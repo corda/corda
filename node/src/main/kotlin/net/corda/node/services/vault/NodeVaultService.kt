@@ -9,6 +9,8 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.tee
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
+import net.corda.core.node.services.StatesNotAvailableException
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
@@ -336,7 +338,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
                                                                                   eligibleStatesQuery: QueryCriteria,
                                                                                   amount: Amount<U>,
-                                                                                  contractType: Class<out T>): List<StateAndRef<T>> {
+                                                                                  contractStateType: Class<out T>): List<StateAndRef<T>> {
         if (amount.quantity == 0L) {
             return emptyList()
         }
@@ -345,9 +347,9 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
         val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
         val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
-                contractStateTypes = setOf(contractType),
+                contractStateTypes = setOf(contractStateType),
                 softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
-        val results = vaultQueryService.queryBy(contractType, enrichedCriteria.and(eligibleStatesQuery), sorter)
+        val results = vaultQueryService.queryBy(contractStateType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
         var claimedAmount = 0L
         val claimedStates = mutableListOf<StateAndRef<T>>()

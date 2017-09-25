@@ -1,6 +1,7 @@
 package net.corda.node.testing
 
 import com.codahale.metrics.MetricRegistry
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -10,6 +11,8 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StateLoaderImpl
+import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
@@ -26,6 +29,7 @@ import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStateMachineRecordedTransactionMappingStorage
 import net.corda.testing.node.MockTransactionStorage
+import java.nio.file.Paths
 import java.sql.Connection
 import java.time.Clock
 
@@ -46,6 +50,7 @@ open class MockServiceHubInternal(
         val schemas: SchemaService? = NodeSchemaService(),
         val customContractUpgradeService: ContractUpgradeService? = null,
         val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2),
+        override val cordappProvider: CordappProvider = CordappProviderImpl(CordappLoader.createDefault(Paths.get("."))).start(attachments),
         protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
 ) : ServiceHubInternal, StateLoader by stateLoader {
     override val vaultQueryService: VaultQueryService

@@ -9,64 +9,63 @@ API: Transactions
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-transactions`.
 
-Transaction workflow
---------------------
-At any time, a transaction can occupy one of three states:
+.. contents::
 
-* ``TransactionBuilder``, a builder for an in-construction transaction
-* ``SignedTransaction``, an immutable transaction with 1+ associated signatures
-* ``LedgerTransaction``, an immutable transaction that can be checked for validity
+Transaction lifecycle
+---------------------
+Between its creation and its final inclusion on the ledger, a transaction will generally occupy one of three states:
 
-Here are the possible transitions between transaction states:
+* ``TransactionBuilder``. A transaction's initial state. This is the only state during which the transaction is
+  mutable, so we must add all the required components before moving on.
+
+* ``SignedTransaction``. The transaction now has one or more digital signatures, making it immutable. This is the
+  transaction type that is passed around to collect additional signatures and that is recorded on the ledger.
+
+* ``LedgerTransaction``. The transaction has been "resolved" - for example, its inputs have been converted from
+  references to actual states - allowing the transaction to be fully inspected.
+
+We can visualise the transitions between the three stages as follows:
 
 .. image:: resources/transaction-flow.png
 
-TransactionBuilder
-------------------
-Creating a builder
-^^^^^^^^^^^^^^^^^^
-The first step when creating a new transaction is to instantiate a ``TransactionBuilder``. We create a builder for a
-transaction as follows:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 19
-       :end-before: DOCEND 19
-       :dedent: 12
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 19
-       :end-before: DOCEND 19
-       :dedent: 12
-
 Transaction components
-^^^^^^^^^^^^^^^^^^^^^^
-Once we have a ``TransactionBuilder``, we need to gather together the various transaction components the transaction
-will include.
+----------------------
+A transaction consists of six types of components:
+
+* 1+ states:
+
+  * 0+ input states
+  * 0+ output states
+
+* 1+ commands
+* 0+ attachments
+* 0 or 1 time-window
+
+  * A transaction with a time-window must also have a notary
+
+Each component corresponds to a specific class in the Corda API. The following section describes each component class,
+and how it is created.
 
 Input states
-~~~~~~~~~~~~
-Input states are added to a transaction as ``StateAndRef`` instances. A ``StateAndRef`` combines:
+^^^^^^^^^^^^
+An input state is added to a transaction as a ``StateAndRef``, which combines:
 
-* A ``ContractState`` representing the input state itself
-* A ``StateRef`` pointing to the input among the outputs of the transaction that created it
+* The ``ContractState`` itself
+* A ``StateRef`` identifying this ``ContractState`` as the output of a specific transaction
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 21
-       :end-before: DOCEND 21
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 21
+        :end-before: DOCEND 21
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 21
-       :end-before: DOCEND 21
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 21
+        :end-before: DOCEND 21
+        :dedent: 12
 
 A ``StateRef`` uniquely identifies an input state, allowing the notary to mark it as historic. It is made up of:
 
@@ -76,151 +75,218 @@ A ``StateRef`` uniquely identifies an input state, allowing the notary to mark i
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 20
-       :end-before: DOCEND 20
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 20
+        :end-before: DOCEND 20
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 20
-       :end-before: DOCEND 20
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 20
+        :end-before: DOCEND 20
+        :dedent: 12
 
-The ``StateRef`` create a chain of pointers from the input states back to the transactions that created them. This
-allows a node to work backwards and verify the entirety of the transaction chain.
+The ``StateRef`` links an input state back to the transaction that created it. This means that transactions form
+"chains" linking each input back to an original issuance transaction. This allows nodes verifying the transaction
+to "walk the chain" and verify that each input was generated through a valid sequence of transactions.
 
 Output states
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 Since a transaction's output states do not exist until the transaction is committed, they cannot be referenced as the
 outputs of previous transactions. Instead, we create the desired output states as ``ContractState`` instances, and
-add them to the transaction:
+add them to the transaction directly:
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 22
-       :end-before: DOCEND 22
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 22
+        :end-before: DOCEND 22
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 22
-       :end-before: DOCEND 22
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 22
+        :end-before: DOCEND 22
+        :dedent: 12
 
-In many cases (e.g. when we have a transaction that updates an existing state), we may want to create an output by
-copying from the input state:
+In cases where an output state represents an update of an input state, we may want to create the output state by basing
+it on the input state:
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 23
-       :end-before: DOCEND 23
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 23
+        :end-before: DOCEND 23
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 23
-       :end-before: DOCEND 23
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 23
+        :end-before: DOCEND 23
+        :dedent: 12
+
+Before our output state can be added to a transaction, we need to associate it with a contract. We can do this by
+wrapping the output state in a ``StateAndContract``, which combines:
+
+* The ``ContractState`` representing the output states
+* A ``String`` identifying the contract governing the state
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 47
+        :end-before: DOCEND 47
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 47
+        :end-before: DOCEND 47
+        :dedent: 12
 
 Commands
-~~~~~~~~
-Commands are added to the transaction as ``Command`` instances. ``Command`` combines:
+^^^^^^^^
+A command is added to the transaction as a ``Command``, which combines:
 
-* A ``CommandData`` instance representing the type of the command
-* A list of the command's required signers
+* A ``CommandData`` instance indicating the command's type
+* A ``List<PublicKey>`` representing the command's required signers
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 24
-       :end-before: DOCEND 24
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 24
+        :end-before: DOCEND 24
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 24
-       :end-before: DOCEND 24
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 24
+        :end-before: DOCEND 24
+        :dedent: 12
 
 Attachments
-~~~~~~~~~~~
-Attachments are identified by their hash. The attachment with the corresponding hash must have been uploaded ahead of
-time via the node's RPC interface:
+^^^^^^^^^^^
+Attachments are identified by their hash:
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 25
-       :end-before: DOCEND 25
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 25
+        :end-before: DOCEND 25
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 25
-       :end-before: DOCEND 25
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 25
+        :end-before: DOCEND 25
+        :dedent: 12
+
+The attachment with the corresponding hash must have been uploaded ahead of time via the node's RPC interface.
 
 Time-windows
-~~~~~~~~~~~~
-Time windows represent the period of time during which the transaction must be notarised. They can have a start and an
-end time, or be open at either end:
+^^^^^^^^^^^^
+Time windows represent the period during which the transaction must be notarised. They can have a start and an end
+time, or be open at either end:
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 26
-       :end-before: DOCEND 26
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 26
+        :end-before: DOCEND 26
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 26
-       :end-before: DOCEND 26
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 26
+        :end-before: DOCEND 26
+        :dedent: 12
 
-We can also define a time window as an ``Instant`` +/- a time tolerance (e.g. 30 seconds):
+We can also define a time window as an ``Instant`` plus/minus a time tolerance (e.g. 30 seconds):
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 42
-       :end-before: DOCEND 42
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 42
+        :end-before: DOCEND 42
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 42
-       :end-before: DOCEND 42
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 42
+        :end-before: DOCEND 42
+        :dedent: 12
 
 Or as a start-time plus a duration:
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 43
+        :end-before: DOCEND 43
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 43
+        :end-before: DOCEND 43
+        :dedent: 12
+
+TransactionBuilder
+------------------
+
+Creating a builder
+^^^^^^^^^^^^^^^^^^
+The first step when creating a transaction proposal is to instantiate a ``TransactionBuilder``.
+
+If the transaction has input states or a time-window, we need to instantiate the builder with a reference to the notary
+that will notarise the inputs and verify the time-window:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
        :language: kotlin
-       :start-after: DOCSTART 43
-       :end-before: DOCEND 43
+       :start-after: DOCSTART 19
+       :end-before: DOCEND 19
        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
-       :start-after: DOCSTART 43
-       :end-before: DOCEND 43
+       :start-after: DOCSTART 19
+       :end-before: DOCEND 19
        :dedent: 12
+
+We discuss the selection of a notary in :doc:`api-flows`.
+
+If the transaction does not have any input states or a time-window, it does not require a notary, and can be
+instantiated without one:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 46
+        :end-before: DOCEND 46
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 46
+        :end-before: DOCEND 46
+        :dedent: 12
 
 Adding items
 ^^^^^^^^^^^^
-The transaction builder is mutable. We add items to it using the ``TransactionBuilder.withItems`` method:
+The next step is to build up the transaction proposal by adding the desired components.
+
+We can add components to the builder using the ``TransactionBuilder.withItems`` method:
 
 .. container:: codeset
 
@@ -232,8 +298,14 @@ The transaction builder is mutable. We add items to it using the ``TransactionBu
 ``withItems`` takes a ``vararg`` of objects and adds them to the builder based on their type:
 
 * ``StateAndRef`` objects are added as input states
-* ``TransactionState`` and ``ContractState`` objects are added as output states
+* ``TransactionState`` and ``StateAndContract`` objects are added as output states
+
+  * Both ``TransactionState`` and ``StateAndContract`` are wrappers around a ``ContractState`` output that link the
+    output to a specific contract
+
 * ``Command`` objects are added as commands
+* ``SecureHash`` objects are added as attachments
+* A ``TimeWindow`` object replaces the transaction's existing ``TimeWindow``, if any
 
 Passing in objects of any other type will cause an ``IllegalArgumentException`` to be thrown.
 
@@ -253,23 +325,105 @@ Here's an example usage of ``TransactionBuilder.withItems``:
        :end-before: DOCEND 27
        :dedent: 12
 
-You can also pass in objects one-by-one. This is the only way to add attachments:
+There are also individual methods for adding components.
+
+Here are the methods for adding inputs and attachments:
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-       :language: kotlin
-       :start-after: DOCSTART 28
-       :end-before: DOCEND 28
-       :dedent: 12
+        :language: kotlin
+        :start-after: DOCSTART 28
+        :end-before: DOCEND 28
+        :dedent: 12
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-       :language: java
-       :start-after: DOCSTART 28
-       :end-before: DOCEND 28
-       :dedent: 12
+        :language: java
+        :start-after: DOCSTART 28
+        :end-before: DOCEND 28
+        :dedent: 12
 
-To set the transaction builder's time-window, we can either set a time-window directly:
+An output state can be added as a ``ContractState``, contract class name and notary:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 49
+        :end-before: DOCEND 49
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 49
+        :end-before: DOCEND 49
+        :dedent: 12
+
+We can also leave the notary field blank, in which case the transaction's default notary is used:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 50
+        :end-before: DOCEND 50
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 50
+        :end-before: DOCEND 50
+        :dedent: 12
+
+Or we can add the output state as a ``TransactionState``, which already specifies the output's contract and notary:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 51
+        :end-before: DOCEND 51
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 51
+        :end-before: DOCEND 51
+        :dedent: 12
+
+Commands can be added as a ``Command``:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 52
+        :end-before: DOCEND 52
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 52
+        :end-before: DOCEND 52
+        :dedent: 12
+
+Or as ``CommandData`` and a ``vararg PublicKey``:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 53
+        :end-before: DOCEND 53
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 53
+        :end-before: DOCEND 53
+        :dedent: 12
+
+For the time-window, we can set a time-window directly:
 
 .. container:: codeset
 
@@ -303,7 +457,9 @@ Or define the time-window as a time plus a duration (e.g. 45 seconds):
 
 Signing the builder
 ^^^^^^^^^^^^^^^^^^^
-Once the builder is ready, we finalize it by signing it and converting it into a ``SignedTransaction``:
+Once the builder is ready, we finalize it by signing it and converting it into a ``SignedTransaction``.
+
+We can either sign with our legal identity key:
 
 .. container:: codeset
 
@@ -319,7 +475,7 @@ Once the builder is ready, we finalize it by signing it and converting it into a
        :end-before: DOCEND 29
        :dedent: 12
 
-This will sign the transaction with your legal identity key. You can also choose to use another one of your public keys:
+Or we can also choose to use another one of our public keys:
 
 .. container:: codeset
 
@@ -335,7 +491,7 @@ This will sign the transaction with your legal identity key. You can also choose
        :end-before: DOCEND 30
        :dedent: 12
 
-Either way, the outcome of this process is to create a ``SignedTransaction``, which can no longer be modified.
+Either way, the outcome of this process is to create an immutable ``SignedTransaction`` with our signature over it.
 
 SignedTransaction
 -----------------
@@ -356,12 +512,14 @@ transaction's signatures.
 
 Verifying the transaction's contents
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To verify a transaction, we need to retrieve any states in the transaction chain that our node doesn't currently have
-in its local storage from the proposer(s) of the transaction. This process is handled by a built-in flow called
-``ReceiveTransactionFlow``. See :doc:`api-flows` for more details.
+If a transaction has inputs, we need to retrieve all the states in the transaction's dependency chain before we can
+verify the transaction's contents. This is because the transaction is only valid if its dependency chain is also valid.
+We do this by requesting any states in the chain that our node doesn't currently have in its local storage from the
+proposer(s) of the transaction. This process is handled by a built-in flow called ``ReceiveTransactionFlow``.
+See :doc:`api-flows` for more details.
 
-We can now *verify* the transaction to ensure that it satisfies the contracts of all the transaction's input and output
-states:
+We can now verify the transaction's contents to ensure that it satisfies the contracts of all the transaction's input
+and output states:
 
 .. container:: codeset
 
@@ -377,11 +535,16 @@ states:
        :end-before: DOCEND 33
        :dedent: 12
 
-We can also conduct additional validation of the transaction, beyond what is performed by its contracts. However, the
-``SignedTransaction`` holds its inputs as ``StateRef`` instances, and its attachments as hashes. These do not provide
-enough information to properly validate the transaction's contents. To resolve these into actual ``ContractState`` and
-``Attachment`` instances, we need to use the ``ServiceHub`` to convert the ``SignedTransaction`` into a
-``LedgerTransaction``:
+Checking that the transaction meets the contract constraints is only part of verifying the transaction's contents. We
+will usually also want to perform our own additional validation of the transaction contents before signing, to ensure
+that the transaction proposal represents an agreement we wish to enter into.
+
+However, the ``SignedTransaction`` holds its inputs as ``StateRef`` instances, and its attachments as ``SecureHash``
+instances, which do not provide enough information to properly validate the transaction's contents. We first need to
+resolve the ``StateRef`` and ``SecureHash`` instances into actual ``ContractState`` and ``Attachment`` instances, which
+we can then inspect.
+
+We achieve this by using the ``ServiceHub`` to convert the ``SignedTransaction`` into a ``LedgerTransaction``:
 
 .. container:: codeset
 
@@ -397,7 +560,7 @@ enough information to properly validate the transaction's contents. To resolve t
        :end-before: DOCEND 32
        :dedent: 12
 
-We can now perform additional verification. Here's a simple example:
+We can now perform our additional verification. Here's a simple example:
 
 .. container:: codeset
 
@@ -415,8 +578,10 @@ We can now perform additional verification. Here's a simple example:
 
 Verifying the transaction's signatures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-We also need to verify that the transaction has all the required signatures, and that these signatures are valid, to
-prevent tampering. We do this using ``SignedTransaction.verifyRequiredSignatures``:
+Aside from verifying that the transaction's contents are valid, we also need to check that the signatures are valid. A
+valid signature over the hash of the transaction prevents tampering.
+
+We can verify that all the transaction's required signatures are present and valid as follows:
 
 .. container:: codeset
 
@@ -432,7 +597,8 @@ prevent tampering. We do this using ``SignedTransaction.verifyRequiredSignatures
        :end-before: DOCEND 35
        :dedent: 12
 
-Alternatively, we can use ``SignedTransaction.verifySignaturesExcept``, which takes a ``vararg`` of the public keys for
+However, we'll often want to verify the transaction's existing signatures before all of them have been collected. For
+this we can use ``SignedTransaction.verifySignaturesExcept``, which takes a ``vararg`` of the public keys for
 which the signatures are allowed to be missing:
 
 .. container:: codeset
@@ -468,13 +634,15 @@ We can also choose to simply verify the signatures that are present:
        :end-before: DOCEND 37
        :dedent: 12
 
-However, BE VERY CAREFUL - this function provides no guarantees that the signatures are correct, or that none are
-missing.
+Be very careful, however - this function neither guarantees that the signatures that are present are required, nor
+checks whether any signatures are missing.
 
 Signing the transaction
 ^^^^^^^^^^^^^^^^^^^^^^^
-Once we are satisfied with the contents and existing signatures over the transaction, we can add our signature to the
-``SignedTransaction`` using:
+Once we are satisfied with the contents and existing signatures over the transaction, we add our signature to the
+``SignedTransaction`` to indicate that we approve the transaction.
+
+We can sign using our legal identity key, as follows:
 
 .. container:: codeset
 
@@ -490,7 +658,7 @@ Once we are satisfied with the contents and existing signatures over the transac
        :end-before: DOCEND 38
        :dedent: 12
 
-As with the ``TransactionBuilder``, we can also choose to sign using another one of our public keys:
+Or we can choose to sign using another one of our public keys:
 
 .. container:: codeset
 
@@ -506,7 +674,9 @@ As with the ``TransactionBuilder``, we can also choose to sign using another one
        :end-before: DOCEND 39
        :dedent: 12
 
-We can also generate a signature over the transaction without adding it to the transaction directly by using:
+We can also generate a signature over the transaction without adding it to the transaction directly.
+
+We can do this with our legal identity key:
 
 .. container:: codeset
 
@@ -522,7 +692,7 @@ We can also generate a signature over the transaction without adding it to the t
        :end-before: DOCEND 40
        :dedent: 12
 
-Or using another one of our public keys, as follows:
+Or using another one of our public keys:
 
 .. container:: codeset
 
@@ -542,22 +712,3 @@ Notarising and recording
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Notarising and recording a transaction is handled by a built-in flow called ``FinalityFlow``. See :doc:`api-flows` for
 more details.
-
-Notary-change transactions
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-A single Corda network will usually have multiple notary services. To commit a transaction, we require a signature
-from the notary service associated with each input state. If we tried to commit a transaction where the input
-states were associated with different notary services, the transaction would require a signature from multiple notary
-services, creating a complicated multi-phase commit scenario. To prevent this, every input state in a transaction
-must be associated with the same notary.
-
-However, we will often need to create a transaction involving input states associated with different notaries. Before
-we can create this transaction, we will need to change the notary service associated with each state by:
-
-* Deciding which notary service we want to notarise the transaction
-* Creating a special ``NotaryChangeWireTransaction`` that consumes the input states pointing to the old notary and
-  produces outputs which are identical but point to the new notary service
-* Using the outputs of the notary-change transactions as inputs to a standard transaction
-
-In practice, this process is handled automatically by a built-in flow called ``NotaryChangeFlow``. See
-:doc:`api-flows` for more details.
