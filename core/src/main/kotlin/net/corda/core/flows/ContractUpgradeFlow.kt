@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ContractUpgradeUtils
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
 /**
@@ -87,6 +88,23 @@ object ContractUpgradeFlow {
             originalState: StateAndRef<OldState>,
             newContractClass: Class<out UpgradedContract<OldState, NewState>>
     ) : AbstractStateReplacementFlow.Instigator<OldState, NewState, Class<out UpgradedContract<OldState, NewState>>>(originalState, newContractClass) {
+
+        companion object {
+            fun <OldState : ContractState, NewState : ContractState> assembleBareTx(
+                    stateRef: StateAndRef<OldState>,
+                    upgradedContractClass: Class<out UpgradedContract<OldState, NewState>>,
+                    privacySalt: PrivacySalt
+            ): TransactionBuilder {
+                val contractUpgrade = upgradedContractClass.newInstance()
+                return TransactionBuilder(stateRef.state.notary)
+                        .withItems(
+                                stateRef,
+                                StateAndContract(contractUpgrade.upgrade(stateRef.state.data), upgradedContractClass.name),
+                                Command(UpgradeCommand(upgradedContractClass.name), stateRef.state.data.participants.map { it.owningKey }),
+                                privacySalt
+                        )
+            }
+        }
 
         @Suspendable
         override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {

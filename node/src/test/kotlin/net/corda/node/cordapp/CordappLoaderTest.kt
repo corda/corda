@@ -1,7 +1,6 @@
 package net.corda.node.cordapp
 
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.node.internal.cordapp.CordappLoader
@@ -15,7 +14,7 @@ class DummyFlow : FlowLogic<Unit>() {
 }
 
 @InitiatedBy(DummyFlow::class)
-class LoaderTestFlow(unusedSession: FlowSession) : FlowLogic<Unit>() {
+class LoaderTestFlow : FlowLogic<Unit>() {
     override fun call() { }
 }
 
@@ -29,7 +28,7 @@ class CordappLoaderTest {
 
     @Test
     fun `test that classes that are in a cordapp are loaded`() {
-        val loader = CordappLoader.createDevMode("net.corda.node.cordapp")
+        val loader = CordappLoader.createWithTestPackages(listOf("net.corda.node.cordapp"))
         val initiatedFlows = loader.cordapps.first().initiatedFlows
         val expectedClass = loader.appClassLoader.loadClass("net.corda.node.cordapp.LoaderTestFlow").asSubclass(FlowLogic::class.java)
         assertThat(initiatedFlows).contains(expectedClass)
@@ -49,7 +48,7 @@ class CordappLoaderTest {
         assertThat(actualCordapp.rpcFlows).contains(loader.appClassLoader.loadClass("net.corda.core.flows.ContractUpgradeFlow\$Initiate").asSubclass(FlowLogic::class.java))
         assertThat(actualCordapp.services).isEmpty()
         assertThat(actualCordapp.plugins).hasSize(1)
-        assertThat(actualCordapp.plugins.first().javaClass.name).isEqualTo("net.corda.finance.contracts.isolated.DummyPlugin")
+        assertThat(actualCordapp.plugins.first().javaClass.name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedPlugin")
         assertThat(actualCordapp.jarPath).isEqualTo(isolatedJAR)
     }
 }

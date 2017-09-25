@@ -11,9 +11,6 @@ description 'Corda node modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-
     compile {
         // We don't need these because we already include netty-all.
         exclude group: 'io.netty', module: 'netty-transport'

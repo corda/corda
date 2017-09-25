@@ -1,7 +1,7 @@
 package net.corda.testing
 
 import net.corda.client.mock.Generator
-import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
@@ -498,7 +498,7 @@ class RandomRpcUser {
 
     companion object {
         private inline fun <reified T> HashMap<Class<*>, Generator<*>>.add(generator: Generator<T>) = this.putIfAbsent(T::class.java, generator)
-        val generatorStore = HashMap<Class<*>, Generator<*>>().apply {
+        private val generatorStore = HashMap<Class<*>, Generator<*>>().apply {
             add(Generator.string())
             add(Generator.int())
         }
@@ -512,7 +512,7 @@ class RandomRpcUser {
             val hostAndPort = NetworkHostAndPort.parse(args[1])
             val username = args[2]
             val password = args[3]
-            CordaRPCClient.initialiseSerialization()
+            KryoClientSerializationScheme.initialiseSerialization()
             val handle = RPCClient<RPCOps>(hostAndPort, null, serializationContext = KRYO_RPC_CLIENT_CONTEXT).start(rpcClass, username, password)
             val callGenerators = rpcClass.declaredMethods.map { method ->
                 Generator.sequence(method.parameters.map {

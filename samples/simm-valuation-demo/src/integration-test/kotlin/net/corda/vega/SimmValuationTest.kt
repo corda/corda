@@ -11,11 +11,15 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.IntegrationTestCategory
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
+import net.corda.testing.setCordappPackages
+import net.corda.testing.unsetCordappPackages
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -27,6 +31,16 @@ class SimmValuationTest : IntegrationTestCategory {
         val nodeALegalName = DUMMY_BANK_A.name
         val nodeBLegalName = DUMMY_BANK_B.name
         val testTradeId = "trade1"
+    }
+
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.vega.contracts")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
     }
 
     @Test

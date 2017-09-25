@@ -12,7 +12,7 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.nodeapi.RPCException
+import net.corda.client.rpc.RPCException
 import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist

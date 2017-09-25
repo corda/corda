@@ -24,37 +24,39 @@ public class CashTestsJava {
     @Test
     public void trivial() {
         transaction(tx -> {
+            tx.attachment(CASH_PROGRAM_ID);
+
             tx.input(CASH_PROGRAM_ID, inState);
 
             tx.tweak(tw -> {
-                tw.output(CASH_PROGRAM_ID, new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(getMINI_CORP_PUBKEY())));
+                tw.output(CASH_PROGRAM_ID, () -> new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(getMINI_CORP_PUBKEY())));
                 tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
                 return tw.failsWith("the amounts balance");
             });
 
             tx.tweak(tw -> {
-                tw.output(CASH_PROGRAM_ID, outState);
+                tw.output(CASH_PROGRAM_ID,  () -> outState );
                 tw.command(getMEGA_CORP_PUBKEY(), DummyCommandData.INSTANCE);
                 // Invalid command
                 return tw.failsWith("required net.corda.finance.contracts.asset.Cash.Commands.Move command");
             });
             tx.tweak(tw -> {
-                tw.output(CASH_PROGRAM_ID, outState);
+                tw.output(CASH_PROGRAM_ID, () -> outState);
                 tw.command(getMINI_CORP_PUBKEY(), new Cash.Commands.Move());
                 return tw.failsWith("the owning keys are a subset of the signing keys");
             });
             tx.tweak(tw -> {
-                tw.output(CASH_PROGRAM_ID, outState);
+                tw.output(CASH_PROGRAM_ID, () -> outState);
                 // issuedBy() can't be directly imported because it conflicts with other identically named functions
                 // with different overloads (for some reason).
-                tw.output(CASH_PROGRAM_ID, outState.issuedBy(getMINI_CORP()));
+                tw.output(CASH_PROGRAM_ID, () -> outState.issuedBy(getMINI_CORP()));
                 tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
                 return tw.failsWith("at least one cash input");
             });
 
             // Simple reallocation works.
             return tx.tweak(tw -> {
-                tw.output(CASH_PROGRAM_ID, outState);
+                tw.output(CASH_PROGRAM_ID, () -> outState);
                 tw.command(getMEGA_CORP_PUBKEY(), new Cash.Commands.Move());
                 return tw.verifies();
             });

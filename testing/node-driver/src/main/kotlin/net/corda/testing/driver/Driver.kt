@@ -501,6 +501,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
     }
 
     fun shutdown() {
+        unsetCordappPackages()
         val shutdownActionFutures = state.locked {
             if (isShutdown) {
                 emptyList<CordaFuture<() -> Unit>>()
@@ -591,7 +592,7 @@ class DriverDSL(
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    private val packagesToScanString = (extraCordappPackagesToScan + getCallerPackage()).joinToString(",")
+    private val packagesToScanString = extraCordappPackagesToScan + getCallerPackage()
 
     class State {
         val processes = ArrayList<CordaFuture<Process>>()
@@ -731,9 +732,9 @@ class DriverDSL(
             rpcUsers: List<User>,
             startInSameProcess: Boolean?
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (0 until clusterSize).map { CordaX500Name(organisation = "Notary Service $it", locality = "Zurich", country = "CH") }
+        val nodeNames = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }
         val paths = nodeNames.map { baseDirectory(it) }
-        ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
+        ServiceIdentityGenerator.generateToDisk(paths, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
@@ -791,7 +792,7 @@ class DriverDSL(
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
         // We set this property so that in-process nodes find cordapps. Out-of-process nodes need this passed in when started.
-        System.setProperty("net.corda.node.cordapp.scan.packages", packagesToScanString)
+        setCordappPackages(*packagesToScanString.toTypedArray())
         if (networkMapStartStrategy.startDedicated) {
             startDedicatedNetworkMapService().andForget(log) // Allow it to start concurrently with other nodes.
         }
@@ -845,7 +846,7 @@ class DriverDSL(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, packagesToScanString)
+            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, packagesToScanString.joinToString(","))
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
                 val processDeathFuture = poll(executorService, "process death") {
