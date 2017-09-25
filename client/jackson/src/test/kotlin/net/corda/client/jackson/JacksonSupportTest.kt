@@ -39,7 +39,7 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
 
     @Test
     fun `should serialize Composite keys`() {
-        val expected = "\"efa46Lo8bTrZpaCRfEm9tkgdndkZxrLEjBu9u4gGzvGcnjP3Yiyo7pq9wTLSARZNBCB3QFbFUpPhwybedjb6TLAG9nXraiohqnq7RemKQ53V6kKXoKsVPCkodbZJSjimTdwx6YFc3ejoJsuiTjur86e7HrxGXQjxPSfwYr1c2DLpqBxsX6BY1pbrp6yWHXvnwjakQfPBiredAu6kFqsDmDgy3tV6wefNCcdWZD6CxLhvd4B8mniDWbux6LQobRV4fsVratpiDW\""
+        val expected = "\"-----BEGIN PUBLIC KEY-----\\r\\nMIHAMBUGE2mtoq+J1bjir/ONk6yd5pab0FoDgaYAMIGiAgECMIGcMDIDLQAwKjAF\\r\\nBgMrZXADIQAgIX1QlJRgaLlD0ttLlJF5kNqT/7P7QwCvrWc9+/248gIBATAyAy0A\\r\\nMCowBQYDK2VwAyEAqS0JPGlzdviBZjB9FaNY+w6cVs3/CQ2A5EimE9Lyng4CAQEw\\r\\nMgMtADAqMAUGAytlcAMhALq4GG0gBQZIlaKE6ucooZsuoKUbH4MtGSmA6cwj136+\\r\\nAgEB\\r\\n-----END PUBLIC KEY-----\\r\\n\""
         val innerKeys = (1..3).map { i ->
             Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, SEED.plus(BigInteger.valueOf(i.toLong()))).public
         }
@@ -58,12 +58,12 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
 
     @Test
     fun `should serialize EdDSA keys`() {
-        val expected = "\"GfHq2tTVk9z4eXgyEsvWqXUh2iSTHrzAD5R3xU9kdn2oYs57sG7FyNmibWL8\""
+        val expected = "\"-----BEGIN PUBLIC KEY-----\\r\\nMCowBQYDK2VwAyEACFTgLk1NOqYXAfxLoR7ctSbZcl9KMXu58Mq31Kv1Dwk=\\r\\n-----END PUBLIC KEY-----\\r\\n\""
         val publicKey = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, SEED).public
         val serialized = mapper.writeValueAsString(publicKey)
-        assertEquals(expected, serialized)
         val parsedKey = mapper.readValue(serialized, EdDSAPublicKey::class.java)
         assertEquals(publicKey, parsedKey)
+        assertEquals(expected, serialized)
     }
 
     @Test

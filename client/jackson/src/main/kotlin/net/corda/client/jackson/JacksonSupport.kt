@@ -29,6 +29,13 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter
+import org.bouncycastle.util.io.pem.PemReader
+import java.io.FileReader
+import java.io.FileWriter
+import java.io.StringReader
+import java.io.StringWriter
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -278,27 +285,44 @@ object JacksonSupport {
 
     object PublicKeySerializer : JsonSerializer<PublicKey>() {
         override fun serialize(obj: PublicKey, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeString(obj.encoded.toBase58())
+            StringWriter().use { writer ->
+                JcaPEMWriter(writer).use { pem ->
+                    pem.writeObject(obj)
+                }
+                generator.writeString(writer.toString())
+            }
         }
     }
 
     object EdDSAPublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
-            return try {
-                Crypto.decodePublicKey(parser.text.base58ToByteArray()) as EdDSAPublicKey
-            } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid EdDSA key ${parser.text}: ${e.message}")
+            var key: EdDSAPublicKey? = null
+            StringReader(parser.text).use { reader ->
+                PemReader(reader).use { pem ->
+                    key = try {
+                        Crypto.decodePublicKey(pem.readPemObject().content) as EdDSAPublicKey
+                    } catch (e: Exception) {
+                        throw JsonParseException(parser, "Invalid EdDSA key ${parser.text}: ${e.message}")
+                    }
+                }
             }
+            return key!!
         }
     }
 
     object CompositeKeyDeserializer : JsonDeserializer<CompositeKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): CompositeKey {
-            return try {
-                Crypto.decodePublicKey(parser.text.base58ToByteArray()) as CompositeKey
-            } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid composite key ${parser.text}: ${e.message}")
+            var key: CompositeKey? = null
+            StringReader(parser.text).use { reader ->
+                PemReader(reader).use { pem ->
+                    key = try {
+                        Crypto.decodePublicKey(pem.readPemObject().content) as CompositeKey
+                    } catch (e: Exception) {
+                        throw JsonParseException(parser, "Invalid EdDSA key ${parser.text}: ${e.message}")
+                    }
+                }
             }
+            return key!!
         }
     }
 
