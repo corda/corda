@@ -7,6 +7,8 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
+
 Release 1.0
 -----------
 
