@@ -47,8 +47,19 @@ AMQP
 .. note:: AMQP serialization is not currently live and will be turned on in a future release.
 
 The long term goal is to migrate the current serialization format for everything except checkpoints away from the current
-``Kryo``-based format to a more sustainable and controllable format based on AMQP.  Documentation on that format, and how JVM
-classes are translated to AMQP, will be linked here when it is available.
+``Kryo``-based format to a more sustainable, self-describing and controllable format based on AMQP 1.0.  The primary drivers for that move are:
+
+    #.  A desire to have a schema describing what has been serialized along-side the actual data:
+        #.  To assist with versioning, both in terms of being able to interpret long ago archived data (e.g. trades from
+            a decade ago, long after the code has changed) and between differing code versions.
+        #.  To make it easier to write user interfaces that can navigate the serialized form of data.
+        #.  To support cross platform (non-JVM) interaction, where the format of a class file is not so easily interpreted.
+    #.  A desire to use a documented and static wire format that is platform independent, and is not subject to change with
+        3rd party library upgrades etc.
+    #.  A desire to support open-ended polymorphism, where the number of subclasses of a superclass can expand over time
+        and do not need to be defined in the schema *upfront*, which is key to many Corda concepts, such as contract states.
+
+Documentation on that format, and how JVM classes are translated to AMQP, will be linked here when it is available.
 
 .. For information on our choice of AMQP 1.0, see :doc:`amqp-choice`.  For detail on how we utilise AMQP 1.0 and represent
    objects in AMQP types, see :doc:`amqp-format`.
@@ -68,7 +79,9 @@ Collection Types
 The following collection types are supported.  Any implementation of the following will be mapped to *an* implementation of the interface or class on the other end.
 e.g. If you, for example, use a Guava implementation of a collection it will deserialize as a different implementation,
 but will continue to adhere to the most specific of any of the following interfaces.  You should use only these types
-as the declared types of fields and properties, and not the concrete implementation types.
+as the declared types of fields and properties, and not the concrete implementation types.  Collections must be used
+in their generic form, the generic type parameters will be included in the schema, and the elements type checked against the
+generic parameters when deserialized.
 
 ::
 
@@ -248,13 +261,22 @@ Kotlin Objects
 
 Currently, the same is not true of Java singletons, and they will deserialize to new instances of the class.
 
+The Carpenter
+`````````````
+
+We will support a class carpenter that can dynamically manufacture classes from the supplied schema when deserializing
+in the JVM without the supporting classes on the classpath.  This can be useful where other components might expect to
+be able to use reflection over the deserialized data, and also for ensuring classes not on the classpath can be
+deserialized without loading potentially malicious code dynamically without security review outside of a fully sandboxed
+environment.  A more detailed discussion of the carpenter will be provided in a future update to the documentation.
+
 Future Enhancements
 ```````````````````
 
     #.  Java singleton support.  We will add support for identifying classes which are singletons and identifying the
         static method responsible for returning the singleton instance.
-    #.  Iterning support.  We will add support for identifying classes that should be resolved against an instances map to avoid
-        creating many duplicate instances that are equal.
+    #.  Instance internalizing support.  We will add support for identifying classes that should be resolved against an instances map to avoid
+        creating many duplicate instances that are equal.  Similar to ``String.intern()``.
     #.  Enum evolution support.  We *may* introduce an annotation that can be applied to an enum element to indicate that
         if an unrecognised enum entry is deserialized from a newer version of the code, it should be converted to that
         element in the older version of the code.  This is dependent on identifying a suitable use case, since it does
