@@ -100,7 +100,7 @@ abstract class FlowLogic<out T> {
      * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
      * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<R> {
@@ -116,7 +116,7 @@ abstract class FlowLogic<out T> {
      * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
      * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     @Suspendable
@@ -165,7 +165,7 @@ abstract class FlowLogic<out T> {
      * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
      * corrupted data in order to exploit your code.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
     @Suspendable
