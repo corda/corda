@@ -19,3 +19,13 @@ object CordaClosureSerializer : ClosureSerializer() {
         return target is Serializable
     }
 }
+
+object CordaClosureBlacklistSerializer : ClosureSerializer() {
+
+    val ERROR_MESSAGE = "Unable to serialize Java Lambda expression, unless explicitly declared e.g., Runnable r = (Runnable & Serializable) () -> System.out.println(\"Hello world!\");"
+
+    override fun write(kryo: Kryo, output: Output, target: Any) {
+
+        throw IllegalArgumentException(ERROR_MESSAGE)
+    }
+}
