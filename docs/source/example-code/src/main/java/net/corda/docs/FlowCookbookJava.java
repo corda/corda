@@ -34,6 +34,7 @@ import java.util.Set;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.testing.TestConstants.getALICE_KEY;
+import static net.corda.testing.contracts.DummyContractKt.DUMMY_PROGRAM_ID;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
@@ -251,12 +252,18 @@ public class FlowCookbookJava {
 
             // Output states are constructed from scratch.
             // DOCSTART 22
-            DummyState ourOutput = new DummyState();
+            DummyState ourOutputState = new DummyState();
             // DOCEND 22
             // Or as copies of other states with some properties changed.
             // DOCSTART 23
-            DummyState ourOtherOutput = ourOutput.copy(77);
+            DummyState ourOtherOutputState = ourOutputState.copy(77);
             // DOCEND 23
+
+            // We then need to pair our output state with a contract.
+            // DOCSTART 47
+            String contractName = "net.corda.testing.contracts.DummyContract";
+            StateAndContract ourOutput = new StateAndContract(ourOutputState, contractName);
+            // DOCEND 47
 
             // Commands pair a ``CommandData`` instance with a list of
             // public keys. To be valid, the transaction requires a signature
@@ -297,11 +304,11 @@ public class FlowCookbookJava {
             // We can also define a time window as an ``Instant`` +/- a time
             // tolerance (e.g. 30 seconds):
             // DOCSTART 42
-            TimeWindow ourTimeWindow2 = TimeWindow.withTolerance(Instant.now(), Duration.ofSeconds(30));
+            TimeWindow ourTimeWindow2 = TimeWindow.withTolerance(getServiceHub().getClock().instant(), Duration.ofSeconds(30));
             // DOCEND 42
             // Or as a start-time plus a duration:
             // DOCSTART 43
-            TimeWindow ourTimeWindow3 = TimeWindow.fromStartAndDuration(Instant.now(), Duration.ofSeconds(30));
+            TimeWindow ourTimeWindow3 = TimeWindow.fromStartAndDuration(getServiceHub().getClock().instant(), Duration.ofSeconds(30));
             // DOCEND 43
 
             /*------------------------
@@ -309,38 +316,72 @@ public class FlowCookbookJava {
             ------------------------*/
             progressTracker.setCurrentStep(TX_BUILDING);
 
+            // If our transaction has input states or a time-window, we must instantiate it with a
+            // notary.
             // DOCSTART 19
             TransactionBuilder txBuilder = new TransactionBuilder(specificNotary);
             // DOCEND 19
 
+            // Otherwise, we can choose to instantiate it without one:
+            // DOCSTART 46
+            TransactionBuilder txBuilderNoNotary = new TransactionBuilder();
+            // DOCEND 46
+
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
             // DOCSTART 27
             txBuilder.withItems(
-                    // Inputs, as ``StateRef``s that reference to the outputs of previous transactions
+                    // Inputs, as ``StateAndRef``s that reference to the outputs of previous transactions
                     ourStateAndRef,
-                    // Outputs, as ``ContractState``s
+                    // Outputs, as ``StateAndContract``s
                     ourOutput,
                     // Commands, as ``Command``s
-                    ourCommand
+                    ourCommand,
+                    // Attachments, as ``SecureHash``es
+                    ourAttachment,
+                    // A time-window, as ``TimeWindow``
+                    ourTimeWindow
             );
             // DOCEND 27
 
-            // We can also add items using methods for the individual components:
+            // We can also add items using methods for the individual components.
+
+            // The individual methods for adding input states and attachments:
             // DOCSTART 28
             txBuilder.addInputState(ourStateAndRef);
-            txBuilder.addOutputState(ourOutput, DummyContractKt.DUMMY_PROGRAM_ID);
-            txBuilder.addCommand(ourCommand);
             txBuilder.addAttachment(ourAttachment);
             // DOCEND 28
 
-            // There are several ways of setting the transaction's time-window.
-            // We can set a time-window directly:
+            // An output state can be added as a ``ContractState``, contract class name and notary.
+            // DOCSTART 49
+            txBuilder.addOutputState(ourOutputState, DUMMY_PROGRAM_ID, specificNotary);
+            // DOCEND 49
+            // We can also leave the notary field blank, in which case the transaction's default
+            // notary is used.
+            // DOCSTART 50
+            txBuilder.addOutputState(ourOutputState, DUMMY_PROGRAM_ID);
+            // DOCEND 50
+            // Or we can add the output state as a ``TransactionState``, which already specifies
+            // the output's contract and notary.
+            // DOCSTART 51
+            TransactionState txState = new TransactionState(ourOutputState, DUMMY_PROGRAM_ID, specificNotary);
+            // DOCEND 51
+
+            // Commands can be added as ``Command``s.
+            // DOCSTART 52
+            txBuilder.addCommand(ourCommand);
+            // DOCEND 52
+            // Or as ``CommandData`` and a ``vararg PublicKey``.
+            // DOCSTART 53
+            txBuilder.addCommand(commandData, ourPubKey, counterpartyPubKey);
+            // DOCEND 53
+
+            // We can set a time-window directly.
             // DOCSTART 44
             txBuilder.setTimeWindow(ourTimeWindow);
             // DOCEND 44
-            // Or as a start time plus a duration (e.g. 45 seconds):
+            // Or as a start time plus a duration (e.g. 45 seconds).
             // DOCSTART 45
-            txBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45));
+            txBuilder.setTimeWindow(getServiceHub().getClock().instant(), Duration.ofSeconds(45));
             // DOCEND 45
 
             /*-----------------------
