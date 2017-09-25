@@ -214,6 +214,7 @@ Classes
         generic parameter must be a supported type, an open wildcard (``*``), or a bounded wildcard which is currently
         widened to an open wildcard.
     #.  Any superclass must adhere to the same rules, but can be abstract.
+    #.  Object graph cycles are not supported, so an object cannot refer to itself, directly or indirectly.
 
 Enums
 `````
