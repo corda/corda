@@ -58,6 +58,9 @@ The long term goal is to migrate the current serialization format for everything
         3rd party library upgrades etc.
     #.  A desire to support open-ended polymorphism, where the number of subclasses of a superclass can expand over time
         and do not need to be defined in the schema *upfront*, which is key to many Corda concepts, such as contract states.
+    #.  Increased security from deserialized objects being constructed through supported constructors rather than having
+        data poked directy into their fields without an opportunity to validate consistency or intercept attempts to manipulate
+        supposed invariants.
 
 Documentation on that format, and how JVM classes are translated to AMQP, will be linked here when it is available.
 
@@ -65,7 +68,7 @@ Documentation on that format, and how JVM classes are translated to AMQP, will b
    objects in AMQP types, see :doc:`amqp-format`.
 
 We describe here what is and will be supported in the Corda AMQP format from the perspective
-of CorDapp developers, to allow for CorDapps to take into consideratio the future state.  The AMQP serialization format will of
+of CorDapp developers, to allow for CorDapps to take into consideration the future state.  The AMQP serialization format will of
 course continue to apply the whitelisting functionality that is already in place and described in :doc:`serialization`.
 
 Core Types
