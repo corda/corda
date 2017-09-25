@@ -22,7 +22,6 @@ import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
@@ -71,7 +70,7 @@ class CordaRPCOpsImplTest {
         val networkMap = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         aliceNode = mockNet.createNode(networkMapAddress = networkMap.network.myAddress)
         notaryNode = mockNet.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.network.myAddress)
-        rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
+        rpc = aliceNode.rpcOps
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>()

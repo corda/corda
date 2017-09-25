@@ -1,6 +1,5 @@
 package net.corda.node.services.network
 
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
@@ -59,11 +58,11 @@ class NetworkMapCacheTest {
         val nodes = mockNet.createSomeNodes(1)
         val n0 = nodes.mapNode
         val n1 = nodes.partyNodes[0]
-        val node0Cache: NetworkMapCache = n0.services.networkMapCache
+        val node0Lookup = n0.nodeLookup
         val expected = n1.info
 
         mockNet.runNetwork()
-        val actual = n0.database.transaction { node0Cache.getNodeByLegalIdentity(n1.info.chooseIdentity()) }
+        val actual = n0.database.transaction { node0Lookup.getNodeByLegalIdentity(n1.info.chooseIdentity()) }
         assertEquals(expected, actual)
 
         // TODO: Should have a test case with anonymous lookup
@@ -76,13 +75,14 @@ class NetworkMapCacheTest {
         val n1 = nodes.partyNodes[0]
         val n0Identity = n0.info.chooseIdentity()
         val n1Identity = n1.info.chooseIdentity()
-        val node0Cache = n0.services.networkMapCache as PersistentNetworkMapCache
+        val node0Lookup = n0.nodeLookup
+        val node0Cache = n0.services.networkMapCache
         mockNet.runNetwork()
         n0.database.transaction {
-            assertThat(node0Cache.getNodeByLegalIdentity(n1Identity) != null)
+            assertThat(node0Lookup.getNodeByLegalIdentity(n1Identity) != null)
             node0Cache.removeNode(n1.info)
-            assertThat(node0Cache.getNodeByLegalIdentity(n1Identity) == null)
-            assertThat(node0Cache.getNodeByLegalIdentity(n0Identity) != null)
+            assertThat(node0Lookup.getNodeByLegalIdentity(n1Identity) == null)
+            assertThat(node0Lookup.getNodeByLegalIdentity(n0Identity) != null)
             assertThat(node0Cache.getNodeByLegalName(n1Identity.name) == null)
         }
     }

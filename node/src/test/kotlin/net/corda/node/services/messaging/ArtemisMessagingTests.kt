@@ -15,7 +15,6 @@ import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.testing.MockServiceHubInternal
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -71,7 +70,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
-        networkMapCache = PersistentNetworkMapCache(serviceHub = object : MockServiceHubInternal(database, config) {})
+        networkMapCache = PersistentNetworkMapCache(database)
     }
 
     @After

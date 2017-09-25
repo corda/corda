@@ -13,6 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NodeLookup
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
@@ -37,7 +38,8 @@ import java.time.Instant
 class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
-        private val database: CordaPersistence
+        private val database: CordaPersistence,
+        private val nodeLookup: NodeLookup
 ) : CordaRPCOps {
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
@@ -208,7 +210,7 @@ class CordaRPCOpsImpl(
 
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
         return database.transaction {
-            services.networkMapCache.getNodeByLegalIdentity(party)
+            nodeLookup.getNodeByLegalIdentity(party)
         }
     }
 

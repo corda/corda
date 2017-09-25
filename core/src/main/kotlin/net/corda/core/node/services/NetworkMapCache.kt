@@ -11,6 +11,19 @@ import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
 import java.security.PublicKey
 
+interface NodeLookup {
+    /**
+     * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable; if the party
+     * is anonymised and the well known party cannot be resolved, it is impossible ot identify the node and therefore this
+     * returns null.
+     *
+     * @param party party to retrieve node information for.
+     * @return the node for the identity, or null if the node could not be found. This does not necessarily mean there is
+     * no node for the party, only that this cache is unaware of it.
+     */
+    fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
+}
+
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
  * they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
@@ -45,17 +58,6 @@ interface NetworkMapCache {
      * first subscriber is registered so as to avoid racing with early updates.
      */
     fun track(): DataFeed<List<NodeInfo>, MapChange>
-
-    /**
-     * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable; if the party
-     * is anonymised and the well known party cannot be resolved, it is impossible ot identify the node and therefore this
-     * returns null.
-     *
-     * @param party party to retrieve node information for.
-     * @return the node for the identity, or null if the node could not be found. This does not necessarily mean there is
-     * no node for the party, only that this cache is unaware of it.
-     */
-    fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 
     /** Look up the node info for a legal name. */
     fun getNodeByLegalName(name: CordaX500Name): NodeInfo?

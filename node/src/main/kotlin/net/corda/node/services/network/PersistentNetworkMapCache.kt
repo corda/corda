@@ -11,7 +11,10 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.node.services.NodeLookup
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -23,16 +26,12 @@ import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
 import net.corda.node.services.api.NetworkCacheError
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
-import net.corda.node.utilities.AddOrRemove
-import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.node.utilities.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -41,15 +40,32 @@ import java.security.SignatureException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
+class NodeLookupImpl(private val identityService: IdentityService, private val networkMapCache: NetworkMapCache) : NodeLookup {
+    init {
+        networkMapCache.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
+        networkMapCache.changed.subscribe { mapChange ->
+            // TODO how should we handle network map removal
+            if (mapChange is MapChange.Added) {
+                mapChange.node.legalIdentitiesAndCerts.forEach {
+                    identityService.verifyAndRegisterIdentity(it)
+                }
+            }
+        }
+    }
+
+    override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
+        val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
+        return wellKnownParty?.let {
+            networkMapCache.getNodesByLegalIdentityKey(it.owningKey).singleOrNull()
+        }
+    }
+}
+
 /**
  * Extremely simple in-memory cache of the network map.
- *
- * @param serviceHub an optional service hub from which we'll take the identity service. We take a service hub rather
- * than the identity service directly, as this avoids problems with service start sequence (network map cache
- * and identity services depend on each other). Should always be provided except for unit test cases.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class PersistentNetworkMapCache(private val database: CordaPersistence) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<PersistentNetworkMapCache>()
     }
@@ -88,11 +104,11 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         }
 
     init {
-        serviceHub.database.transaction { loadFromDB() }
+        database.transaction { loadFromDB() }
     }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
-        val nodes = serviceHub.database.transaction { queryByIdentityKey(party.owningKey) }
+        val nodes = database.transaction { queryByIdentityKey(party.owningKey) }
         if (nodes.size == 1 && nodes[0].isLegalIdentity(party)) {
             return PartyInfo.SingleNode(party, nodes[0].addresses)
         }
@@ -106,17 +122,11 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         return null
     }
 
-    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = serviceHub.database.transaction { queryByLegalName(name).firstOrNull() }
+    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = database.transaction { queryByLegalName(name).firstOrNull() }
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
-            serviceHub.database.transaction { queryByIdentityKey(identityKey) }
-    override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
-        val wellKnownParty = serviceHub.identityService.wellKnownPartyFromAnonymous(party)
-        return wellKnownParty?.let {
-            getNodesByLegalIdentityKey(it.owningKey).singleOrNull()
-        }
-    }
+            database.transaction { queryByIdentityKey(identityKey) }
 
-    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = serviceHub.database.transaction { queryByAddress(address) }
+    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(address) }
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
@@ -160,12 +170,12 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         synchronized(_changed) {
             val previousNode = registeredNodes.put(node.legalIdentities.first().owningKey, node) // TODO hack... we left the first one as special one
             if (previousNode == null) {
-                serviceHub.database.transaction {
+                database.transaction {
                     updateInfoDB(node)
                     changePublisher.onNext(MapChange.Added(node))
                 }
             } else if (previousNode != node) {
-                serviceHub.database.transaction {
+                database.transaction {
                     updateInfoDB(node)
                     changePublisher.onNext(MapChange.Modified(node, previousNode))
                 }
@@ -176,7 +186,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override fun removeNode(node: NodeInfo) {
         synchronized(_changed) {
             registeredNodes.remove(node.legalIdentities.first().owningKey)
-            serviceHub.database.transaction {
+            database.transaction {
                 removeInfoDB(node)
                 changePublisher.onNext(MapChange.Removed(node))
             }
@@ -210,7 +220,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     }
 
     override val allNodes: List<NodeInfo>
-        get () = serviceHub.database.transaction {
+        get() = database.transaction {
             createSession {
                 getAllInfos(it).map { it.toNodeInfo() }
             }
@@ -271,8 +281,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     private fun updateInfoDB(nodeInfo: NodeInfo) {
         // TODO Temporary workaround to force isolated transaction (otherwise it causes race conditions when processing
         //  network map registration on network map node)
-        serviceHub.database.dataSource.connection.use {
-            val session = serviceHub.database.entityManagerFactory.withOptions().connection(it.apply {
+        database.dataSource.connection.use {
+            val session = database.entityManagerFactory.withOptions().connection(it.apply {
                 transactionIsolation = 1
             }).openSession()
             session.use {
@@ -350,7 +360,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     }
 
     override fun clearNetworkMapCache() {
-        serviceHub.database.transaction {
+        database.transaction {
             createSession {
                 val result = getAllInfos(it)
                 for (nodeInfo in result) it.remove(nodeInfo)
