@@ -25,7 +25,7 @@ class VerifierTests {
         var currentLedger = GeneratedLedger.empty
         val transactions = ArrayList<WireTransaction>()
         val random = SplittableRandom()
-        for (i in 0..number - 1) {
+        for (i in 0 until number) {
             val (tx, ledger) = currentLedger.transactionGenerator.generateOrFail(random)
             transactions.add(tx)
             currentLedger = ledger
@@ -35,7 +35,7 @@ class VerifierTests {
 
     @Test
     fun `single verifier works with requestor`() {
-        verifierDriver {
+        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
             val aliceFuture = startVerificationRequestor(ALICE.name)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
@@ -112,7 +112,10 @@ class VerifierTests {
 
     @Test
     fun `single verifier works with a node`() {
-        verifierDriver(networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true)) {
+        verifierDriver(
+            networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
+            extraCordappPackagesToScan = listOf("net.corda.finance.contracts")
+        ) {
             val aliceFuture = startNode(providedName = ALICE.name)
             val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)), verifierType = VerifierType.OutOfProcess)
             val alice = aliceFuture.get()

@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.CompositeKey
@@ -43,6 +44,7 @@ class BFTNotaryServiceTests {
 
     private val mockNet = MockNetwork()
     private val node = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+
     @After
     fun stopNodes() {
         mockNet.stopNodes()
@@ -75,7 +77,7 @@ class BFTNotaryServiceTests {
         val notary = node.services.getDefaultNotary()
         val f = node.run {
             val trivialTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             // Create a new consensus while the redundant replica is sleeping:
             services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
@@ -100,7 +102,7 @@ class BFTNotaryServiceTests {
         val notary = node.services.getDefaultNotary()
         node.run {
             val issueTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DUMMY_PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             database.transaction {
                 services.recordTransactions(issueTx)

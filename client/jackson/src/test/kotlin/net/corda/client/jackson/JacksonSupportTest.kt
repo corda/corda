@@ -1,26 +1,40 @@
 package net.corda.client.jackson
 
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Amount
+import net.corda.core.cordapp.CordappProvider
+import net.corda.core.crypto.*
 import net.corda.finance.USD
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MINI_CORP
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.junit.Before
 import org.junit.Test
 import java.util.*
+import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
 class JacksonSupportTest : TestDependencyInjectionBase() {
     companion object {
         val mapper = JacksonSupport.createNonRpcMapper()
+    }
+
+    private lateinit var services: ServiceHub
+    private lateinit var cordappProvider: CordappProvider
+
+    @Before
+    fun setup() {
+        services = mock()
+        cordappProvider = mock()
+        whenever(services.cordappProvider).thenReturn(cordappProvider)
     }
 
     @Test
@@ -57,8 +71,12 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
 
     @Test
     fun writeTransaction() {
+        val attachmentRef = SecureHash.randomSHA256()
+        whenever(cordappProvider.getContractAttachmentID(DUMMY_PROGRAM_ID))
+            .thenReturn(attachmentRef)
         fun makeDummyTx(): SignedTransaction {
-            val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1)).toWireTransaction()
+            val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))
+                .toWireTransaction(services)
             val signatures = TransactionSignature(
                     ByteArray(1),
                     ALICE_PUBKEY,

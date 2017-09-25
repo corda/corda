@@ -32,8 +32,8 @@ class TransactionGraphSearchTests : TestDependencyInjectionBase() {
      * @param signer signer for the two transactions and their commands.
      */
     fun buildTransactions(command: CommandData): GraphTransactionStorage {
-        val megaCorpServices = MockServices(MEGA_CORP_KEY)
-        val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+        val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), MEGA_CORP_KEY)
+        val notaryServices = MockServices(listOf("net.corda.testing.contracts"), DUMMY_NOTARY_KEY)
 
         val originBuilder = TransactionBuilder(DUMMY_NOTARY)
                 .addOutputState(DummyState(random31BitValue()), DUMMY_PROGRAM_ID)
