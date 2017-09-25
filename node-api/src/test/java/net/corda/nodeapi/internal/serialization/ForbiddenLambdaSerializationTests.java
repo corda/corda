@@ -39,6 +39,11 @@ public final class ForbiddenLambdaSerializationTests extends TestDependencyInjec
 
             assertThat(throwable).isNotNull();
             assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
+            if (ctx != SerializationContext.UseCase.RPCServer && ctx != SerializationContext.UseCase.Storage) {
+                assertThat(throwable).hasMessage(CordaClosureBlacklistSerializer.INSTANCE.getERROR_MESSAGE());
+            } else {
+                assertThat(throwable).hasMessageContaining("RPC not allowed to deserialise internal classes");
+            }
         });
     }
 
@@ -57,6 +62,12 @@ public final class ForbiddenLambdaSerializationTests extends TestDependencyInjec
 
             assertThat(throwable).isNotNull();
             assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
+            assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
+            if (ctx != SerializationContext.UseCase.RPCServer && ctx != SerializationContext.UseCase.Storage) {
+                assertThat(throwable).hasMessage(CordaClosureBlacklistSerializer.INSTANCE.getERROR_MESSAGE());
+            } else {
+                assertThat(throwable).hasMessageContaining("RPC not allowed to deserialise internal classes");
+            }
         });
     }
 
