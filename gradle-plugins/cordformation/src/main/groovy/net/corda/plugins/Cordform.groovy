@@ -136,7 +136,7 @@ class Cordform extends DefaultTask {
         }
         installRunScript()
         def networkMapNode = getNodeByName(networkMapNodeName)
-        if (networkMapNode == null){
+        if (networkMapNode == null) {
             nodes.each {
                 it.build()
             }

@@ -33,7 +33,6 @@ import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
-
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject

@@ -11,7 +11,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-
 import java.nio.charset.Charset
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -64,6 +63,3 @@ class NodeInfoSerializerTest : NodeBasedTest() {
         assertEquals(nodeInfo, nodeInfos.first())
     }
 }
-
-
-
