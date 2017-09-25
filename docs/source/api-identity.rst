@@ -15,40 +15,53 @@ Identities on the network are represented by ``AbstractParty``. There are two ty
 
 For example, in a transaction sent to your node as part of a chain of custody it is important you can convince yourself
 of the transaction's validity, but equally important that you don't learn anything about who was involved in that
-transaction. In these cases ``AnonymousParty`` should be used. In contrast, for internal processing where extended
-details of a party are required, the ``Party`` class should be used. The identity service provides functionality for
-resolving anonymous parties to full parties.
+transaction. In these cases ``AnonymousParty`` should be used by flows constructing when transaction states and commands.
+In contrast, for internal processing where extended details of a party are required, the ``Party`` class should be used
+instead. The identity service provides functionality for flows to resolve anonymous parties to full parties, dependent
+on the anonymous party's identity having been registered with the node earlier (typically this is handled by
+``SwapIdentitiesFlow`` or ``IdentitySyncFlow``, discussed below).
 
 Party names are held within the ``CordaX500Name`` data class, which enforces the structure of names within Corda, as
 well as ensuring a consistent rendering of the names in plain text.
 
-Where a party needs to be paired with proof of identity (generally only in directory information or for relaying
-confidential identities to counterparties), the ``PartyAndCertificate`` data class should be used.
+The support for both Party and AnonymousParty classes in Corda enables sophisticated selective disclosure of identity
+information. For example, it is possible to construct a Transaction using an AnonymousParty, so nobody can learn of your
+involvement by inspection of the transaction, yet prove to specific counterparts that this AnonymousParty actually is
+owned by your well known identity. This disclosure is achieved through the use of the PartyAndCertificate data class
+which can be propagated to those who need to know, and contains the Party's X.509 certificate path to provide proof of
+ownership by a well known identity.
+
+The PartyAndCertificate class is also used in the network map service to represent well known identities, in which
+scenario the certificate path proves its issuance by the Doorman service.
+
 
 Confidential Identities
 -----------------------
 
 Confidential identities are key pairs where the corresponding X.509 certificate is not made public, so that parties who
-are not involved in the transaction cannot identify its participants. Before constructing a new transaction the parties
-must generate and exchange new confidential identities, a process which is typically managed using ``SwapIdentitiesFlow``.
-These identities are then used when generating output states for the transaction, and for signing commands based on
-output keys.
+are not involved in the transaction cannot identify its participants. They are owned by a well known identity, which
+must sign the X.509 certificate. Before constructing a new transaction the involved parties must generate and send new
+confidential identities to each other, a process which managed using ``SwapIdentitiesFlow`` (discussed below). The
+public keys of these confidential identities are then used when generating output states and commands for the transaction.
 
 Where using outputs from a previous transaction in a new transaction, counterparties may need to know who the involved
-parties are, for example proving that a well known identity owned some cash which it is using to pay a debt, where
-the owning key belongs to a confidential identity. ``IdentitySyncFlow`` can be used to extract parties involved in a
-transaction and allow a counterparty to request the certificates for any it does not recognise. Note that the
-``CollectSignaturesFlow`` requires that the initiating node has signed the transaction, and as such all nodes providing
-signatures must recognise the signing key used by the initiating node as being either its well known identity or a
-confidential identity they have the certificate for.
+parties are. One example is in ``TwoPartyTradeFlow`` which delegates to ``CollectSignaturesFlow`` to gather certificates
+from both parties. ``CollectSignaturesFlow`` requires that a confidential identity of the initiating node has signed
+the transaction, and verifying this requires the receiving node has a copy of the confidential identity for the input
+state. ``IdentitySyncFlow`` can be used to synchronize the confidential identities we have the certificate paths for, in
+a single transaction, to another node.
+
+.. note:: ``CollectSignaturesFlow`` requires that the initiating node has signed the transaction, and as such all nodes
+   providing signatures must recognise the signing key used by the initiating node as being either its well known identity
+   or a confidential identity they have the certificate for.
 
 Swap identities flow
 ~~~~~~~~~~~~~~~~~~~~
 
 ``SwapIdentitiesFlow`` takes the identity of a counterparty in its constructor, and is typically run as a subflow of
-another flow. It returns a mapping from well known identities to confidential identities for the local and remote node;
-in future this will be extended to handle swapping identities with multiple counterparties. You can see an example of it
-being used in ``TwoPartyDealFlow.kt``:
+another flow. It returns a mapping from well known identities of the calling flow and our counterparty to the new
+confidential identities; in future this will be extended to handle swapping identities with multiple parties.
+You can see an example of it being used in ``TwoPartyDealFlow.kt``:
 
 .. container:: codeset
 
@@ -56,6 +69,21 @@ being used in ``TwoPartyDealFlow.kt``:
         :language: kotlin
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
+
+The swap identities flow goes through the following key steps:
+
+1. Generate a nonce value.
+2. Send nonce value to all counterparties, and receive their nonce values.
+3. Generate a new confidential identity from our well known identity.
+4. Create a data blob containing the new confidential identity, plus the hash of the nonce values.
+5. Sign the resulting data blob with the confidential identity's public key.
+6. Send the confidential identity, data blob signature to all counterparties, while receiving theirs.
+7. Verify the signatures to ensure that identities were generated by the involved set of parties.
+8. Verify the confidential identities are owned by the expected well known identities.
+9. Store the confidential identities and return them to the calling flow.
+
+This ensures not only that the confidential identity certificates are signed by the correct well known identity, but
+also that the confidential identity private key is held by the counterparty.
 
 Identity synchronization flow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -70,3 +98,11 @@ entities (counterparties) to require to know which well known identities those c
         :language: kotlin
         :start-after: DOCSTART 6
         :end-before: DOCEND 6
+
+The identity synchronization flow goes through the following key steps:
+
+1. Extract participant identities from all input and output states and remove any well known identities.
+2. For each counterparty node, send a list of the public keys of the confidential identities, and receive back a list
+   of those the counterparty needs the certificate path for.
+3. Verify the requested list of identities contains only confidential identities in the offered list, and abort otherwise.
+4. Send the requested confidential identities as ``PartyAndCertificate`` instances to the counterparty.
