@@ -6,7 +6,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.isDirectory
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -16,7 +15,7 @@ import java.io.File
 import java.nio.file.Path
 
 /**
- * Class containing the logic to serialize and de-serialize a [NodeInfo] to disk and reading them back.
+ * Class containing the logic to serialize and de-serialize a [NodeInfo] to disk and reading it back.
  */
 class NodeInfoSerializer {
 
@@ -63,19 +62,18 @@ class NodeInfoSerializer {
             logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
             return result
         }
-        var readFiles = 0
-        for (file in nodeInfoDirectory.toFile().walk().maxDepth(1)) if (file.isFile) {
-            try {
-                logger.info("Reading NodeInfo from file: $file")
-                val nodeInfo = loadFromFile(file)
-                result.add(nodeInfo)
-                readFiles++
-            } catch (e: Exception) {
-                logger.error("Exception parsing NodeInfo from file. $file: " + e)
-                e.printStackTrace()
+        for (file in nodeInfoDirectory.toFile().walk().maxDepth(1))
+            if (file.isFile) {
+                try {
+                    logger.info("Reading NodeInfo from file: $file")
+                    val nodeInfo = loadFromFile(file)
+                    result.add(nodeInfo)
+                } catch (e: Exception) {
+                    logger.error("Exception parsing NodeInfo from file. $file: " + e)
+                    e.printStackTrace()
+                }
             }
-        }
-        logger.info("Succesfully read $readFiles NodeInfo files.")
+        logger.info("Succesfully read ${result.size} NodeInfo files.")
         return result
     }
 
