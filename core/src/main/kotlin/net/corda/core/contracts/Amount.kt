@@ -40,11 +40,10 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
     companion object {
         /**
          * Build an Amount from a decimal representation. For example, with an input of "12.34 GBP",
-         * returns an amount with a quantity of "1234" tokens. The displayTokenSize as determined via
-         * getDisplayTokenSize is used to determine the conversion scaling.
-         * e.g. Bonds might be in nominal amounts of 100, currencies in 0.01 penny units.
+         * returns an amount with a quantity of "1234" tokens. The function [getDisplayTokenSize] is used to determine the
+         * conversion scaling, for example bonds might be in nominal amounts of 100, currencies in 0.01 penny units.
          *
-         * @see Amount<Currency>.toDecimal
+         * @see Amount.toDecimal
          * @throws ArithmeticException if the intermediate calculations cannot be converted to an unsigned 63-bit token amount.
          */
         @JvmStatic
@@ -249,8 +248,9 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
 
     /**
      * Convert a currency [Amount] to a decimal representation. For example, with an amount with a quantity
-     * of "1234" GBP, returns "12.34". The precise representation is controlled by the displayTokenSize,
-     * which determines the size of a single token and controls the trailing decimal places via it's scale property.
+     * of "1234" GBP, returns "12.34". The precise representation is controlled by the display token size (
+     * from [getDisplayTokenSize]), which determines the size of a single token and controls the trailing decimal
+     * places via its scale property.
      *
      * @see Amount.fromDecimal
      */
