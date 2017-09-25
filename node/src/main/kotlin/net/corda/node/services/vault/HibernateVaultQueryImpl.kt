@@ -41,18 +41,18 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
      * Maintain a list of contract state interfaces to concrete types stored in the vault
      * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
      */
-    private val contractTypeMappings = bootstrapContractStateTypes()
+    private val contractStateTypeMappings = bootstrapContractStateTypes()
 
     init {
         vault.rawUpdates.subscribe { update ->
             update.produced.forEach {
                 val concreteType = it.state.data.javaClass
                 log.trace { "State update of type: $concreteType" }
-                val seen = contractTypeMappings.any { it.value.contains(concreteType.name) }
+                val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
                 if (!seen) {
                     val contractInterfaces = deriveContractInterfaces(concreteType)
                     contractInterfaces.map {
-                        val contractInterface = contractTypeMappings.getOrPut(it.name, { mutableSetOf() })
+                        val contractInterface = contractStateTypeMappings.getOrPut(it.name, { mutableSetOf() })
                         contractInterface.add(concreteType.name)
                     }
                 }
@@ -84,7 +84,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
             val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
 
             // TODO: revisit (use single instance of parser for all queries)
-            val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
+            val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
             try {
                 // parse criteria and build where predicates
