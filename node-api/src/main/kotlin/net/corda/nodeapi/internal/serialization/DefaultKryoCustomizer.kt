@@ -116,8 +116,6 @@ object DefaultKryoCustomizer {
             register(PrivacySalt::class.java, PrivacySaltSerializer)
 
             kryo.register(java.lang.invoke.SerializedLambda::class.java)
-//            register(java.lang.invoke.SerializedLambda::class.java, ClosureSerializer())
-            // TODO sollecitom - check
             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
 
             val customization = KryoSerializationCustomization(this)
