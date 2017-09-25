@@ -2,7 +2,6 @@ package net.corda.services.messaging
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
-import net.corda.node.internal.certificates.devCAKeys
 import net.corda.node.utilities.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
@@ -19,6 +18,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Test
 import java.nio.file.Files
 
@@ -92,8 +92,13 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                 if (!trustStoreFile.exists()) {
                     javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStoreFile)
                 }
-                val rootCACert = devCAKeys.getCordaRootX509Certificate().toX509CertHolder()
-                val intermediateCA = devCAKeys.getCordaIntermediateCertificateAndKeyPair("cordacadevkeypass")
+
+                val caKeyStore = loadKeyStore(
+                        javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"),
+                        "cordacadevpass")
+
+                val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).toX509CertHolder()
+                val intermediateCA = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
                 val clientKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
 
                 // Set name constrain to the legal name.

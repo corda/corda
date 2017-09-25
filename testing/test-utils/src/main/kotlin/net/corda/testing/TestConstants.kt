@@ -10,12 +10,15 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX509CertHolder
-import net.corda.node.internal.certificates.devCAKeys
 import net.corda.node.utilities.CertificateAndKeyPair
+import net.corda.node.utilities.X509Utilities
+import net.corda.node.utilities.getCertificateAndKeyPair
+import net.corda.node.utilities.loadKeyStore
 import org.bouncycastle.cert.X509CertificateHolder
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.cert.Certificate
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
@@ -66,11 +69,13 @@ val DUMMY_REGULATOR: Party get() = Party(CordaX500Name(organisation = "Regulator
 
 val DEV_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
-    devCAKeys.getCordaIntermediateCertificateAndKeyPair("cordacadevkeypass")
+    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+    caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
 }
 val DEV_TRUST_ROOT: X509CertificateHolder by lazy {
     // TODO: Should be identity scheme
-    devCAKeys.getCordaIntermediateCertificateChain()!!.last().toX509CertHolder()
+    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+    caKeyStore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA).last().toX509CertHolder()
 }
 
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
