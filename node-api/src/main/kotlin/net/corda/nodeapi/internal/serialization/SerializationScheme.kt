@@ -8,6 +8,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import net.corda.core.contracts.Attachment
@@ -167,6 +168,8 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                             field.set(this, classResolver)
                             DefaultKryoCustomizer.customize(this)
                             addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+                            register(java.lang.invoke.SerializedLambda::class.java)
+                            register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
                             classLoader = it.second
                         }
                     }.build()

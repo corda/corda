@@ -15,7 +15,7 @@ import java.util.concurrent.Callable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
-public final class LambdaSerializationTest extends TestDependencyInjectionBase {
+public final class LambdaRPCServerSerializationTest extends TestDependencyInjectionBase {
 
     private SerializationFactory factory;
     private SerializationContext context;
@@ -23,19 +23,19 @@ public final class LambdaSerializationTest extends TestDependencyInjectionBase {
     @Before
     public void setup() {
         factory = SerializationDefaults.INSTANCE.getSERIALIZATION_FACTORY();
-        context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint);
+        context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.RPCServer);
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    public final void serialization_works_for_serializable_java_lambdas() throws Exception {
+    public final void serialization_fails_for_serializable_java_lambdas() throws Exception {
         String value = "Hey";
         Callable<String> target = (Callable<String> & Serializable) () -> value;
 
-        SerializedBytes<Callable<String>> serialized = serialize(target);
-        Callable<String> deserialized = deserialize(serialized, Callable.class);
+        Throwable throwable = catchThrowable(() -> serialize(target));
 
-        assertThat(deserialized.call()).isEqualTo(value);
+        assertThat(throwable).isNotNull();
+        assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -48,14 +48,9 @@ public final class LambdaSerializationTest extends TestDependencyInjectionBase {
 
         assertThat(throwable).isNotNull();
         assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
-        assertThat(throwable).hasMessage(DefaultKryoCustomizer.CordaClosureSerializer.INSTANCE.getERROR_MESSAGE());
     }
 
     private <T> SerializedBytes<T> serialize(final T target) {
         return factory.serialize(target, context);
-    }
-
-    private <T> T deserialize(final SerializedBytes<? extends T> bytes, final Class<T> type) {
-        return factory.deserialize(bytes, type, context);
     }
 }
