@@ -1,8 +1,8 @@
-package net.corda.core.internal
+@file:JvmName("IdentityUtils")
 
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
+package net.corda.core.identity
+
+import net.corda.core.internal.toMultiMap
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import java.security.PublicKey
@@ -68,7 +68,7 @@ fun groupAbstractPartyByWellKnownParty(serviceHub: ServiceHub, parties: Collecti
  *
  * @return a new copy of the map, with he well known [Party] for this node removed.
  */
-fun <T> excludeMe(serviceHub: ServiceHub, map: Map<Party, T>): Map<Party, T> = map.filterKeys { !serviceHub.myInfo.isLegalIdentity(it) }
+fun <T> excludeHostNode(serviceHub: ServiceHub, map: Map<Party, T>): Map<Party, T> = map.filterKeys { !serviceHub.myInfo.isLegalIdentity(it) }
 
 /**
  * Remove the [Party] associated with the notary of a [SignedTransaction] from the a map of [Party]s.  It is a no-op

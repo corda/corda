@@ -3,7 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
-import net.corda.core.internal.groupAbstractPartyByWellKnownParty
+import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
