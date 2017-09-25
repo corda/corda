@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
+import net.corda.core.internal.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -92,7 +93,7 @@ class FinalityFlow(val transaction: SignedTransaction,
 
     private fun getPartiesToSend(ltx: LedgerTransaction): Set<Party> {
         val participants = ltx.outputStates.flatMap { it.participants } + ltx.inputStates.flatMap { it.participants }
-        return serviceHub.groupAbstractPartyByWellKnownParty(participants).keys + extraRecipients
+        return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys + extraRecipients
     }
 
     private fun verifyTx(): LedgerTransaction {

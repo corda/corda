@@ -7,6 +7,8 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.excludeMe
+import net.corda.core.internal.groupAbstractPartyByWellKnownParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -90,7 +92,7 @@ abstract class AbstractStateReplacementFlow {
          * Initiate sessions with parties we want signatures from.
          */
         open fun getParticipantSessions(): List<Pair<FlowSession, List<AbstractParty>>> {
-            return serviceHub.excludeMe(serviceHub.groupAbstractPartyByWellKnownParty(originalState.state.data.participants)).map { initiateFlow(it.key) to it.value }
+            return excludeMe(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, originalState.state.data.participants)).map { initiateFlow(it.key) to it.value }
         }
 
         @Suspendable

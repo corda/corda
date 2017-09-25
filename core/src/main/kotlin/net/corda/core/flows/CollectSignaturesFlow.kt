@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
+import net.corda.core.internal.groupPublicKeysByWellKnownParty
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -102,7 +103,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
-        val partyToKeysMap = serviceHub.groupPublicKeysByWellKnownParty(unsigned)
+        val partyToKeysMap = groupPublicKeysByWellKnownParty(serviceHub, unsigned)
         // Check that we have a session for all parties.  No more, no less.
         require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeysMap.keys) {
             "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
@@ -241,7 +242,7 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
-        val signingWellKnownIdentities = serviceHub.groupPublicKeysByWellKnownParty(stx.sigs.map(TransactionSignature::by))
+        val signingWellKnownIdentities = groupPublicKeysByWellKnownParty(serviceHub, stx.sigs.map(TransactionSignature::by))
         require(otherSideSession.counterparty in signingWellKnownIdentities) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${otherSideSession}"
         }
