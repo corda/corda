@@ -28,10 +28,11 @@ confidential identities to counterparties), the ``PartyAndCertificate`` data cla
 Confidential Identities
 -----------------------
 
-Confidential identities are key pairs where the corresponding X.509 certificate is not made public. Before constructing
-a new transaction the parties must generate and exchange new confidential identities, a process which is typically
-managed using ``SwapIdentitiesFlow``. These identities are then used when generating output states for the transaction,
-and for signing commands based on output keys.
+Confidential identities are key pairs where the corresponding X.509 certificate is not made public, so that parties who
+are not involved in the transaction cannot identify its participants. Before constructing a new transaction the parties
+must generate and exchange new confidential identities, a process which is typically managed using ``SwapIdentitiesFlow``.
+These identities are then used when generating output states for the transaction, and for signing commands based on
+output keys.
 
 Where using outputs from a previous transaction in a new transaction, counterparties may need to know who the involved
 parties are, for example proving that a well known identity owned some cash which it is using to pay a debt, where
