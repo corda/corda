@@ -5,17 +5,55 @@ Here are release notes for each snapshot release from M9 onwards.
 
 Unreleased
 ----------
+
 Release 1.0
 -----------
+This release represents the first version of Corda to provide API stability for Corda Application developers.
 
-* Flow communications API has been redesigned around session based communication.
+The public API for Corda core is now stable and will only evolve to include new features.
+Corda applications will continue to work against this API with each subsequent release of Corda.
+Additionally, it may be necessary to recompile applications against future versions of the API until we begin offering
+`ABI (Application Binary Interface) <https://en.wikipedia.org/wiki/Application_binary_interface>`_ stability as well.
+We plan to do this soon after this release of Corda.
 
-* Merged handling of well known and confidential identities in the identity service.
+As of Corda 1.0, the following modules export public API that we promise to maintain backwards compatibility for,
+unless an incompatible change is required for security reasons:
+
+ * core
+ * client-rpc
+ * client-jackson
+
+Please read :doc:`api-index` for complete details.
+
+Of significant importance is the API re-design work completed within the Flow framework communications API, which has
+been redesigned around session based communication. All shipped Corda flows have been upgraded to use the new `FlowSession`.
+
+In addition to API stability, this release encompasses a number of major functional improvements, to include:
+
+* Contract constraints
+  Provides a means by which contract-code-containing attachments can be used with a given state.
+  Automatically attach the JAR while building a TX, then store in the attachment store.
+  When loading the attachment via the attachment classloader the constraints of the state the constraint would need to
+  be checked against the list of attachment hashes provided and the attachment rejected if the constraints are not matched.
+
+* Improvements to core transaction data structures to support enhanced sub-component visibility/privacy by providing a
+  new `FilterTransaction`, backwards compatibility using component groups, and additional signature metadata.
+
+* Full support for confidential identities
+  This includes rework and improvements to the identity service to handle both `well known` and `confidential` identities.
+  This work ships in an experimental module in v1 called `confidential-identities`. API stabilisation of confidential
+  identities will improve as we make the integration of this privacy feature into applications even easier for developers.
+
+* Re-designed network map service
+
+The following items have been removed from Corda:
 
 * Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node.
 
 * Remove the legacy web front end from the SIMM demo. This was a very early sample, and does not reflect the quality of
   current Corda code. It may be replaced with a new front end based on a more recent version of AngularJS in a later release.
+
+Finally, please note that the 1.0 release has not yet been security audited.
 
 Milestone 14
 ------------
