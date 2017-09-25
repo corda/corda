@@ -284,11 +284,11 @@ object FlowCookbook {
             // We can also define a time window as an ``Instant`` +/- a time
             // tolerance (e.g. 30 seconds):
             // DOCSTART 42
-            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(Instant.now(), 30.seconds)
+            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(serviceHub.clock.instant(), 30.seconds)
             // DOCEND 42
             // Or as a start-time plus a duration:
             // DOCSTART 43
-            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(Instant.now(), 30.seconds)
+            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(serviceHub.clock.instant(), 30.seconds)
             // DOCEND 43
 
             /**-----------------------

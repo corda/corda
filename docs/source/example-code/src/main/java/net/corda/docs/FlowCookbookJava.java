@@ -304,11 +304,11 @@ public class FlowCookbookJava {
             // We can also define a time window as an ``Instant`` +/- a time
             // tolerance (e.g. 30 seconds):
             // DOCSTART 42
-            TimeWindow ourTimeWindow2 = TimeWindow.withTolerance(Instant.now(), Duration.ofSeconds(30));
+            TimeWindow ourTimeWindow2 = TimeWindow.withTolerance(getServiceHub().getClock().instant(), Duration.ofSeconds(30));
             // DOCEND 42
             // Or as a start-time plus a duration:
             // DOCSTART 43
-            TimeWindow ourTimeWindow3 = TimeWindow.fromStartAndDuration(Instant.now(), Duration.ofSeconds(30));
+            TimeWindow ourTimeWindow3 = TimeWindow.fromStartAndDuration(getServiceHub().getClock().instant(), Duration.ofSeconds(30));
             // DOCEND 43
 
             /*------------------------
