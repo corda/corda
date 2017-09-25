@@ -332,7 +332,7 @@ public class FlowCookbookJava {
             txBuilder.withItems(
                     // Inputs, as ``StateAndRef``s that reference to the outputs of previous transactions
                     ourStateAndRef,
-                    // Outputs, as ``StateAndContracts``s
+                    // Outputs, as ``StateAndContract``s
                     ourOutput,
                     // Commands, as ``Command``s
                     ourCommand,
