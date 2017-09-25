@@ -33,7 +33,7 @@ interface VaultQueryService {
     fun <T : ContractState> _queryBy(criteria: QueryCriteria,
                                      paging: PageSpecification,
                                      sorting: Sort,
-                                     contractType: Class<out T>): Vault.Page<T>
+                                     contractStateType: Class<out T>): Vault.Page<T>
 
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
@@ -51,49 +51,49 @@ interface VaultQueryService {
     fun <T : ContractState> _trackBy(criteria: QueryCriteria,
                                      paging: PageSpecification,
                                      sorting: Sort,
-                                     contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>>
+                                     contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>>
     // DOCEND VaultQueryAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
     // Java Helpers
-    fun <T : ContractState> queryBy(contractType: Class<out T>): Vault.Page<T> {
-        return _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> queryBy(contractStateType: Class<out T>): Vault.Page<T> {
+        return _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
 
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria): Vault.Page<T> {
-        return _queryBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> queryBy(contractStateType: Class<out T>, criteria: QueryCriteria): Vault.Page<T> {
+        return _queryBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
     }
 
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
-        return _queryBy(criteria, paging, Sort(emptySet()), contractType)
+    fun <T : ContractState> queryBy(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
+        return _queryBy(criteria, paging, Sort(emptySet()), contractStateType)
     }
 
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
-        return _queryBy(criteria, PageSpecification(), sorting, contractType)
+    fun <T : ContractState> queryBy(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
+        return _queryBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
-        return _queryBy(criteria, paging, sorting, contractType)
+    fun <T : ContractState> queryBy(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
+        return _queryBy(criteria, paging, sorting, contractStateType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return _trackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> trackBy(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return _trackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return _trackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> trackBy(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return _trackBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return _trackBy(criteria, paging, Sort(emptySet()), contractType)
+    fun <T : ContractState> trackBy(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return _trackBy(criteria, paging, Sort(emptySet()), contractStateType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return _trackBy(criteria, PageSpecification(), sorting, contractType)
+    fun <T : ContractState> trackBy(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return _trackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return _trackBy(criteria, paging, sorting, contractType)
+    fun <T : ContractState> trackBy(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return _trackBy(criteria, paging, sorting, contractStateType)
     }
 }
 

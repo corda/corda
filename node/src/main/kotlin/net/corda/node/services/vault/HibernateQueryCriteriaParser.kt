@@ -21,8 +21,8 @@ import javax.persistence.Tuple
 import javax.persistence.criteria.*
 
 
-class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
-                                   val contractTypeMappings: Map<String, Set<String>>,
+class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractState>,
+                                   val contractStateTypeMappings: Map<String, Set<String>>,
                                    val criteriaBuilder: CriteriaBuilder,
                                    val criteriaQuery: CriteriaQuery<Tuple>,
                                    val vaultStates: Root<VaultSchemaV1.VaultStates>) : IQueryCriteriaParser {
@@ -90,11 +90,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         return predicateSet
     }
 
-    private fun deriveContractTypes(contractStateTypes: Set<Class<out ContractState>>? = null): Set<String> {
-        log.trace { "Contract types to be derived: primary ($contractType), additional ($contractStateTypes)" }
-        val combinedContractStateTypes = contractStateTypes?.plus(contractType) ?: setOf(contractType)
+    private fun deriveContractStateTypes(contractStateTypes: Set<Class<out ContractState>>? = null): Set<String> {
+        log.trace { "Contract types to be derived: primary ($contractStateType), additional ($contractStateTypes)" }
+        val combinedContractStateTypes = contractStateTypes?.plus(contractStateType) ?: setOf(contractStateType)
         combinedContractStateTypes.filter { it.name != ContractState::class.java.name }.let {
-            val interfaces = it.flatMap { contractTypeMappings[it.name] ?: setOf(it.name) }
+            val interfaces = it.flatMap { contractStateTypeMappings[it.name] ?: setOf(it.name) }
             val concrete = it.filter { !it.isInterface }.map { it.name }
             log.trace { "Derived contract types: ${interfaces.union(concrete)}" }
             return interfaces.union(concrete)
@@ -395,17 +395,17 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
 
         // contract state types
-        val contractTypes = deriveContractTypes(criteria.contractStateTypes)
-        if (contractTypes.isNotEmpty()) {
+        val contractStateTypes = deriveContractStateTypes(criteria.contractStateTypes)
+        if (contractStateTypes.isNotEmpty()) {
             val predicateID = Pair(VaultSchemaV1.VaultStates::contractStateClassName.name, CollectionOperator.IN)
             if (commonPredicates.containsKey(predicateID)) {
                 val existingTypes = (commonPredicates[predicateID]!!.expressions[0] as InPredicate<*>).values.map { (it as LiteralExpression).literal }.toSet()
-                if (existingTypes != contractTypes) {
-                    log.warn("Enriching previous attribute [${VaultSchemaV1.VaultStates::contractStateClassName.name}] values [$existingTypes] with [$contractTypes]")
-                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractTypes.plus(existingTypes))))
+                if (existingTypes != contractStateTypes) {
+                    log.warn("Enriching previous attribute [${VaultSchemaV1.VaultStates::contractStateClassName.name}] values [$existingTypes] with [$contractStateTypes]")
+                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes.plus(existingTypes))))
                 }
             } else {
-                commonPredicates.put(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractTypes)))
+                commonPredicates.put(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes)))
             }
         }
 

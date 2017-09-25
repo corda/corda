@@ -41,18 +41,18 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
      * Maintain a list of contract state interfaces to concrete types stored in the vault
      * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
      */
-    private val contractTypeMappings = bootstrapContractStateTypes()
+    private val contractStateTypeMappings = bootstrapContractStateTypes()
 
     init {
         vault.rawUpdates.subscribe { update ->
             update.produced.forEach {
                 val concreteType = it.state.data.javaClass
                 log.trace { "State update of type: $concreteType" }
-                val seen = contractTypeMappings.any { it.value.contains(concreteType.name) }
+                val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
                 if (!seen) {
                     val contractInterfaces = deriveContractInterfaces(concreteType)
                     contractInterfaces.map {
-                        val contractInterface = contractTypeMappings.getOrPut(it.name, { mutableSetOf() })
+                        val contractInterface = contractStateTypeMappings.getOrPut(it.name, { mutableSetOf() })
                         contractInterface.add(concreteType.name)
                     }
                 }
@@ -61,8 +61,8 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
     }
 
     @Throws(VaultQueryException::class)
-    override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): Vault.Page<T> {
-        log.info("Vault Query for contract type: $contractType, criteria: $criteria, pagination: $paging, sorting: $sorting")
+    override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
+        log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
 
         // refresh to include any schemas registered after initial VQ service initialisation
         sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
@@ -73,7 +73,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
         if (!paging.isDefault) {
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
             val countCriteria = VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
-            val results = queryBy(contractType, criteria.and(countCriteria))
+            val results = queryBy(contractStateType, criteria.and(countCriteria))
             totalStates = results.otherResults[0] as Long
         }
 
@@ -84,7 +84,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
             val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
 
             // TODO: revisit (use single instance of parser for all queries)
-            val criteriaParser = HibernateQueryCriteriaParser(contractType, contractTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
+            val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
             try {
                 // parse criteria and build where predicates
@@ -150,11 +150,11 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
     private val mutex = ThreadBox({ vault.updatesPublisher })
 
     @Throws(VaultQueryException::class)
-    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
-            val snapshotResults = _queryBy(criteria, paging, sorting, contractType)
+            val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
             @Suppress("UNCHECKED_CAST")
-            val updates = vault.updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
+            val updates = vault.updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
             DataFeed(snapshotResults, updates)
         }
     }
