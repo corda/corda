@@ -9,7 +9,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.StateLoaderImpl
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
@@ -29,7 +28,6 @@ import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
-import net.corda.testing.node.MockTransactionStorage
 import net.corda.testing.node.TestClock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

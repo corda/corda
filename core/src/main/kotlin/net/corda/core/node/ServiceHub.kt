@@ -28,16 +28,6 @@ interface StateLoader {
     fun loadState(stateRef: StateRef): TransactionState<*>
 }
 
-class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : StateLoader {
-    @Throws(TransactionResolutionException::class)
-    override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return if (stx.isNotaryChangeTransaction()) {
-            stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
-        } else stx.tx.outputs[stateRef.index]
-    }
-}
-
 /**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
  * forms ready for verification.

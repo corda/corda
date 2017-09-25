@@ -6,10 +6,10 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.StateLoader
-import net.corda.core.node.StateLoaderImpl
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
