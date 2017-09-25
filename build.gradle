@@ -146,10 +146,16 @@ allprojects {
         maven { url 'https://jitpack.io' }
     }
 
-    configurations.compile {
-        // We want to use SLF4J's version of these bindings: jcl-over-slf4j
-        // Remove any transitive dependency on Apache's version.
-        exclude group: 'commons-logging', module: 'commons-logging'
+    configurations {
+        compile {
+            // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+            // Remove any transitive dependency on Apache's version.
+            exclude group: 'commons-logging', module: 'commons-logging'
+        }
+        runtime {
+            // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
+            exclude module: 'isolated'
+        }
     }
 }
 

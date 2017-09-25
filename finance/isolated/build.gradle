@@ -2,5 +2,5 @@ apply plugin: 'kotlin'
 apply plugin: CanonicalizerPlugin
 
 dependencies {
-    compile project(':core')
+    compileOnly project(':core')
 }
