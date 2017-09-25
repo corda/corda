@@ -193,11 +193,6 @@ Corda Types
 ```````````
 
 Classes and interfaces in the Corda codebase annotated with ``@CordaSerializable`` are of course supported.
-The following un-annotated corda types are supported.
-
-::
-
-    net.corda.core.identity.PartyAndCertificate
 
 All Corda exceptions that are expected to be serialized inherit from ``CordaThrowable`` via either ``CordaException``, for
 checked exceptions, or ``CordaRuntimeException``, for unchecked exceptions.  Any ``Throwable`` that is serialized but does
