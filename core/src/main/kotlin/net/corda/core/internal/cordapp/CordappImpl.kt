@@ -15,6 +15,8 @@ data class CordappImpl(
         override val plugins: List<CordaPluginRegistry>,
         override val customSchemas: Set<MappedSchema>,
         override val jarPath: URL) : Cordapp {
+    override val name: String = jarPath.file.removeSuffix(".jar")
+
     /**
      * An exhaustive list of all classes relevant to the node within this CorDapp
      *
