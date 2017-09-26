@@ -61,6 +61,8 @@ Milestone 14
 
 * MockNetwork is no longer resolvable.
   A new test driver module dependency needs to be including in your project: `corda-node-driver`.
+  To continue using the mock network for testing, replace
+  `testCompile "net.corda:corda-test-utils:$corda_release_version"` with `testCompile "net.corda:corda-node-driver:$corda_release_version"`
 
 * Overrides nothing: isRelevant in LinearState.
   Removed the concept of relevancy from ``LinearState``. The ``ContractState``'s relevancy to the vault can be determined
@@ -80,6 +82,28 @@ Milestone 14
 
 * Missing flow import.
   import net.corda.core.flows.ResolveTransactionsFlow -> import net.corda.core.internal.ResolveTransactionsFlow
+
+* `FinalityFlow` now returns a single `SignedTransaction`, instead of a `List<SignedTransaction>`
+
+* `getAnyNotary` is gone - use `serviceHub.networkMapCache.notaryIdentities[0]` instead
+
+* serviceHub.myInfo.legalIdentity no longer exists, use the ourIdentity property of the flow instead.
+  `FlowLogic.ourIdentity` has been introduced as a shortcut for retrieving our identity in a flow
+
+* `args[0].parseNetworkHostAndPort()` becomes `NetworkHostAndPort.parse(args[0])`
+
+* `ServiceHub.networkMapUpdates` is replaced by `ServiceHub.networkMapFeed`
+
+* `ServiceHub.partyFromX500Name` is replaced by `ServiceHub.wellKnownPartyFromX500Name`
+
+* txBuilder.toLedgerTransaction() now requires a serviceHub parameter.
+  Used by the new Contract Constraints functionality to validate and resolve attachments.
+
+* Moved ``finance`` gradle project files into a ``net.corda.finance`` package namespace.
+  This may require adjusting imports of Cash flow references and also of ``StartFlow`` permission in ``gradle.build`` files.
+  Associated flows (cash, two party trade, two part deal) must now be imported from this package.
+
+* There is no longer a `NodeInfo.advertisedServices` property.
 
 Milestone 13
 ------------
@@ -110,12 +134,14 @@ Milestone 13
   For testing purposes, use the `SchemaService` method to register new custom schemas:
     `services.schemaService.registerCustomSchemas(setOf(YoSchemaV1))`
 
-* `X500Name` now becomes `CordaX500Name` with a predefined set of mandatory (organisation, locality, country)
+* Party names are now `CordaX500Name`, not `X500Name`
+  `CordaX500Name` specifies a predefined set of mandatory (organisation, locality, country)
   and optional fields (commonName, organisationUnit, state) with validation checking.
   Use new builder CordaX500Name.build(X500Name(target)) or, preferably, explicitly define X500Name parameters using
   `CordaX500Name` constructor.
 
 * MockNetwork Testing.
+  Mock nodes in node tests are now of type `StartedNode<MockNode>`, rather than `MockNode`
   MockNetwork now returns a BasketOf(<StartedNode<MockNode>>)
   Must call internals on StartedNode to get MockNode:
     a = nodes.partyNodes[0].internals
@@ -124,6 +150,10 @@ Milestone 13
 * Host and Port change.
   Use string helper function `parseNetworkHostAndPort()` to parse a URL on startup.
    eg. val hostAndPort = args[0].parseNetworkHostAndPort()`
+
+* The node driver parameters for starting a node have been reordered, and the node’s name needs to be given as an
+  `CordaX500Name`, instead of using `getX509Name`
+
 
 Milestone 12 - First Public Beta
 --------------------------------
@@ -150,4 +180,5 @@ Milestone 12 - First Public Beta
         net.corda.finance.flows.CashExitFlow
 
 * Transaction building
+  You no longer need to specify the type of a `TransactionBuilder` as `TransactionType.General`
   `TransactionType.General.Builder(notary)` becomes `TransactionBuilder(notary)`
