@@ -12,12 +12,9 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.abbreviate
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.staticField
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
@@ -281,7 +278,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     // TODO Dummy implementation of access to application specific audit logging
-    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>): Unit {
+    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
         val flowAuditEvent = FlowAppAuditEvent(
                 serviceHub.clock.instant(),
                 flowInitiator,
@@ -430,8 +427,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val session = receiveRequest.session
         val receiveType = receiveRequest.receiveType
         if (receiveType.isInstance(message)) {
-            @Suppress("UNCHECKED_CAST")
-            return this as ReceivedSessionMessage<M>
+            return uncheckedCast(this)
         } else if (message is SessionEnd) {
             openSessions.values.remove(session)
             if (message is ErrorSessionEnd) {
@@ -519,7 +515,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 }
 
-@Suppress("UNCHECKED_CAST")
 val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out FlowLogic<*>>> get() {
     var current: Class<*> = this
     var found: Pair<Int, Class<out FlowLogic<*>>>? = null
@@ -528,7 +523,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
         if (annotation != null) {
             if (found != null) throw IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated once")
             require(annotation.version > 0) { "Flow versions have to be greater or equal to 1" }
-            found = annotation.version to (current as Class<out FlowLogic<*>>)
+            found = annotation.version to uncheckedCast(current)
         }
         current = current.superclass
             ?: return found

@@ -5,7 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -46,7 +46,6 @@ object FixingFlow {
 
         @Suspendable
         override fun assembleSharedTX(handshake: TwoPartyDealFlow.Handshake<FixingSession>): Triple<TransactionBuilder, List<PublicKey>, List<TransactionSignature>> {
-            @Suppress("UNCHECKED_CAST")
             val fixOf = deal.nextFixingOf()!!
 
             // TODO Do we need/want to substitute in new public keys for the Parties?
@@ -91,9 +90,8 @@ object FixingFlow {
     class Floater(override val otherSideSession: FlowSession,
                   override val payload: FixingSession,
                   override val progressTracker: ProgressTracker = TwoPartyDealFlow.Primary.tracker()) : TwoPartyDealFlow.Primary() {
-        @Suppress("UNCHECKED_CAST")
         private val dealToFix: StateAndRef<FixableDealState> by transient {
-            val state = serviceHub.loadState(payload.ref) as TransactionState<FixableDealState>
+            val state: TransactionState<FixableDealState> = uncheckedCast(serviceHub.loadState(payload.ref))
             StateAndRef(state, payload.ref)
         }
 

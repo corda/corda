@@ -1,5 +1,6 @@
 package net.corda.testing
 
+import net.corda.core.internal.uncheckedCast
 import kotlin.reflect.KCallable
 import kotlin.reflect.jvm.reflect
 
@@ -9,18 +10,14 @@ import kotlin.reflect.jvm.reflect
  * different combinations of parameters.
  */
 
-@Suppress("UNCHECKED_CAST")
-fun <A, R> measure(a: Iterable<A>, f: (A) -> R) =
-        measure(listOf(a), f.reflect()!!) { (f as ((Any?)->R))(it[0]) }
-@Suppress("UNCHECKED_CAST")
-fun <A, B, R> measure(a: Iterable<A>, b: Iterable<B>, f: (A, B) -> R) =
-        measure(listOf(a, b), f.reflect()!!) { (f as ((Any?,Any?)->R))(it[0], it[1]) }
-@Suppress("UNCHECKED_CAST")
-fun <A, B, C, R> measure(a: Iterable<A>, b: Iterable<B>, c: Iterable<C>, f: (A, B, C) -> R) =
-        measure(listOf(a, b, c), f.reflect()!!) { (f as ((Any?,Any?,Any?)->R))(it[0], it[1], it[2]) }
-@Suppress("UNCHECKED_CAST")
-fun <A, B, C, D, R> measure(a: Iterable<A>, b: Iterable<B>, c: Iterable<C>, d: Iterable<D>, f: (A, B, C, D) -> R) =
-        measure(listOf(a, b, c, d), f.reflect()!!) { (f as ((Any?,Any?,Any?,Any?)->R))(it[0], it[1], it[2], it[3]) }
+fun <A : Any, R> measure(a: Iterable<A>, f: (A) -> R) =
+        measure(listOf(a), f.reflect()!!) { f(uncheckedCast(it[0])) }
+fun <A : Any, B : Any, R> measure(a: Iterable<A>, b: Iterable<B>, f: (A, B) -> R) =
+        measure(listOf(a, b), f.reflect()!!) { f(uncheckedCast(it[0]), uncheckedCast(it[1])) }
+fun <A : Any, B : Any, C : Any, R> measure(a: Iterable<A>, b: Iterable<B>, c: Iterable<C>, f: (A, B, C) -> R) =
+        measure(listOf(a, b, c), f.reflect()!!) { f(uncheckedCast(it[0]), uncheckedCast(it[1]), uncheckedCast(it[2])) }
+fun <A : Any, B : Any, C : Any, D : Any, R> measure(a: Iterable<A>, b: Iterable<B>, c: Iterable<C>, d: Iterable<D>, f: (A, B, C, D) -> R) =
+        measure(listOf(a, b, c, d), f.reflect()!!) { f(uncheckedCast(it[0]), uncheckedCast(it[1]), uncheckedCast(it[2]), uncheckedCast(it[3])) }
 
 private fun <R> measure(paramIterables: List<Iterable<Any?>>, kCallable: KCallable<R>, call: (Array<Any?>) -> R): Iterable<MeasureResult<R>> {
     val kParameters = kCallable.parameters

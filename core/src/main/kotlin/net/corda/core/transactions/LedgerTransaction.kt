@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 import java.util.function.Predicate
@@ -52,8 +53,7 @@ data class LedgerTransaction(
      * @param index The index into the inputs.
      * @return The [StateAndRef]
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> inRef(index: Int): StateAndRef<T> = inputs[index] as StateAndRef<T>
+    fun <T : ContractState> inRef(index: Int): StateAndRef<T> = uncheckedCast(inputs[index])
 
     /**
      * Verifies this transaction and runs contract code. At this stage it is assumed that signatures have already been verified.
@@ -230,8 +230,7 @@ data class LedgerTransaction(
      * @return the possibly empty list of inputs [StateAndRef] matching the clazz restriction.
      */
     fun <T : ContractState> inRefsOfType(clazz: Class<T>): List<StateAndRef<T>> {
-        @Suppress("UNCHECKED_CAST")
-        return inputs.mapNotNull { if (clazz.isInstance(it.state.data)) it as StateAndRef<T> else null }
+        return inputs.mapNotNull { if (clazz.isInstance(it.state.data)) uncheckedCast(it) else null }
     }
 
     inline fun <reified T : ContractState> inRefsOfType(): List<StateAndRef<T>> = inRefsOfType(T::class.java)
@@ -307,8 +306,7 @@ data class LedgerTransaction(
      * @param index the position of the item in the commands.
      * @return The Command at the requested index
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : CommandData> getCommand(index: Int): Command<T> = Command(commands[index].value as T, commands[index].signers)
+    fun <T : CommandData> getCommand(index: Int): Command<T> = Command(uncheckedCast(commands[index].value), commands[index].signers)
 
     /**
      * Helper to simplify getting all [Command] items with a [CommandData] of a particular class, interface, or base class.

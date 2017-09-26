@@ -3,6 +3,7 @@ package net.corda.node.services.vault
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
@@ -111,8 +112,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 }
             }
             is ColumnPredicate.BinaryComparison -> {
-                @Suppress("UNCHECKED_CAST")
-                val literal = columnPredicate.rightLiteral as Comparable<Any?>?
+                val literal: Comparable<Any?>? = uncheckedCast(columnPredicate.rightLiteral)
                 @Suppress("UNCHECKED_CAST")
                 column as Path<Comparable<Any?>?>
                 when (columnPredicate.operator) {
@@ -139,10 +139,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             is ColumnPredicate.Between -> {
                 @Suppress("UNCHECKED_CAST")
                 column as Path<Comparable<Any?>?>
-                @Suppress("UNCHECKED_CAST")
-                val fromLiteral = columnPredicate.rightFromLiteral as Comparable<Any?>?
-                @Suppress("UNCHECKED_CAST")
-                val toLiteral = columnPredicate.rightToLiteral as Comparable<Any?>?
+                val fromLiteral: Comparable<Any?>? = uncheckedCast(columnPredicate.rightFromLiteral)
+                val toLiteral: Comparable<Any?>? = uncheckedCast(columnPredicate.rightToLiteral)
                 criteriaBuilder.between(column, fromLiteral, toLiteral)
             }
             is ColumnPredicate.NullExpression -> {

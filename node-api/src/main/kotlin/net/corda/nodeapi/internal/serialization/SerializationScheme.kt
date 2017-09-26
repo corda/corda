@@ -14,6 +14,7 @@ import com.google.common.cache.CacheBuilder
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.LazyPool
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
@@ -204,11 +205,10 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
         Input(byteSequence.bytes, byteSequence.offset + headerSize, byteSequence.size - headerSize).use { input ->
             return pool.run { kryo ->
                 withContext(kryo, context) {
-                    @Suppress("UNCHECKED_CAST")
                     if (context.objectReferencesEnabled) {
-                        kryo.readClassAndObject(input) as T
+                        uncheckedCast(kryo.readClassAndObject(input))
                     } else {
-                        kryo.withoutReferences { kryo.readClassAndObject(input) as T }
+                        kryo.withoutReferences { uncheckedCast<Any?, T>(kryo.readClassAndObject(input)) }
                     }
                 }
             }

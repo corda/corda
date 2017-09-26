@@ -39,7 +39,6 @@ private fun rowsToAmount(currency: Currency, rows: Vault.Page<FungibleAsset<*>>)
     } else {
         require(rows.otherResults.size == 2)
         require(rows.otherResults[1] == currency.currencyCode)
-        @Suppress("UNCHECKED_CAST")
         val quantity = rows.otherResults[0] as Long
         Amount(quantity, currency)
     }

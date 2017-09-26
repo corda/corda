@@ -8,6 +8,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -132,8 +133,7 @@ interface ServiceHubInternal : ServiceHub {
             flowInitiator: FlowInitiator,
             vararg args: Any?): FlowStateMachineImpl<T> {
         val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
-        @Suppress("UNCHECKED_CAST")
-        val logic = FlowLogicRefFactoryImpl.toFlowLogic(logicRef) as FlowLogic<T>
+        val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
         return startFlow(logic, flowInitiator, ourIdentity = null)
     }
 

@@ -3,6 +3,7 @@ package net.corda.client.rpc.internal
 import net.corda.client.rpc.RPCException
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.logElapsedTime
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
@@ -169,8 +170,7 @@ class RPCClient<I : RPCOps>(
             try {
                 proxyHandler.start()
 
-                @Suppress("UNCHECKED_CAST")
-                val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
+                val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))
 
                 val serverProtocolVersion = ops.protocolVersion
                 if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {

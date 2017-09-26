@@ -226,8 +226,8 @@ private fun IntProgression.toSpliterator(): Spliterator.OfInt {
 
 fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.intStream(toSpliterator(), parallel)
 
-@Suppress("UNCHECKED_CAST") // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable).
-inline fun <reified T> Stream<out T>.toTypedArray() = toArray { size -> arrayOfNulls<T>(size) } as Array<T>
+// When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
+inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
@@ -255,8 +255,7 @@ fun <T: Any> KClass<T>.objectOrNewInstance(): T {
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
     private val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
     var value: T
-        @Suppress("UNCHECKED_CAST")
-        get() = javaField.get(receiver) as T
+        get() = uncheckedCast<Any?, T>(javaField.get(receiver))
         set(value) = javaField.set(receiver, value)
 }
 

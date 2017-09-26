@@ -16,6 +16,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.write
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.client.jackson.JacksonSupport
+import net.corda.core.internal.uncheckedCast
 import net.corda.node.services.statemachine.FlowStackSnapshotFactory
 import java.nio.file.Path
 import java.time.Instant
@@ -134,11 +135,10 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
 
 }
 
-private inline fun <reified R, A> R.getField(name: String): A {
+private inline fun <reified R, A : Any> R.getField(name: String): A {
     val field = R::class.java.getDeclaredField(name)
     field.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    return field.get(this) as A
+    return uncheckedCast(field.get(this))
 }
 
 private fun getFiberStack(fiber: Fiber<*>): Stack {
