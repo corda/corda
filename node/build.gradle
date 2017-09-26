@@ -189,7 +189,6 @@ task integrationTest(type: Test) {
 }
 
 task smokeTestJar(type: Jar) {
-    baseName = project.name + '-smoke-test'
     classifier 'smokeTests'
     from sourceSets.smokeTest.output
 }
