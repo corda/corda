@@ -34,6 +34,10 @@ import java.time.Clock
 import java.time.Instant
 import java.util.*
 
+interface VaultServiceInternal : VaultService {
+    var vaultQueryService: VaultQueryService
+}
+
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
  * we add further functionality as the design for the vault and vault service matures.

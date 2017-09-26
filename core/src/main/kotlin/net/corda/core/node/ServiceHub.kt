@@ -19,6 +19,9 @@ import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
 
+/**
+ * Part of [ServiceHub].
+ */
 interface StateLoader {
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].

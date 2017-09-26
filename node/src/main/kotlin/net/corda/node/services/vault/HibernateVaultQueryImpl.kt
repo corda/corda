@@ -11,7 +11,6 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.VaultQueryService
-import net.corda.core.node.services.VaultServiceInternal
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT

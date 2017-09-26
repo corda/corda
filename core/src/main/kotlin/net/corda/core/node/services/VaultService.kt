@@ -244,10 +244,6 @@ interface VaultService {
 
 }
 
-interface VaultServiceInternal : VaultService {
-    var vaultQueryService: VaultQueryService
-}
-
 class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
     override fun toString() = "Soft locking error: $message"
 }
