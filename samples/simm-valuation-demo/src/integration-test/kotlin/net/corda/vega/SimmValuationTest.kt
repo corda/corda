@@ -45,7 +45,7 @@ class SimmValuationTest : IntegrationTestCategory {
 
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(isDebug = true, startNodesInProcess = true) {
+        driver(isDebug = true) {
             startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
