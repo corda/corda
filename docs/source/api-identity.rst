@@ -58,7 +58,7 @@ a single transaction, to another node.
 Swap identities flow
 ~~~~~~~~~~~~~~~~~~~~
 
-``SwapIdentitiesFlow`` takes the identity of a counterparty in its constructor, and is typically run as a subflow of
+``SwapIdentitiesFlow`` takes the party to swap identities with in its constructor (the counterparty), and is typically run as a subflow of
 another flow. It returns a mapping from well known identities of the calling flow and our counterparty to the new
 confidential identities; in future this will be extended to handle swapping identities with multiple parties.
 You can see an example of it being used in ``TwoPartyDealFlow.kt``:
