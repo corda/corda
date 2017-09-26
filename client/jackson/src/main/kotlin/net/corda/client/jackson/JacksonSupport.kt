@@ -29,8 +29,9 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.parsePublicKeyBase58
-import net.corda.core.utilities.toBase58String
+import net.corda.core.utilities.base58ToByteArray
+import net.corda.core.utilities.base64ToByteArray
+import net.corda.core.utilities.toBase64
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
 import java.security.PublicKey
@@ -84,13 +85,9 @@ object JacksonSupport {
             addDeserializer(SecureHash::class.java, SecureHashDeserializer())
             addDeserializer(SecureHash.SHA256::class.java, SecureHashDeserializer())
 
-            // For ed25519 pubkeys
-            addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
-            addDeserializer(EdDSAPublicKey::class.java, PublicKeyDeserializer)
-
-            // For composite keys
-            addSerializer(CompositeKey::class.java, CompositeKeySerializer)
-            addDeserializer(CompositeKey::class.java, CompositeKeyDeserializer)
+            // Public key types
+            addSerializer(PublicKey::class.java, PublicKeySerializer)
+            addDeserializer(PublicKey::class.java, PublicKeyDeserializer)
 
             // For NodeInfo
             // TODO this tunnels the Kryo representation as a Base58 encoded string. Replace when RPC supports this.
@@ -159,7 +156,7 @@ object JacksonSupport {
 
     object AnonymousPartySerializer : JsonSerializer<AnonymousParty>() {
         override fun serialize(obj: AnonymousParty, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeString(obj.owningKey.toBase58String())
+            PublicKeySerializer.serialize(obj.owningKey, generator, provider)
         }
     }
 
@@ -169,8 +166,7 @@ object JacksonSupport {
                 parser.nextToken()
             }
 
-            // TODO this needs to use some industry identifier(s) instead of these keys
-            val key = parsePublicKeyBase58(parser.text)
+            val key = PublicKeyDeserializer.deserialize(parser, context)
             return AnonymousParty(key)
         }
     }
@@ -188,19 +184,24 @@ object JacksonSupport {
             }
 
             val mapper = parser.codec as PartyObjectMapper
-            // TODO: We should probably have a better specified way of identifying X.500 names vs keys
-            // Base58 keys never include an equals character, while X.500 names always will, so we use that to determine
-            // how to parse the content
-            return if (parser.text.contains("=")) {
+            // The comma character is invalid in base64, and required as a separator for X.500 names. As Corda
+            // X.500 names all involve at least three attributes (organisation, locality, country), they must
+            // include a comma. As such we can use it as a distinguisher between the two types.
+            return if (parser.text.contains(",")) {
                 val principal = CordaX500Name.parse(parser.text)
                 mapper.wellKnownPartyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
             } else {
                 val nameMatches = mapper.partiesFromName(parser.text)
                 if (nameMatches.isEmpty()) {
+                    val derBytes = try {
+                        parser.text.base64ToByteArray()
+                    } catch (e: AddressFormatException) {
+                        throw JsonParseException(parser, "Could not find a matching party for '${parser.text}' and is not a base64 encoded public key: " + e.message)
+                    }
                     val key = try {
-                        parsePublicKeyBase58(parser.text)
+                        Crypto.decodePublicKey(derBytes)
                     } catch (e: Exception) {
-                        throw JsonParseException(parser, "Could not find a matching party for '${parser.text}' and is not a base58 encoded public key")
+                        throw JsonParseException(parser, "Could not find a matching party for '${parser.text}' and is not a valid public key: " + e.message)
                     }
                     mapper.partyFromKey(key) ?: throw JsonParseException(parser, "Could not find a Party with key ${key.toStringShort()}")
                 } else if (nameMatches.size == 1) {
@@ -273,35 +274,19 @@ object JacksonSupport {
         }
     }
 
-    object PublicKeySerializer : JsonSerializer<EdDSAPublicKey>() {
-        override fun serialize(obj: EdDSAPublicKey, generator: JsonGenerator, provider: SerializerProvider) {
-            check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
-            generator.writeString(obj.toBase58String())
+    object PublicKeySerializer : JsonSerializer<PublicKey>() {
+        override fun serialize(obj: PublicKey, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeString(obj.encoded.toBase64())
         }
     }
 
-    object PublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
+    object PublicKeyDeserializer : JsonDeserializer<PublicKey>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): PublicKey {
             return try {
-                parsePublicKeyBase58(parser.text) as EdDSAPublicKey
+                val derBytes = parser.text.base64ToByteArray()
+                Crypto.decodePublicKey(derBytes)
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
-            }
-        }
-    }
-
-    object CompositeKeySerializer : JsonSerializer<CompositeKey>() {
-        override fun serialize(obj: CompositeKey, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeString(obj.toBase58String())
-        }
-    }
-
-    object CompositeKeyDeserializer : JsonDeserializer<CompositeKey>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): CompositeKey {
-            return try {
-                parsePublicKeyBase58(parser.text) as CompositeKey
-            } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid composite key ${parser.text}: ${e.message}")
             }
         }
     }
