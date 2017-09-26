@@ -35,8 +35,8 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
         /**
          * Returns the default configuration we recommend you use.
          */
-        @JvmStatic
-        val default = CordaRPCClientConfiguration(connectionMaxRetryInterval = RPCClientConfiguration.default.connectionMaxRetryInterval)
+        @JvmField
+        val DEFAULT = CordaRPCClientConfiguration(connectionMaxRetryInterval = RPCClientConfiguration.default.connectionMaxRetryInterval)
     }
 }
 
@@ -66,19 +66,18 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
  * @param hostAndPort The network address to connect to.
  * @param configuration An optional configuration used to tweak client behaviour.
  */
-class CordaRPCClient @JvmOverloads constructor(
-        hostAndPort: NetworkHostAndPort,
-        sslConfiguration: SSLConfiguration? = null,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default,
-        initialiseSerialization: Boolean = true
+class CordaRPCClient
+private constructor(hostAndPort: NetworkHostAndPort,
+                    sslConfiguration: SSLConfiguration? = null,
+                    configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
 ) {
+    constructor(hostAndPort: NetworkHostAndPort) : this(hostAndPort, sslConfiguration = null)
+    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration) :
+            this(hostAndPort, sslConfiguration = null, configuration = configuration)
+
     init {
-        // Init serialization.  It's plausible there are multiple clients in a single JVM, so be tolerant of
-        // others having registered first.
         // TODO: allow clients to have serialization factory etc injected and align with RPC protocol version?
-        if (initialiseSerialization) {
-            KryoClientSerializationScheme.initialiseSerialization()
-        }
+        KryoClientSerializationScheme.initialiseSerialization()
     }
 
     private val rpcClient = RPCClient<CordaRPCOps>(
@@ -107,5 +106,14 @@ class CordaRPCClient @JvmOverloads constructor(
      */
     inline fun <A> use(username: String, password: String, block: (CordaRPCConnection) -> A): A {
         return start(username, password).use(block)
+    }
+
+    companion object {
+        // This is workaround for making the default c'tor private
+        internal fun bridgeCordaRPCClient(hostAndPort: NetworkHostAndPort,
+                                          sslConfiguration: SSLConfiguration? = null,
+                                          configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT): CordaRPCClient {
+            return CordaRPCClient(hostAndPort, sslConfiguration, configuration)
+        }
     }
 }
