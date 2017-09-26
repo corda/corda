@@ -36,8 +36,31 @@ In addition to API stability, this release encompasses a number of major functio
   When loading the attachment via the attachment classloader the constraints of the state the constraint would need to
   be checked against the list of attachment hashes provided and the attachment rejected if the constraints are not matched.
 
-* Improvements to core transaction data structures to support enhanced sub-component visibility/privacy by providing a
-  new `FilterTransaction`, backwards compatibility using component groups, and additional signature metadata.
+* Signature Metadata support
+  Signers can add metadata to their digital signatures. While previously a user could only sign the Merkle root of a
+  transaction, it is now possible that extra information can be attached to a signature, at the moment platformVersion
+  and the signature-scheme used.
+
+  .. image:: resources/signatureMetadata.png
+
+* Backwards compatibility and improvements to core transaction data structures
+  A new Merkle tree model that utilises sub-Merkle trees per component type is introduced. Briefly, components of the
+  same type, such as inputs or commands, are grouped together and they form their own Merkle tree. Then, the roots of
+  each group are used as leaves in the top-level Merkle tree. This model enables for backwards compatibility, in the
+  sense that if new component types are added in the future, old clients will still be able to compute the Merkle root
+  and relay transactions even if they cannot read (deserialise) the new component types. Due to the above,
+  `FilterTransaction` is now simpler and structurally closer to the `WireTransaction` making the life easier for
+  developers to work with both filtered and unfiltered transactions.
+
+* Enhanced component privacy
+  Corda 1.0 is equipped with a scalable patent pending component visibility design based on the above sophisticated
+  sub-tree model and the introduction of nonces per component. Roughly, an initial base-nonce, called the privacy-salt,
+  is used to deterministically generate nonces based on the path of each component in the tree. It is now possible that
+  a notary will ensure it sees all inputs and if there was an a `TimeWindow` in the original transaction, even if it can
+  just see hashes. The new visibility functions could be also applied to Oracles so as to ensure all of the commands are
+  visible to them.
+
+  .. image:: resources/subTreesPrivacy.png
 
 * Full support for confidential identities
   This includes rework and improvements to the identity service to handle both `well known` and `confidential` identities.
