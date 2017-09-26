@@ -90,19 +90,46 @@ data class LedgerTransaction(
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      */
     private fun verifyContracts() {
-        val contracts = (inputs.map { it.state.contract } + outputs.map { it.contract }).toSet()
-        for (contractClassName in contracts) {
-            val contract = try {
+        val contractClassNames = (inputs.map { it.state.contract } + outputs.map { it.contract }).toSet()
+        val contracts: Map<String, Contract> = contractClassNames.map { contractClassName ->
+            try {
                 assert(javaClass.classLoader == ClassLoader.getSystemClassLoader())
                 javaClass.classLoader.loadClass(contractClassName).asSubclass(Contract::class.java).getConstructor().newInstance()
             } catch (e: ClassNotFoundException) {
                 throw TransactionVerificationException.ContractCreationError(id, contractClassName, e)
             }
-
-            try {
-                contract.verify(this)
-            } catch (e: Throwable) {
-                throw TransactionVerificationException.ContractRejection(id, contract, e)
+        }.associateBy { it.javaClass.name }
+        val upgradeCommands = commands.filter { it.value is UpgradeCommand }
+        if (upgradeCommands.isNotEmpty()) {
+            if (upgradeCommands.size != commands.size) {
+                throw TransactionVerificationException.UpgradeRejection(id, "Upgrade transactions must only contain upgrade commands")
+            }
+            if (inputs.isEmpty()) {
+                throw TransactionVerificationException.UpgradeRejection(id, "Upgrade transactions must contain at least one input")
+            }
+            if (outputStates.size != inputs.size) {
+                throw TransactionVerificationException.UpgradeRejection(id, "Upgrade transactions must contain equal numbers of inputs and outputs")
+            }
+            for (index in 0 until inputs.size) {
+                val input = inputs[index]
+                val output = outputs[index]
+                val contract = contracts[output.contract] as? UpgradedContract<*, *> ?: throw TransactionVerificationException.UpgradeRejection(id, "Contract ${output.contract} is not an upgraded transaction.")
+                if (input.state.contract != contract.legacyContract) {
+                    throw TransactionVerificationException.UpgradeRejection(id, "Output $index is not an upgraded equivalent of input $index. Expected ${contract.legacyContract}, found ${input.state.contract}")
+                }
+                val expected = contract.upgrade(input)
+                if (expected != output) {
+                    throw TransactionVerificationException.UpgradeRejection(id, "Output $index does not match the upgraded input at the same index")
+                }
+                // TODO: Check command signatures
+            }
+        } else {
+            for (contract in contracts.values) {
+                try {
+                    contract.verify(this)
+                } catch (e: Throwable) {
+                    throw TransactionVerificationException.ContractRejection(id, contract, e)
+                }
             }
         }
     }
