@@ -13,6 +13,7 @@ import java.net.URL
  *
  * This will only need to be constructed manually for certain kinds of tests.
  *
+ * @property name Cordapp name - derived from the base name of the Cordapp JAR (therefore may not be unique)
  * @property contractClassNames List of contracts
  * @property initiatedFlows List of initiatable flow classes
  * @property rpcFlows List of RPC initiable flows classes
@@ -22,6 +23,7 @@ import java.net.URL
  * @property jarPath The path to the JAR for this CorDapp
  */
 interface Cordapp {
+    val name: String
     val contractClassNames: List<String>
     val initiatedFlows: List<Class<out FlowLogic<*>>>
     val rpcFlows: List<Class<out FlowLogic<*>>>
