@@ -102,7 +102,8 @@ interface ServiceHub : ServicesForResolution {
     val networkMapCache: NetworkMapCache
 
     /**
-     * Provides verification service. The implementation may be a simple in-memory verify() call or perhaps an IPC/RPC.
+     * INTERNAL. DO NOT USE.
+     * @suppress
      */
     val transactionVerifierService: TransactionVerifierService
 
