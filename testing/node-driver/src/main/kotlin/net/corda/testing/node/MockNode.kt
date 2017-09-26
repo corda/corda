@@ -405,6 +405,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }
 
+    // Convenience method for Java
+    fun createNotaryNode() = createNotaryNode(null, DUMMY_NOTARY.name, null, null)
+
     fun createNotaryNode(networkMapAddress: SingleMessageRecipient? = null,
                          legalName: CordaX500Name = DUMMY_NOTARY.name,
                          overrideServices: Map<ServiceInfo, KeyPair>? = null,
@@ -412,6 +415,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return createNode(networkMapAddress, legalName = legalName, overrideServices = overrideServices,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type, serviceName)))
     }
+
+    // Convenience method for Java
+    fun createPartyNode(networkMapAddress: SingleMessageRecipient,
+                        legalName: CordaX500Name) = createPartyNode(networkMapAddress, legalName, null)
 
     fun createPartyNode(networkMapAddress: SingleMessageRecipient,
                         legalName: CordaX500Name? = null,
