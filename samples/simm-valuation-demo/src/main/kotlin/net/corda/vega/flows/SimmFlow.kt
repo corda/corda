@@ -30,6 +30,8 @@ import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import java.time.LocalDate
 
+private val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
+
 /**
  * The Simm Flow is between two parties that both agree on a portfolio of trades to run valuations on. Both sides
  * will independently value the portfolio using a SIMM implementation and then come to consensus over those valuations.
@@ -134,7 +136,6 @@ object SimmFlow {
 
             val pricer = DiscountingSwapProductPricer.DEFAULT
             val OGTrades = portfolio.swaps.map { it -> it.toFixedLeg().resolve(referenceData) }
-            val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
 
             val ratesProvider = calibrator.calibrate(curveGroup, marketData, ReferenceData.standard())
             val fxRateProvider = MarketDataFxRateProvider.of(marketData)
@@ -252,7 +253,6 @@ object SimmFlow {
 
             val pricer = DiscountingSwapProductPricer.DEFAULT
             val OGTrades = portfolio.swaps.map { it -> it.toFixedLeg().resolve(referenceData) }
-            val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
 
             val ratesProvider = calibrator.calibrate(curveGroup, marketData, ReferenceData.standard())
             val fxRateProvider = MarketDataFxRateProvider.of(marketData)
