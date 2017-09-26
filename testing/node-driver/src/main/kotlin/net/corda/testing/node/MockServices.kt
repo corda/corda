@@ -133,8 +133,9 @@ open class MockServices(
         }
     }
 
-    constructor() : this(generateKeyPair())
     constructor(vararg keys: KeyPair) : this(emptyList(), *keys)
+
+    constructor() : this(generateKeyPair())
 
     val key: KeyPair get() = keys.first()
 
