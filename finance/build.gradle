@@ -6,6 +6,7 @@ apply plugin: CanonicalizerPlugin
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda finance modules'

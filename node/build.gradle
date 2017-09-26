@@ -5,6 +5,7 @@ apply plugin: 'kotlin-jpa'
 apply plugin: 'java'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node modules'
@@ -189,6 +190,7 @@ task integrationTest(type: Test) {
 
 task smokeTestJar(type: Jar) {
     baseName = project.name + '-smoke-test'
+    classifier 'smokeTests'
     from sourceSets.smokeTest.output
 }
 
