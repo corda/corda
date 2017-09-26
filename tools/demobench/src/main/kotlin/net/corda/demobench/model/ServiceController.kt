@@ -8,7 +8,7 @@ import java.util.logging.Level
 
 class ServiceController(resourceName: String = "/services.conf") : Controller() {
 
-    val services: HashMap<String, String> = loadConf(resources.url(resourceName))
+    val services: Map<String, String> = loadConf(resources.url(resourceName))
 
     val notaries: Map<String, String> = services.filter { it.value.startsWith("corda.notary.") }
 
@@ -17,23 +17,28 @@ class ServiceController(resourceName: String = "/services.conf") : Controller() 
     /*
      * Load our list of known extra Corda services.
      */
-    private fun loadConf(url: URL?): HashMap<String, String> {
+    private fun loadConf(url: URL?): Map<String, String> {
         return if (url == null) {
-            HashMap()
+            emptyMap()
         } else {
             try {
-                val map = HashMap<String, String>()
+                val map = linkedMapOf<String, String>()
                 InputStreamReader(url.openStream()).useLines { sq ->
                     sq.forEach { line ->
                         val service = line.split(":").map { it.trim() }
-                        map[service[1]] = service[0]
-                        log.info("Supports: $service")
+                        if (service.size != 2) {
+                            log.info("Encountered corrupted line while reading the service config from: $url")
+                        }
+                        else {
+                            map[service[1]] = service[0]
+                            log.info("Supports: $service")
+                        }
                     }
                     map
                 }
             } catch (e: IOException) {
                 log.log(Level.SEVERE, "Failed to load $url: ${e.message}", e)
-                HashMap<String, String>()
+                emptyMap<String, String>()
             }
         }
     }
