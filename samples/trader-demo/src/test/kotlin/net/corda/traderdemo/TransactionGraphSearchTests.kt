@@ -6,7 +6,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.*
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
@@ -36,7 +35,7 @@ class TransactionGraphSearchTests : TestDependencyInjectionBase() {
         val notaryServices = MockServices(listOf("net.corda.testing.contracts"), DUMMY_NOTARY_KEY)
 
         val originBuilder = TransactionBuilder(DUMMY_NOTARY)
-                .addOutputState(DummyState(random31BitValue()), DUMMY_PROGRAM_ID)
+                .addOutputState(DummyState(random31BitValue()), DummyContract.PROGRAM_ID)
                 .addCommand(command, MEGA_CORP_PUBKEY)
 
         val originPtx = megaCorpServices.signInitialTransaction(originBuilder)

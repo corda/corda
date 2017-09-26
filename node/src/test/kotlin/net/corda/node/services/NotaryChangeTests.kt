@@ -14,9 +14,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.*
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -145,9 +143,9 @@ class NotaryChangeTests {
 
         val tx = TransactionBuilder(null).apply {
             addCommand(Command(DummyContract.Commands.Create(), owner.party.owningKey))
-            addOutputState(stateA, DUMMY_PROGRAM_ID, notaryIdentity, encumbrance = 2) // Encumbered by stateB
-            addOutputState(stateC, DUMMY_PROGRAM_ID, notaryIdentity)
-            addOutputState(stateB, DUMMY_PROGRAM_ID, notaryIdentity, encumbrance = 1) // Encumbered by stateC
+            addOutputState(stateA, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 2) // Encumbered by stateB
+            addOutputState(stateC, DummyContract.PROGRAM_ID, notaryIdentity)
+            addOutputState(stateB, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 1) // Encumbered by stateC
         }
         val stx = node.services.signInitialTransaction(tx)
         node.services.recordTransactions(stx)
@@ -173,7 +171,7 @@ fun issueState(node: StartedNode<*>, notaryNode: StartedNode<*>, notaryIdentity:
 
 fun issueMultiPartyState(nodeA: StartedNode<*>, nodeB: StartedNode<*>, notaryNode: StartedNode<*>, notaryIdentity: Party): StateAndRef<DummyContract.MultiOwnerState> {
     val state = TransactionState(DummyContract.MultiOwnerState(0,
-            listOf(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())), DUMMY_PROGRAM_ID, notaryIdentity)
+            listOf(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())), DummyContract.PROGRAM_ID, notaryIdentity)
     val tx = TransactionBuilder(notary = notaryIdentity).withItems(state, dummyCommand())
     val signedByA = nodeA.services.signInitialTransaction(tx)
     val signedByAB = nodeB.services.addSignature(signedByA)

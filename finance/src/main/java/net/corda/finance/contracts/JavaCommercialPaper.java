@@ -7,6 +7,7 @@ import net.corda.core.crypto.NullKeys.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
+import net.corda.core.identity.PartyAndCertificate;
 import net.corda.core.node.ServiceHub;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -239,8 +240,11 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @Suspendable
-    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, ServiceHub services) throws InsufficientBalanceException {
-        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), Collections.emptySet());
+    public void generateRedeem(final TransactionBuilder tx,
+                               final StateAndRef<State> paper,
+                               final ServiceHub services,
+                               final PartyAndCertificate ourIdentity) throws InsufficientBalanceException {
+        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), ourIdentity, paper.getState().getData().getOwner(), Collections.emptySet());
         tx.addInputState(paper);
         tx.addCommand(new Command<>(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
     }

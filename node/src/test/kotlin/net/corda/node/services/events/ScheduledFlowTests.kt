@@ -20,9 +20,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
-import net.corda.testing.dummyCommand
-import net.corda.testing.getDefaultNotary
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert.*
@@ -65,7 +63,7 @@ class ScheduledFlowTests {
             val scheduledState = ScheduledState(serviceHub.clock.instant(), ourIdentity, destination)
             val notary = serviceHub.getDefaultNotary()
             val builder = TransactionBuilder(notary)
-                    .addOutputState(scheduledState, DUMMY_PROGRAM_ID)
+                    .addOutputState(scheduledState, DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx))
@@ -87,7 +85,7 @@ class ScheduledFlowTests {
             val newStateOutput = scheduledState.copy(processed = true)
             val builder = TransactionBuilder(notary)
                     .addInputState(state)
-                    .addOutputState(newStateOutput, DUMMY_PROGRAM_ID)
+                    .addOutputState(newStateOutput, DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(scheduledState.destination)))

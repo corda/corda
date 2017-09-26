@@ -9,7 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.aliceBobAndNotary
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.driver.driver
 import net.corda.testing.dummyCommand
@@ -29,7 +29,7 @@ class LargeTransactionsTest {
         @Suspendable
         override fun call() {
             val tx = TransactionBuilder(notary = DUMMY_NOTARY)
-                    .addOutputState(DummyState(), DUMMY_PROGRAM_ID)
+                    .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
                     .addAttachment(hash1)
                     .addAttachment(hash2)

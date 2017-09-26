@@ -24,7 +24,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -283,7 +283,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 val freshKey = services.keyManagementService.freshKey()
                 val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, services.myInfo.chooseIdentity())
                 val builder = TransactionBuilder(null).apply {
-                    addOutputState(state, DUMMY_PROGRAM_ID, DUMMY_NOTARY)
+                    addOutputState(state, DummyContract.PROGRAM_ID, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)
                 }
                 val usefulTX = services.signInitialTransaction(builder, freshKey)

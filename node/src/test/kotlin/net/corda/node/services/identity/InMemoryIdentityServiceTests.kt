@@ -1,4 +1,4 @@
-package net.corda.node.services.network
+package net.corda.node.services.identity
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.generateKeyPair

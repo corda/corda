@@ -1,7 +1,7 @@
 package net.corda.core.identity
 
+import com.google.common.collect.ImmutableSet
 import net.corda.core.internal.LegalNameValidator
-import net.corda.core.internal.countryCodes
 import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.ASN1Encodable
@@ -9,12 +9,12 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
-import java.security.Principal
+import java.util.Locale
 import javax.security.auth.x500.X500Principal
 
 /**
  * X.500 distinguished name data type customised to how Corda uses names. This restricts the attributes to those Corda
- * supports, and requires that organsation, locality and country attributes are specified. See also RFC 4519 for
+ * supports, and requires that organisation, locality and country attributes are specified. See also RFC 4519 for
  * the underlying attribute type definitions
  *
  * @property commonName optional name by the which the entity is usually known. Used only for services (for
@@ -78,6 +78,7 @@ data class CordaX500Name(val commonName: String?,
         const val MAX_LENGTH_ORGANISATION_UNIT = 64
         const val MAX_LENGTH_COMMON_NAME = 64
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
+        private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries())
 
         @JvmStatic
         fun build(principal: X500Principal) : CordaX500Name {

@@ -6,14 +6,13 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Amount
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
-import net.corda.finance.USD
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
+import net.corda.finance.USD
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MINI_CORP
 import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.junit.Before
@@ -72,7 +71,7 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
     @Test
     fun writeTransaction() {
         val attachmentRef = SecureHash.randomSHA256()
-        whenever(cordappProvider.getContractAttachmentID(DUMMY_PROGRAM_ID))
+        whenever(cordappProvider.getContractAttachmentID(DummyContract.PROGRAM_ID))
             .thenReturn(attachmentRef)
         fun makeDummyTx(): SignedTransaction {
             val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))

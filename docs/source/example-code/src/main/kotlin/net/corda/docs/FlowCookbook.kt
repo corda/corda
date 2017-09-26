@@ -23,7 +23,6 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import java.security.PublicKey
@@ -333,17 +332,17 @@ object FlowCookbook {
 
             // An output state can be added as a ``ContractState``, contract class name and notary.
             // DOCSTART 49
-            txBuilder.addOutputState(ourOutputState, DUMMY_PROGRAM_ID, specificNotary)
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary)
             // DOCEND 49
             // We can also leave the notary field blank, in which case the transaction's default
             // notary is used.
             // DOCSTART 50
-            txBuilder.addOutputState(ourOutputState, DUMMY_PROGRAM_ID)
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID)
             // DOCEND 50
             // Or we can add the output state as a ``TransactionState``, which already specifies
             // the output's contract and notary.
             // DOCSTART 51
-            val txState: TransactionState<DummyState> = TransactionState(ourOutputState, DUMMY_PROGRAM_ID, specificNotary)
+            val txState: TransactionState<DummyState> = TransactionState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary)
             // DOCEND 51
 
             // Commands can be added as ``Command``s.

@@ -219,7 +219,7 @@ object TwoPartyTradeFlow {
             val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = Cash.generateSpend(serviceHub, ptx, tradeRequest.price, tradeRequest.payToIdentity.party)
+            val (tx, cashSigningPubKeys) = Cash.generateSpend(serviceHub, ptx, tradeRequest.price, ourIdentityAndCert, tradeRequest.payToIdentity.party)
 
             // Add inputs/outputs/a command for the movement of the asset.
             tx.addInputState(assetForSale)

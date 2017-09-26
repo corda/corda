@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import org.junit.Test
 import kotlin.test.*
@@ -32,7 +33,7 @@ interface IIII {
     val i: I
 }
 
-class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
+class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
     @Test
     fun interfaceParent1() {
         class A(override val j: Int) : J
@@ -61,7 +62,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals(1, aSchema.interfaces.size)
         assertEquals(J::class.java, aSchema.interfaces[0])
 
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val objJ = aBuilder.constructors[0].newInstance(testJ)
         val j = objJ as J
 
@@ -106,7 +107,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals(1, aSchema.interfaces.size)
         assertEquals(J::class.java, aSchema.interfaces[0])
 
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val objJ = aBuilder.constructors[0].newInstance(testJ, testJJ)
         val j = objJ as J
 
@@ -154,7 +155,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertTrue(I::class.java in aSchema.interfaces)
         assertTrue(II::class.java in aSchema.interfaces)
 
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val objA = aBuilder.constructors[0].newInstance(testI, testII)
         val i = objA as I
         val ii = objA as II
@@ -200,7 +201,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertTrue(I::class.java in aSchema.interfaces)
         assertTrue(III::class.java in aSchema.interfaces)
 
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val objA = aBuilder.constructors[0].newInstance(testI, testIII)
         val i = objA as I
         val iii = objA as III
@@ -247,8 +248,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertNotEquals(null, aCarpenterSchema)
         assertNotEquals(null, bCarpenterSchema)
 
-        val cc = ClassCarpenter()
-        val cc2 = ClassCarpenter()
+        val cc = ClassCarpenter(whitelist = AllWhitelist)
+        val cc2 = ClassCarpenter(whitelist = AllWhitelist)
         val bBuilder = cc.build(bCarpenterSchema!!)
         bBuilder.constructors[0].newInstance(a, testIIII)
 
@@ -332,7 +333,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals(1, carpenterSchema.dependsOn[iName]!!.size)
         assertEquals(aName, carpenterSchema.dependsOn[iName]!![0])
 
-        val mc = MetaCarpenter(carpenterSchema)
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)
@@ -385,7 +386,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iName })
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iiName })
 
-        val mc = MetaCarpenter(carpenterSchema)
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)
@@ -445,7 +446,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iiiName })
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iName })
 
-        val mc = MetaCarpenter(carpenterSchema)
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)
