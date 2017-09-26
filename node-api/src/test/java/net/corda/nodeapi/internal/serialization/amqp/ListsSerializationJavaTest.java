@@ -15,7 +15,11 @@ public class ListsSerializationJavaTest {
     interface Parent {}
 
     public static class Child implements Parent {
-        private int value;
+        private final int value;
+
+        public Child(int value) {
+            this.value = value;
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -32,18 +36,20 @@ public class ListsSerializationJavaTest {
             return value;
         }
 
+        // Needed to show that there is a property called "value"
+        @SuppressWarnings("unused")
         public int getValue() {
             return value;
-        }
-
-        public void setValue(int value) {
-            this.value = value;
         }
     }
 
     @CordaSerializable
     public static class CovariantContainer<T extends Parent> {
-        private List<T> content;
+        private final List<T> content;
+
+        public CovariantContainer(List<T> content) {
+            this.content = content;
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -60,10 +66,8 @@ public class ListsSerializationJavaTest {
             return content != null ? content.hashCode() : 0;
         }
 
-        public void setContent(List<T> content) {
-            this.content = content;
-        }
-
+        // Needed to show that there is a property called "content"
+        @SuppressWarnings("unused")
         public List<T> getContent() {
             return content;
         }
@@ -72,14 +76,9 @@ public class ListsSerializationJavaTest {
     @Test
     public void checkCovariance() throws Exception {
         List<Child> payload = new ArrayList<>();
-        Child child1 = new Child();
-        child1.setValue(1);
-        payload.add(child1);
-        Child child2 = new Child();
-        child2.setValue(2);
-        payload.add(child2);
-        CovariantContainer<Child> container = new CovariantContainer<>();
-        container.setContent(payload);
+        payload.add(new Child(1));
+        payload.add(new Child(2));
+        CovariantContainer<Child> container = new CovariantContainer<>(payload);
         assertEqualAfterRoundTripSerialization(container);
     }
 
