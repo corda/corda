@@ -44,17 +44,17 @@ private class TraderDemo {
         }
 
         // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
-        // will contact the buyer and actually make something happen.
+        // will contact the buyer and actually make something happen.  We intentionally use large amounts here.
         val role = options.valueOf(roleArg)!!
         if (role == Role.BANK) {
             val bankHost = NetworkHostAndPort("localhost", bankRpcPort)
             CordaRPCClient(bankHost).use("demo", "demo") {
-                TraderDemoClientApi(it.proxy).runIssuer(1100.DOLLARS, buyerName, sellerName)
+                TraderDemoClientApi(it.proxy).runIssuer(1_100_000_000.DOLLARS, buyerName, sellerName)
             }
         } else {
             val sellerHost = NetworkHostAndPort("localhost", sellerRpcPort)
             CordaRPCClient(sellerHost).use("demo", "demo") {
-                TraderDemoClientApi(it.proxy).runSeller(1000.DOLLARS, buyerName)
+                TraderDemoClientApi(it.proxy).runSeller(1_000_000_000.DOLLARS, buyerName)
             }
         }
     }
