@@ -548,7 +548,6 @@ public class FlowCookbookJava {
                 // DOCSTART 37
                 twiceSignedTx.checkSignaturesAreValid();
                 // DOCEND 37
-
             } catch (GeneralSecurityException e) {
                 // Handle this as required.
             }

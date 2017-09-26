@@ -97,20 +97,20 @@ object RPCApi {
          * @param clientAddress return address to contact the client at.
          * @param id a unique ID for the request, which the server will use to identify its response with.
          * @param methodName name of the method (procedure) to be called.
-         * @param arguments arguments to pass to the method, if any.
+         * @param serialisedArguments Serialised arguments to pass to the method, if any.
          */
         data class RpcRequest(
                 val clientAddress: SimpleString,
                 val id: RpcRequestId,
                 val methodName: String,
-                val arguments: List<Any?>
+                val serialisedArguments: ByteArray
         ) : ClientToServer() {
-            fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
+            fun writeToClientMessage(message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REQUEST.ordinal)
                 message.putLongProperty(RPC_ID_FIELD_NAME, id.toLong)
                 message.putStringProperty(METHOD_NAME_FIELD_NAME, methodName)
-                message.bodyBuffer.writeBytes(arguments.serialize(context = context).bytes)
+                message.bodyBuffer.writeBytes(serialisedArguments)
             }
         }
 
@@ -128,26 +128,15 @@ object RPCApi {
         }
 
         companion object {
-
-            fun fromClientMessage(context: SerializationContext, message: ClientMessage): ClientToServer {
+            fun fromClientMessage(message: ClientMessage): ClientToServer {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
-                    RPCApi.ClientToServer.Tag.RPC_REQUEST -> {
-                        val partialReq = RpcRequest(
-                                clientAddress = MessageUtil.getJMSReplyTo(message),
-                                id = RpcRequestId(message.getLongProperty(RPC_ID_FIELD_NAME)),
-                                methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
-                                arguments = emptyList()
-                        )
-                        // Deserialisation of the arguments can fail, but we'd like to return a response mapped to
-                        // this specific RPC, so we throw the partial request with ID and method name.
-                        try {
-                            val arguments = message.getBodyAsByteArray().deserialize<List<Any?>>(context = context)
-                            return partialReq.copy(arguments = arguments)
-                        } catch (t: Throwable) {
-                            throw ArgumentDeserialisationException(t, partialReq)
-                        }
-                    }
+                    RPCApi.ClientToServer.Tag.RPC_REQUEST -> RpcRequest(
+                            clientAddress = MessageUtil.getJMSReplyTo(message),
+                            id = RpcRequestId(message.getLongProperty(RPC_ID_FIELD_NAME)),
+                            methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
+                            serialisedArguments = message.getBodyAsByteArray()
+                    )
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
                         val ids = ArrayList<ObservableId>()
                         val buffer = message.bodyBuffer
@@ -160,7 +149,6 @@ object RPCApi {
                 }
             }
         }
-
     }
 
     /**
@@ -227,13 +215,6 @@ object RPCApi {
             }
         }
     }
-
-    /**
-     * Thrown when the arguments passed to an RPC couldn't be deserialised by the server. This will
-     * typically indicate a missing application on the server side, or different versions between
-     * client and server.
-     */
-    class ArgumentDeserialisationException(cause: Throwable, val reqWithNoArguments: ClientToServer.RpcRequest) : RPCException("Failed to deserialise RPC arguments: version or app skew between client and server?", cause)
 }
 
 data class ArtemisProducer(
