@@ -277,7 +277,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                         minimumMatches.forEach { originator, consumedTxs ->
                             if (consumedTxs > 0) {
                                 newNodeDiffQueues!!
-                                for (i in 0..consumedTxs - 1) {
+                                for (i in 0 until consumedTxs) {
                                     val (issuer, quantity) = newNodeDiffQueues[originator]!!.removeAt(0)
                                     newNodeVault.put(issuer, (newNodeVault[issuer] ?: 0L) + quantity)
                                 }
