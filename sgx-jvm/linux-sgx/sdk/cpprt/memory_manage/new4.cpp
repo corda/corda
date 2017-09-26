@@ -37,7 +37,7 @@
 #include "internal/se_cdefs.h"
 
 //Allocate storage space for array
-SGX_WEAK void* SGXAPI operator new[](size_t dwBytes) throw(std::bad_alloc)
+SGX_WEAK void* SGXAPI operator new[](size_t dwBytes)
 {
 	return operator new(dwBytes);
 }

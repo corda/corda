@@ -26,6 +26,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #define UNW_LOCAL_ONLY
 
 #include <setjmp.h>
+#include <signal.h>
 
 #include "libunwind_i.h"
 #include "jmpbuf.h"

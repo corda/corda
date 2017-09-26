@@ -48,22 +48,22 @@ namespace std
 	 * The function to call when allocation fails.  By default, there is no
 	 * handler and a bad allocation exception is thrown if an allocation fails.
 	 */
-	new_handler set_new_handler(new_handler handler) throw();
+	new_handler set_new_handler(new_handler handler);
 };
 
-void* SGXAPI operator new (size_t) throw (std::bad_alloc);
-void* SGXAPI operator new[] (size_t) throw (std::bad_alloc);
+void* SGXAPI operator new (size_t);
+void* SGXAPI operator new[] (size_t);
 
-void* SGXAPI operator new (size_t, const std::nothrow_t&) throw();
-void* SGXAPI operator new (size_t, void*) throw();
-void* SGXAPI operator new[] (size_t, const std::nothrow_t&) throw();
-void* SGXAPI operator new[] (size_t, void*) throw();
+void* SGXAPI operator new (size_t, const std::nothrow_t&);
+void* SGXAPI operator new (size_t, void*);
+void* SGXAPI operator new[] (size_t, const std::nothrow_t&);
+void* SGXAPI operator new[] (size_t, void*);
 
 void SGXAPI operator delete (void*) throw ();
-void SGXAPI operator delete (void*, const std::nothrow_t&) throw();
-void SGXAPI operator delete (void*, void*) throw();
-void SGXAPI operator delete[] (void*) throw ();
-void SGXAPI operator delete[] (void*, const std::nothrow_t&) throw();
-void SGXAPI operator delete[] (void*, void*) throw();
+void SGXAPI operator delete (void*, const std::nothrow_t&);
+void SGXAPI operator delete (void*, void*);
+void SGXAPI operator delete[] (void*);
+void SGXAPI operator delete[] (void*, const std::nothrow_t&);
+void SGXAPI operator delete[] (void*, void*);
 
 #endif /* _NEW_ */

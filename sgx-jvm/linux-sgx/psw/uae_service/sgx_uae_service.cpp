@@ -623,6 +623,9 @@ sgx_status_t    oal_map_status(uae_oal_status_t status)
         case UAE_OAL_ERROR_TIMEOUT:
             retVal = SGX_ERROR_SERVICE_TIMEOUT;
             break;
+        case UAE_OAL_ERROR_INVALID:
+            retVal = SGX_ERROR_INVALID_PARAMETER;
+            break;
         default:
             retVal = SGX_ERROR_UNEXPECTED;
     }

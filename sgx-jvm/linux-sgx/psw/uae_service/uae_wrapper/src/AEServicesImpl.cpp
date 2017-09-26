@@ -54,7 +54,7 @@ uae_oal_status_t AEServicesImpl::InternalInterface(IAERequest* request, IAERespo
 {
     if(request->check() == false)
     {
-        return UAE_OAL_ERROR_UNEXPECTED;
+        return UAE_OAL_ERROR_INVALID;
     }
     uae_oal_status_t ipc_status = mTransporter->transact(request, response, timeout_msec);
 

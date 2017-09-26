@@ -36,7 +36,7 @@
 #include "sgx_trts.h"
 #include "internal/se_cdefs.h"
 
-SGX_WEAK void* SGXAPI operator new[] (size_t dwBytes, const std::nothrow_t& nothrow_constant) throw()
+SGX_WEAK void* SGXAPI operator new[] (size_t dwBytes, const std::nothrow_t& nothrow_constant)
 {
 	return operator new(dwBytes, nothrow_constant);
 }

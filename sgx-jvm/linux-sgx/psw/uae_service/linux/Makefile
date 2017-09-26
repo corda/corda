@@ -74,8 +74,9 @@ PROTPBUF_CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
 EXTERNAL_LIB += -lprotobuf 
  
 vpath %.cpp .. $(COMMON_DIR)/src  $(IPC_COMMON_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(UAE_SRC_DIR) $(AE_COMMON_DIR)
+vpath %.c   $(COMMON_DIR)/src
 
-
+C_SRC   := se_trace.c
 
 IPC_SRC  := AECloseSessionRequest.cpp    \
              AEGetQuoteResponse.cpp \
@@ -122,7 +123,7 @@ SRC :=       AEServicesImpl.cpp \
              uae_service_version.cpp \
              uae_service_assert.cpp
 
-OBJ := $(SRC:.cpp=.o) $(IPC_SRC:.cpp=.o)  $(PROTOBUF_SRC:.cc=.o) 
+OBJ := $(C_SRC:.c=.o) $(SRC:.cpp=.o) $(IPC_SRC:.cpp=.o)  $(PROTOBUF_SRC:.cc=.o) 
 
 LDUFLAGS:= -pthread -L$(BUILD_DIR)
 LDUFLAGS += -Wl,--version-script=uae_service.lds -Wl,--gc-sections
@@ -163,6 +164,9 @@ messages.pb.o : $(IPC_COMMON_PROTO_DIR)/messages.pb.cc
 	$(CXX) $(filter-out -Wshadow, $(CXXFLAGS)) -c $< -o $@
 %.o :%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+%.o: %.c
+	$(CC) $(CFLAGS) $(INCLUDE) -Werror -fPIC -c $< -o $@
+
 
 $(BUILD_DIR):
 	@$(MKDIR) $@

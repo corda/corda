@@ -36,7 +36,7 @@
 #include "sgx_trts.h"
 #include "internal/se_cdefs.h"
 
-SGX_WEAK void SGXAPI operator delete[] (void* ptr, const std::nothrow_t& nothrow_constant) throw()
+SGX_WEAK void SGXAPI operator delete[] (void* ptr, const std::nothrow_t& nothrow_constant)
 {
 	operator delete(ptr, nothrow_constant);
 }

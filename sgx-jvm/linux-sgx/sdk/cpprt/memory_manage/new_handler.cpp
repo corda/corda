@@ -53,7 +53,7 @@ namespace std{
     // Return Value
     //      new_handler - The value of the current new_handler function if this has been previously set by this function
     //									 NULL -if this is the first call to set_new_handler
-    new_handler set_new_handler(new_handler handle) throw()
+    new_handler set_new_handler(new_handler handle)
     {
         sgx_spin_lock(&handler_lock);
         new_handler retHandle = new_handl;

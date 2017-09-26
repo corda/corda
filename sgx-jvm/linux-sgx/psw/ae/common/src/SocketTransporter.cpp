@@ -82,7 +82,7 @@ uae_oal_status_t SocketTransporter::sendMessage(AEMessage *message, ICommunicati
 uae_oal_status_t SocketTransporter::transact(IAERequest* request, IAEResponse* response, uint32_t timeout)
 {
     if (request == NULL || response == NULL)
-        return UAE_OAL_ERROR_UNEXPECTED;
+        return UAE_OAL_ERROR_INVALID;
 
 
     ICommunicationSocket* communicationSocket = mSocketFactory->NewCommunicationSocket();

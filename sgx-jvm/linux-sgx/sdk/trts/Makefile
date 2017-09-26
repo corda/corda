@@ -40,7 +40,7 @@ CXXFLAGS += $(ENCLAVE_CXXFLAGS) \
             -fno-exceptions \
             -fno-rtti
 
-TCXXFLAGS := $(filter-out -fstack-protector-strong, $(CXXFLAGS))
+TCXXFLAGS := $(patsubst -fstack-protector%,-fno-stack-protector,$(CXXFLAGS))
 
 OBJS1 := init_enclave.o  \
         trts.o           \

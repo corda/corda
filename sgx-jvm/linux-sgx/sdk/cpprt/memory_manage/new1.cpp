@@ -39,7 +39,7 @@
 //aligned to represent an object of that size
 //and returns a non-null pointer to the first byte of this block. 
 //On failure, it throws a bad_alloc exception.
-SGX_WEAK void* SGXAPI operator new(size_t dwBytes) throw(std::bad_alloc)
+SGX_WEAK void* SGXAPI operator new(size_t dwBytes)
 {
 	void* address =  malloc(dwBytes);
 	while ( address == NULL ){

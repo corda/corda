@@ -36,7 +36,7 @@
 #include "sgx_trts.h"
 #include "internal/util.h"
 
-SGX_WEAK void SGXAPI operator delete (void* ptr, void* voidptr2) throw()
+SGX_WEAK void SGXAPI operator delete (void* ptr, void* voidptr2)
 {
     UNUSED(ptr);
     UNUSED(voidptr2);

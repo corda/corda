@@ -42,6 +42,7 @@ typedef enum{
     UAE_OAL_ERROR_UNEXPECTED            ,
     UAE_OAL_ERROR_AESM_UNAVAILABLE      ,
     UAE_OAL_ERROR_TIMEOUT               ,
+    UAE_OAL_ERROR_INVALID               ,
 } uae_oal_status_t;
 
 /*OAL methods from here forward */
