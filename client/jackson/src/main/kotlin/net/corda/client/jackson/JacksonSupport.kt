@@ -183,7 +183,10 @@ object JacksonSupport {
             }
 
             val mapper = parser.codec as PartyObjectMapper
-            return if (parser.text.contains("=") && !parser.text.endsWith("=")) {
+            // The comma character is invalid in base64, and required as a separator for X.500 names. As Corda
+            // X.500 names all involve at least three attributes (organisation, locality, country), they must
+            // include a comma. As such we can use it as a distinguisher between the two types.
+            return if (parser.text.indexOf(",") >= 0) {
                 val principal = CordaX500Name.parse(parser.text)
                 mapper.wellKnownPartyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
             } else {
