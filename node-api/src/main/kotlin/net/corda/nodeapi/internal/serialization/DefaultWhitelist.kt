@@ -19,16 +19,14 @@ class DefaultWhitelist : CordaPluginRegistry() {
                     Notification::class.java,
                     Notification.Kind::class.java,
                     ArrayList::class.java,
-                    listOf<Any>().javaClass, // EmptyList
                     Pair::class.java,
                     ByteArray::class.java,
                     UUID::class.java,
                     LinkedHashSet::class.java,
-                    setOf<Unit>().javaClass, // EmptySet
                     Currency::class.java,
                     listOf(Unit).javaClass, // SingletonList
                     setOf(Unit).javaClass, // SingletonSet
-                    mapOf(Unit to Unit).javaClass, // SingletonSet
+                    mapOf(Unit to Unit).javaClass, // SingletonMap
                     NetworkHostAndPort::class.java,
                     SimpleString::class.java,
                     KryoException::class.java, // TODO: Will be removed when we migrate away from Kryo

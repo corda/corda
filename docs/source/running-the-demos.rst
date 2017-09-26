@@ -1,18 +1,21 @@
 Running the demos
 =================
 
+.. contents::
+
 The `Corda repository <https://github.com/corda/corda>`_ contains a number of demo programs demonstrating
 Corda's functionality:
 
-1. The Trader Demo, which shows a delivery-vs-payment atomic swap of commercial paper for cash
-2. The IRS Demo, which shows two nodes establishing an interest rate swap and performing fixings with a
+1. The :ref:`trader-demo`, which shows a delivery-vs-payment atomic swap of commercial paper for cash
+2. The :ref:`irs-demo`, which shows two nodes establishing an interest rate swap and performing fixings with a
    rates oracle
-3. The Attachment Demo, which demonstrates uploading attachments to nodes
-4. The Notary Demo, which shows three different types of notaries and a single node getting multiple transactions notarised.
-5. The Bank of Corda Demo, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
+3. The :ref:`attachment-demo`, which demonstrates uploading attachments to nodes
+4. The :ref:`notary-demo`, which shows three different types of notaries and a single node getting multiple transactions
+   notarised
+5. The :ref:`bank-of-corda-demo`, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
    applications request issuance of some cash on behalf of a node called Big Corporation
 
-If any of the demos don't work, please raise an issue on GitHub.
+If any of the demos don't work, please raise an issue on `GitHub <https://github.com/corda/corda/issues>`_.
 
 .. note:: If you are running the demos from the command line in Linux (but not macOS), you may have to install xterm.
 
@@ -77,6 +80,8 @@ use the time controls at the top left of the home page to run the fixings. Click
 
 .. note:: The IRS web UI currently has a bug when changing the clock time where it may show no numbers or apply fixings inconsistently.
           The issues will be addressed in a future milestone release. Meanwhile, you can take a look at a simpler oracle example https://github.com/corda/oracle-example
+
+.. _attachment-demo:
 
 Attachment demo
 ---------------
@@ -160,6 +165,8 @@ by using the H2 web console:
 
 - The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table. Note that the raw data is not human-readable,
   but we're only interested in the row count for this demo
+
+.. _bank-of-corda-demo:
 
 Bank Of Corda demo
 ------------------

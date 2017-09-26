@@ -51,6 +51,7 @@ open class CashPaymentFlow(
             Cash.generateSpend(serviceHub,
                     builder,
                     amount,
+                    ourIdentityAndCert,
                     anonymousRecipient,
                     issuerConstraint)
         } catch (e: InsufficientBalanceException) {

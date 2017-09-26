@@ -4,6 +4,7 @@ package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
@@ -185,7 +186,7 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) 
     constructor(data: T, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
-    override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"
+    override fun toString() = "${commandDataToString()} with pubkeys ${signers.map { it.toStringShort() }.joinToString()}"
 }
 
 /** A common move command for contract states which can change owner. */
