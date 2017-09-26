@@ -20,7 +20,6 @@ import net.corda.core.utilities.ProgressTracker.Step;
 import net.corda.core.utilities.UntrustworthyData;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.testing.contracts.DummyContract;
-import net.corda.testing.contracts.DummyContractKt;
 import net.corda.testing.contracts.DummyState;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,7 +33,6 @@ import java.util.Set;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.testing.TestConstants.getALICE_KEY;
-import static net.corda.testing.contracts.DummyContractKt.DUMMY_PROGRAM_ID;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
@@ -353,17 +351,17 @@ public class FlowCookbookJava {
 
             // An output state can be added as a ``ContractState``, contract class name and notary.
             // DOCSTART 49
-            txBuilder.addOutputState(ourOutputState, DUMMY_PROGRAM_ID, specificNotary);
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary);
             // DOCEND 49
             // We can also leave the notary field blank, in which case the transaction's default
             // notary is used.
             // DOCSTART 50
-            txBuilder.addOutputState(ourOutputState, DUMMY_PROGRAM_ID);
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID);
             // DOCEND 50
             // Or we can add the output state as a ``TransactionState``, which already specifies
             // the output's contract and notary.
             // DOCSTART 51
-            TransactionState txState = new TransactionState(ourOutputState, DUMMY_PROGRAM_ID, specificNotary);
+            TransactionState txState = new TransactionState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary);
             // DOCEND 51
 
             // Commands can be added as ``Command``s.

@@ -11,7 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
+import net.corda.testing.contracts.DummyContract
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
@@ -37,7 +37,7 @@ data class GeneratedLedger(
 
     companion object {
         val empty = GeneratedLedger(emptyList(), emptyMap(), emptySet(), emptySet())
-        val contractAttachment = ContractAttachment(GeneratedAttachment(ByteArray(0) { 0 }), DUMMY_PROGRAM_ID)
+        val contractAttachment = ContractAttachment(GeneratedAttachment(ByteArray(0) { 0 }), DummyContract.PROGRAM_ID)
     }
 
     fun resolveWireTransaction(transaction: WireTransaction): LedgerTransaction {
@@ -69,7 +69,7 @@ data class GeneratedLedger(
             Generator.sequence(
                     outputs.map { output ->
                         pickOneOrMaybeNew(identities, partyGenerator).map { notary ->
-                            TransactionState(output, DUMMY_PROGRAM_ID, notary, null, HashAttachmentConstraint(contractAttachment.id))
+                            TransactionState(output, DummyContract.PROGRAM_ID, notary, null, HashAttachmentConstraint(contractAttachment.id))
                         }
                     }
             )
@@ -134,7 +134,7 @@ data class GeneratedLedger(
     fun regularTransactionGenerator(inputNotary: Party, inputsToChooseFrom: List<StateAndRef<ContractState>>): Generator<Pair<WireTransaction, GeneratedLedger>> {
         val outputsGen = outputsGenerator.map { outputs ->
             outputs.map { output ->
-                TransactionState(output, DUMMY_PROGRAM_ID, inputNotary, null, HashAttachmentConstraint(contractAttachment.id))
+                TransactionState(output, DummyContract.PROGRAM_ID, inputNotary, null, HashAttachmentConstraint(contractAttachment.id))
             }
         }
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)

@@ -25,9 +25,22 @@ import java.util.*
 class CordaClassResolver(serializationContext: SerializationContext) : DefaultClassResolver() {
     val whitelist: ClassWhitelist = TransientClassWhiteList(serializationContext.whitelist)
 
+    /*
+     * These classes are assignment-compatible Java equivalents of Kotlin classes.
+     * The point is that we do not want to send Kotlin types "over the wire" via RPC.
+     */
+    private val javaAliases: Map<Class<*>, Class<*>> = mapOf(
+        listOf<Any>().javaClass to Collections.emptyList<Any>().javaClass,
+        setOf<Any>().javaClass to Collections.emptySet<Any>().javaClass,
+        mapOf<Any, Any>().javaClass to Collections.emptyMap<Any, Any>().javaClass
+    )
+
+    private fun typeForSerializationOf(type: Class<*>): Class<*> = javaAliases[type] ?: type
+
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
-        return super.getRegistration(type) ?: checkClass(type)
+        val targetType = typeForSerializationOf(type)
+        return super.getRegistration(targetType) ?: checkClass(targetType)
     }
 
     private var whitelistEnabled = true
@@ -61,9 +74,9 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
     }
 
     override fun registerImplicit(type: Class<*>): Registration {
-
+        val targetType = typeForSerializationOf(type)
         val objectInstance = try {
-            type.kotlin.objectInstance
+            targetType.kotlin.objectInstance
         } catch (t: Throwable) {
             null  // objectInstance will throw if the type is something like a lambda
         }
@@ -74,15 +87,19 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
             kryo.references = true
             val serializer = when {
                 objectInstance != null -> KotlinObjectSerializer(objectInstance)
-                kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
-                    FieldSerializer<Any>(kryo, type).apply { setIgnoreSyntheticFields(false) }
-                Throwable::class.java.isAssignableFrom(type) -> ThrowableSerializer(kryo, type)
-                else -> kryo.getDefaultSerializer(type)
+                kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(targetType) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
+                    FieldSerializer<Any>(kryo, targetType).apply { setIgnoreSyntheticFields(false) }
+                Throwable::class.java.isAssignableFrom(targetType) -> ThrowableSerializer(kryo, targetType)
+                else -> kryo.getDefaultSerializer(targetType)
             }
-            return register(Registration(type, serializer, NAME.toInt()))
+            return register(Registration(targetType, serializer, NAME.toInt()))
         } finally {
             kryo.references = references
         }
+    }
+
+    override fun writeName(output: Output, type: Class<*>, registration: Registration) {
+        super.writeName(output, registration.type ?: type, registration)
     }
 
     // Trivial Serializer which simply returns the given instance, which we already know is a Kotlin object
@@ -126,10 +143,6 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
 
 interface MutableClassWhitelist : ClassWhitelist {
     fun add(entry: Class<*>)
-}
-
-object EmptyWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = false
 }
 
 class BuiltInExceptionsWhitelist : ClassWhitelist {

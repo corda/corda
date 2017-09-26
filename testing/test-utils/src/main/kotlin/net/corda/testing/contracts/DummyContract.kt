@@ -9,8 +9,6 @@ import kotlin.reflect.jvm.jvmName
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes, but has to be serializable
 
-const val DUMMY_PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContract"
-
 data class DummyContract(val blank: Any? = null) : Contract {
     interface State : ContractState {
         val magicNumber: Int
@@ -43,15 +41,17 @@ data class DummyContract(val blank: Any? = null) : Contract {
     }
 
     companion object {
+        const val PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContract"
+
         @JvmStatic
         fun generateInitial(magicNumber: Int, notary: Party, owner: PartyAndReference, vararg otherOwners: PartyAndReference): TransactionBuilder {
             val owners = listOf(owner) + otherOwners
             return if (owners.size == 1) {
                 val state = SingleOwnerState(magicNumber, owners.first().party)
-                TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), Command(Commands.Create(), owners.first().party.owningKey))
+                TransactionBuilder(notary).withItems(StateAndContract(state, PROGRAM_ID), Command(Commands.Create(), owners.first().party.owningKey))
             } else {
                 val state = MultiOwnerState(magicNumber, owners.map { it.party })
-                TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), Command(Commands.Create(), owners.map { it.party.owningKey }))
+                TransactionBuilder(notary).withItems(StateAndContract(state, PROGRAM_ID), Command(Commands.Create(), owners.map { it.party.owningKey }))
             }
         }
 
@@ -66,7 +66,7 @@ data class DummyContract(val blank: Any? = null) : Contract {
             return TransactionBuilder(notary = priors[0].state.notary).withItems(
                     /* INPUTS  */ *priors.toTypedArray(),
                     /* COMMAND */ Command(cmd, priorState.owner.owningKey),
-                    /* OUTPUT  */ StateAndContract(state, DUMMY_PROGRAM_ID)
+                    /* OUTPUT  */ StateAndContract(state, PROGRAM_ID)
             )
         }
     }

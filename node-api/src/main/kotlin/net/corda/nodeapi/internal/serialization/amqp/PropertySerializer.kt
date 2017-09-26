@@ -76,19 +76,21 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
         // This is lazy so we don't get an infinite loop when a method returns an instance of the class.
         private val typeSerializer: AMQPSerializer<*> by lazy { lazyTypeSerializer() }
 
-        override fun writeClassInfo(output: SerializationOutput) {
+        override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({nameForDebug}) {
             if (resolvedType != Any::class.java) {
                 typeSerializer.writeClassInfo(output)
             }
         }
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
-            return input.readObjectOrNull(obj, schema, resolvedType)
+        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? = ifThrowsAppend({nameForDebug}) {
+            input.readObjectOrNull(obj, schema, resolvedType)
         }
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) = ifThrowsAppend({nameForDebug}) {
             output.writeObjectOrNull(readMethod!!.invoke(obj), data, resolvedType)
         }
+
+        private val nameForDebug = "$name(${resolvedType.typeName})"
     }
 
     /**

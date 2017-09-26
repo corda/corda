@@ -1,10 +1,11 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
 
-class DeserializeNeedingCarpentryOfEnumsTest : AmqpCarpenterBase() {
+class DeserializeNeedingCarpentryOfEnumsTest : AmqpCarpenterBase(AllWhitelist) {
     companion object {
         /**
          * If you want to see the schema encoded into the envelope after serialisation change this to true
