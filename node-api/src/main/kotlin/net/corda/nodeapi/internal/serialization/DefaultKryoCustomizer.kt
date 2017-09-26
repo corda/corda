@@ -43,7 +43,6 @@ import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
 import java.io.InputStream
-import java.io.Serializable
 import java.lang.reflect.Modifier.isPublic
 import java.security.cert.CertPath
 import java.util.*
@@ -117,9 +116,6 @@ object DefaultKryoCustomizer {
             // Don't deserialize PrivacySalt via its default constructor.
             register(PrivacySalt::class.java, PrivacySaltSerializer)
 
-            kryo.register(java.lang.invoke.SerializedLambda::class.java)
-            register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
-
             // Used by the remote verifier, and will possibly be removed in future.
             register(ContractAttachment::class.java, ContractAttachmentSerializer)
 
@@ -181,24 +177,6 @@ object DefaultKryoCustomizer {
 
         override fun read(kryo: Kryo, input: Input, type: Class<PrivacySalt>): PrivacySalt {
             return PrivacySalt(input.readBytesWithLength())
-        }
-    }
-
-    object CordaClosureSerializer : ClosureSerializer() {
-
-        val ERROR_MESSAGE = "Unable to serialize Java Lambda expression, unless explicitly declared e.g., Runnable r = (Runnable & Serializable) () -> System.out.println(\"Hello world!\");"
-
-        override fun write(kryo: Kryo, output: Output, target: Any) {
-
-            if (!isSerializable(target)) {
-                throw IllegalArgumentException(ERROR_MESSAGE)
-            }
-            super.write(kryo, output, target)
-        }
-
-        private fun isSerializable(target: Any): Boolean {
-
-            return target is Serializable
         }
     }
 
