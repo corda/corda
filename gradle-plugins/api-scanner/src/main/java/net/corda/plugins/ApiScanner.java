@@ -9,6 +9,12 @@ import org.gradle.jvm.tasks.Jar;
 
 public class ApiScanner implements Plugin<Project> {
 
+    /**
+     * Identify the Gradle Jar tasks creating jars
+     * without Maven classifiers, and generate API
+     * documentation for them.
+     * @param p
+     */
     @Override
     public void apply(Project p) {
         p.getLogger().info("Applying API scanner to {}", p.getName());
@@ -20,15 +26,16 @@ public class ApiScanner implements Plugin<Project> {
                 return;
             }
 
-            Jar jarTask = jarTasks.size() == 1 ? jarTasks.iterator().next() : jarTasks.getByName("jar");
+            project.getLogger().info("Adding scanApi task to {}", project.getName());
             ScanApiTask scanTask = project.getTasks().create(
-                                     "scanApi", ScanApiTask.class, task -> task.dependsOn(jarTask));
-            scanTask.setSources(project.files(jarTask.getArchivePath()));
+                 "scanApi", ScanApiTask.class, task -> task.dependsOn(jarTasks));
             scanTask.setClasspath(compilationClasspath(project.getConfigurations()));
+            scanTask.setSources(project.files(jarTasks));
         });
     }
 
     private static FileCollection compilationClasspath(ConfigurationContainer configurations) {
-        return configurations.getByName("compile").plus(configurations.getByName("compileOnly"));
+        return configurations.getByName("compile")
+                .plus(configurations.getByName("compileOnly"));
     }
 }
