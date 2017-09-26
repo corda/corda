@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.opengamma.strata.basics.ReferenceData
 import com.opengamma.strata.basics.currency.Currency
 import com.opengamma.strata.data.MarketDataFxRateProvider
-import com.opengamma.strata.pricer.curve.CalibrationMeasures
+import com.opengamma.strata.pricer.curve.CalibrationMeasureSerializables
 import com.opengamma.strata.pricer.curve.CurveCalibrator
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
@@ -134,7 +134,7 @@ object SimmFlow {
 
             val pricer = DiscountingSwapProductPricer.DEFAULT
             val OGTrades = portfolio.swaps.map { it -> it.toFixedLeg().resolve(referenceData) }
-            val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
+            val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasureSerializables.PAR_SPREAD)
 
             val ratesProvider = calibrator.calibrate(curveGroup, marketData, ReferenceData.standard())
             val fxRateProvider = MarketDataFxRateProvider.of(marketData)
@@ -252,7 +252,7 @@ object SimmFlow {
 
             val pricer = DiscountingSwapProductPricer.DEFAULT
             val OGTrades = portfolio.swaps.map { it -> it.toFixedLeg().resolve(referenceData) }
-            val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
+            val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasureSerializables.PAR_SPREAD)
 
             val ratesProvider = calibrator.calibrate(curveGroup, marketData, ReferenceData.standard())
             val fxRateProvider = MarketDataFxRateProvider.of(marketData)
