@@ -7,12 +7,12 @@ import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
+import net.corda.testing.kryoSpecific
 import org.assertj.core.api.Assertions
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import org.bouncycastle.asn1.x500.X500Name
 import java.io.ByteArrayOutputStream
-import java.io.NotSerializableException
 import java.util.*
 
 class MapsSerializationTest : TestDependencyInjectionBase() {
@@ -45,7 +45,8 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
         val payload = HashMap<String, String>(smallMap)
         val wrongPayloadType = WrongPayloadType(payload)
         Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
-                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
+                .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining(
+                "Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
     @CordaSerializable
@@ -63,7 +64,7 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty map serialises as Java emptytMap`() {
+    fun `check empty map serialises as Java emptyMap`() = kryoSpecific<MapsSerializationTest>("Specifically checks Kryo serialization") {
         val nameID = 0
         val serializedForm = emptyMap<Int, Int>().serialize()
         val output = ByteArrayOutputStream().apply {
