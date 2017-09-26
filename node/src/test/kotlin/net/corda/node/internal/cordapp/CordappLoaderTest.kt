@@ -1,7 +1,6 @@
-package net.corda.node.cordapp
+package net.corda.node.internal.cordapp
 
 import net.corda.core.flows.*
-import net.corda.node.internal.cordapp.CordappLoader
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
@@ -27,19 +26,17 @@ class DummyRPCFlow : FlowLogic<Unit>() {
 }
 
 class CordappLoaderTest {
+    private companion object {
+        val testScanPackages = listOf("net.corda.node.internal.cordapp")
+    }
+
     @Test
     fun `test that classes that aren't in cordapps aren't loaded`() {
         // Basedir will not be a corda node directory so the dummy flow shouldn't be recognised as a part of a cordapp
         val loader = CordappLoader.createDefault(Paths.get("."))
-        assertThat(loader.cordapps).isEmpty()
-    }
-
-    @Test
-    fun `test that classes that are in a cordapp are loaded`() {
-        val loader = CordappLoader.createWithTestPackages(listOf("net.corda.node.cordapp"))
-        val initiatedFlows = loader.cordapps.first().initiatedFlows
-        val expectedClass = loader.appClassLoader.loadClass("net.corda.node.cordapp.LoaderTestFlow").asSubclass(FlowLogic::class.java)
-        assertThat(initiatedFlows).contains(expectedClass)
+        assertThat(loader.cordapps)
+                .hasSize(1)
+                .contains(CordappLoader.coreCordapp)
     }
 
     @Test
@@ -48,12 +45,12 @@ class CordappLoaderTest {
         val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
 
         val actual = loader.cordapps.toTypedArray()
-        assertThat(actual).hasSize(1)
+        assertThat(actual).hasSize(2)
 
-        val actualCordapp = actual.first()
+        val actualCordapp = actual.single { it != CordappLoader.coreCordapp }
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf("net.corda.finance.contracts.isolated.AnotherDummyContract"))
         assertThat(actualCordapp.initiatedFlows).isEmpty()
-        assertThat(actualCordapp.rpcFlows).contains(loader.appClassLoader.loadClass("net.corda.core.flows.ContractUpgradeFlow\$Initiate").asSubclass(FlowLogic::class.java))
+        assertThat(actualCordapp.rpcFlows).isEmpty()
         assertThat(actualCordapp.schedulableFlows).isEmpty()
         assertThat(actualCordapp.services).isEmpty()
         assertThat(actualCordapp.plugins).hasSize(1)
@@ -63,12 +60,15 @@ class CordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val loader = CordappLoader.createDevMode("net.corda.node.cordapp")
+        val loader = CordappLoader.createWithTestPackages(testScanPackages)
 
         val actual = loader.cordapps.toTypedArray()
-        assertThat(actual).hasSize(1)
+        // One core cordapp, one cordapp from this source tree, and two others due to identically named locations
+        // in resources and the non-test part of node. This is okay due to this being test code. In production this
+        // cannot happen.
+        assertThat(actual).hasSize(4)
 
-        val actualCordapp = actual.first()
+        val actualCordapp = actual.single { !it.initiatedFlows.isEmpty() }
         assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
         assertThat(actualCordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
         assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
