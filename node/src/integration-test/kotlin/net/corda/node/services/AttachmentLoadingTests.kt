@@ -67,10 +67,9 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
         assertEquals(expected, actual)
     }
 
-    // TODO - activate this test
-    // @Test
+    @Test
     fun `test that attachments retrieved over the network are not used for code`() {
-        driver(initialiseSerialization = false) {
+        driver(startNodesInProcess = true, initialiseSerialization = false) {
             val bankAName = CordaX500Name("BankA", "Zurich", "CH")
             val bankBName = CordaX500Name("BankB", "Zurich", "CH")
             // Copy the app jar to the first node. The second won't have it.
@@ -80,6 +79,7 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
                     input.copyTo(output)
                 }
             }
+
             val admin = User("admin", "admin", permissions = setOf("ALL"))
             val (bankA, bankB) = listOf(
                     startNode(providedName = bankAName, rpcUsers = listOf(admin)),
