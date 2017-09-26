@@ -29,10 +29,14 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
 
         ...
 
+        // We create the transaction components.
+        val outputState = IOUState(iouValue, ourIdentity, otherParty)
+        val outputContract = IOUContract::class.jvmName
+        val outputContractAndState = StateAndContract(outputState, outputContract)
+        val cmd = Command(IOUContract.Create(), listOf(ourIdentity.owningKey, otherParty.owningKey))
+
         // We add the items to the builder.
-        val state = IOUState(iouValue, me, otherParty)
-        val cmd = Command(IOUContract.Create(), listOf(me.owningKey, otherParty.owningKey))
-        txBuilder.withItems(state, cmd)
+        txBuilder.withItems(outputContractAndState, cmd)
 
         // Verifying the transaction.
         txBuilder.verify(serviceHub)
@@ -40,8 +44,11 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         // Signing the transaction.
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
-        // Obtaining the counterparty's signature
-        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, CollectSignaturesFlow.tracker()))
+        // Creating a session with the other party.
+        val otherpartySession = initiateFlow(otherParty)
+
+        // Obtaining the counterparty's signature.
+        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, listOf(otherpartySession), CollectSignaturesFlow.tracker()))
 
         // Finalising the transaction.
         subFlow(FinalityFlow(fullySignedTx))
@@ -56,11 +63,15 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
 
         ...
 
+        // We create the transaction components.
+        IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
+        String outputContract = IOUContract.class.getName();
+        StateAndContract outputContractAndState = new StateAndContract(outputState, outputContract);
+        List<PublicKey> requiredSigners = ImmutableList.of(getOurIdentity().getOwningKey(), otherParty.getOwningKey());
+        Command cmd = new Command<>(new IOUContract.Create(), requiredSigners);
+
         // We add the items to the builder.
-        IOUState state = new IOUState(iouValue, me, otherParty);
-        List<PublicKey> requiredSigners = ImmutableList.of(me.getOwningKey(), otherParty.getOwningKey());
-        Command cmd = new Command(new IOUContract.Create(), requiredSigners);
-        txBuilder.withItems(state, cmd);
+        txBuilder.withItems(outputContractAndState, cmd);
 
         // Verifying the transaction.
         txBuilder.verify(getServiceHub());
@@ -68,19 +79,34 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         // Signing the transaction.
         final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
-        // Obtaining the counterparty's signature
-        final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(signedTx, CollectSignaturesFlow.Companion.tracker()));
+        // Creating a session with the other party.
+        FlowSession otherpartySession = initiateFlow(otherParty);
+
+        // Obtaining the counterparty's signature.
+        SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(
+                signedTx, ImmutableList.of(otherpartySession), CollectSignaturesFlow.tracker()));
 
         // Finalising the transaction.
-        subFlow(new FinalityFlow(fullySignedTx));
+        subFlow(new FinalityFlow(signedTx));
 
         return null;
 
 To make the borrower a required signer, we simply add the borrower's public key to the list of signers on the command.
 
-``CollectSignaturesFlow``, meanwhile, takes a transaction signed by the flow initiator, and returns a transaction
-signed by all the transaction's other required signers. We then pass this fully-signed transaction into
-``FinalityFlow``.
+We now need to communicate with the borrower to request their signature. Whenever you want to communicate with another
+party in the context of a flow, you first need to establish a flow session with them. If the counterparty has a
+``FlowLogic`` registered to respond to the ``FlowLogic`` initiating the session, a session will be established. All
+communication between the two ``FlowLogic`` instances will then place as part of this session.
+
+Once we have a session with the borrower, we gather the borrower's signature using ``CollectSignaturesFlow``, which
+takes:
+
+* A transaction signed by the flow initiator
+* A list of flow-sessions between the flow initiator and the required signers
+
+And returns a transaction signed by all the required signers.
+
+We then pass this fully-signed transaction into ``FinalityFlow``.
 
 Creating the borrower's flow
 ----------------------------
@@ -98,10 +124,10 @@ In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file i
         ...
 
         @InitiatedBy(IOUFlow::class)
-        class IOUFlowResponder(val otherParty: Party) : FlowLogic<Unit>() {
+        class IOUFlowResponder(val otherPartyFlow: FlowSession) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                val signTransactionFlow = object : SignTransactionFlow(otherParty, SignTransactionFlow.tracker()) {
+                val signTransactionFlow = object : SignTransactionFlow(otherPartyFlow, SignTransactionFlow.tracker()) {
                     override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val output = stx.tx.outputs.single().data
                         "This must be an IOU transaction." using (output is IOUState)
@@ -121,11 +147,7 @@ In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file i
         import co.paralleluniverse.fibers.Suspendable;
         import com.template.state.IOUState;
         import net.corda.core.contracts.ContractState;
-        import net.corda.core.flows.FlowException;
-        import net.corda.core.flows.FlowLogic;
-        import net.corda.core.flows.InitiatedBy;
-        import net.corda.core.flows.SignTransactionFlow;
-        import net.corda.core.identity.Party;
+        import net.corda.core.flows.*;
         import net.corda.core.transactions.SignedTransaction;
         import net.corda.core.utilities.ProgressTracker;
 
@@ -133,18 +155,18 @@ In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file i
 
         @InitiatedBy(IOUFlow.class)
         public class IOUFlowResponder extends FlowLogic<Void> {
-            private final Party otherParty;
+            private final FlowSession otherPartyFlow;
 
-            public IOUFlowResponder(Party otherParty) {
-                this.otherParty = otherParty;
+            public IOUFlowResponder(FlowSession otherPartyFlow) {
+                this.otherPartyFlow = otherPartyFlow;
             }
 
             @Suspendable
             @Override
             public Void call() throws FlowException {
                 class signTxFlow extends SignTransactionFlow {
-                    private signTxFlow(Party otherParty, ProgressTracker progressTracker) {
-                        super(otherParty, progressTracker);
+                    private signTxFlow(FlowSession otherPartyFlow, ProgressTracker progressTracker) {
+                        super(otherPartyFlow, progressTracker);
                     }
 
                     @Override
@@ -159,7 +181,7 @@ In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file i
                     }
                 }
 
-                subFlow(new signTxFlow(otherParty, SignTransactionFlow.Companion.tracker()));
+                subFlow(new signTxFlow(otherPartyFlow, SignTransactionFlow.Companion.tracker()));
 
                 return null;
             }
