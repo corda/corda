@@ -190,22 +190,19 @@ object JacksonSupport {
             }
 
             val mapper = parser.codec as PartyObjectMapper
-            // TODO: We should probably have a better specified way of identifying X.500 names vs keys
-            // Base58 keys never include an equals character, while X.500 names always will, so we use that to determine
-            // how to parse the content
-            return if (parser.text.contains("=")) {
+            return if (parser.text.contains("=") && !parser.text.endsWith("=")) {
                 val principal = CordaX500Name.parse(parser.text)
                 mapper.wellKnownPartyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
             } else {
                 val nameMatches = mapper.partiesFromName(parser.text)
                 if (nameMatches.isEmpty()) {
-                    val keyBytes = try {
-                        parser.text.base58ToByteArray()
+                    val derBytes = try {
+                        parser.text.base64ToByteArray()
                     } catch (e: AddressFormatException) {
-                        throw JsonParseException(parser, "Could not find a matching party for '${parser.text}' and is not a base58 encoded public key: " + e.message)
+                        throw JsonParseException(parser, "Could not find a matching party for '${parser.text}' and is not a base64 encoded public key: " + e.message)
                     }
                     val key = try {
-                        Crypto.decodePublicKey(keyBytes)
+                        Crypto.decodePublicKey(derBytes)
                     } catch (e: Exception) {
                         throw JsonParseException(parser, "Could not find a matching party for '${parser.text}' and is not a valid public key: " + e.message)
                     }
