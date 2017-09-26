@@ -160,7 +160,7 @@ enum class DayCountBasisDay {
 enum class DayCountBasisYear {
     // Ditto above comment for years.
     Y360,
-    Y365F, Y365L, Y365Q, Y366, YActual, YActualA, Y365B, Y365, YISMA, YICMA, Y252;
+    Y365F, Y365L, Y365Q, Y366, YActual, YActualA, Y365B, Y365, YISMA, YISDA, YICMA, Y252;
 
     override fun toString(): String {
         return super.toString().drop(1)
