@@ -10,8 +10,13 @@ import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.flows.*
 import net.corda.core.flows.AbstractStateReplacementFlow.Proposal
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
@@ -21,7 +26,13 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
-import net.corda.vega.analytics.*
+import net.corda.vega.analytics.BimmAnalysisUtils
+import net.corda.vega.analytics.InitialMarginTriple
+import net.corda.vega.analytics.IsdaConfiguration
+import net.corda.vega.analytics.OGSIMMAnalyticsEngine
+import net.corda.vega.analytics.PortfolioNormalizer
+import net.corda.vega.analytics.RwamBimmNotProductClassesCalculator
+import net.corda.vega.analytics.compareIMTriples
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
 import net.corda.vega.contracts.PortfolioValuation
@@ -29,6 +40,8 @@ import net.corda.vega.contracts.RevisionedState
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import java.time.LocalDate
+
+private val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
 
 /**
  * The Simm Flow is between two parties that both agree on a portfolio of trades to run valuations on. Both sides
@@ -134,7 +147,6 @@ object SimmFlow {
 
             val pricer = DiscountingSwapProductPricer.DEFAULT
             val OGTrades = portfolio.swaps.map { it -> it.toFixedLeg().resolve(referenceData) }
-            val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
 
             val ratesProvider = calibrator.calibrate(curveGroup, marketData, ReferenceData.standard())
             val fxRateProvider = MarketDataFxRateProvider.of(marketData)
@@ -252,7 +264,6 @@ object SimmFlow {
 
             val pricer = DiscountingSwapProductPricer.DEFAULT
             val OGTrades = portfolio.swaps.map { it -> it.toFixedLeg().resolve(referenceData) }
-            val calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
 
             val ratesProvider = calibrator.calibrate(curveGroup, marketData, ReferenceData.standard())
             val fxRateProvider = MarketDataFxRateProvider.of(marketData)

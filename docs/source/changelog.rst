@@ -10,6 +10,8 @@ UNRELEASED
 Release 1.0
 -----------
 
+* Java 8 lambdas now work property with Kryo during check-pointing.
+
 * String constants have been marked as ``const`` type in Kotlin, eliminating cases where functions of the form
   ``get<constant name>()`` were created for the Java API. These can now be referenced by their name directly.
 

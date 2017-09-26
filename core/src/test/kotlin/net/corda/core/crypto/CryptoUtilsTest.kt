@@ -613,7 +613,7 @@ class CryptoUtilsTest {
         val encodedPrivK1 = privK1.encoded
 
         // fail on malformed key.
-        for (i in 0..encodedPrivK1.size - 1) {
+        for (i in 0 until encodedPrivK1.size) {
             val b = encodedPrivK1[i]
             encodedPrivK1[i] = b.inc()
             try {
