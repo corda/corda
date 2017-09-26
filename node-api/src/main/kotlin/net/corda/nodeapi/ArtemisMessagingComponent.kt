@@ -1,17 +1,15 @@
 package net.corda.nodeapi
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.internal.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.toBase58String
 import net.corda.nodeapi.config.SSLConfiguration
-import java.security.KeyStore
 import java.security.PublicKey
 
 /**
@@ -84,22 +82,6 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
 
     /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
     abstract val config: SSLConfiguration?
-
-    /**
-     * Returns nothing if the keystore was opened OK or throws if not. Useful to check the password, as
-     * unfortunately Artemis tends to bury the exception when the password is wrong.
-     */
-    fun checkStorePasswords() {
-        val config = config ?: return
-        arrayOf(config.sslKeystore, config.nodeKeystore).forEach {
-            it.read {
-                KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
-            }
-        }
-        config.trustStoreFile.read {
-            KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
-        }
-    }
 
     // Used for bridges creation.
     fun getArtemisPeerAddress(party: Party, address: NetworkHostAndPort, netMapName: CordaX500Name? = null): ArtemisPeerAddress {
