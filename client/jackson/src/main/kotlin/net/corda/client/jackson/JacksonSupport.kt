@@ -85,9 +85,8 @@ object JacksonSupport {
             addDeserializer(SecureHash.SHA256::class.java, SecureHashDeserializer())
 
             // Public key types
+            addSerializer(PublicKey::class.java, PublicKeySerializer)
             addDeserializer(PublicKey::class.java, PublicKeyDeserializer)
-            addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
-            addSerializer(CompositeKey::class.java, PublicKeySerializer)
 
             // For NodeInfo
             // TODO this tunnels the Kryo representation as a Base58 encoded string. Replace when RPC supports this.
