@@ -426,18 +426,50 @@ Our side of the flow must mirror these calls. We could do this as follows:
         :end-before: DOCEND 8
         :dedent: 12
 
-Porting from the old Party-based API
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Why sessions?
+^^^^^^^^^^^^^
 
 Before ``FlowSession`` s were introduced the send/receive API looked a bit different. They were functions on
 ``FlowLogic`` and took the address ``Party`` as argument. The platform internally maintained a mapping from ``Party`` to
 session, hiding sessions from the user completely.
 
-However we realised that this could introduce subtle bugs and security issues where sends meant for different sessions
-may end up in the same session if the target ``Party`` happens to be the same.
+Although this is a convenient API it introduces subtle issues where a message that was originally meant for a specific
+session may end up in another.
 
-Therefore the session concept is now exposed through ``FlowSession`` which disambiguates which communication sequence a
-message is intended for.
+Consider the following contrived example using the old ``Party`` based API:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/LaunchTheNukesFlow.kt
+        :language: kotlin
+        :start-after: DOCSTART LaunchTheNukesFlow
+        :end-before: DOCEND LaunchTheNukesFlow
+
+The intention of the flows is very clear: LaunchTheNukesFlow asks the president whether the nukes should be launched.
+The president in return tells the secretary that they need coffee. Afterwards the president replies that they don't want
+to launch the nukes.
+
+However the above can go horribly wrong when the ``launcher`` happens to be the same party ``getSecretary`` returns. In
+this case the boolean meant for the secretary will be received by the launcher!
+
+This means that ``Party`` is not a good identifier for the communication sequence, and indeed the ``Party`` based API
+may introduce ways for an attacker to fish for information and even trigger unintended control flow like in the above
+case.
+
+Hence we introduced ``FlowSession``, which identifies the communication sequence. With ``FlowSession`` s the above set
+of flows would look like this:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/LaunchTheNukesFlow.kt
+        :language: kotlin
+        :start-after: DOCSTART LaunchTheNukesFlowCorrect
+        :end-before: DOCEND LaunchTheNukesFlowCorrect
+
+Note how the president is now explicit about which session it wants to send to. The people of Earth live another day.
+
+Porting from the old Party-based API
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In the old API the first ``send`` or ``receive`` to a ``Party`` was the one kicking off the counterflow. This is now
 explicit in the ``initiateFlow`` function call. To port existing code:
@@ -640,6 +672,20 @@ We can also send and receive a ``StateAndRef`` dependency chain and automaticall
         :start-after: DOCSTART 14
         :end-before: DOCEND 14
         :dedent: 12
+
+Why inlined subflows?
+^^^^^^^^^^^^^^^^^^^^^
+
+Inlined subflows provide a way to share commonly used flow code `while forcing users to create a parent flow`. Take for
+example ``CollectSignaturesFlow``. Say we made it an initiating flow that automatically kicks off
+``SignTransactionFlow`` that signs the transaction. This would mean malicious nodes can just send any old transaction to
+us using ``CollectSignaturesFlow`` and we would automatically sign it!
+
+By making this pair of flows inlined we provide control to the user over whether to sign the transaction or not by
+forcing them to nest it in their own parent flows.
+
+In general if you're writing a subflow the decision of whether you should make it initiating should depend on whether
+the counterflow needs broader context to achieve its goal.
 
 FlowException
 -------------
