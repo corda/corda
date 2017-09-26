@@ -105,6 +105,10 @@ Milestone 14
 
 * There is no longer a `NodeInfo.advertisedServices` property.
 
+* CordaRPCOps
+  - Accessing the networkMapCache via services.nodeInfo().legalIdentities returns a list of identities. 
+  - The first element in the list is the Party object referring to a node's single identity.
+
 Milestone 13
 ------------
 
