@@ -23,7 +23,7 @@ The key RPC operations exposed by the node are:
     * Returns the node's identity
 * ``CordaRPCOps.currentNodeTime``
     * Returns the node's current time
-* ``CordaRPCOps.partyFromKey/CordaRPCOps.partyFromX500Name``
+* ``CordaRPCOps.partyFromKey/CordaRPCOps.wellKnownPartyFromX500Name``
     * Retrieves a party on the network based on a public key or X500 name
 * ``CordaRPCOps.uploadAttachment``/``CordaRPCOps.openAttachment``/``CordaRPCOps.attachmentExists``
     * Uploads, opens and checks for the existence of attachments

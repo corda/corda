@@ -23,6 +23,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.finance.contracts.getCashBalance
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
@@ -52,8 +53,10 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
+        setCordappPackages("net.corda.finance.contracts.asset")
         LogHelper.setLevel(NodeVaultService::class)
-        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(BOC_KEY, DUMMY_CASH_ISSUER_KEY))
+        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(BOC_KEY, DUMMY_CASH_ISSUER_KEY),
+                                                                  customSchemas = setOf(CashSchemaV1))
         database = databaseAndServices.first
         services = databaseAndServices.second
         issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOC_KEY)
@@ -63,6 +66,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     fun tearDown() {
         database.close()
         LogHelper.reset(NodeVaultService::class)
+        unsetCordappPackages()
     }
 
     @Suspendable
@@ -443,7 +447,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val megaCorpServices = MockServices(MEGA_CORP_KEY)
 
         database.transaction {
-            val freshKey = services.legalIdentityKey
+            val freshKey = services.myInfo.chooseIdentity().owningKey
 
             // Issue a txn to Send us some Money
             val usefulBuilder = TransactionBuilder(null).apply {
@@ -475,11 +479,11 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     fun `is ownable state relevant`() {
         val service = (services.vaultService as NodeVaultService)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
-        val wellKnownCash = Cash.State(amount, services.myInfo.legalIdentity)
+        val wellKnownCash = Cash.State(amount, services.myInfo.chooseIdentity())
         val myKeys = services.keyManagementService.filterMyKeys(listOf(wellKnownCash.owner.owningKey))
         assertTrue { service.isRelevant(wellKnownCash, myKeys.toSet()) }
 
-        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.chooseIdentityAndCert(), false)
         val anonymousCash = Cash.State(amount, anonymousIdentity.party)
         val anonymousKeys = services.keyManagementService.filterMyKeys(listOf(anonymousCash.owner.owningKey))
         assertTrue { service.isRelevant(anonymousCash, anonymousKeys.toSet()) }
@@ -499,24 +503,24 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
             service.updates.subscribe(this)
         }
 
-        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.chooseIdentityAndCert(), false)
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
         // Issue then move some cash
-        val issueTx = TransactionBuilder(services.myInfo.legalIdentity).apply {
+        val issueTx = TransactionBuilder(services.myInfo.chooseIdentity()).apply {
             Cash().generateIssue(this,
-                    amount, anonymousIdentity.party, services.myInfo.legalIdentity)
-        }.toWireTransaction()
+                    amount, anonymousIdentity.party, services.myInfo.chooseIdentity())
+        }.toWireTransaction(services)
         val cashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
 
         database.transaction { service.notify(issueTx) }
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
 
         database.transaction {
-            val moveTx = TransactionBuilder(services.myInfo.legalIdentity).apply {
+            val moveTx = TransactionBuilder(services.myInfo.chooseIdentity()).apply {
                 Cash.generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
-            }.toWireTransaction()
+            }.toWireTransaction(services)
             service.notify(moveTx)
         }
         val expectedMoveUpdate = Vault.Update(setOf(cashState), emptySet(), null)
@@ -528,13 +532,13 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     @Test
     fun `correct updates are generated when changing notaries`() {
         val service = (services.vaultService as NodeVaultService)
-        val notary = services.myInfo.legalIdentity
+        val notary = services.myInfo.chooseIdentity()
 
         val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
             service.updates.subscribe(this)
         }
 
-        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.chooseIdentityAndCert(), false)
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
@@ -561,7 +565,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         val moveTx = database.transaction {
             TransactionBuilder(newNotary).apply {
                 Cash.generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
-            }.toWireTransaction()
+            }.toWireTransaction(services)
         }
 
         database.transaction {

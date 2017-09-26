@@ -1,10 +1,10 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.TransactionKeyFlow
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -39,18 +39,19 @@ open class CashPaymentFlow(
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
-            subFlow(TransactionKeyFlow(recipient))
+            subFlow(SwapIdentitiesFlow(recipient))
         } else {
             emptyMap<Party, AnonymousParty>()
         }
         val anonymousRecipient = txIdentities[recipient] ?: recipient
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(null as Party?)
+        val builder = TransactionBuilder(notary = null)
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             Cash.generateSpend(serviceHub,
                     builder,
                     amount,
+                    ourIdentityAndCert,
                     anonymousRecipient,
                     issuerConstraint)
         } catch (e: InsufficientBalanceException) {
@@ -61,10 +62,13 @@ open class CashPaymentFlow(
         val tx = serviceHub.signInitialTransaction(spendTX, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        finaliseTx(setOf(recipient), tx, "Unable to notarise spend")
-        return Result(tx, anonymousRecipient)
+        val notarised = finaliseTx(tx, setOf(recipient), "Unable to notarise spend")
+        return Result(notarised, anonymousRecipient)
     }
 
     @CordaSerializable
-    class PaymentRequest(amount: Amount<Currency>, val recipient: Party, val anonymous: Boolean, val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
+    class PaymentRequest(amount: Amount<Currency>,
+                         val recipient: Party,
+                         val anonymous: Boolean,
+                         val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
 }

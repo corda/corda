@@ -6,8 +6,59 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
+Release 1.0
+-----------
+
+* Java 8 lambdas now work property with Kryo during check-pointing.
+
+* String constants have been marked as ``const`` type in Kotlin, eliminating cases where functions of the form
+  ``get<constant name>()`` were created for the Java API. These can now be referenced by their name directly.
+
+* ``FlowLogic`` communication has been extensively rewritten to use functions on ``FlowSession`` as the base for communication
+  between nodes.
+  * Calls to ``send()``, ``receive()`` and ``sendAndReceive()`` on FlowLogic should be replaced with calls
+    to the function of the same name on ``FlowSession``. Note that the replacement functions do not take in a destination
+    parameter, as this is defined in the session.
+  * Initiated flows now take in a ``FlowSession`` instead of ``Party`` in their constructor. If you need to access the
+    counterparty identity, it is in the ``counterparty`` property of the flow session.
+
+* Added X509EdDSAEngine to intercept and rewrite EdDSA public keys wrapped in X509Key instances. This corrects an issue
+  with verifying certificate paths loaded from a Java Keystore where they contain EdDSA keys.
+
+* generateSpend() now creates a new confidential identity for the change address rather than using the identity of the
+  input state owner.
+
+* Remove the legacy web front end from the SIMM demo.
+
+* ``NodeInfo`` and ``NetworkMapCache`` changes:
+   * Removed ``NodeInfo::legalIdentity`` in preparation for handling of multiple identities. We left list of ``NodeInfo::legalIdentitiesAndCerts``,
+   the first identity still plays a special role of main node identity.
+   * We no longer support advertising services in network map. Removed ``NodeInfo::advertisedServices``, ``serviceIdentities``
+   and ``notaryIdentity``.
+   * Removed service methods from ``NetworkMapCache``: ``partyNodes``, ``networkMapNodes``, ``notaryNodes``, ``regulatorNodes``,
+   ``getNodesWithService``, ``getPeersWithService``, ``getRecommended``, ``getNodesByAdvertisedServiceIdentityKey``, ``getAnyNotary``,
+   ``notaryNode``, ``getAnyServiceOfType``. To get all known ``NodeInfo``s call ``allNodes``.
+   * In preparation for ``NetworkMapService`` redesign and distributing notaries through ``NetworkParameters`` we added
+   ``NetworkMapCache::notaryIdentities`` list to enable to lookup for notary parties known to the network. Related ``CordaRPCOps::notaryIdentities``
+   was introduced. Other special nodes parties like Oracles or Regulators need to be specified directly in CorDapp or flow.
+   * Moved ``ServiceType`` and ``ServiceInfo`` to ``net.corda.nodeapi`` package as services are only required on node startup.
+
+* Adding enum support to the class carpenter
+
+* ``ContractState::contract`` has been moved ``TransactionState::contract`` and it's type has changed to ``String`` in order to
+  support dynamic classloading of contract and contract constraints.
+
+* CorDapps that contain contracts are now automatically loaded into the attachment storage - for CorDapp developers this
+  now means that contracts should be stored in separate JARs to flows, services and utilities to avoid large JARs being
+  auto imported to the attachment store.
+
 * About half of the code in test-utils has been moved to a new module ``node-driver``,
   and the test scope modules are now located in a ``testing`` directory.
+
+* Removed `requireSchemas` CordaPluginRegistry configuration item.
+  Custom schemas are now automatically located using classpath scanning for deployed CorDapps.
+  Improved support for testing custom schemas in MockNode and MockServices using explicit registration.
 
 * Contract Upgrades: deprecated RPC authorisation / deauthorisation API calls in favour of equivalent flows in ContractUpgradeFlow.
   Implemented contract upgrade persistence using JDBC backed persistent map.
@@ -125,6 +176,62 @@ UNRELEASED
   ``tx: WireTransaction``.
 
 * Test type ``NodeHandle`` now has method ``stop(): CordaFuture<Unit>`` that terminates the referenced node.
+
+* Fixed some issues in IRS demo:
+   * Fixed leg and floating leg notional amounts were not displayed for created deals neither in single nor in list view.
+   * Parties were not displayed for created deals in single view.
+   * Non-default notional amounts caused the creation of new deals to fail.
+
+.. warning:: Renamed configuration property key `basedir` to `baseDirectory`. This will require updating existing configuration files.
+
+* Removed deprecated parts of the API.
+
+* Removed ``PluginServiceHub``. Replace with ``ServiceHub`` for ``@CordaService`` constructors.
+
+* ``X509CertificateHolder`` has been removed from the public API, replaced by ``java.security.X509Certificate``.
+
+* Moved ``CityDatabase`` out of ``core`` and into ``finance``
+
+* All of the ``serializedHash`` and ``computeNonce`` functions have been removed from ``MerkleTransaction``.
+  The ``serializedHash(x: T)`` and ``computeNonce`` were moved to ``CryptoUtils``.
+
+* Two overloaded methods ``componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int,
+  internalIndex: Int): SecureHash`` and ``componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash`` have
+  been added to ``CryptoUtils``. Similarly to ``computeNonce``, they internally use SHA256d for nonce and leaf hash
+  computations.
+
+* The ``verify(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash`` in ``PartialMerkleTree`` has been
+  renamed to ``rootAndUsedHashes`` and is now public, as it is required in the verify function of ``FilteredTransaction``.
+
+* ``TraversableTransaction`` is now an abstract class extending ``CoreTransaction``. ``WireTransaction`` and
+  ``FilteredTransaction`` now extend ``TraversableTransaction``.
+
+* Two classes, ``ComponentGroup(open val groupIndex: Int, open val components: List<OpaqueBytes>)`` and
+  ``FilteredComponentGroup(override val groupIndex: Int, override val components: List<OpaqueBytes>,
+      val nonces: List<SecureHash>, val partialMerkleTree: PartialMerkleTree): ComponentGroup(groupIndex, components)``
+  have been added, which are properties of the ``WireTransaction`` and ``FilteredTransaction``, respectively.
+
+* ``checkAllComponentsVisible(componentGroupEnum: ComponentGroupEnum)`` is added to ``FilteredTransaction``, a new
+  function to check if all components are visible in a specific component-group.
+
+* To allow for backwards compatibility, ``WireTransaction`` and ``FilteredTransaction`` have new fields and
+  constructors: ``WireTransaction(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt())``,
+  ``FilteredTransaction private constructor(id: SecureHash,filteredComponentGroups: List<FilteredComponentGroup>,
+      groupHashes: List<SecureHash>``. ``FilteredTransaction`` is still built via
+  ``buildFilteredTransaction(wtx: WireTransaction, filtering: Predicate<Any>).
+
+* ``FilteredLeaves`` class have been removed and as a result we can directly call the components from
+  ``FilteredTransaction``, such as ``ftx.inputs`` Vs the old ``ftx.filteredLeaves.inputs``.
+
+* A new ``ComponentGroupEnum`` is added with the following enum items: ``INPUTS_GROUP``, ``OUTPUTS_GROUP``,
+ ``COMMANDS_GROUP``, ``ATTACHMENTS_GROUP``, ``NOTARY_GROUP``, ``TIMEWINDOW_GROUP``.
+
+* ``ContractUpgradeFlow.Initiator`` has been renamed to ``ContractUpgradeFlow.Initiate``
+
+* ``@RPCSinceVersion``, ``RPCException`` and ``PermissionException`` have moved to ``net.corda.client.rpc``.
+
+* Current implementation of SSL in ``CordaRPCClient`` has been removed until we have a better solution which doesn't rely
+  on the node's keystore.
 
 Milestone 14
 ------------

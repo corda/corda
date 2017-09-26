@@ -1,7 +1,6 @@
 package net.corda.loadtest
 
 import net.corda.client.mock.*
-import net.corda.node.services.network.NetworkMapService
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.Callable
@@ -42,9 +41,10 @@ data class DisruptionSpec(
  *     * Randomly block queues.
  *     * Randomly duplicate messages, perhaps to other queues even.
  */
-
-val isNetworkMap = { node: NodeConnection -> node.info.advertisedServices.any { it.info.type == NetworkMapService.type } }
-val isNotary = { node: NodeConnection -> node.info.advertisedServices.any { it.info.type.isNotary() } }
+val isNotary = { node: NodeConnection ->
+    val notaries = node.proxy.notaryIdentities()
+    node.info.legalIdentities.any { it in notaries }
+}
 fun <A> ((A) -> Boolean).or(other: (A) -> Boolean): (A) -> Boolean = { this(it) || other(it) }
 
 fun hang(hangIntervalRange: LongRange) = Disruption("Hang randomly") { node, random ->

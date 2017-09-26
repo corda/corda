@@ -1,12 +1,11 @@
 package net.corda.core.identity
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.Crypto
 import net.corda.core.utilities.OpaqueBytes
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import java.security.PublicKey
+import java.security.cert.X509Certificate
 
 /**
  * The [Party] class represents an entity on the network, which is typically identified by a legal [name] and public key
@@ -27,9 +26,10 @@ import java.security.PublicKey
  *
  * @see CompositeKey
  */
-class Party(val name: X500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
-    constructor(certificate: X509CertificateHolder) : this(certificate.subject, Crypto.toSupportedPublicKey(certificate.subjectPublicKeyInfo))
-    override fun nameOrNull(): X500Name = name
+class Party(val name: CordaX500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
+    constructor(certificate: X509Certificate)
+            : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
+    override fun nameOrNull(): CordaX500Name = name
     fun anonymise(): AnonymousParty = AnonymousParty(owningKey)
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = name.toString()

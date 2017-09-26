@@ -15,6 +15,6 @@ import java.util.function.Function
  */
 class SimmPlugin : WebServerPluginRegistry {
     override val webApis = listOf(Function(::PortfolioApi))
-    override val staticServeDirs: Map<String, String> = mapOf("simmvaluationdemo" to javaClass.classLoader.getResource("simmvaluationweb").toExternalForm())
+    override val staticServeDirs: Map<String, String> = emptyMap()
     override fun customizeJSONSerialization(om: ObjectMapper): Unit = registerFinanceJSONMappers(om)
 }

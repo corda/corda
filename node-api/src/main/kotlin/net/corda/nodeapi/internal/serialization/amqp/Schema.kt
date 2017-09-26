@@ -18,9 +18,9 @@ import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterFiel
 import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSchema
 
 // TODO: get an assigned number as per AMQP spec
-val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
+const val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
 
-val DESCRIPTOR_DOMAIN: String = "net.corda"
+const val DESCRIPTOR_DOMAIN: String = "net.corda"
 
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
 val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
@@ -468,7 +468,8 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
     }
 }
 
-private fun isCollectionOrMap(type: Class<*>) = Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)
+private fun isCollectionOrMap(type: Class<*>) = (Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)) &&
+        !EnumSet::class.java.isAssignableFrom(type)
 
 private fun fingerprintForObject(type: Type, contextType: Type?, alreadySeen: MutableSet<Type>, hasher: Hasher, factory: SerializerFactory): Hasher {
     // Hash the class + properties + interfaces

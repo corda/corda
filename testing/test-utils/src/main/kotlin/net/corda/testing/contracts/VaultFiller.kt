@@ -8,6 +8,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.toFuture
@@ -21,10 +22,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.CommodityContract
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_OBLIGATION_ISSUER
-import net.corda.testing.CHARLIE
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.dummyCommand
+import net.corda.testing.*
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -35,13 +33,13 @@ import java.util.*
 fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
                                      participants: List<AbstractParty> = emptyList(),
                                      notary: Party = DUMMY_NOTARY) : Vault<DealState> {
-    val myKey: PublicKey = myInfo.legalIdentity.owningKey
+    val myKey: PublicKey = myInfo.chooseIdentity().owningKey
     val me = AnonymousParty(myKey)
 
     val transactions: List<SignedTransaction> = dealIds.map {
         // Issue a deal state
         val dummyIssue = TransactionBuilder(notary = notary).apply {
-            addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)))
+            addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)), DUMMY_DEAL_PROGRAM_ID)
             addCommand(dummyCommand())
         }
         val stx = signInitialTransaction(dummyIssue)
@@ -66,7 +64,7 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
                                             linearNumber: Long = 0L,
                                             linearBoolean: Boolean = false,
                                             linearTimestamp: Instant = now()) : Vault<LinearState> {
-    val myKey: PublicKey = myInfo.legalIdentity.owningKey
+    val myKey: PublicKey = myInfo.chooseIdentity().owningKey
     val me = AnonymousParty(myKey)
     val issuerKey = DUMMY_NOTARY_KEY
     val signatureMetadata = SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
@@ -80,7 +78,7 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
                     linearString = linearString,
                     linearNumber = linearNumber,
                     linearBoolean = linearBoolean,
-                    linearTimestamp = linearTimestamp))
+                    linearTimestamp = linearTimestamp), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
             addCommand(dummyCommand())
         }
 
@@ -119,7 +117,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     issuedBy: PartyAndReference = DUMMY_CASH_ISSUER): Vault<Cash.State> {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
-    val myKey = ownedBy?.owningKey ?: myInfo.legalIdentity.owningKey
+    val myKey = ownedBy?.owningKey ?: myInfo.chooseIdentity().owningKey
     val anonParty = AnonymousParty(myKey)
 
     // We will allocate one state to one transaction, for simplicities sake.
@@ -154,7 +152,7 @@ fun ServiceHub.fillWithSomeTestCommodity(amount: Amount<Commodity>,
                                          ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
                                          ownedBy: AbstractParty? = null,
                                          issuedBy: PartyAndReference = DUMMY_OBLIGATION_ISSUER.ref(1)): Vault<CommodityContract.State> {
-    val myKey: PublicKey = ownedBy?.owningKey ?: myInfo.legalIdentity.owningKey
+    val myKey: PublicKey = ownedBy?.owningKey ?: myInfo.chooseIdentity().owningKey
     val me = AnonymousParty(myKey)
 
     val commodity = CommodityContract()
@@ -221,7 +219,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>, 
     // Create a txn consuming different contract types
     builder = TransactionBuilder(notary = notary).apply {
         addOutputState(DummyLinearContract.State(linearId = stateAndRef.state.data.linearId,
-                participants = stateAndRef.state.data.participants))
+                participants = stateAndRef.state.data.participants), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
         addCommand(dummyCommand(notary.owningKey))
     }
     val producedTx = signInitialTransaction(builder, notary.owningKey)
@@ -242,14 +240,26 @@ fun ServiceHub.consumeLinearStates(linearStates: List<StateAndRef<LinearState>>,
 fun ServiceHub.evolveLinearStates(linearStates: List<StateAndRef<LinearState>>, notary: Party) = consumeAndProduce(linearStates, notary)
 fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>, notary: Party) : StateAndRef<LinearState> = consumeAndProduce(linearState, notary)
 
+/**
+ * Consume cash, sending any change to the default identity for this node. Only suitable for use in test scenarios,
+ * where nodes have a default identity.
+ */
 @JvmOverloads
 fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE, notary: Party): Vault.Update<ContractState> {
+    return consumeCash(amount, myInfo.chooseIdentityAndCert(), to, notary)
+}
+
+/**
+ * Consume cash, sending any change to the specified identity.
+ */
+@JvmOverloads
+fun ServiceHub.consumeCash(amount: Amount<Currency>, ourIdentity: PartyAndCertificate, to: Party = CHARLIE, notary: Party): Vault.Update<ContractState> {
     val update =  vaultService.rawUpdates.toFuture()
     val services = this
 
     // A tx that spends our money.
     val builder = TransactionBuilder(notary).apply {
-        Cash.generateSpend(services, this, amount, to)
+        Cash.generateSpend(services, this, amount, ourIdentity, to)
     }
     val spendTx = signInitialTransaction(builder, notary.owningKey)
 

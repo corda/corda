@@ -3,9 +3,7 @@
 define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
     return {
         fixedRatePayer: "O=Bank A,L=London,C=GB",
-        notional: {
-            quantity: 2500000000
-        },
+        notional: 2500000000,
         paymentFrequency: "SemiAnnual",
         effectiveDateAdjustment: null,
         terminationDateAdjustment: null,

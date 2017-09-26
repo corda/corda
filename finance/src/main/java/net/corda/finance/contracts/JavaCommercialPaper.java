@@ -7,6 +7,7 @@ import net.corda.core.crypto.NullKeys.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
+import net.corda.core.identity.PartyAndCertificate;
 import net.corda.core.node.ServiceHub;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -31,7 +32,7 @@ import static net.corda.core.contracts.ContractsDSL.requireThat;
  */
 @SuppressWarnings("unused")
 public class JavaCommercialPaper implements Contract {
-    private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
+    static final String JCP_PROGRAM_ID = "net.corda.finance.contracts.JavaCommercialPaper";
 
     @SuppressWarnings("unused")
     public static class State implements OwnableState, ICommercialPaperState {
@@ -88,12 +89,6 @@ public class JavaCommercialPaper implements Contract {
 
         public Instant getMaturityDate() {
             return maturityDate;
-        }
-
-        @NotNull
-        @Override
-        public Contract getContract() {
-            return JCP_PROGRAM_ID;
         }
 
         @Override
@@ -236,7 +231,7 @@ public class JavaCommercialPaper implements Contract {
 
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {
         State state = new State(issuance, issuance.getParty(), faceValue, maturityDate);
-        TransactionState output = new TransactionState<>(state, notary, encumbrance);
+        TransactionState output = new TransactionState<>(state, JCP_PROGRAM_ID, notary, encumbrance);
         return new TransactionBuilder(notary).withItems(output, new Command<>(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
@@ -245,15 +240,18 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @Suspendable
-    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, ServiceHub services) throws InsufficientBalanceException {
-        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), Collections.emptySet());
+    public void generateRedeem(final TransactionBuilder tx,
+                               final StateAndRef<State> paper,
+                               final ServiceHub services,
+                               final PartyAndCertificate ourIdentity) throws InsufficientBalanceException {
+        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), ourIdentity, paper.getState().getData().getOwner(), Collections.emptySet());
         tx.addInputState(paper);
         tx.addCommand(new Command<>(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
     }
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, AbstractParty newOwner) {
         tx.addInputState(paper);
-        tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary(), paper.getState().getEncumbrance()));
+        tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), JCP_PROGRAM_ID, paper.getState().getNotary(), paper.getState().getEncumbrance()));
         tx.addCommand(new Command<>(new Commands.Move(), paper.getState().getData().getOwner().getOwningKey()));
     }
 

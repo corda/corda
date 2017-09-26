@@ -11,14 +11,18 @@ import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.client.rpc.RPCException
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
 import net.corda.core.messaging.RPCOps
-import net.corda.core.utilities.seconds
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
-import net.corda.core.utilities.*
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.seconds
 import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
@@ -32,7 +36,6 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Notification
 import rx.Observable
 import rx.Subscriber
@@ -76,7 +79,7 @@ class RPCServer(
         private val rpcServerPassword: String,
         private val serverLocator: ServerLocator,
         private val userService: RPCUserService,
-        private val nodeLegalName: X500Name,
+        private val nodeLegalName: CordaX500Name,
         private val rpcConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
 ) {
     private companion object {
@@ -341,7 +344,7 @@ class RPCServer(
         val rpcUser = userService.getUser(validatedUser)
         if (rpcUser != null) {
             return rpcUser
-        } else if (X500Name(validatedUser) == nodeLegalName) {
+        } else if (CordaX500Name.parse(validatedUser) == nodeLegalName) {
             return nodeUser
         } else {
             throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")

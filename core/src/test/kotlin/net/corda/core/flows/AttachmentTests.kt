@@ -8,13 +8,15 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -59,10 +61,10 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.ensureRegistered()
+        n0.internals.ensureRegistered()
 
-        n0.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         // Insert an attachment into node zero's store directly.
         val id = n0.database.transaction {
@@ -71,7 +73,7 @@ class AttachmentTests {
 
         // Get node one to run a flow to fetch it and insert it.
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.legalIdentity)
+        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity())
         mockNet.runNetwork()
         assertEquals(0, f1.resultFuture.getOrThrow().fromDisk.size)
 
@@ -83,9 +85,9 @@ class AttachmentTests {
         assertEquals(id, attachment.open().readBytes().sha256())
 
         // Shut down node zero and ensure node one can still resolve the attachment.
-        n0.stop()
+        n0.dispose()
 
-        val response: FetchDataFlow.Result<Attachment> = n1.startAttachmentFlow(setOf(id), n0.info.legalIdentity).resultFuture.getOrThrow()
+        val response: FetchDataFlow.Result<Attachment> = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity()).resultFuture.getOrThrow()
         assertEquals(attachment, response.fromDisk[0])
     }
 
@@ -97,15 +99,15 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.ensureRegistered()
+        n0.internals.ensureRegistered()
 
-        n0.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(hash), n0.info.legalIdentity)
+        val f1 = n1.startAttachmentFlow(setOf(hash), n0.info.chooseIdentity())
         mockNet.runNetwork()
         val e = assertFailsWith<FetchDataFlow.HashNotFound> { f1.resultFuture.getOrThrow() }
         assertEquals(hash, e.requested)
@@ -120,10 +122,7 @@ class AttachmentTests {
                                 overrideServices: Map<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
-                    override fun start() {
-                        super.start()
-                        attachments.checkAttachmentsOnLoad = false
-                    }
+                    override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }
         }, advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
@@ -131,10 +130,10 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.ensureRegistered()
+        n0.internals.ensureRegistered()
 
-        n0.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
@@ -153,22 +152,25 @@ class AttachmentTests {
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.legalIdentity)
+        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity())
         mockNet.runNetwork()
         assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { f1.resultFuture.getOrThrow() }
     }
 
-    private fun MockNetwork.MockNode.startAttachmentFlow(hashes: Set<SecureHash>, otherSide: Party) = services.startFlow(InitiatingFetchAttachmentsFlow(otherSide, hashes))
+    private fun StartedNode<*>.startAttachmentFlow(hashes: Set<SecureHash>, otherSide: Party) = services.startFlow(InitiatingFetchAttachmentsFlow(otherSide, hashes))
 
     @InitiatingFlow
     private class InitiatingFetchAttachmentsFlow(val otherSide: Party, val hashes: Set<SecureHash>) : FlowLogic<FetchDataFlow.Result<Attachment>>() {
         @Suspendable
-        override fun call(): FetchDataFlow.Result<Attachment> = subFlow(FetchAttachmentsFlow(hashes, otherSide))
+        override fun call(): FetchDataFlow.Result<Attachment> {
+            val session = initiateFlow(otherSide)
+            return subFlow(FetchAttachmentsFlow(hashes, session))
+        }
     }
 
     @InitiatedBy(InitiatingFetchAttachmentsFlow::class)
-    private class FetchAttachmentsResponse(val otherSide: Party) : FlowLogic<Void?>() {
+    private class FetchAttachmentsResponse(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(TestDataVendingFlow(otherSide))
+        override fun call() = subFlow(TestDataVendingFlow(otherSideSession))
     }
 }

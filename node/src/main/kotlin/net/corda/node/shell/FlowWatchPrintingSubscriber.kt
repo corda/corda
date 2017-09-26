@@ -1,6 +1,5 @@
 package net.corda.node.shell
 
-import net.corda.core.utilities.organisation
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.openFuture

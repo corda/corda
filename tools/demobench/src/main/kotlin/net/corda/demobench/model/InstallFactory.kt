@@ -1,10 +1,10 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.Config
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.parseNetworkHostAndPort
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
@@ -21,7 +21,7 @@ class InstallFactory : Controller() {
         val rpcPort = config.parsePort("rpcAddress")
         val webPort = config.parsePort("webAddress")
         val h2Port = config.getInt("h2port")
-        val x500name = X500Name(config.getString("myLegalName"))
+        val x500name = CordaX500Name.parse(config.getString("myLegalName"))
         val extraServices = config.parseExtraServices("extraAdvertisedServiceIds")
         val tempDir = Files.createTempDirectory(baseDir, ".node")
 
@@ -38,7 +38,7 @@ class InstallFactory : Controller() {
 
         if (config.hasPath("networkMapService")) {
             val nmap = config.getConfig("networkMapService")
-            nodeConfig.networkMap = NetworkMapConfig(X500Name(nmap.getString("legalName")), nmap.parsePort("address"))
+            nodeConfig.networkMap = NetworkMapConfig(CordaX500Name.parse(nmap.getString("legalName")), nmap.parsePort("address"))
         } else {
             log.info("Node '${nodeConfig.legalName}' is the network map")
         }
@@ -48,7 +48,7 @@ class InstallFactory : Controller() {
 
     private fun Config.parsePort(path: String): Int {
         val address = this.getString(path)
-        val port = address.parseNetworkHostAndPort().port
+        val port = NetworkHostAndPort.parse(address).port
         require(nodeController.isPortValid(port), { "Invalid port $port from '$path'." })
         return port
     }

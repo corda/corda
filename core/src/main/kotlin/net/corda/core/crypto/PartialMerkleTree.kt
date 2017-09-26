@@ -121,6 +121,28 @@ class PartialMerkleTree(val root: PartialTree) {
                 }
             }
         }
+
+        /**
+         * Recursive calculation of root of this partial tree.
+         * Modifies usedHashes to later check for inclusion with hashes provided.
+         * @param node the partial Merkle tree for which we want to calculate the Merkle root.
+         * @param usedHashes a mutable list that at the end of this recursive algorithm, it will consist of the included leaves (hashes of the visible components).
+         * @return the root [SecureHash] of this partial Merkle tree.
+         */
+        fun rootAndUsedHashes(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash {
+            return when (node) {
+                is PartialTree.IncludedLeaf -> {
+                    usedHashes.add(node.hash)
+                    node.hash
+                }
+                is PartialTree.Leaf -> node.hash
+                is PartialTree.Node -> {
+                    val leftHash = rootAndUsedHashes(node.left, usedHashes)
+                    val rightHash = rootAndUsedHashes(node.right, usedHashes)
+                    return leftHash.hashConcat(rightHash)
+                }
+            }
+        }
     }
 
     /**
@@ -129,29 +151,10 @@ class PartialMerkleTree(val root: PartialTree) {
      */
     fun verify(merkleRootHash: SecureHash, hashesToCheck: List<SecureHash>): Boolean {
         val usedHashes = ArrayList<SecureHash>()
-        val verifyRoot = verify(root, usedHashes)
+        val verifyRoot = rootAndUsedHashes(root, usedHashes)
         // It means that we obtained more/fewer hashes than needed or different sets of hashes.
         if (hashesToCheck.groupBy { it } != usedHashes.groupBy { it })
             return false
         return (verifyRoot == merkleRootHash)
-    }
-
-    /**
-     * Recursive calculation of root of this partial tree.
-     * Modifies usedHashes to later check for inclusion with hashes provided.
-     */
-    private fun verify(node: PartialTree, usedHashes: MutableList<SecureHash>): SecureHash {
-        return when (node) {
-            is PartialTree.IncludedLeaf -> {
-                usedHashes.add(node.hash)
-                node.hash
-            }
-            is PartialTree.Leaf -> node.hash
-            is PartialTree.Node -> {
-                val leftHash = verify(node.left, usedHashes)
-                val rightHash = verify(node.right, usedHashes)
-                return leftHash.hashConcat(rightHash)
-            }
-        }
     }
 }

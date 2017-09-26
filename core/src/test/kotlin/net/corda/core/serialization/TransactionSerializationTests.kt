@@ -15,9 +15,9 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-val TEST_PROGRAM_ID = TransactionSerializationTests.TestCash()
-
 class TransactionSerializationTests : TestDependencyInjectionBase() {
+    val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
+
     class TestCash : Contract {
         override fun verify(tx: LedgerTransaction) {
         }
@@ -26,7 +26,6 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
                 val deposit: PartyAndReference,
                 val amount: Amount<Currency>,
                 override val owner: AbstractParty) : OwnableState {
-            override val contract: Contract = TEST_PROGRAM_ID
             override val participants: List<AbstractParty>
                 get() = listOf(owner)
 
@@ -42,12 +41,12 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
     // It refers to a fake TX/state that we don't bother creating here.
     val depositRef = MINI_CORP.ref(1)
     val fakeStateRef = generateStateRef()
-    val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), DUMMY_NOTARY), fakeStateRef)
-    val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), DUMMY_NOTARY)
-    val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), DUMMY_NOTARY)
+    val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY), fakeStateRef)
+    val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
+    val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
 
-    val megaCorpServices = MockServices(MEGA_CORP_KEY)
-    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP_KEY)
+    val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
     @Before

@@ -1,13 +1,10 @@
+@file:JvmName("KeyStoreUtilities")
+
 package net.corda.node.utilities
 
-import net.corda.core.utilities.CertificateAndKeyPair
 import net.corda.core.crypto.Crypto
-import net.corda.core.utilities.cert
-import net.corda.core.internal.exists
-import net.corda.core.internal.read
-import net.corda.core.internal.toX509CertHolder
-import net.corda.core.internal.write
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.*
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.IOException
 import java.io.InputStream
@@ -17,8 +14,9 @@ import java.security.*
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 
-val KEYSTORE_TYPE = "JKS"
+const val KEYSTORE_TYPE = "JKS"
 
 /**
  * Helper method to either open an existing keystore for modification, or create a new blank keystore.
@@ -137,7 +135,7 @@ fun KeyStore.getKeyPair(alias: String, keyPassword: String): KeyPair = getCertif
  * @param keyPassword The password for the PrivateKey (not the store access password).
  */
 fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): CertificateAndKeyPair {
-    val cert = getX509Certificate(alias)
+    val cert = getX509Certificate(alias).toX509CertHolder()
     val publicKey = Crypto.toSupportedPublicKey(cert.subjectPublicKeyInfo)
     return CertificateAndKeyPair(cert, KeyPair(publicKey, getSupportedKey(alias, keyPassword)))
 }
@@ -147,9 +145,9 @@ fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): Certi
  * @param alias The name to lookup the Key and Certificate chain from.
  * @return The X509Certificate found in the KeyStore under the specified alias.
  */
-fun KeyStore.getX509Certificate(alias: String): X509CertificateHolder {
-    val certificate = getCertificate(alias) ?: throw IllegalArgumentException("No certificate under alias \"$alias\"")
-    return certificate.toX509CertHolder()
+fun KeyStore.getX509Certificate(alias: String): X509Certificate {
+    val certificate = getCertificate(alias) ?: throw IllegalArgumentException("No certificate under alias \"$alias\".")
+    return certificate as? X509Certificate  ?: throw IllegalArgumentException("Certificate under alias \"$alias\" is not an X.509 certificate.")
 }
 
 /**
@@ -175,7 +173,7 @@ fun KeyStore.getSupportedKey(alias: String, keyPassword: String): PrivateKey {
 class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
     private val keyStore = storePath.read { loadKeyStore(it, storePassword) }
 
-    private fun createCertificate(serviceName: X500Name, pubKey: PublicKey): CertPath {
+    private fun createCertificate(serviceName: CordaX500Name, pubKey: PublicKey): CertPath {
         val clientCertPath = keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         // Assume key password = store password.
         val clientCA = certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
@@ -187,14 +185,14 @@ class KeyStoreWrapper(private val storePath: Path, private val storePassword: St
         return certPath
     }
 
-    fun signAndSaveNewKeyPair(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
+    fun signAndSaveNewKeyPair(serviceName: CordaX500Name, privateKeyAlias: String, keyPair: KeyPair) {
         val certPath = createCertificate(serviceName, keyPair.public)
         // Assume key password = store password.
         keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), certPath.certificates.toTypedArray())
         keyStore.save(storePath, storePassword)
     }
 
-    fun savePublicKey(serviceName: X500Name, pubKeyAlias: String, pubKey: PublicKey) {
+    fun savePublicKey(serviceName: CordaX500Name, pubKeyAlias: String, pubKey: PublicKey) {
         val certPath = createCertificate(serviceName, pubKey)
         // Assume key password = store password.
         keyStore.addOrReplaceCertificate(pubKeyAlias, certPath.certificates.first())

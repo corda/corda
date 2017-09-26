@@ -1,15 +1,16 @@
 package net.corda.netmap.simulation
 
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.CordaX500Name
+import net.corda.finance.utils.CityDatabase
+import net.corda.finance.utils.WorldMapLocation
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.CityDatabase
-import net.corda.core.node.WorldMapLocation
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.getX500Name
-import net.corda.core.utilities.locality
 import net.corda.irs.api.NodeInterestRates
+import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
@@ -56,6 +57,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                              advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                              entropyRoot: BigInteger)
         : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, overrideServices, entropyRoot) {
+        override val started: StartedNode<SimulatedNode>? get() = uncheckedCast(super.started)
         override fun findMyLocation(): WorldMapLocation? {
             return configuration.myLegalName.locality.let { CityDatabase[it] }
         }
@@ -72,14 +74,14 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = getX500Name(O = "Bank $letter", L = city, C = country))
+                    myLegalName = CordaX500Name(organisation = "Bank $letter", locality = city, country = country))
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
 
         fun createAll(): List<SimulatedNode> {
             return bankLocations.mapIndexed { i, _ ->
                 // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
-                mockNet.createNode(networkMap.network.myAddress, nodeFactory = this, start = false, entropyRoot = BigInteger.valueOf(i.toLong()))
+                mockNet.createUnstartedNode(networkMap.network.myAddress, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong()))
             }
         }
     }
@@ -112,18 +114,16 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object RatesOracleFactory : MockNetwork.Factory<SimulatedNode> {
         // TODO: Make a more realistic legal name
-        val RATES_SERVICE_NAME = getX500Name(O = "Rates Service Provider", OU = "corda", L = "Madrid", C = "ES")
+        val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): SimulatedNode {
-            require(advertisedServices.containsType(NodeInterestRates.Oracle.type))
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = RATES_SERVICE_NAME)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
-                override fun start() {
-                    super.start()
+                override fun start() = super.start().apply {
                     registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
                     registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
                     javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
@@ -155,11 +155,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     // This one must come first.
     val networkMap = mockNet.createNode(nodeFactory = NetworkMapNodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type))
     val notary = mockNet.createNode(networkMap.network.myAddress, nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type))
-    val regulators = listOf(mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = RegulatorFactory))
-    val ratesOracle = mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = RatesOracleFactory, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
+    val regulators = listOf(mockNet.createUnstartedNode(networkMap.network.myAddress, nodeFactory = RegulatorFactory))
+    val ratesOracle = mockNet.createUnstartedNode(networkMap.network.myAddress, nodeFactory = RatesOracleFactory)
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
-    val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)
+    val serviceProviders: List<SimulatedNode> = listOf(notary.internals, ratesOracle, networkMap.internals)
     val banks: List<SimulatedNode> = bankFactory.createAll()
 
     val clocks = (serviceProviders + regulators + banks).map { it.platformClock as TestClock }
@@ -227,10 +227,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         return null
     }
 
-    protected fun showProgressFor(nodes: List<SimulatedNode>) {
+    protected fun showProgressFor(nodes: List<StartedNode<SimulatedNode>>) {
         nodes.forEach { node ->
             node.smm.changes.filter { it is StateMachineManager.Change.Add }.subscribe {
-                linkFlowProgress(node, it.logic)
+                linkFlowProgress(node.internals, it.logic)
             }
         }
     }
@@ -246,7 +246,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showConsensusFor(nodes: List<SimulatedNode>) {
         val node = nodes.first()
-        node.smm.changes.filter { it is StateMachineManager.Change.Add }.first().subscribe {
+        node.started!!.smm.changes.filter { it is StateMachineManager.Change.Add }.first().subscribe {
             linkConsensus(nodes, it.logic)
         }
     }
@@ -264,6 +264,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     fun start(): Future<Unit> {
         mockNet.startNodes()
+        mockNet.registerIdentities()
         // Wait for all the nodes to have finished registering with the network map service.
         return networkInitialisationFinished.thenCompose { startMainSimulation() }
     }

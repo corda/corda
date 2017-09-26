@@ -5,8 +5,8 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.webserver.WebServerConfig
+import net.corda.webserver.converters.CordaConverterProvider
 import net.corda.webserver.services.WebServerPluginRegistry
 import net.corda.webserver.servlets.*
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.Writer
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.NoSuchFileException
 import java.util.*
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.MediaType
@@ -136,6 +137,7 @@ class NodeWebServer(val config: WebServerConfig) {
             val resourceConfig = ResourceConfig()
                 .register(ObjectMapperConfig(rpcObjectMapper))
                 .register(ResponseFilter())
+                .register(CordaConverterProvider)
                 .register(APIServerImpl(localRpc))
 
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
@@ -185,12 +187,12 @@ class NodeWebServer(val config: WebServerConfig) {
             try {
                 return connectLocalRpcAsNodeUser()
             } catch (e: ActiveMQNotConnectedException) {
-                log.debug("Could not connect to ${config.p2pAddress} due to exception: ", e)
+                log.debug("Could not connect to ${config.rpcAddress} due to exception: ", e)
                 Thread.sleep(retryDelay)
                 // This error will happen if the server has yet to create the keystore
                 // Keep the fully qualified package name due to collisions with the Kotlin stdlib
                 // exception of the same name
-            } catch (e: java.nio.file.NoSuchFileException) {
+            } catch (e: NoSuchFileException) {
                 log.debug("Tried to open a file that doesn't yet exist, retrying", e)
                 Thread.sleep(retryDelay)
             } catch (e: Throwable) {
@@ -203,9 +205,10 @@ class NodeWebServer(val config: WebServerConfig) {
     }
 
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
-        log.info("Connecting to node at ${config.p2pAddress} as node user")
-        val client = CordaRPCClient(config.p2pAddress, config)
-        val connection = client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+        val rpcUser = config.rpcUsers.firstOrNull() ?: throw IllegalArgumentException("The node config has not specified any RPC users")
+        log.info("Connecting to node at ${config.rpcAddress} as $rpcUser")
+        val client = CordaRPCClient(config.rpcAddress)
+        val connection = client.start(rpcUser.username, rpcUser.password)
         return connection.proxy
     }
 

@@ -2,12 +2,16 @@ package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.KeyManagementService
-import java.security.KeyPair
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -58,7 +62,8 @@ open class TransactionBuilder(
                 is StateAndRef<*> -> addInputState(t)
                 is SecureHash -> addAttachment(t)
                 is TransactionState<*> -> addOutputState(t)
-                is ContractState -> addOutputState(t)
+                is StateAndContract -> addOutputState(t.state, t.contract)
+                is ContractState -> throw UnsupportedOperationException("Removed as of V1: please use a StateAndContract instead")
                 is Command<*> -> addCommand(t)
                 is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
                 is TimeWindow -> setTimeWindow(t)
@@ -70,11 +75,35 @@ open class TransactionBuilder(
     }
     // DOCEND 1
 
-    fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, window, privacySalt)
+    /**
+     * Generates a [WireTransaction] from this builder and resolves any [AutomaticHashConstraint] on contracts to
+     * [HashAttachmentConstraint].
+     *
+     * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
+     */
+    @JvmOverloads
+    @Throws(MissingContractAttachments::class)
+    fun toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+        // Resolves the AutomaticHashConstraints to HashAttachmentConstraints for convenience. The AutomaticHashConstraint
+        // allows for less boiler plate when constructing transactions since for the typical case the named contract
+        // will be available when building the transaction. In exceptional cases the TransactionStates must be created
+        // with an explicit [AttachmentConstraint]
+        val resolvedOutputs = outputs.map { state ->
+            if (state.constraint is AutomaticHashConstraint) {
+                services.cordappProvider.getContractAttachmentID(state.contract)?.let {
+                    state.copy(constraint = HashAttachmentConstraint(it))
+                } ?: throw MissingContractAttachments(listOf(state))
+            } else {
+                state
+            }
+        }
+        return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
+            WireTransaction(WireTransaction.createComponentGroups(inputs, resolvedOutputs, commands, attachments, notary, window), privacySalt)
+        }
+    }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
+    fun toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext? = null) = toWireTransaction(services, serializationContext).toLedgerTransaction(services)
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {
@@ -93,20 +122,22 @@ open class TransactionBuilder(
         return this
     }
 
+    @JvmOverloads
     fun addOutputState(state: TransactionState<*>): TransactionBuilder {
         outputs.add(state)
         return this
     }
 
     @JvmOverloads
-    fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null): TransactionBuilder {
-        return addOutputState(TransactionState(state, notary, encumbrance))
+    fun addOutputState(state: ContractState, contract: ContractClassName, notary: Party, encumbrance: Int? = null, constraint: AttachmentConstraint = AutomaticHashConstraint): TransactionBuilder {
+        return addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
     }
 
     /** A default notary must be specified during builder construction to use this method */
-    fun addOutputState(state: ContractState): TransactionBuilder {
+    @JvmOverloads
+    fun addOutputState(state: ContractState, contract: ContractClassName, constraint: AttachmentConstraint = AutomaticHashConstraint): TransactionBuilder {
         checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
-        addOutputState(state, notary!!)
+        addOutputState(state, contract, notary!!, constraint = constraint)
         return this
     }
 
@@ -153,8 +184,8 @@ open class TransactionBuilder(
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
      * [ServiceHub.signInitialTransaction] instead.
      */
-    fun toSignedTransaction(keyManagementService: KeyManagementService, publicKey: PublicKey, signatureMetadata: SignatureMetadata): SignedTransaction {
-        val wtx = toWireTransaction()
+    fun toSignedTransaction(keyManagementService: KeyManagementService, publicKey: PublicKey, signatureMetadata: SignatureMetadata, services: ServicesForResolution): SignedTransaction {
+        val wtx = toWireTransaction(services)
         val signableData = SignableData(wtx.id, signatureMetadata)
         val sig = keyManagementService.sign(signableData, publicKey)
         return SignedTransaction(wtx, listOf(sig))

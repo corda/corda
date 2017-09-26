@@ -1,9 +1,7 @@
 package net.corda.services.messaging
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.exists
+import net.corda.core.internal.*
 import net.corda.node.utilities.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
@@ -20,6 +18,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Test
 import java.nio.file.Files
 
@@ -28,7 +27,7 @@ import java.nio.file.Files
  */
 class MQSecurityAsNodeTest : MQSecurityTest() {
     override fun createAttacker(): SimpleMQClient {
-        return clientTo(alice.configuration.p2pAddress)
+        return clientTo(alice.internals.configuration.p2pAddress)
     }
 
     override fun startAttacker(attacker: SimpleMQClient) {
@@ -42,7 +41,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `only the node running the broker can login using the special node user`() {
-        val attacker = clientTo(alice.configuration.p2pAddress)
+        val attacker = clientTo(alice.internals.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(NODE_USER, NODE_USER)
         }
@@ -50,7 +49,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login as the default cluster user`() {
-        val attacker = clientTo(alice.configuration.p2pAddress)
+        val attacker = clientTo(alice.internals.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQClusterSecurityException::class.java).isThrownBy {
             attacker.start(ActiveMQDefaultConfiguration.getDefaultClusterUser(), ActiveMQDefaultConfiguration.getDefaultClusterPassword())
         }
@@ -58,7 +57,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login without a username and password`() {
-        val attacker = clientTo(alice.configuration.p2pAddress)
+        val attacker = clientTo(alice.internals.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start()
         }
@@ -66,7 +65,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a node user`() {
-        val attacker = clientTo(alice.configuration.rpcAddress!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcAddress!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(NODE_USER, NODE_USER, enableSSL = false)
         }
@@ -74,7 +73,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a peer user`() {
-        val attacker = clientTo(alice.configuration.rpcAddress!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcAddress!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER, enableSSL = false)  // Login as a peer
         }
@@ -98,12 +97,12 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                         javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"),
                         "cordacadevpass")
 
-                val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
+                val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).toX509CertHolder()
                 val intermediateCA = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
                 val clientKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
 
                 // Set name constrain to the legal name.
-                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName))), arrayOf())
+                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
                 val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCA.certificate,
                         intermediateCA.keyPair, legalName, clientKey.public, nameConstraints = nameConstraints)
                 val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -128,7 +127,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
             }
         }
 
-        val attacker = clientTo(alice.configuration.p2pAddress, sslConfig)
+        val attacker = clientTo(alice.internals.configuration.p2pAddress, sslConfig)
 
         assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER)

@@ -1,17 +1,13 @@
 package net.corda.vega.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
 import net.corda.vega.contracts.IRSState
-import net.corda.vega.contracts.OGTrade
 import net.corda.vega.contracts.SwapData
 
 object IRSTradeFlow {
@@ -23,40 +19,40 @@ object IRSTradeFlow {
     class Requester(val swap: SwapData, val otherParty: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
-            val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
-            val myIdentity = serviceHub.myInfo.legalIdentity
+            require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
+            val notary = serviceHub.networkMapCache.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
             val (buyer, seller) =
-                    if (swap.buyer.second == myIdentity.owningKey) {
-                        Pair(myIdentity, otherParty)
+                    if (swap.buyer.second == ourIdentity.owningKey) {
+                        Pair(ourIdentity, otherParty)
                     } else {
-                        Pair(otherParty, myIdentity)
+                        Pair(otherParty, ourIdentity)
                     }
-            val offer = IRSState(swap, buyer, seller, OGTrade())
+            val offer = IRSState(swap, buyer, seller)
 
             logger.info("Handshake finished, sending IRS trade offer message")
-            val otherPartyAgreeFlag = sendAndReceive<Boolean>(otherParty, OfferMessage(notary, offer)).unwrap { it }
+            val session = initiateFlow(otherParty)
+            val otherPartyAgreeFlag = session.sendAndReceive<Boolean>(OfferMessage(notary, offer)).unwrap { it }
             require(otherPartyAgreeFlag)
 
             return subFlow(TwoPartyDealFlow.Instigator(
-                    otherParty,
+                    session,
                     TwoPartyDealFlow.AutoOffer(notary, offer)))
         }
 
     }
 
     @InitiatedBy(Requester::class)
-    class Receiver(private val replyToParty: Party) : FlowLogic<Unit>() {
+    class Receiver(private val replyToSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             logger.info("IRSTradeFlow receiver started")
             logger.info("Handshake finished, awaiting IRS trade offer")
 
-            val offer = receive<OfferMessage>(replyToParty).unwrap { it }
+            val offer = replyToSession.receive<OfferMessage>().unwrap { it }
             // Automatically agree - in reality we'd vet the offer message
-            require(serviceHub.networkMapCache.notaryNodes.map { it.notaryIdentity }.contains(offer.notary))
-            send(replyToParty, true)
-            subFlow(TwoPartyDealFlow.Acceptor(replyToParty))
+            require(serviceHub.networkMapCache.notaryIdentities.contains(offer.notary))
+            replyToSession.send(true)
+            subFlow(TwoPartyDealFlow.Acceptor(replyToSession))
         }
     }
 }

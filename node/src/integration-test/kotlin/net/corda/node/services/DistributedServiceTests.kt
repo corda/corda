@@ -6,12 +6,12 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
@@ -22,16 +22,15 @@ import org.junit.Test
 import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 
 class DistributedServiceTests : DriverBasedTest() {
     lateinit var alice: NodeHandle
     lateinit var notaries: List<NodeHandle.OutOfProcess>
     lateinit var aliceProxy: CordaRPCOps
     lateinit var raftNotaryIdentity: Party
-    lateinit var notaryStateMachines: Observable<Pair<NodeInfo, StateMachineUpdate>>
+    lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
 
-    override fun setup() = driver {
+    override fun setup() = driver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
         // Start Alice and 3 notaries in a RAFT cluster
         val clusterSize = 3
         val testUser = User("test", "test", permissions = setOf(
@@ -40,7 +39,7 @@ class DistributedServiceTests : DriverBasedTest() {
         )
         val aliceFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser))
         val notariesFuture = startNotaryCluster(
-                DUMMY_NOTARY.name,
+                DUMMY_NOTARY.name.copy(commonName = RaftValidatingNotaryService.type.id),
                 rpcUsers = listOf(testUser),
                 clusterSize = clusterSize,
                 type = RaftValidatingNotaryService.type
@@ -52,8 +51,8 @@ class DistributedServiceTests : DriverBasedTest() {
         notaries = notaryNodes.map { it as NodeHandle.OutOfProcess }
 
         assertEquals(notaries.size, clusterSize)
-        assertEquals(notaries.size, notaries.map { it.nodeInfo.legalIdentity }.toSet().size)
-
+        // Check that each notary has different identity as a node.
+        assertEquals(notaries.size, notaries.map { it.nodeInfo.chooseIdentity() }.toSet().size)
         // Connect to Alice and the notaries
         fun connectRpc(node: NodeHandle): CordaRPCOps {
             val client = node.rpcClientToNode()
@@ -62,7 +61,7 @@ class DistributedServiceTests : DriverBasedTest() {
         aliceProxy = connectRpc(alice)
         val rpcClientsToNotaries = notaries.map(::connectRpc)
         notaryStateMachines = Observable.from(rpcClientsToNotaries.map { proxy ->
-            proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeIdentity(), it) }
+            proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeInfo().chooseIdentity(), it) }
         }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
 
         runTest()
@@ -82,10 +81,10 @@ class DistributedServiceTests : DriverBasedTest() {
         // The state machines added in the notaries should map one-to-one to notarisation requests
         val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
-            replicate<Pair<NodeInfo, StateMachineUpdate>>(50) {
+            replicate<Pair<Party, StateMachineUpdate>>(50) {
                 expect(match = { it.second is StateMachineUpdate.Added }) { (notary, update) ->
                     update as StateMachineUpdate.Added
-                    notarisationsPerNotary.compute(notary.legalIdentity) { _, number -> number?.plus(1) ?: 1 }
+                    notarisationsPerNotary.compute(notary) { _, number -> number?.plus(1) ?: 1 }
                 }
             }
         }
@@ -120,10 +119,10 @@ class DistributedServiceTests : DriverBasedTest() {
 
         val notarisationsPerNotary = HashMap<Party, Int>()
         notaryStateMachines.expectEvents(isStrict = false) {
-            replicate<Pair<NodeInfo, StateMachineUpdate>>(30) {
+            replicate<Pair<Party, StateMachineUpdate>>(30) {
                 expect(match = { it.second is StateMachineUpdate.Added }) { (notary, update) ->
                     update as StateMachineUpdate.Added
-                    notarisationsPerNotary.compute(notary.legalIdentity) { _, number -> number?.plus(1) ?: 1 }
+                    notarisationsPerNotary.compute(notary) { _, number -> number?.plus(1) ?: 1 }
                 }
             }
         }
@@ -137,6 +136,6 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
+        aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.chooseIdentity()).returnValue.getOrThrow()
     }
 }

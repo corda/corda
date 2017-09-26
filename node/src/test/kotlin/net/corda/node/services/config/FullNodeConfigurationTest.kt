@@ -1,6 +1,5 @@
 package net.corda.node.services.config
 
-import net.corda.core.utilities.organisation
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
@@ -15,7 +14,7 @@ class FullNodeConfigurationTest {
     @Test
     fun `Artemis special characters not permitted in RPC usernames`() {
         val testConfiguration = FullNodeConfiguration(
-                basedir = Paths.get("."),
+                baseDirectory = Paths.get("."),
                 myLegalName = ALICE.name,
                 networkMapService = null,
                 emailAddress = "",

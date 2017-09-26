@@ -5,11 +5,11 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.contracts.DealState
 import net.corda.vega.analytics.InitialMarginTriple
@@ -21,7 +21,6 @@ import net.corda.vega.flows.SimmRevaluation
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import net.corda.vega.portfolio.toStateAndRef
-import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -33,7 +32,7 @@ import javax.ws.rs.core.Response
 
 @Path("simmvaluationdemo")
 class PortfolioApi(val rpc: CordaRPCOps) {
-    private val ownParty: Party get() = rpc.nodeIdentity().legalIdentity
+    private val ownParty: Party get() = rpc.nodeInfo().legalIdentitiesAndCerts.first().party
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
@@ -242,7 +241,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         }
     }
 
-    data class ApiParty(val id: String, val text: X500Name)
+    data class ApiParty(val id: String, val text: CordaX500Name)
     data class AvailableParties(val self: ApiParty, val counterparties: List<ApiParty>)
 
     /**
@@ -253,14 +252,16 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Produces(MediaType.APPLICATION_JSON)
     fun getWhoAmI(): AvailableParties {
         val parties = rpc.networkMapSnapshot()
-        val counterParties = parties.filterNot {
-            it.advertisedServices.any { it.info.type in setOf(ServiceType.networkMap, ServiceType.notary) }
-                    || it.legalIdentity == ownParty
+        val notaries = rpc.notaryIdentities()
+        // TODO We are not able to filter by network map node now
+        val counterParties = parties.filterNot { it.legalIdentities.any { it in notaries }
+                || ownParty in it.legalIdentities
         }
-
         return AvailableParties(
                 self = ApiParty(ownParty.owningKey.toBase58String(), ownParty.name),
-                counterparties = counterParties.map { ApiParty(it.legalIdentity.owningKey.toBase58String(), it.legalIdentity.name) })
+                // TODO It will show all identities including service identities.
+                counterparties = counterParties.flatMap { it.legalIdentitiesAndCerts.map { ApiParty(it.owningKey.toBase58String(), it.name) }}
+        )
     }
 
     data class ValuationCreationParams(val valuationDate: LocalDate)

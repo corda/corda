@@ -1,11 +1,11 @@
+@file:JvmName("ConfigUtilities")
 package net.corda.nodeapi.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigUtil
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.parseNetworkHostAndPort
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.LoggerFactory
 import java.net.Proxy
 import java.net.URL
@@ -68,11 +68,11 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         Boolean::class -> getBoolean(path)
         LocalDate::class -> LocalDate.parse(getString(path))
         Instant::class -> Instant.parse(getString(path))
-        NetworkHostAndPort::class -> getString(path).parseNetworkHostAndPort()
+        NetworkHostAndPort::class -> NetworkHostAndPort.parse(getString(path))
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
         Properties::class -> getConfig(path).toProperties()
-        X500Name::class -> X500Name(getString(path))
+        CordaX500Name::class -> CordaX500Name.parse(getString(path))
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {
@@ -96,10 +96,10 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         Boolean::class -> getBooleanList(path)
         LocalDate::class -> getStringList(path).map(LocalDate::parse)
         Instant::class -> getStringList(path).map(Instant::parse)
-        NetworkHostAndPort::class -> getStringList(path).map { it.parseNetworkHostAndPort() }
+        NetworkHostAndPort::class -> getStringList(path).map(NetworkHostAndPort.Companion::parse)
         Path::class -> getStringList(path).map { Paths.get(it) }
         URL::class -> getStringList(path).map(::URL)
-        X500Name::class -> getStringList(path).map(::X500Name)
+        CordaX500Name::class -> getStringList(path).map(CordaX500Name.Companion::parse)
         Properties::class -> getConfigList(path).map(Config::toProperties)
         else -> if (elementClass.java.isEnum) {
             getStringList(path).map { parseEnum(elementClass.java, it) }

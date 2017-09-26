@@ -5,7 +5,6 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.containsAny
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -15,6 +14,8 @@ import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import java.time.LocalDateTime
 import java.time.ZoneOffset.UTC
+
+const val DUMMY_LINEAR_CONTRACT_PROGRAM_ID = "net.corda.testing.contracts.DummyLinearContract"
 
 class DummyLinearContract : Contract {
     override fun verify(tx: LedgerTransaction) {
@@ -31,16 +32,13 @@ class DummyLinearContract : Contract {
 
     data class State(
             override val linearId: UniqueIdentifier = UniqueIdentifier(),
-            override val contract: Contract = DummyLinearContract(),
             override val participants: List<AbstractParty> = listOf(),
             val linearString: String = "ABC",
             val linearNumber: Long = 123L,
             val linearTimestamp: java.time.Instant = LocalDateTime.now().toInstant(UTC),
             val linearBoolean: Boolean = true,
             val nonce: SecureHash = SecureHash.randomSHA256()) : LinearState, QueryableState {
-
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(DummyLinearStateSchemaV1, DummyLinearStateSchemaV2)
-
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is DummyLinearStateSchemaV1 -> DummyLinearStateSchemaV1.PersistentDummyLinearState(

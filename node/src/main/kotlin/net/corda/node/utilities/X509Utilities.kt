@@ -3,7 +3,8 @@ package net.corda.node.utilities
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.utilities.cert
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.x500Name
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.ASN1EncodableVector
@@ -43,12 +44,12 @@ object X509Utilities {
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
     // Aliases for private keys and certificates.
-    val CORDA_ROOT_CA = "cordarootca"
-    val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
-    val CORDA_CLIENT_TLS = "cordaclienttls"
-    val CORDA_CLIENT_CA = "cordaclientca"
+    const val CORDA_ROOT_CA = "cordarootca"
+    const val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
+    const val CORDA_CLIENT_TLS = "cordaclienttls"
+    const val CORDA_CLIENT_CA = "cordaclientca"
 
-    val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
+    const val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
 
     private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
     /**
@@ -88,25 +89,53 @@ object X509Utilities {
      * Create a de novo root self-signed X509 v3 CA cert.
      */
     @JvmStatic
-    fun createSelfSignedCACertificate(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509CertificateHolder {
+    fun createSelfSignedCACertificate(subject: CordaX500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
-        return createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
+        return createCertificate(CertificateType.ROOT_CA, subject.x500Name, keyPair, subject.x500Name, keyPair.public, window)
     }
 
     /**
-     * Create a X509 v3 cert.
+     * Create a X509 v3 certificate for use as a CA or for TLS. This does not require a [CordaX500Name] because the
+     * constraints are inappropriate for TLS/CA usage, however as a result this is unsuitable for Corda identity
+     * certificate generation.
+     *
      * @param issuerCertificate The Public certificate of the root CA above this used to sign it.
      * @param issuerKeyPair The KeyPair of the root CA above this used to sign it.
      * @param subject subject of the generated certificate.
-     * @param subjectPublicKey subject 's public key.
+     * @param subjectPublicKey subject's public key.
      * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
      */
     @JvmStatic
     fun createCertificate(certificateType: CertificateType,
-                          issuerCertificate: X509CertificateHolder, issuerKeyPair: KeyPair,
-                          subject: X500Name, subjectPublicKey: PublicKey,
+                          issuerCertificate: X509CertificateHolder,
+                          issuerKeyPair: KeyPair,
+                          subject: CordaX500Name,
+                          subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder
+    = createCertificate(certificateType, issuerCertificate, issuerKeyPair, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
+
+    /**
+     * Create a X509 v3 certificate for use as a CA or for TLS. This does not require a [CordaX500Name] because the
+     * constraints are inappropriate for TLS/CA usage, however as a result this is unsuitable for Corda identity
+     * certificate generation.
+     *
+     * @param issuerCertificate The Public certificate of the root CA above this used to sign it.
+     * @param issuerKeyPair The KeyPair of the root CA above this used to sign it.
+     * @param subject subject of the generated certificate.
+     * @param subjectPublicKey subject's public key.
+     * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
+     * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
+     * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
+     */
+    @JvmStatic
+    fun createCertificate(certificateType: CertificateType,
+                          issuerCertificate: X509CertificateHolder,
+                          issuerKeyPair: KeyPair,
+                          subject: X500Name,
+                          subjectPublicKey: PublicKey,
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
                           nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)
@@ -114,10 +143,10 @@ object X509Utilities {
     }
 
     @Throws(CertPathValidatorException::class)
-    fun validateCertificateChain(trustedRoot: X509CertificateHolder, vararg certificates: Certificate) {
+    fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: Certificate) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         val certFactory = CertificateFactory.getInstance("X509")
-        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot.cert, null)))
+        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
         params.isRevocationEnabled = false
         val certPath = certFactory.generateCertPath(certificates.toList())
         val pathValidator = CertPathValidator.getInstance("PKIX")
@@ -162,16 +191,37 @@ object X509Utilities {
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name,
-                          subject: X500Name, subjectPublicKey: PublicKey,
+    fun createCertificate(certificateType: CertificateType,
+                          issuer: CordaX500Name,
+                          subject: CordaX500Name,
+                          subjectPublicKey: PublicKey,
                           validityWindow: Pair<Date, Date>,
                           nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
+        return createCertificate(certificateType, issuer.x500Name, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
+    }
+
+    /**
+     * Build a partial X.509 certificate ready for signing.
+     *
+     * @param issuer name of the issuing entity.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     */
+    internal fun createCertificate(certificateType: CertificateType,
+                                   issuer: X500Name,
+                                   subject: X500Name,
+                                   subjectPublicKey: PublicKey,
+                                   validityWindow: Pair<Date, Date>,
+                                   nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
 
         val serial = BigInteger.valueOf(random63BitValue())
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
 
-        val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
+        val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second,
+                subject, subjectPublicKey)
                 .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
                 .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
                 .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
@@ -193,11 +243,14 @@ object X509Utilities {
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerSigner: ContentSigner,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
-        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
+    internal fun createCertificate(certificateType: CertificateType,
+                                   issuer: X500Name,
+                                   issuerSigner: ContentSigner,
+                                   subject: CordaX500Name,
+                                   subjectPublicKey: PublicKey,
+                                   validityWindow: Pair<Date, Date>,
+                                   nameConstraints: NameConstraints? = null): X509CertificateHolder {
+        val builder = createCertificate(certificateType, issuer, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
         return builder.build(issuerSigner).apply {
             require(isValidOn(Date()))
         }
@@ -213,7 +266,7 @@ object X509Utilities {
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
+    internal fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
                           subject: X500Name, subjectPublicKey: PublicKey,
                           validityWindow: Pair<Date, Date>,
                           nameConstraints: NameConstraints? = null): X509CertificateHolder {
@@ -232,12 +285,12 @@ object X509Utilities {
     /**
      * Create certificate signing request using provided information.
      */
-    fun createCertificateSigningRequest(subject: X500Name, email: String, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
+    internal fun createCertificateSigningRequest(subject: CordaX500Name, email: String, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
         val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.findProvider(signatureScheme.providerName))
-        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).addAttribute(BCStyle.E, DERUTF8String(email)).build(signer)
+        return JcaPKCS10CertificationRequestBuilder(subject.x500Name, keyPair.public).addAttribute(BCStyle.E, DERUTF8String(email)).build(signer)
     }
 
-    fun createCertificateSigningRequest(subject: X500Name, email: String, keyPair: KeyPair) = createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
+    fun createCertificateSigningRequest(subject: CordaX500Name, email: String, keyPair: KeyPair) = createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
 }
 
 
@@ -255,3 +308,5 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
     // TODO: Identity certs should have only limited depth (i.e. 1) CA signing capability, with tight name constraints
     IDENTITY(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true)
 }
+
+data class CertificateAndKeyPair(val certificate: X509CertificateHolder, val keyPair: KeyPair)

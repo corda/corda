@@ -7,7 +7,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.CommercialPaper
@@ -16,8 +15,8 @@ import java.util.*
 
 @InitiatingFlow
 @StartableByRPC
-class SellerFlow(val otherParty: Party,
-                 val amount: Amount<Currency>,
+class SellerFlow(private val otherParty: Party,
+                 private val amount: Amount<Currency>,
                  override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
     constructor(otherParty: Party, amount: Amount<Currency>) : this(otherParty, amount, tracker())
 
@@ -40,17 +39,16 @@ class SellerFlow(val otherParty: Party,
     override fun call(): SignedTransaction {
         progressTracker.currentStep = SELF_ISSUING
 
-        val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
-        val cpOwner = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
+        val cpOwner = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
         val commercialPaper = serviceHub.vaultQueryService.queryBy(CommercialPaper.State::class.java).states.first()
 
         progressTracker.currentStep = TRADING
 
         // Send the offered amount.
-        send(otherParty, amount)
+        val session = initiateFlow(otherParty)
+        session.send(amount)
         val seller = TwoPartyTradeFlow.Seller(
-                otherParty,
-                notary,
+                session,
                 commercialPaper,
                 amount,
                 cpOwner,

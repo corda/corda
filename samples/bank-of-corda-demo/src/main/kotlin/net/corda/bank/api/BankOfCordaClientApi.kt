@@ -36,19 +36,19 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
         // TODO: privileged security controls required
         client.start("bankUser", "test").use { connection ->
             val rpc = connection.proxy
+            rpc.waitUntilNetworkReady()
 
             // Resolve parties via RPC
-            val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
-                    ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
-            val notaryLegalIdentity = rpc.partyFromX500Name(params.notaryName)
-                    ?: throw IllegalStateException("Unable to locate ${params.notaryName} in Network Map Service")
-            val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
-                    ?: throw IllegalStateException("Unable to locate notary node in network map cache")
+            val issueToParty = rpc.wellKnownPartyFromX500Name(params.issueToPartyName)
+                    ?: throw IllegalStateException("Unable to locate ${params.issueToPartyName} in Network Map Service")
+            val notaryLegalIdentity = rpc.notaryIdentities().firstOrNull { it.name == params.notaryName } ?:
+                    throw IllegalStateException("Couldn't locate notary ${params.notaryName} in NetworkMapCache")
 
             val amount = Amount(params.amount, Currency.getInstance(params.currency))
+            val anonymous = true
             val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
 
-            return rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, params.anonymous, notaryNode.notaryIdentity)
+            return rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, anonymous, notaryLegalIdentity)
                     .returnValue.getOrThrow().stx
         }
     }

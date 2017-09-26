@@ -13,7 +13,7 @@
                 <tr class="center aligned">
                     <td>Parties</td>
                     <td>
-                        <span ng-repeat="party in deal.parties">
+                        <span ng-repeat="party in deal.participants">
                             {{party}}<span ng-show="!$last">,</span>
                         </span>
                     </td>
@@ -55,7 +55,7 @@
                 </tr>
                 <tr class="center aligned">
                     <td>Notional</td>
-                    <td>{{deal.fixedLeg.notional.quantity | number}} {{deal.fixedLeg.notional.token}}</td>
+                    <td>{{deal.fixedLeg.notional}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Payment Frequency</td>
@@ -96,13 +96,7 @@
                                 Holiday Dates
                             </div>
                             <div class="content">
-                                <table class="ui celled small table">
-                                    <tbody>
-                                    <tr class="center aligned" ng-repeat="date in deal.fixedLeg.paymentCalendar.holidayDates">
-                                        <td>{{date}}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                <span>{{deal.fixedLeg.paymentCalendar}}</span>
                             </div>
                         </div>
                     </td>
@@ -124,7 +118,7 @@
                 </tr>
                 <tr class="center aligned">
                     <td>Notional</td>
-                    <td>{{deal.floatingLeg.notional.quantity | number}} {{deal.floatingLeg.notional.token}}</td>
+                    <td>{{deal.floatingLeg.notional}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Payment Frequency</td>
@@ -162,13 +156,9 @@
                                 Holiday Dates
                             </div>
                             <div class="content">
-                                <table class="ui celled small table">
-                                    <tbody>
-                                    <tr class="center aligned" ng-repeat="date in deal.floatingLeg.paymentCalendar.holidayDates">
-                                        <td>{{date}}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                <span>
+                                    {{deal.floatingLeg.paymentCalendar}}
+                                </span>
                             </div>
                         </div>
                     </td>
@@ -189,13 +179,9 @@
                                 Holiday Dates
                             </div>
                             <div class="content">
-                                <table class="ui celled small table">
-                                    <tbody>
-                                    <tr class="center aligned" ng-repeat="date in deal.floatingLeg.fixingCalendar.holidayDates">
-                                        <td>{{date}}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                <span>
+                                    {{deal.floatingLeg.fixingCalendar}}
+                                </span>
                             </div>
                         </div>
                     </td>

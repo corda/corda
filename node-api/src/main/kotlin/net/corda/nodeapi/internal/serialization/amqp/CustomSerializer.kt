@@ -29,6 +29,11 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      */
     abstract val schemaForDocumentation: Schema
 
+    /**
+     * Whether subclasses using this serializer via inheritance should have a mapping in the schema.
+     */
+    open val revealSubclassesInSchema: Boolean = false
+
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         data.withDescribed(descriptor) {
             @Suppress("UNCHECKED_CAST")

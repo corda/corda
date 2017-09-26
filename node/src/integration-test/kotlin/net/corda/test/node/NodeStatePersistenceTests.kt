@@ -1,20 +1,13 @@
 package net.corda.test.node
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Command
-import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.LinearState
-import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.contracts.requireSingleCommand
-import net.corda.core.contracts.requireThat
+import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -26,8 +19,10 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.driver
 import org.junit.Test
 import java.lang.management.ManagementFactory
@@ -46,7 +41,7 @@ class NodeStatePersistenceTests {
 
             startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
             var nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-            val nodeName = nodeHandle.nodeInfo.legalIdentity.name
+            val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
             nodeHandle.rpcClientToNode().start(user.username, user.password).use {
                 it.proxy.startFlow(::SendMessageFlow, message).returnValue.getOrThrow()
             }
@@ -71,7 +66,6 @@ fun isQuasarAgentSpecified(): Boolean {
 data class Message(val value: String)
 
 data class MessageState(val message: Message, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
-    override val contract = MessageContract()
     override val participants: List<AbstractParty> = listOf(by)
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
@@ -103,6 +97,8 @@ object MessageSchemaV1 : MappedSchema(
             var value: String
     ) : PersistentState()
 }
+
+val MESSAGE_CONTRACT_PROGRAM_ID = "net.corda.test.node.MessageContract"
 
 open class MessageContract : Contract {
     override fun verify(tx: LedgerTransaction) {
@@ -140,21 +136,21 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val notary = serviceHub.networkMapCache.getAnyNotary()
+        val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
         progressTracker.currentStep = GENERATING_TRANSACTION
 
-        val messageState = MessageState(message = message, by = serviceHub.myInfo.legalIdentity)
+        val messageState = MessageState(message = message, by = ourIdentity)
         val txCommand = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
-        val txBuilder = TransactionBuilder(notary).withItems(messageState, txCommand)
+        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
 
         progressTracker.currentStep = VERIFYING_TRANSACTION
-        txBuilder.toWireTransaction().toLedgerTransaction(serviceHub).verify()
+        txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
 
         progressTracker.currentStep = SIGNING_TRANSACTION
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         progressTracker.currentStep = FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker())).single()
+        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
     }
 }

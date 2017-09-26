@@ -3,48 +3,43 @@ API: States
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-states`.
 
+.. contents::
+
 ContractState
 -------------
-In Corda, states are classes that implement ``ContractState``. The ``ContractState`` interface is defined as follows:
+In Corda, states are instances of classes that implement ``ContractState``. The ``ContractState`` interface is defined
+as follows:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/ContractState.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
 
-Where:
+``ContractState`` has a single field, ``participants``. ``participants`` is a ``List`` of the ``AbstractParty`` that
+are considered to have a stake in the state. Among other things, the ``participants`` will:
 
-* ``contract`` is the ``Contract`` class defining the constraints on transactions involving states of this type
-* ``participants`` is a ``List`` of the ``AbstractParty`` who are considered to have a stake in the state. For example,
-  all the ``participants`` will:
+* Usually store the state in their vault (see below)
 
-  * Need to sign a notary-change transaction for this state
-  * Receive any committed transactions involving this state as part of ``FinalityFlow``
+* Need to sign any notary-change and contract-upgrade transactions involving this state
 
-The vault
----------
-Each node has a vault, where it stores the states that are "relevant" to the node's owner. Whenever the node sees a
-new transaction, it performs a relevancy check to decide whether to add each of the transaction's output states to
-its vault. The default vault implementation decides whether a state is relevant as follows:
-
-  * The vault will store any state for which it is one of the ``participants``
-  * This behavior is overridden for states that implement ``LinearState`` or ``OwnableState`` (see below)
-
-If a state is not considered relevant, the node will still store the transaction in its local storage, but it will
-not track the transaction's states in its vault.
+* Receive any finalised transactions involving this state as part of ``FinalityFlow``
 
 ContractState sub-interfaces
 ----------------------------
-There are two common optional sub-interfaces of ``ContractState``:
+The behaviour of the state can be further customised by implementing sub-interfaces of ``ContractState``. The two most
+common sub-interfaces are:
 
-* ``LinearState``, which helps represent objects that have a constant identity over time
-* ``OwnableState``, which helps represent fungible assets
+* ``LinearState``
 
-For example, a cash is an ``OwnableState`` - you don't have a specific piece of cash you are tracking over time, but
-rather a total amount of cash that you can combine and divide at will. A contract, on the other hand, cannot be
-merged with other contracts of the same type - it has a unique separate identity over time.
+* ``OwnableState``
+
+``LinearState`` models shared facts for which there is only one current version at any point in time. ``LinearState``
+states evolve in a straight line by superseding themselves. On the other hand, ``OwnableState`` is meant to represent
+assets that can be freely split and merged over time. Cash is a good example of an ``OwnableState`` - two existing $5
+cash states can be combined into a single $10 cash state, or split into five $1 cash states. With ``OwnableState``, its
+the total amount held that is important, rather than the actual units held.
 
 We can picture the hierarchy as follows:
 
@@ -52,12 +47,6 @@ We can picture the hierarchy as follows:
 
 LinearState
 ^^^^^^^^^^^
-``LinearState`` models facts that have a constant identity over time. Remember that in Corda, states are immutable and
-can't be updated directly. Instead, we represent an evolving fact as a sequence of states where every state is a
-``LinearState`` that shares the same ``linearId``. Each sequence of linear states represents the lifecycle of a given
-fact up to the current point in time. It represents the historic audit trail of how the fact evolved over time to its
-current "state".
-
 The ``LinearState`` interface is defined as follows:
 
 .. container:: codeset
@@ -67,32 +56,31 @@ The ``LinearState`` interface is defined as follows:
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
 
-Where:
+Remember that in Corda, states are immutable and can't be updated directly. Instead, we represent an evolving fact as a
+sequence of ``LinearState`` states that share the same ``linearId`` and represent an audit trail for the lifecycle of
+the fact over time.
 
-* ``linearId`` is a ``UniqueIdentifier`` that:
+When we want to extend a ``LinearState`` chain (i.e. a sequence of states sharing a ``linearId``), we:
 
-  * Allows the successive versions of the fact to be linked over time
-  * Provides an ``externalId`` for referencing the state in external systems
+* Use the ``linearId`` to extract the latest state in the chain from the vault
 
-* ``isRelevant(ourKeys: Set<PublicKey>)`` overrides the default vault implementation's relevancy check. You would
-  generally override it to check whether ``ourKeys`` is relevant to the state at hand in some way.
+* Create a new state that has the same ``linearId``
 
-The vault tracks the head (i.e. the most recent version) of each ``LinearState`` chain (i.e. each sequence of
-states all sharing a ``linearId``). To create a transaction updating a ``LinearState``, we retrieve the state from the
-vault using its ``linearId``.
+* Create a transaction with:
 
-UniqueIdentifier
-~~~~~~~~~~~~~~~~
-``UniqueIdentifier`` is a combination of a (Java) ``UUID`` representing a globally unique 128 bit random number, and
-an arbitrary string which can be paired with it. For instance the string may represent an existing "weak" (not
-guaranteed unique) identifier for convenience purposes.
+  * The current latest state in the chain as an input
+
+  * The newly-created state as an output
+
+The new state will now become the latest state in the chain, representing the new current state of the agreement.
+
+``linearId`` is of type ``UniqueIdentifier``, which is a combination of:
+
+* A Java ``UUID`` representing a globally unique 128 bit random number
+* An optional external-reference string for referencing the state in external systems
 
 OwnableState
 ^^^^^^^^^^^^
-``OwnableState`` models fungible assets. Fungible assets are assets for which it's the total amount held that is
-important, rather than the actual units held. US dollars are an example of a fungible asset - we do not track the
-individual dollar bills held, but rather the total amount of dollars.
-
 The ``OwnableState`` interface is defined as follows:
 
 .. container:: codeset
@@ -106,26 +94,26 @@ Where:
 
 * ``owner`` is the ``PublicKey`` of the asset's owner
 
-  * ``OwnableState`` also override the default behavior of the vault's relevancy check. The default vault
-    implementation will track any ``OwnableState`` of which it is the owner.
+* ``withNewOwner(newOwner: AbstractParty)`` creates an copy of the state with a new owner
 
-* ``withNewOwner(newOwner: AbstractParty)`` creates an identical copy of the state, only with a new owner
+Because ``OwnableState`` models fungible assets that can be merged and split over time, ``OwnableState`` instances do
+not have a ``linearId``. $5 of cash created by one transaction is considered to be identical to $5 of cash produced by
+another transaction.
 
 Other interfaces
 ^^^^^^^^^^^^^^^^
-``ContractState`` has several more sub-interfaces that can optionally be implemented:
+You can also customize your state by implementing the following interfaces:
 
-* ``QueryableState``, which allows the state to be queried in the node's database using SQL (see
+* ``QueryableState``, which allows the state to be queried in the node's database using custom attributes (see
   :doc:`api-persistence`)
-* ``SchedulableState``, which allows us to schedule future actions for the state (e.g. a coupon on a bond) (see
+
+* ``SchedulableState``, which allows us to schedule future actions for the state (e.g. a coupon payment on a bond) (see
   :doc:`event-scheduling`)
 
 User-defined fields
 -------------------
-Beyond implementing ``LinearState`` or ``OwnableState``, the definition of the state is up to the CorDapp developer.
-You can define any additional class fields and methods you see fit.
-
-For example, here is a relatively complex state definition, for a state representing cash:
+Beyond implementing ``ContractState`` or a sub-interface, a state is allowed to have any number of additional fields
+and methods. For example, here is the relatively complex definition for a state representing cash:
 
 .. container:: codeset
 
@@ -134,20 +122,33 @@ For example, here is a relatively complex state definition, for a state represen
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
 
+The vault
+---------
+Whenever a node records a new transaction, it also decides whether it should store each of the transaction's output
+states in its vault. The default vault implementation makes the decision based on the following rules:
+
+  * If the state is an ``OwnableState``, the vault will store the state if the node is the state's ``owner``
+  * Otherwise, the vault will store the state if it is one of the ``participants``
+
+States that are not considered relevant are not stored in the node's vault. However, the node will still store the
+transactions that created the states in its transaction storage.
+
 TransactionState
 ----------------
 When a ``ContractState`` is added to a ``TransactionBuilder``, it is wrapped in a ``TransactionState``:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/TransactionState.kt
         :language: kotlin
-        :start-after: DOCSTART 4
-        :end-before: DOCEND 4
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
 
 Where:
 
 * ``data`` is the state to be stored on-ledger
+* ``contract`` is the contract governing evolutions of this state
 * ``notary`` is the notary service for this state
 * ``encumbrance`` points to another state that must also appear as an input to any transaction consuming this
   state
+* ``constraint`` is a constraint on which contract-code attachments can be used with this state

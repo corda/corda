@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
@@ -9,6 +10,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -19,9 +21,9 @@ class FlowVersioningTest : NodeBasedTest() {
         val (alice, bob) = listOf(
                 startNode(ALICE.name, platformVersion = 2),
                 startNode(BOB.name, platformVersion = 3)).transpose().getOrThrow()
-        bob.installCoreFlow(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
+        bob.internals.installCoreFlow(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
         val (alicePlatformVersionAccordingToBob, bobPlatformVersionAccordingToAlice) = alice.services.startFlow(
-                PretendInitiatingCoreFlow(bob.info.legalIdentity)).resultFuture.getOrThrow()
+                PretendInitiatingCoreFlow(bob.info.chooseIdentity())).resultFuture.getOrThrow()
         assertThat(alicePlatformVersionAccordingToBob).isEqualTo(2)
         assertThat(bobPlatformVersionAccordingToAlice).isEqualTo(3)
     }
@@ -31,17 +33,18 @@ class FlowVersioningTest : NodeBasedTest() {
         @Suspendable
         override fun call(): Pair<Int, Int> {
             // Execute receive() outside of the Pair constructor to avoid Kotlin/Quasar instrumentation bug.
-            val alicePlatformVersionAccordingToBob = receive<Int>(initiatedParty).unwrap { it }
+            val session = initiateFlow(initiatedParty)
+            val alicePlatformVersionAccordingToBob = session.receive<Int>().unwrap { it }
             return Pair(
                     alicePlatformVersionAccordingToBob,
-                    getFlowContext(initiatedParty).flowVersion
+                    session.getCounterpartyFlowInfo().flowVersion
             )
         }
     }
 
-    private class PretendInitiatedCoreFlow(val initiatingParty: Party) : FlowLogic<Unit>() {
+    private class PretendInitiatedCoreFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() = send(initiatingParty, getFlowContext(initiatingParty).flowVersion)
+        override fun call() = otherSideSession.send(otherSideSession.getCounterpartyFlowInfo().flowVersion)
     }
 
 }

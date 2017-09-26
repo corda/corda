@@ -79,31 +79,6 @@ open class ContractBuilder {
         return c
     }
 
-    @Deprecated(level = DeprecationLevel.ERROR, message = "Not allowed")
-    fun Action(@Suppress("UNUSED_PARAMETER") name: String, @Suppress("UNUSED_PARAMETER") condition: Perceivable<Boolean>,
-               @Suppress("UNUSED_PARAMETER") actors: Set<Party>, @Suppress("UNUSED_PARAMETER") arrangement: Arrangement) {
-    }
-
-    @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun <T> String.anytime(@Suppress("UNUSED_PARAMETER") ignore: T) {
-    }
-
-    @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun <T> String.givenThat(@Suppress("UNUSED_PARAMETER") ignore: T) {
-    }
-
-    @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun <T> String.givenThat(@Suppress("UNUSED_PARAMETER") ignore1: T, @Suppress("UNUSED_PARAMETER") ignore2: T) {
-    }
-
-    @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun Party.may(init: ActionBuilder.() -> Action) {
-    }
-
-    @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun Set<Party>.may(init: ActionBuilder.() -> Action) {
-    }
-
     val start = StartDate()
     val end = EndDate()
 

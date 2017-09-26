@@ -1,17 +1,17 @@
 package net.corda.testing
 
 import net.corda.client.mock.Generator
-import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
@@ -42,7 +42,6 @@ import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
-import org.bouncycastle.asn1.x500.X500Name
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -60,7 +59,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
      */
     fun <I : RPCOps> startInVmRpcServer(
             rpcUser: User = rpcTestUser,
-            nodeLegalName: X500Name = fakeNodeLegalName,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
@@ -105,7 +104,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
     fun <I : RPCOps> startRpcServer(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
-            nodeLegalName: X500Name = fakeNodeLegalName,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
@@ -174,7 +173,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
 
     fun <I : RPCOps> startRpcServerWithBrokerRunning(
             rpcUser: User = rpcTestUser,
-            nodeLegalName: X500Name = fakeNodeLegalName,
+            nodeLegalName: CordaX500Name = fakeNodeLegalName,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops: I,
             brokerHandle: RpcBrokerHandle
@@ -211,7 +210,7 @@ data class RpcServerHandle(
 )
 
 val rpcTestUser = User("user1", "test", permissions = emptySet())
-val fakeNodeLegalName = X500Name("CN=not:a:valid:name")
+val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
 private val globalPortAllocation = PortAllocation.Incremental(10000)
@@ -226,6 +225,7 @@ fun <A> rpcDriver(
         initialiseSerialization: Boolean = true,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         startNodesInProcess: Boolean = false,
+        extraCordappPackagesToScan: List<String> = emptyList(),
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -237,7 +237,8 @@ fun <A> rpcDriver(
                         useTestClock = useTestClock,
                         networkMapStartStrategy = networkMapStartStrategy,
                         isDebug = isDebug,
-                        startNodesInProcess = startNodesInProcess
+                        startNodesInProcess = startNodesInProcess,
+                        extraCordappPackagesToScan = extraCordappPackagesToScan
                 )
         ),
         coerce = { it },
@@ -327,7 +328,7 @@ data class RPCDriverDSL(
 
     override fun <I : RPCOps> startInVmRpcServer(
             rpcUser: User,
-            nodeLegalName: X500Name,
+            nodeLegalName: CordaX500Name,
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
@@ -364,7 +365,7 @@ data class RPCDriverDSL(
     override fun <I : RPCOps> startRpcServer(
             serverName: String,
             rpcUser: User,
-            nodeLegalName: X500Name,
+            nodeLegalName: CordaX500Name,
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
@@ -460,7 +461,7 @@ data class RPCDriverDSL(
 
     override fun <I : RPCOps> startRpcServerWithBrokerRunning(
             rpcUser: User,
-            nodeLegalName: X500Name,
+            nodeLegalName: CordaX500Name,
             configuration: RPCServerConfiguration,
             ops: I,
             brokerHandle: RpcBrokerHandle
@@ -497,7 +498,7 @@ class RandomRpcUser {
 
     companion object {
         private inline fun <reified T> HashMap<Class<*>, Generator<*>>.add(generator: Generator<T>) = this.putIfAbsent(T::class.java, generator)
-        val generatorStore = HashMap<Class<*>, Generator<*>>().apply {
+        private val generatorStore = HashMap<Class<*>, Generator<*>>().apply {
             add(Generator.string())
             add(Generator.int())
         }
@@ -508,10 +509,10 @@ class RandomRpcUser {
             require(args.size == 4)
             @Suppress("UNCHECKED_CAST")
             val rpcClass = Class.forName(args[0]) as Class<RPCOps>
-            val hostAndPort = args[1].parseNetworkHostAndPort()
+            val hostAndPort = NetworkHostAndPort.parse(args[1])
             val username = args[2]
             val password = args[3]
-            CordaRPCClient.initialiseSerialization()
+            KryoClientSerializationScheme.initialiseSerialization()
             val handle = RPCClient<RPCOps>(hostAndPort, null, serializationContext = KRYO_RPC_CLIENT_CONTEXT).start(rpcClass, username, password)
             val callGenerators = rpcClass.declaredMethods.map { method ->
                 Generator.sequence(method.parameters.map {

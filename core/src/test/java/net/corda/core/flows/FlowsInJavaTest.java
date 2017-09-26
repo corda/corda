@@ -3,6 +3,7 @@ package net.corda.core.flows;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
+import net.corda.node.internal.StartedNode;
 import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;
@@ -11,14 +12,15 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static net.corda.testing.CoreTestUtils.chooseIdentity;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 
 public class FlowsInJavaTest {
 
     private final MockNetwork mockNet = new MockNetwork();
-    private MockNetwork.MockNode node1;
-    private MockNetwork.MockNode node2;
+    private StartedNode<MockNetwork.MockNode> node1;
+    private StartedNode<MockNetwork.MockNode> node2;
 
     @Before
     public void setUp() throws Exception {
@@ -27,7 +29,7 @@ public class FlowsInJavaTest {
         node2 = someNodes.getPartyNodes().get(1);
         mockNet.runNetwork();
         // Ensure registration was successful
-        node1.getNodeReadyFuture().get();
+        node1.getInternals().getNodeReadyFuture().get();
     }
 
     @After
@@ -37,8 +39,8 @@ public class FlowsInJavaTest {
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
-        node2.registerInitiatedFlow(SendHelloAndThenReceive.class);
-        Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
+        node2.getInternals().registerInitiatedFlow(SendHelloAndThenReceive.class);
+        Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(chooseIdentity(node2.getInfo()))).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
@@ -53,7 +55,7 @@ public class FlowsInJavaTest {
     }
 
     private void primitiveReceiveTypeTest(Class<?> receiveType) throws InterruptedException {
-        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(node2.getInfo().getLegalIdentity(), receiveType);
+        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(chooseIdentity(node2.getInfo()), receiveType);
         Future<?> result = node1.getServices().startFlow(flow).getResultFuture();
         mockNet.runNetwork();
         try {
@@ -78,8 +80,9 @@ public class FlowsInJavaTest {
         @Suspendable
         @Override
         public String call() throws FlowException {
-            return receive(String.class, otherParty).unwrap(data -> {
-                send(otherParty, "Something");
+            FlowSession session = initiateFlow(otherParty);
+            return session.receive(String.class).unwrap(data -> {
+                session.send("Something");
                 return data;
             });
         }
@@ -87,16 +90,16 @@ public class FlowsInJavaTest {
 
     @InitiatedBy(SendInUnwrapFlow.class)
     private static class SendHelloAndThenReceive extends FlowLogic<String> {
-        private final Party otherParty;
+        private final FlowSession otherSide;
 
-        private SendHelloAndThenReceive(Party otherParty) {
-            this.otherParty = otherParty;
+        private SendHelloAndThenReceive(FlowSession otherParty) {
+            this.otherSide = otherParty;
         }
 
         @Suspendable
         @Override
         public String call() throws FlowException {
-            return sendAndReceive(String.class, otherParty, "Hello").unwrap(data -> data);
+            return otherSide.sendAndReceive(String.class, "Hello").unwrap(data -> data);
         }
     }
 
@@ -113,7 +116,8 @@ public class FlowsInJavaTest {
         @Suspendable
         @Override
         public Void call() throws FlowException {
-            receive(Primitives.unwrap(receiveType), otherParty);
+            FlowSession session = initiateFlow(otherParty);
+            session.receive(Primitives.unwrap(receiveType));
             return null;
         }
     }

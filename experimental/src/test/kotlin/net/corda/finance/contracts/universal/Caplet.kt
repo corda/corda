@@ -3,7 +3,11 @@ package net.corda.finance.contracts.universal
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Tenor
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.setCordappPackages
 import net.corda.testing.transaction
+import net.corda.testing.unsetCordappPackages
+import org.junit.After
+import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
@@ -50,10 +54,20 @@ class Caplet {
 
     val stateFinal = UniversalContract.State(listOf(DUMMY_NOTARY), contractFinal)
 
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.finance.contracts.universal")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
+    }
+
     @Test
     fun issue() {
         transaction {
-            output { stateStart }
+            output(UNIVERSAL_PROGRAM_ID) { stateStart }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -70,8 +84,8 @@ class Caplet {
     @Test
     fun `execute`() {
         transaction {
-            input { stateFixed }
-            output { stateFinal }
+            input(UNIVERSAL_PROGRAM_ID) { stateFixed }
+            output(UNIVERSAL_PROGRAM_ID) { stateFinal }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -88,8 +102,8 @@ class Caplet {
     @Test
     fun `fixing`() {
         transaction {
-            input { stateStart }
-            output { stateFixed }
+            input(UNIVERSAL_PROGRAM_ID) { stateStart }
+            output(UNIVERSAL_PROGRAM_ID) { stateFixed }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {

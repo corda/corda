@@ -2,11 +2,9 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.CordaThrowable
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import net.corda.nodeapi.internal.serialization.amqp.constructorForDeserialization
-import net.corda.nodeapi.internal.serialization.amqp.propertiesForSerialization
+import net.corda.nodeapi.internal.serialization.amqp.*
 import java.io.NotSerializableException
 
 class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(Throwable::class.java, ThrowableProxy::class.java, factory) {
@@ -14,6 +12,8 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
     companion object {
         private val logger = loggerFor<ThrowableSerializer>()
     }
+
+    override val revealSubclassesInSchema: Boolean = true
 
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(StackTraceElementSerializer(factory))
 
@@ -28,12 +28,20 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
                     extraProperties[prop.name] = prop.readMethod!!.invoke(obj)
                 }
             } catch(e: NotSerializableException) {
+                logger.warn("Unexpected exception", e)
             }
             obj.originalMessage
         } else {
             obj.message
         }
-        return ThrowableProxy(obj.javaClass.name, message, obj.stackTrace, obj.cause, obj.suppressed, extraProperties)
+        val stackTraceToInclude = if (shouldIncludeInternalInfo()) obj.stackTrace else emptyArray()
+        return ThrowableProxy(obj.javaClass.name, message, stackTraceToInclude, obj.cause, obj.suppressed, extraProperties)
+    }
+
+    private fun shouldIncludeInternalInfo(): Boolean {
+        val currentContext = SerializationFactory.currentFactory?.currentContext
+        val includeInternalInfo = currentContext?.properties?.get(CommonPropertyNames.IncludeInternalInfo)
+        return true == includeInternalInfo
     }
 
     override fun fromProxy(proxy: ThrowableProxy): Throwable {

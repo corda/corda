@@ -1,7 +1,11 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.setCordappPackages
 import net.corda.testing.transaction
+import net.corda.testing.unsetCordappPackages
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -40,6 +44,16 @@ class ZeroCouponBond {
 
     val outStateMove = UniversalContract.State(listOf(DUMMY_NOTARY), contractMove)
 
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.finance.contracts.universal")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
+    }
+
     @Test
     fun basic() {
         assertEquals(Zero(), Zero())
@@ -49,7 +63,7 @@ class ZeroCouponBond {
     @Test
     fun `issue - signature`() {
         transaction {
-            output { inState }
+            output(UNIVERSAL_PROGRAM_ID) { inState }
 
             tweak {
                 command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
@@ -65,8 +79,8 @@ class ZeroCouponBond {
     @Test
     fun `execute`() {
         transaction {
-            input { inState }
-            output { outState }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -83,8 +97,8 @@ class ZeroCouponBond {
     @Test
     fun `execute - not authorized`() {
         transaction {
-            input { inState }
-            output { outState }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState }
             timeWindow(TEST_TX_TIME_1)
 
             command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
@@ -95,8 +109,8 @@ class ZeroCouponBond {
     @Test
     fun `execute - outState mismatch`() {
         transaction {
-            input { inState }
-            output { outStateWrong }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outStateWrong }
             timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
@@ -107,10 +121,10 @@ class ZeroCouponBond {
     @Test
     fun move() {
         transaction {
-            input { inState }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
 
             tweak {
-                output { outStateMove }
+                output(UNIVERSAL_PROGRAM_ID) { outStateMove }
                 command(acmeCorp.owningKey) {
                     UniversalContract.Commands.Move(acmeCorp, momAndPop)
                 }
@@ -118,14 +132,14 @@ class ZeroCouponBond {
             }
 
             tweak {
-                output { inState }
+                output(UNIVERSAL_PROGRAM_ID) { inState }
                 command(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey) {
                     UniversalContract.Commands.Move(acmeCorp, momAndPop)
                 }
                 this `fails with` "output state does not reflect move command"
             }
 
-            output { outStateMove }
+            output(UNIVERSAL_PROGRAM_ID) { outStateMove }
 
             command(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey) {
                 UniversalContract.Commands.Move(acmeCorp, momAndPop)

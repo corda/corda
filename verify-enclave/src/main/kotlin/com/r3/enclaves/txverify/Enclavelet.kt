@@ -36,7 +36,8 @@ fun verifyInEnclave(reqBytes: ByteArray) {
     val ltx = wtxToVerify.toLedgerTransaction(
             resolveIdentity = { null },
             resolveAttachment = { null },
-            resolveStateRef = { dependencies[it.txhash]?.outputs?.get(it.index) }
+            resolveStateRef = { dependencies[it.txhash]?.outputs?.get(it.index) },
+            resolveContractAttachment = { null }
     )
     ltx.verify()
 }

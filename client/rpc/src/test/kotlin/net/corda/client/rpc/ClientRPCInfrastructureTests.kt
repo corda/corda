@@ -7,7 +7,6 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.getRpcContext
-import net.corda.nodeapi.RPCSinceVersion
 import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.rpcDriver
 import net.corda.testing.rpcTestUser

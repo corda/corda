@@ -6,9 +6,14 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.node.internal.StartedNode
+import net.corda.testing.chooseIdentity
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.setCordappPackages
+import net.corda.testing.unsetCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -16,23 +21,25 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashExitFlowTests {
-    private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+    private lateinit var mockNet : MockNetwork
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
-    private lateinit var bankOfCordaNode: MockNode
+    private lateinit var bankOfCordaNode: StartedNode<MockNode>
     private lateinit var bankOfCorda: Party
-    private lateinit var notaryNode: MockNode
+    private lateinit var notaryNode: StartedNode<MockNode>
     private lateinit var notary: Party
 
     @Before
     fun start() {
+        setCordappPackages("net.corda.finance.contracts.asset")
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
         val nodes = mockNet.createSomeNodes(1)
         notaryNode = nodes.notaryNode
         bankOfCordaNode = nodes.partyNodes[0]
-        notary = notaryNode.info.notaryIdentity
-        bankOfCorda = bankOfCordaNode.info.legalIdentity
+        bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         mockNet.runNetwork()
+        notary = bankOfCordaNode.services.getDefaultNotary()
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
@@ -41,6 +48,7 @@ class CashExitFlowTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        unsetCordappPackages()
     }
 
     @Test

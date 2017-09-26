@@ -30,7 +30,7 @@ import tornadofx.*
 /**
  * The root view embeds the [Shell] and provides support for the status bar, and modal dialogs.
  */
-class MainView : View() {
+class MainView : View(WINDOW_TITLE) {
     override val root by fxml<Parent>()
 
     // Inject components.
@@ -50,7 +50,7 @@ class MainView : View() {
 
     init {
         // Header
-        userButton.textProperty().bind(myIdentity.map { it?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) } })
+        userButton.textProperty().bind(myIdentity.map { it?.let { PartyNameFormatter.short.format(it.name) } })
         exit.setOnAction {
             (root.scene.window as Stage).fireEvent(WindowEvent(root.scene.window, WindowEvent.WINDOW_CLOSE_REQUEST))
         }

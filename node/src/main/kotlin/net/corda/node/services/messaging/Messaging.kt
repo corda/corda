@@ -2,6 +2,7 @@ package net.corda.node.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -9,7 +10,6 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -225,7 +225,7 @@ interface Message {
 // or something like that.
 interface ReceivedMessage : Message {
     /** The authenticated sender. */
-    val peer: X500Name
+    val peer: CordaX500Name
     /** Platform version of the sender's node. */
     val platformVersion: Int
 }

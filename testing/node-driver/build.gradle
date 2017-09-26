@@ -6,9 +6,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }
@@ -28,7 +25,7 @@ sourceSets {
 
 dependencies {
     compile project(':test-utils')
-    compile project(':cordform-common')
+    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
     // Integration test helpers
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"

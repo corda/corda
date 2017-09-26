@@ -8,6 +8,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import net.corda.core.contracts.Attachment
@@ -16,6 +17,7 @@ import net.corda.core.internal.LazyPool
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.nodeapi.internal.AttachmentsClassLoader
 import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 import java.util.*
@@ -59,7 +61,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
                     serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
                 }
                 missing.isNotEmpty() && throw MissingAttachmentsException(missing)
-                AttachmentsClassLoader(attachments)
+                AttachmentsClassLoader(attachments, parent = deserializationClassLoader)
             })
         } catch (e: ExecutionException) {
             // Caught from within the cache get, so unwrap.
@@ -166,6 +168,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                             field.set(this, classResolver)
                             DefaultKryoCustomizer.customize(this)
                             addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+                            register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
                             classLoader = it.second
                         }
                     }.build()

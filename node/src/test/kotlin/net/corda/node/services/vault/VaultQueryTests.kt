@@ -3,6 +3,7 @@ package net.corda.node.services.vault
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.*
@@ -45,24 +46,28 @@ import java.util.*
 
 class VaultQueryTests : TestDependencyInjectionBase() {
 
-    lateinit var services: MockServices
-    lateinit var notaryServices: MockServices
-    val vaultSvc: VaultService get() = services.vaultService
-    val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
-    val identitySvc: IdentityService = makeTestIdentityService()
-    lateinit var database: CordaPersistence
+    private lateinit var services: MockServices
+    private lateinit var notaryServices: MockServices
+    private val vaultSvc: VaultService get() = services.vaultService
+    private val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
+    private val identitySvc: IdentityService = makeTestIdentityService()
+    private lateinit var database: CordaPersistence
 
     // test cash notary
-    val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
-    val CASH_NOTARY: Party get() = Party(getX500Name(O = "Cash Notary Service", OU = "corda", L = "Zurich", C = "CH"), CASH_NOTARY_KEY.public)
-    val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull(), CASH_NOTARY_KEY.public)
+    private val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(21)) }
+    private val CASH_NOTARY: Party get() = Party(CordaX500Name(organisation = "Cash Notary Service", locality = "Zurich", country = "CH"), CASH_NOTARY_KEY.public)
+    private val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull(), CASH_NOTARY_KEY.public)
 
     @Before
     fun setUp() {
+        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts")
+
         // register additional identities
         identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
         identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
-        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY), createIdentityService = { identitySvc })
+        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY),
+                                                                  createIdentityService = { identitySvc },
+                                                                  customSchemas = setOf(CashSchemaV1, CommercialPaperSchemaV1, DummyLinearStateSchemaV1))
         database = databaseAndServices.first
         services = databaseAndServices.second
         notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
@@ -71,6 +76,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @After
     fun tearDown() {
         database.close()
+        unsetCordappPackages()
     }
 
     /**
@@ -1088,7 +1094,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
         database.transaction {
 
-            val sortCol1 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONTRACT_TYPE), Sort.Direction.DESC)
+            val sortCol1 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONTRACT_STATE_TYPE), Sort.Direction.DESC)
             val sortCol2 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.STATE_STATUS), Sort.Direction.ASC)
             val sortCol3 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONSUMED_TIME), Sort.Direction.DESC)
             val sorting = Sort(setOf(sortCol1, sortCol2, sortCol3))
@@ -1097,12 +1103,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val states = result.states
             val metadata = result.statesMetadata
 
-            for (i in 0..states.size - 1) {
+            for (i in 0 until states.size) {
                 println("${states[i].ref} : ${metadata[i].contractStateClassName}, ${metadata[i].status}, ${metadata[i].consumedTime}")
             }
 
             assertThat(states).hasSize(20)
-            assertThat(metadata.first().contractStateClassName).isEqualTo("net.corda.testing.contracts.DummyLinearContract\$State")
+            assertThat(metadata.first().contractStateClassName).isEqualTo("$DUMMY_LINEAR_CONTRACT_PROGRAM_ID\$State")
             assertThat(metadata.first().status).isEqualTo(Vault.StateStatus.UNCONSUMED) // 0 = UNCONSUMED
             assertThat(metadata.last().contractStateClassName).isEqualTo("net.corda.finance.contracts.asset.Cash\$State")
             assertThat(metadata.last().status).isEqualTo(Vault.StateStatus.CONSUMED)    // 1 = CONSUMED
@@ -1484,15 +1490,15 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed fungible assets for selected issuer parties`() {
         // GBP issuer
         val gbpCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1001))
-        val gbpCashIssuer = Party(getX500Name(O = "British Pounds Cash Issuer", OU = "corda", L = "London", C = "GB"), gbpCashIssuerKey.public).ref(1)
+        val gbpCashIssuer = Party(CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB"), gbpCashIssuerKey.public).ref(1)
         val gbpCashIssuerServices = MockServices(gbpCashIssuerKey)
         // USD issuer
         val usdCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1002))
-        val usdCashIssuer = Party(getX500Name(O = "US Dollars Cash Issuer", OU = "corda", L = "New York", C = "US"), usdCashIssuerKey.public).ref(1)
+        val usdCashIssuer = Party(CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US"), usdCashIssuerKey.public).ref(1)
         val usdCashIssuerServices = MockServices(usdCashIssuerKey)
         // CHF issuer
         val chfCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1003))
-        val chfCashIssuer = Party(getX500Name(O = "Swiss Francs Cash Issuer", OU = "corda", L = "Zurich", C = "CH"), chfCashIssuerKey.public).ref(1)
+        val chfCashIssuer = Party(CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH"), chfCashIssuerKey.public).ref(1)
         val chfCashIssuerServices = MockServices(chfCashIssuerKey)
 
         database.transaction {

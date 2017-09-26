@@ -25,7 +25,7 @@ object StabilityTest {
             generate = { _, _ ->
                 val payments = simpleNodes.flatMap { payer -> simpleNodes.map { payer to it } }
                         .filter { it.first != it.second }
-                        .map { (payer, payee) -> CrossCashCommand(PaymentRequest(Amount(1, USD), payee.info.legalIdentity, anonymous = true), payer) }
+                        .map { (payer, payee) -> CrossCashCommand(PaymentRequest(Amount(1, USD), payee.mainIdentity, anonymous = true), payer) }
                 Generator.pure(List(replication) { payments }.flatten())
             },
             interpret = { _, _ -> },
@@ -49,10 +49,11 @@ object StabilityTest {
     fun selfIssueTest(replication: Int) = LoadTest<SelfIssueCommand, Unit>(
             "Self issuing lot of cash",
             generate = { _, _ ->
+                val notaryIdentity = simpleNodes[0].proxy.notaryIdentities().first()
                 // Self issue cash is fast, its ok to flood the node with this command.
                 val generateIssue =
                         simpleNodes.map { issuer ->
-                            SelfIssueCommand(IssueAndPaymentRequest(Amount(100000, USD), OpaqueBytes.of(0), issuer.info.legalIdentity, notary.info.notaryIdentity, anonymous = true), issuer)
+                            SelfIssueCommand(IssueAndPaymentRequest(Amount(100000, USD), OpaqueBytes.of(0), issuer.mainIdentity, notaryIdentity, anonymous = true), issuer)
                         }
                 Generator.pure(List(replication) { generateIssue }.flatten())
             },

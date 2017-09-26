@@ -6,13 +6,14 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.identity.Party
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.excludeHostNode
+import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
-import java.security.PublicKey
 
 /**
  * Abstract flow to be used for replacing one state with another, for example when changing the notary of a state.
@@ -33,10 +34,8 @@ abstract class AbstractStateReplacementFlow {
      * The assembled transaction for upgrading a contract.
      *
      * @param stx signed transaction to do the upgrade.
-     * @param participants the parties involved in the upgrade transaction.
-     * @param myKey key
      */
-    data class UpgradeTx(val stx: SignedTransaction, val participants: Iterable<PublicKey>, val myKey: PublicKey)
+    data class UpgradeTx(val stx: SignedTransaction)
 
     /**
      * The [Instigator] assembles the transaction for state replacement and sends out change proposals to all participants
@@ -62,15 +61,11 @@ abstract class AbstractStateReplacementFlow {
         @Suspendable
         @Throws(StateReplacementException::class)
         override fun call(): StateAndRef<T> {
-            val (stx, participantKeys, myKey) = assembleTx()
-
+            val (stx) = assembleTx()
+            val participantSessions = getParticipantSessions()
             progressTracker.currentStep = SIGNING
 
-            val signatures = if (participantKeys.singleOrNull() == myKey) {
-                getNotarySignatures(stx)
-            } else {
-                collectSignatures(participantKeys - myKey, stx)
-            }
+            val signatures = collectSignatures(participantSessions, stx)
 
             val finalTx = stx + signatures
             serviceHub.recordTransactions(finalTx)
@@ -89,35 +84,38 @@ abstract class AbstractStateReplacementFlow {
         /**
          * Build the upgrade transaction.
          *
-         * @return a triple of the transaction, the public keys of all participants, and the participating public key of
-         * this node.
+         * @return the transaction
          */
         abstract protected fun assembleTx(): UpgradeTx
 
-        @Suspendable
-        private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<TransactionSignature> {
-            val parties = participants.map {
-                val participantNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it) ?:
-                        throw IllegalStateException("Participant $it to state $originalState not found on the network")
-                participantNode.legalIdentity
-            }
+        /**
+         * Initiate sessions with parties we want signatures from.
+         */
+        open fun getParticipantSessions(): List<Pair<FlowSession, List<AbstractParty>>> {
+            return excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, originalState.state.data.participants)).map { initiateFlow(it.key) to it.value }
+        }
 
-            val participantSignatures = parties.map { getParticipantSignature(it, stx) }
+        @Suspendable
+        private fun collectSignatures(sessions: List<Pair<FlowSession, List<AbstractParty>>>, stx: SignedTransaction): List<TransactionSignature> {
+            val participantSignatures = sessions.map { getParticipantSignature(it.first, it.second, stx) }
 
             val allPartySignedTx = stx + participantSignatures
 
             val allSignatures = participantSignatures + getNotarySignatures(allPartySignedTx)
-            parties.forEach { send(it, allSignatures) }
+            sessions.forEach { it.first.send(allSignatures) }
 
             return allSignatures
         }
 
         @Suspendable
-        private fun getParticipantSignature(party: Party, stx: SignedTransaction): TransactionSignature {
+        private fun getParticipantSignature(session: FlowSession, party: List<AbstractParty>, stx: SignedTransaction): TransactionSignature {
+            require(party.size == 1) {
+                "We do not currently support multiple signatures from the same party ${session.counterparty}: $party"
+            }
             val proposal = Proposal(originalState.ref, modification)
-            subFlow(SendTransactionFlow(party, stx))
-            return sendAndReceive<TransactionSignature>(party, proposal).unwrap {
-                check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
+            subFlow(SendTransactionFlow(session, stx))
+            return session.sendAndReceive<TransactionSignature>(proposal).unwrap {
+                check(party.single().owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verify(stx.id)
                 it
             }
@@ -136,9 +134,9 @@ abstract class AbstractStateReplacementFlow {
 
     // Type parameter should ideally be Unit but that prevents Java code from subclassing it (https://youtrack.jetbrains.com/issue/KT-15964).
     // We use Void? instead of Unit? as that's what you'd use in Java.
-    abstract class Acceptor<in T>(val otherSide: Party,
+    abstract class Acceptor<in T>(val initiatingSession: FlowSession,
                                   override val progressTracker: ProgressTracker = Acceptor.tracker()) : FlowLogic<Void?>() {
-            constructor(otherSide: Party) : this(otherSide, Acceptor.tracker())
+            constructor(initiatingSession: FlowSession) : this(initiatingSession, Acceptor.tracker())
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
             object APPROVING : ProgressTracker.Step("State replacement approved")
@@ -151,9 +149,9 @@ abstract class AbstractStateReplacementFlow {
         override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
             // We expect stx to have insufficient signatures here
-            val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false))
+            val stx = subFlow(ReceiveTransactionFlow(initiatingSession, checkSufficientSignatures = false))
             checkMySignatureRequired(stx)
-            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
+            val maybeProposal: UntrustworthyData<Proposal<T>> = initiatingSession.receive()
             maybeProposal.unwrap {
                 verifyProposal(stx, it)
             }
@@ -166,7 +164,7 @@ abstract class AbstractStateReplacementFlow {
             progressTracker.currentStep = APPROVING
 
             val mySignature = sign(stx)
-            val swapSignatures = sendAndReceive<List<TransactionSignature>>(otherSide, mySignature)
+            val swapSignatures = initiatingSession.sendAndReceive<List<TransactionSignature>>(mySignature)
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifyRequiredSignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
@@ -193,7 +191,8 @@ abstract class AbstractStateReplacementFlow {
 
         private fun checkMySignatureRequired(stx: SignedTransaction) {
             // TODO: use keys from the keyManagementService instead
-            val myKey = serviceHub.myInfo.legalIdentity.owningKey
+            // TODO Check the set of multiple identities?
+            val myKey = ourIdentity.owningKey
 
             val requiredKeys = if (stx.isNotaryChangeTransaction()) {
                 stx.resolveNotaryChangeTransaction(serviceHub).requiredSigningKeys

@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.CordaException
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -32,5 +33,4 @@ interface UniquenessProvider {
     data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
 }
 
-@CordaSerializable
-class UniquenessException(val error: UniquenessProvider.Conflict) : Exception()
+class UniquenessException(val error: UniquenessProvider.Conflict) : CordaException(UniquenessException::class.java.name)

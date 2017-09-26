@@ -3,13 +3,15 @@ package net.corda.testing.node
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.utilities.getX500Name
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.ServiceEntry
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -20,7 +22,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -49,7 +50,7 @@ class InMemoryMessagingNetwork(
         private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
     companion object {
-        val MESSAGES_LOG_NAME = "messages"
+        const val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
     }
 
@@ -80,8 +81,8 @@ class InMemoryMessagingNetwork(
 
     // Holds the mapping from services to peers advertising the service.
     private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
-    // Holds the mapping from node's X500Name to PeerHandle.
-    private val peersMapping = HashMap<X500Name, PeerHandle>()
+    // Holds the mapping from node's X.500 name to PeerHandle.
+    private val peersMapping = HashMap<CordaX500Name, PeerHandle>()
 
     @Suppress("unused") // Used by the visualiser tool.
             /** A stream of (sender, message, recipients) triples */
@@ -105,10 +106,10 @@ class InMemoryMessagingNetwork(
     @Synchronized
     fun createNode(manuallyPumped: Boolean,
                    executor: AffinityExecutor,
-                   advertisedServices: List<ServiceEntry>,
+                   notaryService: PartyAndCertificate?,
                    database: CordaPersistence): Pair<PeerHandle, MessagingServiceBuilder<InMemoryMessaging>> {
         check(counter >= 0) { "In memory network stopped: please recreate." }
-        val builder = createNodeWithID(manuallyPumped, counter, executor, advertisedServices, database = database) as Builder
+        val builder = createNodeWithID(manuallyPumped, counter, executor, notaryService, database = database) as Builder
         counter++
         val id = builder.id
         return Pair(id, builder)
@@ -126,13 +127,15 @@ class InMemoryMessagingNetwork(
             manuallyPumped: Boolean,
             id: Int,
             executor: AffinityExecutor,
-            advertisedServices: List<ServiceEntry>,
-            description: X500Name = getX500Name(O = "In memory node $id", L = "London", C = "UK"),
+            notaryService: PartyAndCertificate?,
+            description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"),
             database: CordaPersistence)
             : MessagingServiceBuilder<InMemoryMessaging> {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
-        return Builder(manuallyPumped, peerHandle, advertisedServices.map(::ServiceHandle), executor, database = database)
+        notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
+        val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) } ?: emptyList() //TODO only notary can be distributed?
+        return Builder(manuallyPumped, peerHandle, serviceHandles, executor, database = database)
     }
 
     interface LatencyCalculator {
@@ -200,15 +203,15 @@ class InMemoryMessagingNetwork(
     }
 
     @CordaSerializable
-    data class PeerHandle(val id: Int, val description: X500Name) : SingleMessageRecipient {
+    data class PeerHandle(val id: Int, val description: CordaX500Name) : SingleMessageRecipient {
         override fun toString() = description.toString()
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
     }
 
     @CordaSerializable
-    data class ServiceHandle(val service: ServiceEntry) : MessageRecipientGroup {
-        override fun toString() = "Service($service)"
+    data class ServiceHandle(val party: Party) : MessageRecipientGroup {
+        override fun toString() = "Service($party)"
     }
 
     /**
@@ -289,7 +292,7 @@ class InMemoryMessagingNetwork(
                                                override val platformVersion: Int,
                                                override val uniqueMessageId: UUID,
                                                override val debugTimestamp: Instant,
-                                               override val peer: X500Name) : ReceivedMessage
+                                               override val peer: CordaX500Name) : ReceivedMessage
 
     /**
      * An [InMemoryMessaging] provides a [MessagingService] that isn't backed by any kind of network or disk storage
@@ -332,8 +335,8 @@ class InMemoryMessagingNetwork(
 
         override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
             return when (partyInfo) {
-                is PartyInfo.Node -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No MockNode for party ${partyInfo.party.name}")
-                is PartyInfo.Service -> ServiceHandle(partyInfo.service)
+                is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No MockNode for party ${partyInfo.party.name}")
+                is PartyInfo.DistributedNode -> ServiceHandle(partyInfo.party)
             }
         }
 

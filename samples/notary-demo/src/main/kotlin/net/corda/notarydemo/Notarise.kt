@@ -2,6 +2,7 @@ package net.corda.notarydemo
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
@@ -11,7 +12,6 @@ import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.testing.BOB
 import java.util.concurrent.Future
-import kotlin.streams.asSequence
 
 fun main(args: Array<String>) {
     val address = NetworkHostAndPort("localhost", 10003)
@@ -24,14 +24,16 @@ fun main(args: Array<String>) {
 /** Interface for using the notary demo API from a client. */
 private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
-        val parties = rpc.networkMapSnapshot()
-        val id = parties.stream().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().asSequence().singleOrNull()
+        val id = rpc.notaryIdentities().singleOrNull()
         checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 
-    private val counterpartyNode by lazy {
+    private val counterparty by lazy {
         val parties = rpc.networkMapSnapshot()
-        parties.single { it.legalIdentity.name == BOB.name }
+        parties.fold(ArrayList<PartyAndCertificate>()) { acc, elem ->
+            acc.addAll(elem.legalIdentitiesAndCerts.filter { it.name == BOB.name})
+            acc
+        }.single().party
     }
 
     /** Makes calls to the node rpc to start transaction notarisation. */
@@ -51,7 +53,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
         val flowFutures = (1..count).map {
-            rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity, it).returnValue
+            rpc.startFlow(::DummyIssueAndMove, notary, counterparty, it).returnValue
         }
         return flowFutures.map { it.getOrThrow() }
     }

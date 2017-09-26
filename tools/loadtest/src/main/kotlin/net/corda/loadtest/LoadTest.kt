@@ -3,7 +3,6 @@ package net.corda.loadtest
 import com.google.common.util.concurrent.RateLimiter
 import net.corda.client.mock.Generator
 import net.corda.core.utilities.toBase58String
-import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.driver.PortAllocation
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -173,6 +172,8 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
         }
     }
 
+    val networkMap = remoteNodes[0].hostname// TODO Should be taken from configs? but also we don't care that much about that, because networkMapService will be gone and no one uses LoadTesting now
+
     connectToNodes(remoteNodes, PortAllocation.Incremental(configuration.localTunnelStartingPort)) { connections ->
         log.info("Connected to all nodes!")
         val hostNodeMap = ConcurrentHashMap<String, NodeConnection>()
@@ -181,8 +182,9 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             val info = connection.info
             log.info("Got node info of ${connection.remoteNode.hostname}: $info!")
             val otherInfo = connection.proxy.networkMapSnapshot()
-            val pubKeysString = otherInfo.map {
-                "    ${it.legalIdentity.name}: ${it.legalIdentity.owningKey.toBase58String()}"
+            val pubKeysString = otherInfo.map { // TODO Rethink, we loose ability for nice showing of NodeInfos.
+                "NodeInfo identities set:\n" +
+                        it.legalIdentitiesAndCerts.fold("") { acc, elem -> acc + "\n" + elem.name + ": " + elem.owningKey.toBase58String() }
             }.joinToString("\n")
             log.info("${connection.remoteNode.hostname} waiting for network map")
             connection.proxy.waitUntilNetworkReady().get()
@@ -190,16 +192,13 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             hostNodeMap.put(connection.remoteNode.hostname, connection)
         }
 
-        val networkMapNode = hostNodeMap.values.single { it.info.advertisedServices.any { it.info.type == NetworkMapService.type } }
-        val notaryNode = hostNodeMap.values.single { it.info.advertisedServices.any { it.info.type.isNotary() } }
+        val networkMapNode = hostNodeMap[networkMap]!!
+        val notaryIdentity = networkMapNode.proxy.notaryIdentities().single()
+        val notaryNode = hostNodeMap.values.single { notaryIdentity in it.info.legalIdentities }
         val nodes = Nodes(
                 notary = notaryNode,
                 networkMap = networkMapNode,
-                simpleNodes = hostNodeMap.values.filter {
-                    it.info.advertisedServices.none {
-                        it.info.type == NetworkMapService.type || it.info.type.isNotary()
-                    }
-                }
+                simpleNodes = hostNodeMap.values.filter { it.info.legalIdentitiesAndCerts.size == 1 } // TODO Fix it with network map.
         )
 
         tests.forEach { (test, parameters) ->

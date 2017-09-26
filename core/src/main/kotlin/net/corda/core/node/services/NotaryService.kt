@@ -3,28 +3,27 @@ package net.corda.core.node.services
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
-import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
+import java.security.PublicKey
 
 abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val services: ServiceHub
+    abstract val notaryIdentityKey: PublicKey
 
     abstract fun start()
     abstract fun stop()
 
     /**
      * Produces a notary service flow which has the corresponding sends and receives as [NotaryFlow.Client].
-     * @param otherParty client [Party] making the request
+     * @param otherPartySession client [Party] making the request
      */
-    abstract fun createServiceFlow(otherParty: Party): FlowLogic<Void?>
+    abstract fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?>
 }
 
 /**
@@ -70,11 +69,11 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
     }
 
     fun sign(bits: ByteArray): DigitalSignature.WithKey {
-        return services.keyManagementService.sign(bits, services.notaryIdentityKey)
+        return services.keyManagementService.sign(bits, notaryIdentityKey)
     }
 
     fun sign(txId: SecureHash): TransactionSignature {
-        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(services.notaryIdentityKey).schemeNumberID))
-        return services.keyManagementService.sign(signableData, services.notaryIdentityKey)
+        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
+        return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
 }

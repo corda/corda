@@ -3,11 +3,11 @@ package net.corda.node.internal
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
 import net.corda.core.internal.Emoji
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
+import net.corda.nodeapi.internal.ServiceInfo
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException

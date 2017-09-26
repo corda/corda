@@ -1,8 +1,10 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.core.serialization.ClassWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.*
 import net.corda.nodeapi.internal.serialization.amqp.Field
 import net.corda.nodeapi.internal.serialization.amqp.Schema
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 
 fun mangleName(name: String) = "${name}__carpenter"
 
@@ -33,8 +35,9 @@ fun Schema.mangleNames(names: List<String>): Schema {
     return Schema(types = newTypes)
 }
 
-open class AmqpCarpenterBase {
-    var factory = testDefaultFactory()
+open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
+    var cc = ClassCarpenter(whitelist = whitelist)
+    var factory = SerializerFactory(AllWhitelist, cc.classloader)
 
     fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
     fun testName(): String = Thread.currentThread().stackTrace[2].methodName

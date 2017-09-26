@@ -2,14 +2,13 @@ package net.corda.docs;
 
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.TransactionSignature;
 import net.corda.core.flows.*;
+import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.internal.FetchDataFlow;
-import net.corda.core.node.services.ServiceType;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.Vault.Page;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
@@ -19,7 +18,6 @@ import net.corda.core.transactions.TransactionBuilder;
 import net.corda.core.utilities.ProgressTracker;
 import net.corda.core.utilities.ProgressTracker.Step;
 import net.corda.core.utilities.UntrustworthyData;
-import net.corda.core.utilities.X500NameUtils;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.testing.contracts.DummyContract;
 import net.corda.testing.contracts.DummyState;
@@ -29,6 +27,7 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -37,6 +36,7 @@ import static net.corda.testing.TestConstants.getALICE_KEY;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
+@SuppressWarnings("unused")
 public class FlowCookbookJava {
     // ``InitiatorFlow`` is our first flow, and will communicate with
     // ``ResponderFlow``, below.
@@ -53,11 +53,13 @@ public class FlowCookbookJava {
         private final boolean arg1;
         private final int arg2;
         private final Party counterparty;
+        private final Party regulator;
 
-        public InitiatorFlow(boolean arg1, int arg2, Party counterparty) {
+        public InitiatorFlow(boolean arg1, int arg2, Party counterparty, Party regulator) {
             this.arg1 = arg1;
             this.arg2 = arg2;
             this.counterparty = counterparty;
+            this.regulator = regulator;
         }
 
         /*----------------------------------
@@ -78,14 +80,14 @@ public class FlowCookbookJava {
             // subflow's progress steps in our flow's progress tracker.
             @Override
             public ProgressTracker childProgressTracker() {
-                return CollectSignaturesFlow.Companion.tracker();
+                return CollectSignaturesFlow.tracker();
             }
         };
         private static final Step VERIFYING_SIGS = new Step("Verifying a transaction's signatures.");
         private static final Step FINALISATION = new Step("Finalising a transaction.") {
             @Override
             public ProgressTracker childProgressTracker() {
-                return FinalityFlow.Companion.tracker();
+                return FinalityFlow.tracker();
             }
         };
 
@@ -122,27 +124,19 @@ public class FlowCookbookJava {
             //   - To serve as a timestamping authority if the transaction has a time-window
             // We retrieve a notary from the network map.
             // DOCSTART 1
-            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(X500NameUtils.getX500Name("Notary Service", "London", "UK"));
-            Party anyNotary = getServiceHub().getNetworkMapCache().getAnyNotary(null);
-            // Unlike the first two methods, ``getNotaryNodes`` returns a
-            // ``List<NodeInfo>``. We have to extract the notary identity of
-            // the node we want.
-            Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryNodes().get(0).getNotaryIdentity();
+            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(new CordaX500Name("Notary Service", "London", "UK"));
+            // Alternatively, we can pick an arbitrary notary from the notary list. However, it is always preferable to
+            // specify which notary to use explicitly, as the notary list might change when new notaries are introduced,
+            // or old ones decommissioned.
+            Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
             // DOCEND 1
 
             // We may also need to identify a specific counterparty.
             // Again, we do so using the network map.
             // DOCSTART 2
-            Party namedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalName(X500NameUtils.getX500Name("NodeA", "London", "UK")).getLegalIdentity();
-            Party keyedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalIdentityKey(dummyPubKey).getLegalIdentity();
-            Party firstCounterparty = getServiceHub().getNetworkMapCache().getPartyNodes().get(0).getLegalIdentity();
+            Party namedCounterparty = getServiceHub().getIdentityService().wellKnownPartyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
+            Party keyedCounterparty = getServiceHub().getIdentityService().partyFromKey(dummyPubKey);
             // DOCEND 2
-
-            // Finally, we can use the map to identify nodes providing a
-            // specific service (e.g. a regulator or an oracle).
-            // DOCSTART 3
-            Party regulator = getServiceHub().getNetworkMapCache().getNodesWithService(ServiceType.Companion.getRegulator()).get(0).getLegalIdentity();
-            // DOCEND 3
 
             /*------------------------------
              * SENDING AND RECEIVING DATA *
@@ -160,7 +154,8 @@ public class FlowCookbookJava {
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
             // DOCSTART 4
-            send(counterparty, new Object());
+            FlowSession counterpartySession = initiateFlow(counterparty);
+            counterpartySession.send(new Object());
             // DOCEND 4
 
             // We can wait to receive arbitrary data of a specific type from a
@@ -183,7 +178,7 @@ public class FlowCookbookJava {
             // be what it appears to be! We must unwrap the
             // ``UntrustworthyData`` using a lambda.
             // DOCSTART 5
-            UntrustworthyData<Integer> packet1 = receive(Integer.class, counterparty);
+            UntrustworthyData<Integer> packet1 = counterpartySession.receive(Integer.class);
             Integer integer = packet1.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -197,7 +192,7 @@ public class FlowCookbookJava {
             // data sent doesn't need to match the type of the data received
             // back.
             // DOCSTART 7
-            UntrustworthyData<Boolean> packet2 = sendAndReceive(Boolean.class, counterparty, "You can send and receive any class!");
+            UntrustworthyData<Boolean> packet2 = counterpartySession.sendAndReceive(Boolean.class, "You can send and receive any class!");
             Boolean bool = packet2.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -210,8 +205,9 @@ public class FlowCookbookJava {
             // counterparty. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
-            send(regulator, new Object());
-            UntrustworthyData<Object> packet3 = receive(Object.class, regulator);
+            FlowSession regulatorSession = initiateFlow(regulator);
+            regulatorSession.send(new Object());
+            UntrustworthyData<Object> packet3 = regulatorSession.receive(Object.class);
             // DOCEND 6
 
             /*------------------------------------
@@ -254,19 +250,25 @@ public class FlowCookbookJava {
 
             // Output states are constructed from scratch.
             // DOCSTART 22
-            DummyState ourOutput = new DummyState();
+            DummyState ourOutputState = new DummyState();
             // DOCEND 22
             // Or as copies of other states with some properties changed.
             // DOCSTART 23
-            DummyState ourOtherOutput = ourOutput.copy(77);
+            DummyState ourOtherOutputState = ourOutputState.copy(77);
             // DOCEND 23
+
+            // We then need to pair our output state with a contract.
+            // DOCSTART 47
+            String contractName = "net.corda.testing.contracts.DummyContract";
+            StateAndContract ourOutput = new StateAndContract(ourOutputState, contractName);
+            // DOCEND 47
 
             // Commands pair a ``CommandData`` instance with a list of
             // public keys. To be valid, the transaction requires a signature
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
             DummyContract.Commands.Create commandData = new DummyContract.Commands.Create();
-            PublicKey ourPubKey = getServiceHub().getLegalIdentityKey();
+            PublicKey ourPubKey = getServiceHub().getMyInfo().getLegalIdentitiesAndCerts().get(0).getOwningKey();
             PublicKey counterpartyPubKey = counterparty.getOwningKey();
             List<PublicKey> requiredSigners = ImmutableList.of(ourPubKey, counterpartyPubKey);
             Command<DummyContract.Commands.Create> ourCommand = new Command<>(commandData, requiredSigners);
@@ -300,11 +302,11 @@ public class FlowCookbookJava {
             // We can also define a time window as an ``Instant`` +/- a time
             // tolerance (e.g. 30 seconds):
             // DOCSTART 42
-            TimeWindow ourTimeWindow2 = TimeWindow.withTolerance(Instant.now(), Duration.ofSeconds(30));
+            TimeWindow ourTimeWindow2 = TimeWindow.withTolerance(getServiceHub().getClock().instant(), Duration.ofSeconds(30));
             // DOCEND 42
             // Or as a start-time plus a duration:
             // DOCSTART 43
-            TimeWindow ourTimeWindow3 = TimeWindow.fromStartAndDuration(Instant.now(), Duration.ofSeconds(30));
+            TimeWindow ourTimeWindow3 = TimeWindow.fromStartAndDuration(getServiceHub().getClock().instant(), Duration.ofSeconds(30));
             // DOCEND 43
 
             /*------------------------
@@ -312,38 +314,72 @@ public class FlowCookbookJava {
             ------------------------*/
             progressTracker.setCurrentStep(TX_BUILDING);
 
+            // If our transaction has input states or a time-window, we must instantiate it with a
+            // notary.
             // DOCSTART 19
             TransactionBuilder txBuilder = new TransactionBuilder(specificNotary);
             // DOCEND 19
 
+            // Otherwise, we can choose to instantiate it without one:
+            // DOCSTART 46
+            TransactionBuilder txBuilderNoNotary = new TransactionBuilder();
+            // DOCEND 46
+
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
             // DOCSTART 27
             txBuilder.withItems(
-                    // Inputs, as ``StateRef``s that reference to the outputs of previous transactions
+                    // Inputs, as ``StateAndRef``s that reference to the outputs of previous transactions
                     ourStateAndRef,
-                    // Outputs, as ``ContractState``s
+                    // Outputs, as ``StateAndContract``s
                     ourOutput,
                     // Commands, as ``Command``s
-                    ourCommand
+                    ourCommand,
+                    // Attachments, as ``SecureHash``es
+                    ourAttachment,
+                    // A time-window, as ``TimeWindow``
+                    ourTimeWindow
             );
             // DOCEND 27
 
-            // We can also add items using methods for the individual components:
+            // We can also add items using methods for the individual components.
+
+            // The individual methods for adding input states and attachments:
             // DOCSTART 28
             txBuilder.addInputState(ourStateAndRef);
-            txBuilder.addOutputState(ourOutput);
-            txBuilder.addCommand(ourCommand);
             txBuilder.addAttachment(ourAttachment);
             // DOCEND 28
 
-            // There are several ways of setting the transaction's time-window.
-            // We can set a time-window directly:
+            // An output state can be added as a ``ContractState``, contract class name and notary.
+            // DOCSTART 49
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary);
+            // DOCEND 49
+            // We can also leave the notary field blank, in which case the transaction's default
+            // notary is used.
+            // DOCSTART 50
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID);
+            // DOCEND 50
+            // Or we can add the output state as a ``TransactionState``, which already specifies
+            // the output's contract and notary.
+            // DOCSTART 51
+            TransactionState txState = new TransactionState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary);
+            // DOCEND 51
+
+            // Commands can be added as ``Command``s.
+            // DOCSTART 52
+            txBuilder.addCommand(ourCommand);
+            // DOCEND 52
+            // Or as ``CommandData`` and a ``vararg PublicKey``.
+            // DOCSTART 53
+            txBuilder.addCommand(commandData, ourPubKey, counterpartyPubKey);
+            // DOCEND 53
+
+            // We can set a time-window directly.
             // DOCSTART 44
             txBuilder.setTimeWindow(ourTimeWindow);
             // DOCEND 44
-            // Or as a start time plus a duration (e.g. 45 seconds):
+            // Or as a start time plus a duration (e.g. 45 seconds).
             // DOCSTART 45
-            txBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45));
+            txBuilder.setTimeWindow(getServiceHub().getClock().instant(), Duration.ofSeconds(45));
             // DOCEND 45
 
             /*-----------------------
@@ -401,10 +437,10 @@ public class FlowCookbookJava {
             // for data request until the transaction is resolved and verified
             // on the other side:
             // DOCSTART 12
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx));
+            subFlow(new SendTransactionFlow(counterpartySession, twiceSignedTx));
 
             // Optional request verification to further restrict data access.
-            subFlow(new SendTransactionFlow(counterparty, twiceSignedTx) {
+            subFlow(new SendTransactionFlow(counterpartySession, twiceSignedTx) {
                 @Override
                 protected void verifyDataRequest(@NotNull FetchDataFlow.Request.Data dataRequest) {
                     // Extra request verification.
@@ -414,17 +450,17 @@ public class FlowCookbookJava {
 
             // We can receive the transaction using ``ReceiveTransactionFlow``,
             // which will automatically download all the dependencies and verify
-            // the transaction
+            // the transaction and then record in our vault
             // DOCSTART 13
-            SignedTransaction verifiedTransaction = subFlow(new ReceiveTransactionFlow(counterparty));
+            SignedTransaction verifiedTransaction = subFlow(new ReceiveTransactionFlow(counterpartySession));
             // DOCEND 13
 
             // We can also send and receive a `StateAndRef` dependency chain and automatically resolve its dependencies.
             // DOCSTART 14
-            subFlow(new SendStateAndRefFlow(counterparty, dummyStates));
+            subFlow(new SendStateAndRefFlow(counterpartySession, dummyStates));
 
             // On the receive side ...
-            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterparty));
+            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterpartySession));
             // DOCEND 14
 
             try {
@@ -481,7 +517,7 @@ public class FlowCookbookJava {
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()));
+            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, Collections.emptySet(), SIGS_GATHERING.childProgressTracker()));
             // DOCEND 15
 
             /*------------------------
@@ -523,13 +559,13 @@ public class FlowCookbookJava {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 9
-            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).get(0);
+            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()));
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            Set<Party> additionalParties = ImmutableSet.of(regulator, regulator);
-            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(ImmutableList.of(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).get(0);
+            Set<Party> additionalParties = Collections.singleton(regulator);
+            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()));
             // DOCEND 10
 
             return null;
@@ -546,10 +582,10 @@ public class FlowCookbookJava {
     @InitiatedBy(InitiatorFlow.class)
     public static class ResponderFlow extends FlowLogic<Void> {
 
-        private final Party counterparty;
+        private final FlowSession counterpartySession;
 
-        public ResponderFlow(Party counterparty) {
-            this.counterparty = counterparty;
+        public ResponderFlow(FlowSession counterpartySession) {
+            this.counterpartySession = counterpartySession;
         }
 
         private static final Step RECEIVING_AND_SENDING_DATA = new Step("Sending data between parties.");
@@ -581,9 +617,9 @@ public class FlowCookbookJava {
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
             // DOCSTART 8
-            Object obj = receive(Object.class, counterparty).unwrap(data -> data);
-            String string = sendAndReceive(String.class, counterparty, 99).unwrap(data -> data);
-            send(counterparty, true);
+            Object obj = counterpartySession.receive(Object.class).unwrap(data -> data);
+            String string = counterpartySession.sendAndReceive(String.class, 99).unwrap(data -> data);
+            counterpartySession.send(true);
             // DOCEND 8
 
             /*-----------------------------------------
@@ -596,8 +632,8 @@ public class FlowCookbookJava {
             // ``SignTransactionFlow`` subclass.
             // DOCSTART 16
             class SignTxFlow extends SignTransactionFlow {
-                private SignTxFlow(Party otherParty, ProgressTracker progressTracker) {
-                    super(otherParty, progressTracker);
+                private SignTxFlow(FlowSession otherSession, ProgressTracker progressTracker) {
+                    super(otherSession, progressTracker);
                 }
 
                 @Override
@@ -611,7 +647,7 @@ public class FlowCookbookJava {
                 }
             }
 
-            subFlow(new SignTxFlow(counterparty, SignTransactionFlow.Companion.tracker()));
+            subFlow(new SignTxFlow(counterpartySession, SignTransactionFlow.tracker()));
             // DOCEND 16
 
             /*------------------------------

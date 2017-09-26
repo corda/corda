@@ -155,6 +155,11 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         }
     }
 
+    /**
+     * TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
+     * from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
+     * objects from the TransactionState.
+     */
     private fun verifyRegularTransaction(checkSufficientSignatures: Boolean, services: ServiceHub) {
         checkSignaturesAreValid()
         if (checkSufficientSignatures) verifyRequiredSignatures()

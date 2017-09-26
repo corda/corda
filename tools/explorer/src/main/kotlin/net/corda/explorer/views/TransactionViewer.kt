@@ -24,9 +24,8 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.organisation
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
@@ -37,10 +36,10 @@ import net.corda.explorer.identicon.identiconToolTip
 import net.corda.explorer.model.CordaView
 import net.corda.explorer.model.CordaWidget
 import net.corda.explorer.model.ReportingCurrencyModel
+import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.sign
 import net.corda.explorer.ui.setCustomCellFactory
 import net.corda.finance.contracts.asset.Cash
-import org.bouncycastle.asn1.x500.X500Name
 import tornadofx.*
 import java.util.*
 
@@ -53,7 +52,7 @@ class TransactionViewer : CordaView("Transactions") {
     // Inject data
     private val transactions by observableListReadOnly(TransactionDataModel::partiallyResolvedTransactions)
     private val reportingExchange by observableValue(ReportingCurrencyModel::reportingExchange)
-    private val reportingCurrency by observableValue(ReportingCurrencyModel::reportingCurrency)
+    private val reportingCurrency by observableValue(SettingsModel::reportingCurrencyProperty)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
 
     override val widgets = listOf(CordaWidget(title, TransactionWidget(), icon)).observable()
@@ -134,8 +133,8 @@ class TransactionViewer : CordaView("Transactions") {
 
         val searchField = SearchField(transactions,
                 "Transaction ID" to { tx, s -> "${tx.id}".contains(s, true) },
-                "Input" to { tx, s -> tx.inputs.resolved.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
-                "Output" to { tx, s -> tx.outputs.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
+                "Input" to { tx, s -> tx.inputs.resolved.any { it.state.contract.contains(s, true) } },
+                "Output" to { tx, s -> tx.outputs.any { it.state.contract.contains(s, true) } },
                 "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) ?: false } } },
                 "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) ?: false } } },
                 "Command Type" to { tx, s -> tx.commandTypes.any { it.simpleName.contains(s, true) } }
@@ -200,14 +199,14 @@ class TransactionViewer : CordaView("Transactions") {
         })
     }
 
-    private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<X500Name>): String {
+    private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<CordaX500Name>): String {
         return flatten().map {
             it.value?.let { formatter.format(it.name) }
         }.filterNotNull().toSet().joinToString(separator)
     }
 
     private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { it.owningKey.toKnownParty() } }
-    private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract().javaClass.simpleName }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
+    private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract() }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
 
     private class TransactionWidget : BorderPane() {
         private val partiallyResolvedTransactions by observableListReadOnly(TransactionDataModel::partiallyResolvedTransactions)
@@ -261,7 +260,7 @@ class TransactionViewer : CordaView("Transactions") {
                     vgap = 10.0
                     hgap = 10.0
                     row {
-                        label("${contractState.contract().javaClass.simpleName} (${contractState.ref.toString().substring(0, 16)}...)[${contractState.ref.index}]") {
+                        label("${contractState.contract()} (${contractState.ref.toString().substring(0, 16)}...)[${contractState.ref.index}]") {
                             graphic = identicon(contractState.ref.txhash, 30.0)
                             tooltip = identiconToolTip(contractState.ref.txhash)
                             gridpaneConstraints { columnSpan = 2 }
@@ -299,29 +298,27 @@ class TransactionViewer : CordaView("Transactions") {
         }
     }
 
-    private fun StateAndRef<ContractState>.contract() = this.state.data.contract
-
+    private fun StateAndRef<ContractState>.contract() = this.state.contract.split(".").last()
 }
 
 /**
  * We calculate the total value by subtracting relevant input states and adding relevant output states, as long as they're cash
  */
-private fun calculateTotalEquiv(myIdentity: NodeInfo?,
+private fun calculateTotalEquiv(myIdentity: Party?,
                                 reportingCurrencyExchange: Pair<Currency, (Amount<Currency>) -> Amount<Currency>>,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
-    val myLegalIdentity = myIdentity?.legalIdentity
     fun List<ContractState>.sum() = this.map { it as? Cash.State }
             .filterNotNull()
-            .filter { it.owner.owningKey.toKnownParty().value == myLegalIdentity }
+            .filter { it.owner.owningKey.toKnownParty().value == myIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum()
 
     // For issuing cash, if I am the issuer and not the owner (e.g. issuing cash to other party), count it as negative.
     val issuedAmount = if (inputs.isEmpty()) outputs.map { it as? Cash.State }
             .filterNotNull()
-            .filter { it.amount.token.issuer.party.owningKey.toKnownParty().value == myLegalIdentity && it.owner.owningKey.toKnownParty().value != myLegalIdentity }
+            .filter { it.amount.token.issuer.party.owningKey.toKnownParty().value == myIdentity && it.owner.owningKey.toKnownParty().value != myIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum() else 0
 
