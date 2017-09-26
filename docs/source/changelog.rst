@@ -228,6 +228,9 @@ Release 1.0
 
 * ``@RPCSinceVersion``, ``RPCException`` and ``PermissionException`` have moved to ``net.corda.client.rpc``.
 
+* Current implementation of SSL in ``CordaRPCClient`` has been removed until we have a better solution which doesn't rely
+  on the node's keystore.
+
 Milestone 14
 ------------
 
