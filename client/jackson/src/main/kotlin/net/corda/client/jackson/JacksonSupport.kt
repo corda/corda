@@ -27,7 +27,10 @@ import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.base58ToByteArray
+import net.corda.core.utilities.base64ToByteArray
+import net.corda.core.utilities.toBase64
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
 import java.security.PublicKey
@@ -80,6 +83,9 @@ object JacksonSupport {
             addSerializer(SecureHash.SHA256::class.java, SecureHashSerializer)
             addDeserializer(SecureHash::class.java, SecureHashDeserializer())
             addDeserializer(SecureHash.SHA256::class.java, SecureHashDeserializer())
+
+            // Generic deserializer for public keys
+            addDeserializer(PublicKey::class.java, PublicKeyDeserializer)
 
             // For ed25519 pubkeys
             addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
@@ -156,7 +162,7 @@ object JacksonSupport {
 
     object AnonymousPartySerializer : JsonSerializer<AnonymousParty>() {
         override fun serialize(obj: AnonymousParty, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeString(obj.owningKey.toBase58String())
+            PublicKeySerializer.serialize(obj.owningKey, generator, provider)
         }
     }
 
@@ -166,8 +172,7 @@ object JacksonSupport {
                 parser.nextToken()
             }
 
-            // TODO this needs to use some industry identifier(s) instead of these keys
-            val key = parsePublicKeyBase58(parser.text)
+            val key = PublicKeyDeserializer.deserialize(parser, context)
             return AnonymousParty(key)
         }
     }
@@ -282,27 +287,28 @@ object JacksonSupport {
         }
     }
 
+    object PublicKeyDeserializer : JsonDeserializer<PublicKey>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): PublicKey {
+            return try {
+                val derBytes = parser.text.base64ToByteArray()
+                Crypto.decodePublicKey(derBytes)
+            } catch (e: Exception) {
+                throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
+            }
+        }
+    }
+
     object EdDSAPublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
-            return try {
-                parser.text.base64ToByteArray().let { bytes ->
-                    Crypto.decodePublicKey(bytes) as EdDSAPublicKey
-                }
-            } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid EdDSA key ${parser.text}: ${e.message}")
-            }
+            val key = PublicKeyDeserializer.deserialize(parser, context) as? EdDSAPublicKey
+            return key ?: throw JsonParseException(parser, "Invalid EdDSA key ${parser.text}")
         }
     }
 
     object CompositeKeyDeserializer : JsonDeserializer<CompositeKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): CompositeKey {
-            return try {
-                parser.text.base64ToByteArray().let { bytes ->
-                    Crypto.decodePublicKey(bytes) as CompositeKey
-                }
-            } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid composite key ${parser.text}: ${e.message}")
-            }
+            val key = PublicKeyDeserializer.deserialize(parser, context) as? CompositeKey
+            return key ?: throw JsonParseException(parser, "Invalid composite key ${parser.text}")
         }
     }
 
