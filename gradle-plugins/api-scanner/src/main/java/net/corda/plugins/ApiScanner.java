@@ -13,7 +13,7 @@ public class ApiScanner implements Plugin<Project> {
      * Identify the Gradle Jar tasks creating jars
      * without Maven classifiers, and generate API
      * documentation for them.
-     * @param p
+     * @param p Current project.
      */
     @Override
     public void apply(Project p) {
@@ -27,10 +27,11 @@ public class ApiScanner implements Plugin<Project> {
             }
 
             project.getLogger().info("Adding scanApi task to {}", project.getName());
-            ScanApiTask scanTask = project.getTasks().create(
-                 "scanApi", ScanApiTask.class, task -> task.dependsOn(jarTasks));
-            scanTask.setClasspath(compilationClasspath(project.getConfigurations()));
-            scanTask.setSources(project.files(jarTasks));
+            project.getTasks().create("scanApi", ScanApiTask.class, scanTask -> {
+                scanTask.setClasspath(compilationClasspath(project.getConfigurations()));
+                scanTask.setSources(project.files(jarTasks));
+                scanTask.dependsOn(jarTasks);
+            });
         });
     }
 

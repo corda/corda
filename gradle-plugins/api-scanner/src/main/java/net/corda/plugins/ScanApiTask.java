@@ -36,7 +36,7 @@ public class ScanApiTask extends DefaultTask {
         return sources;
     }
 
-    public void setSources(FileCollection sources) {
+    void setSources(FileCollection sources) {
         this.sources.setFrom(sources);
     }
 
@@ -45,8 +45,13 @@ public class ScanApiTask extends DefaultTask {
         return classpath;
     }
 
-    public void setClasspath(FileCollection classpath) {
+    void setClasspath(FileCollection classpath) {
         this.classpath.setFrom(classpath);
+    }
+
+    @Input
+    public boolean getVerbose() {
+        return verbose;
     }
 
     public void setVerbose(boolean verbose) {
