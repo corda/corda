@@ -42,7 +42,9 @@ class NetworkIdentityModel {
     }.map { it?.party }.filterNotNull()
 
     val notaryNodes: ObservableList<NodeInfo> = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
-    val parties: ObservableList<NodeInfo> = networkIdentities.filtered { it.legalIdentities.all { it !in notaries } }
+    val parties: ObservableList<NodeInfo> = networkIdentities
+            .filtered { it.legalIdentities.all { it !in notaries } }
+            .filtered { it.legalIdentities.all { it.name.organisation != "Network Map Service" } }
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }
 
     fun partyFromPublicKey(publicKey: PublicKey): ObservableValue<NodeInfo?> = identityCache[publicKey]
