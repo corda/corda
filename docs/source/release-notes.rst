@@ -54,11 +54,13 @@ In addition to API stability, this release encompasses a number of major functio
 
 * **Enhanced component privacy**:
   Corda 1.0 is equipped with a scalable patent pending component visibility design based on the above sophisticated
-  sub-tree model and the introduction of nonces per component. Roughly, an initial base-nonce, called the privacy-salt,
-  is used to deterministically generate nonces based on the path of each component in the tree. It is now possible that
-  a notary will ensure it sees all inputs and if there was a `TimeWindow` in the original transaction. The new
-  "visibility" functions could be also applied to Oracles so as to ensure all of the commands are
-  visible to them.
+  sub-tree model and the introduction of nonces per component. Roughly, an initial base-nonce, the "privacy-salt",
+  is used to deterministically generate nonces based on the path of each component in the tree. Because each component
+  is accompanied by a nonce, we protect against brute force attacks, even against low-entropy components. In addition,
+  a new privacy feature is provided that allows non-validating notaries to ensure they see all inputs and if there was a
+  `TimeWindow` in the original transaction. Due to the above, a malicious user cannot selectively hide one or more
+  input states from the notary that would enable her to bypass the double-spending check. The aforementioned
+  functionality could also be applied to Oracles so as to ensure all of the commands are visible to them.
 
   .. image:: resources/subTreesPrivacy.png
 
