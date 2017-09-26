@@ -7,6 +7,7 @@ import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
+import net.corda.testing.kryoSpecific
 import org.assertj.core.api.Assertions
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
@@ -63,7 +64,7 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty map serialises as Java emptytMap`() {
+    fun `check empty map serialises as Java emptyMap`() = kryoSpecific<MapsSerializationTest>("Specifically checks Kryo serialization") {
         val nameID = 0
         val serializedForm = emptyMap<Int, Int>().serialize()
         val output = ByteArrayOutputStream().apply {
