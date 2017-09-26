@@ -40,29 +40,29 @@ class NetworkMapCacheTest {
     @Test
     fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
-        val nodeA = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = ALICE.name, entropyRoot = entropy, advertisedServices = ServiceInfo(NetworkMapService.type))
-        val nodeB = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = BOB.name, entropyRoot = entropy, advertisedServices = ServiceInfo(NetworkMapService.type))
-        assertEquals(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())
+        val aliceNode = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = ALICE.name, entropyRoot = entropy, advertisedServices = ServiceInfo(NetworkMapService.type))
+        val bobNode = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = BOB.name, entropyRoot = entropy, advertisedServices = ServiceInfo(NetworkMapService.type))
+        assertEquals(aliceNode.info.chooseIdentity(), bobNode.info.chooseIdentity())
 
         mockNet.runNetwork()
 
         // Node A currently knows only about itself, so this returns node A
-        assertEquals(nodeA.services.networkMapCache.getNodesByLegalIdentityKey(nodeA.info.chooseIdentity().owningKey).singleOrNull(), nodeA.info)
+        assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(aliceNode.info.chooseIdentity().owningKey).singleOrNull(), aliceNode.info)
 
-        nodeA.services.networkMapCache.addNode(nodeB.info)
+        aliceNode.services.networkMapCache.addNode(bobNode.info)
         // The details of node B write over those for node A
-        assertEquals(nodeA.services.networkMapCache.getNodesByLegalIdentityKey(nodeA.info.chooseIdentity().owningKey).singleOrNull(), nodeB.info)
+        assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(aliceNode.info.chooseIdentity().owningKey).singleOrNull(), bobNode.info)
     }
 
     @Test
     fun `getNodeByLegalIdentity`() {
-        val n0 = mockNet.createNotaryNode()
-        val n1 = mockNet.createPartyNode(n0.network.myAddress, ALICE.name)
-        val node0Cache: NetworkMapCache = n0.services.networkMapCache
-        val expected = n1.info
+        val notaryNode = mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+        val notaryCache: NetworkMapCache = notaryNode.services.networkMapCache
+        val expected = aliceNode.info
 
         mockNet.runNetwork()
-        val actual = n0.database.transaction { node0Cache.getNodeByLegalIdentity(n1.info.chooseIdentity()) }
+        val actual = notaryNode.database.transaction { notaryCache.getNodeByLegalIdentity(aliceNode.info.chooseIdentity()) }
         assertEquals(expected, actual)
 
         // TODO: Should have a test case with anonymous lookup
@@ -70,18 +70,18 @@ class NetworkMapCacheTest {
 
     @Test
     fun `remove node from cache`() {
-        val n0 = mockNet.createNotaryNode()
-        val n1 = mockNet.createPartyNode(n0.network.myAddress, ALICE.name)
-        val n0Identity = n0.info.chooseIdentity()
-        val n1Identity = n1.info.chooseIdentity()
-        val node0Cache = n0.services.networkMapCache as PersistentNetworkMapCache
+        val notaryNode = mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+        val notaryLegalIdentity = notaryNode.info.chooseIdentity()
+        val alice = aliceNode.info.chooseIdentity()
+        val notaryCache = notaryNode.services.networkMapCache as PersistentNetworkMapCache
         mockNet.runNetwork()
-        n0.database.transaction {
-            assertThat(node0Cache.getNodeByLegalIdentity(n1Identity) != null)
-            node0Cache.removeNode(n1.info)
-            assertThat(node0Cache.getNodeByLegalIdentity(n1Identity) == null)
-            assertThat(node0Cache.getNodeByLegalIdentity(n0Identity) != null)
-            assertThat(node0Cache.getNodeByLegalName(n1Identity.name) == null)
+        notaryNode.database.transaction {
+            assertThat(notaryCache.getNodeByLegalIdentity(alice) != null)
+            notaryCache.removeNode(aliceNode.info)
+            assertThat(notaryCache.getNodeByLegalIdentity(alice) == null)
+            assertThat(notaryCache.getNodeByLegalIdentity(notaryLegalIdentity) != null)
+            assertThat(notaryCache.getNodeByLegalName(alice.name) == null)
         }
     }
 }
