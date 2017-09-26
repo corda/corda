@@ -7,7 +7,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
@@ -34,9 +33,9 @@ data class CordaRPCClientConfiguration(
 }
 
 /** @see RPCClient */
+//TODO Add SSL support
 class CordaRPCClient(
         hostAndPort: NetworkHostAndPort,
-        sslConfiguration: SSLConfiguration? = null,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default,
         initialiseSerialization: Boolean = true
 ) {
@@ -50,7 +49,7 @@ class CordaRPCClient(
     }
 
     private val rpcClient = RPCClient<CordaRPCOps>(
-            tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration),
+            tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = null),
             configuration.toRpcClientConfiguration(),
             KRYO_RPC_CLIENT_CONTEXT
     )
