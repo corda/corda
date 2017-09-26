@@ -132,6 +132,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             CordappImpl(findContractClassNames(scanResult),
                     findInitiatedFlows(scanResult),
                     findRPCFlows(scanResult),
+                    findSchedulableFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
                     findCustomSchemas(scanResult),
@@ -170,6 +171,10 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
                 ContractUpgradeFlow.Deauthorise::class.java
         )
         return found + coreFlows
+    }
+
+    private fun findSchedulableFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
     }
 
     private fun findContractClassNames(scanResult: ScanResult): List<String> {
