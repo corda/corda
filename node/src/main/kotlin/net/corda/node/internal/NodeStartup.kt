@@ -263,6 +263,7 @@ open class NodeStartup(val args: Array<String>) {
         node.configuration.extraAdvertisedServiceIds.let {
             if (it.isNotEmpty()) Node.printBasicNodeInfo("Providing network services", it.joinToString())
         }
+        Node.printBasicNodeInfo("Loaded CorDapps", node.cordappProvider.cordapps.map { it.name }.joinToString())
         val plugins = node.pluginRegistries
                 .map { it.javaClass.name }
                 .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.") }
