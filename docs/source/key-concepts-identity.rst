@@ -28,7 +28,7 @@ ill-suited to transactions where confidentiality of participants is required.
   certificate is limited.
 
 Although there are several elements to the Corda transaction privacy model, including ensuring that transactions are
-only shared with those who need to see them, and planned use of Intel SGX, it is important to provide defence in depth against
+only shared with those who need to see them, and planned use of Intel SGX, it is important to provide defense in depth against
 privacy breaches. Confidential identities are used to ensure that even if a third party gets access to an unencrypted
 transaction, they cannot identify the participants without additional information.
 
