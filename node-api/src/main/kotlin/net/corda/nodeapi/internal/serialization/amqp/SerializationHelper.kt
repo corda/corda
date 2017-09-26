@@ -190,6 +190,7 @@ internal fun Type.asClass(): Class<*>? {
         this is ParameterizedType -> this.rawType.asClass()
         this is GenericArrayType -> this.genericComponentType.asClass()?.arrayClass()
         this is TypeVariable<*> -> this.bounds.first().asClass()
+        this is WildcardType -> this.upperBounds.first().asClass()
         else -> null
     }
 }
