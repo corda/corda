@@ -30,7 +30,7 @@ class CashExitFlowTests {
     fun start() {
         setCordappPackages("net.corda.finance.contracts.asset")
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
-        notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        notaryNode = mockNet.createNotaryNode()
         bankOfCordaNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
         notary = notaryNode.services.getDefaultNotary()
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()

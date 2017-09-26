@@ -30,7 +30,7 @@ class NetworkMapCacheTest {
 
     @Test
     fun registerWithNetwork() {
-        val mapNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val mapNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(mapNode.network.myAddress, ALICE.name)
         val future = aliceNode.services.networkMapCache.addMapService(aliceNode.network, mapNode.network.myAddress, false, null)
         mockNet.runNetwork()
@@ -56,7 +56,7 @@ class NetworkMapCacheTest {
 
     @Test
     fun `getNodeByLegalIdentity`() {
-        val n0 = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val n0 = mockNet.createNotaryNode()
         val n1 = mockNet.createPartyNode(n0.network.myAddress, ALICE.name)
         val node0Cache: NetworkMapCache = n0.services.networkMapCache
         val expected = n1.info
@@ -70,7 +70,7 @@ class NetworkMapCacheTest {
 
     @Test
     fun `remove node from cache`() {
-        val n0 = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val n0 = mockNet.createNotaryNode()
         val n1 = mockNet.createPartyNode(n0.network.myAddress, ALICE.name)
         val n0Identity = n0.info.chooseIdentity()
         val n1Identity = n1.info.chooseIdentity()

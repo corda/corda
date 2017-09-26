@@ -58,7 +58,7 @@ class AttachmentTests {
 
     @Test
     fun `download and store`() {
-        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val n0 = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
         val n1 = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
 
@@ -96,7 +96,7 @@ class AttachmentTests {
 
     @Test
     fun `missing`() {
-        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val n0 = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
         val n1 = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
 

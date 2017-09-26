@@ -35,7 +35,7 @@ class CollectSignaturesFlowTests {
         setCordappPackages("net.corda.testing.contracts")
         services = MockServices()
         mockNet = MockNetwork()
-        val notaryNode = mockNet.createNotaryNode(legalName =  DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
         bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         chalieNode = mockNet.createPartyNode(notaryNode.network.myAddress, CHARLIE.name)

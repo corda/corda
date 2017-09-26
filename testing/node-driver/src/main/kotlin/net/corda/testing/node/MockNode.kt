@@ -406,7 +406,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun createNotaryNode(networkMapAddress: SingleMessageRecipient? = null,
-                         legalName: CordaX500Name? = null,
+                         legalName: CordaX500Name = DUMMY_NOTARY.name,
                          overrideServices: Map<ServiceInfo, KeyPair>? = null,
                          serviceName: CordaX500Name? = null): StartedNode<MockNode> {
         return createNode(networkMapAddress, legalName = legalName, overrideServices = overrideServices,
