@@ -14,7 +14,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
-import net.corda.finance.contracts.asset.CASH_PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.testing.chooseIdentity
@@ -184,8 +183,8 @@ class ForeignExchangeFlow(private val tradeId: String,
         // Build and add the inputs and outputs
         builder.withItems(*ourInputStates.toTypedArray())
         builder.withItems(*theirInputStates.toTypedArray())
-        builder.withItems(*ourOutputState.map { StateAndContract(it, CASH_PROGRAM_ID) }.toTypedArray())
-        builder.withItems(*theirOutputState.map { StateAndContract(it, CASH_PROGRAM_ID) }.toTypedArray())
+        builder.withItems(*ourOutputState.map { StateAndContract(it, Cash.PROGRAM_ID) }.toTypedArray())
+        builder.withItems(*theirOutputState.map { StateAndContract(it, Cash.PROGRAM_ID) }.toTypedArray())
 
         // We have already validated their response and trust our own data
         // so we can sign. Note the returned SignedTransaction is still not fully signed

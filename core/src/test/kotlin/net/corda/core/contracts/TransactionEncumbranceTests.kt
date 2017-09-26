@@ -4,7 +4,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.asset.CASH_PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
@@ -48,9 +47,9 @@ class TransactionEncumbranceTests {
     fun `state can be encumbered`() {
         ledger {
             transaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
-                input(CASH_PROGRAM_ID) { state }
-                output(CASH_PROGRAM_ID, encumbrance = 1) { stateWithNewOwner }
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
+                input(Cash.PROGRAM_ID) { state }
+                output(Cash.PROGRAM_ID, encumbrance = 1) { stateWithNewOwner }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 verifies()
@@ -62,16 +61,16 @@ class TransactionEncumbranceTests {
     fun `state can transition if encumbrance rules are met`() {
         ledger {
             unverifiedTransaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
-                output(CASH_PROGRAM_ID, "state encumbered by 5pm time-lock") { state }
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
+                output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock") { state }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
             }
             // Un-encumber the output if the time of the transaction is later than the timelock.
             transaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
-                output(CASH_PROGRAM_ID) { stateWithNewOwner }
+                output(Cash.PROGRAM_ID) { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 timeWindow(FIVE_PM)
                 verifies()
@@ -83,16 +82,16 @@ class TransactionEncumbranceTests {
     fun `state cannot transition if the encumbrance contract fails to verify`() {
         ledger {
             unverifiedTransaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
-                output(CASH_PROGRAM_ID, "state encumbered by 5pm time-lock") { state }
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
+                output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock") { state }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
             }
             // The time of the transaction is earlier than the time specified in the encumbering timelock.
             transaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
-                output(CASH_PROGRAM_ID) { state }
+                output(Cash.PROGRAM_ID) { state }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 timeWindow(FOUR_PM)
                 this `fails with` "the time specified in the time-lock has passed"
@@ -104,14 +103,14 @@ class TransactionEncumbranceTests {
     fun `state must be consumed along with its encumbrance`() {
         ledger {
             unverifiedTransaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
-                output(CASH_PROGRAM_ID, "state encumbered by 5pm time-lock", encumbrance = 1) { state }
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
+                output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock", encumbrance = 1) { state }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
             }
             transaction {
-                attachments(CASH_PROGRAM_ID)
+                attachments(Cash.PROGRAM_ID)
                 input("state encumbered by 5pm time-lock")
-                output(CASH_PROGRAM_ID) { stateWithNewOwner }
+                output(Cash.PROGRAM_ID) { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 timeWindow(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"
@@ -123,9 +122,9 @@ class TransactionEncumbranceTests {
     fun `state cannot be encumbered by itself`() {
         ledger {
             transaction {
-                attachments(CASH_PROGRAM_ID)
-                input(CASH_PROGRAM_ID) { state }
-                output(CASH_PROGRAM_ID, encumbrance = 0) { stateWithNewOwner }
+                attachments(Cash.PROGRAM_ID)
+                input(Cash.PROGRAM_ID) { state }
+                output(Cash.PROGRAM_ID, encumbrance = 0) { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 this `fails with` "Missing required encumbrance 0 in OUTPUT"
             }
@@ -136,8 +135,8 @@ class TransactionEncumbranceTests {
     fun `encumbrance state index must be valid`() {
         ledger {
             transaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
-                input(CASH_PROGRAM_ID) { state }
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
+                input(Cash.PROGRAM_ID) { state }
                 output(TEST_TIMELOCK_ID, encumbrance = 2) { stateWithNewOwner }
                 output(TEST_TIMELOCK_ID) { timeLock }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
@@ -150,16 +149,16 @@ class TransactionEncumbranceTests {
     fun `correct encumbrance state must be provided`() {
         ledger {
             unverifiedTransaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
-                output(CASH_PROGRAM_ID, "state encumbered by some other state", encumbrance = 1) { state }
-                output(CASH_PROGRAM_ID, "some other state") { state }
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
+                output(Cash.PROGRAM_ID, "state encumbered by some other state", encumbrance = 1) { state }
+                output(Cash.PROGRAM_ID, "some other state") { state }
                 output(TEST_TIMELOCK_ID, "5pm time-lock") { timeLock }
             }
             transaction {
-                attachments(CASH_PROGRAM_ID, TEST_TIMELOCK_ID)
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 input("state encumbered by some other state")
                 input("5pm time-lock")
-                output(CASH_PROGRAM_ID) { stateWithNewOwner }
+                output(Cash.PROGRAM_ID) { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 timeWindow(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"

@@ -32,8 +32,7 @@ import java.util.*
 // TODO: Need to think about expiry of commodities, how to require payment of storage costs, etc.
 class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, CommodityContract.State>() {
     companion object {
-        // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-        val COMMODITY_PROGRAM_ID = "net.corda.finance.contracts.asset.CommodityContract"
+        const val PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.CommodityContract"
     }
 
     /** A state representing a commodity claim against some party */
@@ -158,7 +157,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Commodity>>, owner: AbstractParty, notary: Party)
-            = generateIssue(tx, TransactionState(State(amount, owner), COMMODITY_PROGRAM_ID, notary), Commands.Issue())
+            = generateIssue(tx, TransactionState(State(amount, owner), PROGRAM_ID, notary), Commands.Issue())
 
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Commodity>>, owner: AbstractParty)
