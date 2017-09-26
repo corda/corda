@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
@@ -69,7 +70,14 @@ class ValidatingNotaryServiceTests {
 
         val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.TransactionInvalid
-        assertThat(notaryError.cause).isInstanceOf(SignedTransaction.SignaturesMissingException::class.java)
+        kryoSpecific<ValidatingNotaryServiceTests>("Exception handling type slightly different in Kryo") {
+            assertThat(notaryError.cause).isInstanceOf(SignedTransaction.SignaturesMissingException::class.java)
+        }
+
+        amqpSpecific<ValidatingNotaryServiceTests>("Exception handling type slightly different in AMQP") {
+            assertThat(notaryError.cause).isInstanceOf(CordaRuntimeException::class.java)
+            assertThat((notaryError.cause as CordaRuntimeException).originalExceptionClassName).isEqualTo(SignedTransaction.SignaturesMissingException::class.java.name)
+        }
     }
 
     @Test
