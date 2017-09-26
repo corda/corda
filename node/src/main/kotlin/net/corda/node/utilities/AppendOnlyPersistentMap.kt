@@ -48,7 +48,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?): Boolean {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean, store: (K,V) -> V?): Boolean {
         var insertionAttempt = false
         var isUnique = true
         val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
@@ -95,8 +95,8 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      * If the map previously contained a mapping for the key, the old value is not replaced.
      * @return true if added key was unique, otherwise false
      */
-    fun addWithDuplicatesAllowed(key: K, value: V): Boolean =
-            set(key, value) {
+    fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean =
+            set(key, value, logWarning) {
                 k, v ->
                 val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(k))
                 if (existingEntry == null) {

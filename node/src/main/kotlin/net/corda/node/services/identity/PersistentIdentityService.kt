@@ -102,11 +102,11 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
         identities.forEach {
             val key = mapToKey(it)
-            keyToParties.addWithDuplicatesAllowed(key, it)
-            principalToParties.addWithDuplicatesAllowed(it.name, key)
+            keyToParties.addWithDuplicatesAllowed(key, it, false)
+            principalToParties.addWithDuplicatesAllowed(it.name, key, false)
         }
         confidentialIdentities.forEach {
-            principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it))
+            principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
         }
     }
 
@@ -129,7 +129,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         val key = mapToKey(identity)
         keyToParties.addWithDuplicatesAllowed(key, identity)
         // Always keep the first party we registered, as that's the well known identity
-        principalToParties.addWithDuplicatesAllowed(identity.name, key)
+        principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
         val parentId = mapToKey(identity.certPath.certificates[1].publicKey)
         return keyToParties[parentId]
     }
