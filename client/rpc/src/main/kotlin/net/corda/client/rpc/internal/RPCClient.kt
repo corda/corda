@@ -169,9 +169,7 @@ class RPCClient<I : RPCOps>(
             val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext)
             try {
                 proxyHandler.start()
-
                 val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))
-
                 val serverProtocolVersion = ops.protocolVersion
                 if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
                     throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
