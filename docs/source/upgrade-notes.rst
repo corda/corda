@@ -85,6 +85,8 @@ Milestone 14
 
 * `FinalityFlow` now returns a single `SignedTransaction`, instead of a `List<SignedTransaction>`
 
+* `TransactionKeyFlow` renamed to `SwapIdentitiesFlow`
+
 * `getAnyNotary` is gone - use `serviceHub.networkMapCache.notaryIdentities[0]` instead
 
 * serviceHub.myInfo.legalIdentity no longer exists, use the ourIdentity property of the flow instead.
