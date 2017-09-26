@@ -176,7 +176,7 @@ object TwoPartyDealFlow {
             // What is the seller trying to sell us?
             val autoOffer = handshake.payload
             val deal = autoOffer.dealBeingOffered
-            logger.trace { "Got deal request for: ${deal.linearId.externalId!!}" }
+            logger.trace { "Got deal request for: ${deal.linearId.externalId}" }
             return handshake.copy(payload = autoOffer.copy(dealBeingOffered = deal))
         }
 
