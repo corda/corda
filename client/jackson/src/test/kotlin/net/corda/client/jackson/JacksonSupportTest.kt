@@ -14,10 +14,10 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MINI_CORP
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DummyContract
-import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
+import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -50,7 +50,7 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
         }
         val serialized = mapper.writeValueAsString(publicKey)
         assertEquals(expected, serialized)
-        val parsedKey = mapper.readValue(serialized, CompositeKey::class.java)
+        val parsedKey = mapper.readValue(serialized, PublicKey::class.java)
         assertEquals(publicKey, parsedKey)
     }
 
@@ -62,7 +62,7 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
         val publicKey = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, SEED).public
         val serialized = mapper.writeValueAsString(publicKey)
         assertEquals(expected, serialized)
-        val parsedKey = mapper.readValue(serialized, EdDSAPublicKey::class.java)
+        val parsedKey = mapper.readValue(serialized, PublicKey::class.java)
         assertEquals(publicKey, parsedKey)
     }
 

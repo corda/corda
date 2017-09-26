@@ -84,16 +84,10 @@ object JacksonSupport {
             addDeserializer(SecureHash::class.java, SecureHashDeserializer())
             addDeserializer(SecureHash.SHA256::class.java, SecureHashDeserializer())
 
-            // Generic deserializer for public keys
+            // Public key types
             addDeserializer(PublicKey::class.java, PublicKeyDeserializer)
-
-            // For ed25519 pubkeys
             addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
-            addDeserializer(EdDSAPublicKey::class.java, EdDSAPublicKeyDeserializer)
-
-            // For composite keys
             addSerializer(CompositeKey::class.java, PublicKeySerializer)
-            addDeserializer(CompositeKey::class.java, CompositeKeyDeserializer)
 
             // For NodeInfo
             // TODO this tunnels the Kryo representation as a Base58 encoded string. Replace when RPC supports this.
@@ -292,20 +286,6 @@ object JacksonSupport {
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
             }
-        }
-    }
-
-    object EdDSAPublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
-            val key = PublicKeyDeserializer.deserialize(parser, context) as? EdDSAPublicKey
-            return key ?: throw JsonParseException(parser, "Invalid EdDSA key ${parser.text}")
-        }
-    }
-
-    object CompositeKeyDeserializer : JsonDeserializer<CompositeKey>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): CompositeKey {
-            val key = PublicKeyDeserializer.deserialize(parser, context) as? CompositeKey
-            return key ?: throw JsonParseException(parser, "Invalid composite key ${parser.text}")
         }
     }
 
