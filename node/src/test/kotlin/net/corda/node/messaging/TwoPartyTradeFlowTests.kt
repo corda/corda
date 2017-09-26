@@ -93,7 +93,7 @@ class TwoPartyTradeFlowTests {
         mockNet = MockNetwork(false, true)
 
         ledger(initialiseSerialization = false) {
-            val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+            val notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
             val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
             val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
             val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
