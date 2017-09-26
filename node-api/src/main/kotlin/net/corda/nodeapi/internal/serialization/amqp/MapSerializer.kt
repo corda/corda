@@ -68,14 +68,14 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 
     private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
 
-    override fun writeClassInfo(output: SerializationOutput) {
+    override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({declaredType.typeName}) {
         if (output.writeTypeNotations(typeNotation)) {
             output.requireSerializer(declaredType.actualTypeArguments[0])
             output.requireSerializer(declaredType.actualTypeArguments[1])
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({declaredType.typeName}) {
         obj.javaClass.checkSupportedMapType()
         // Write described
         data.withDescribed(typeNotation.descriptor) {
@@ -90,10 +90,10 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({declaredType.typeName}) {
         // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
         val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schema, input, it) }
-        return concreteBuilder(entries.toMap())
+        concreteBuilder(entries.toMap())
     }
 
     private fun readEntry(schema: Schema, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) =

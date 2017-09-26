@@ -235,7 +235,7 @@ class NodeConfigTest {
         val webConfig = WebServerConfig(baseDir, nodeConfig)
 
         assertEquals(localPort(20001), webConfig.webAddress)
-        assertEquals(localPort(10001), webConfig.p2pAddress)
+        assertEquals(localPort(40002), webConfig.rpcAddress)
         assertEquals("trustpass", webConfig.trustStorePassword)
         assertEquals("cordacadevpass", webConfig.keyStorePassword)
     }

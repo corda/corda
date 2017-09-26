@@ -7,6 +7,8 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.excludeNotary
+import net.corda.core.identity.groupPublicKeysByWellKnownParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -112,7 +114,7 @@ object TwoPartyDealFlow {
 
             // DOCSTART 1
             // Get signatures of other signers
-            val sessionsForOtherSigners = serviceHub.excludeNotary(serviceHub.groupPublicKeysByWellKnownParty(ptxSignedByOtherSide.getMissingSigners()), ptxSignedByOtherSide).map { initiateFlow(it.key) }
+            val sessionsForOtherSigners = excludeNotary(groupPublicKeysByWellKnownParty(serviceHub, ptxSignedByOtherSide.getMissingSigners()), ptxSignedByOtherSide).map { initiateFlow(it.key) }
             val stx = subFlow(CollectSignaturesFlow(ptxSignedByOtherSide, sessionsForOtherSigners, additionalSigningPubKeys))
             // DOCEND 1
 
@@ -174,7 +176,7 @@ object TwoPartyDealFlow {
             // What is the seller trying to sell us?
             val autoOffer = handshake.payload
             val deal = autoOffer.dealBeingOffered
-            logger.trace { "Got deal request for: ${deal.linearId.externalId!!}" }
+            logger.trace { "Got deal request for: ${deal.linearId.externalId}" }
             return handshake.copy(payload = autoOffer.copy(dealBeingOffered = deal))
         }
 

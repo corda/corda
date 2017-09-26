@@ -153,8 +153,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
         return client
     }
 
-    fun loginToRPC(target: NetworkHostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): CordaRPCOps {
-        return CordaRPCClient(target, sslConfiguration, initialiseSerialization = false).start(rpcUser.username, rpcUser.password).proxy
+    fun loginToRPC(target: NetworkHostAndPort, rpcUser: User): CordaRPCOps {
+        return CordaRPCClient(target, initialiseSerialization = false).start(rpcUser.username, rpcUser.password).proxy
     }
 
     fun loginToRPCAndGetClientQueue(): String {

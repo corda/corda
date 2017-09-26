@@ -10,6 +10,8 @@ UNRELEASED
 Release 1.0
 -----------
 
+* Java 8 lambdas now work property with Kryo during check-pointing.
+
 * String constants have been marked as ``const`` type in Kotlin, eliminating cases where functions of the form
   ``get<constant name>()`` were created for the Java API. These can now be referenced by their name directly.
 
@@ -227,6 +229,9 @@ Release 1.0
 * ``ContractUpgradeFlow.Initiator`` has been renamed to ``ContractUpgradeFlow.Initiate``
 
 * ``@RPCSinceVersion``, ``RPCException`` and ``PermissionException`` have moved to ``net.corda.client.rpc``.
+
+* Current implementation of SSL in ``CordaRPCClient`` has been removed until we have a better solution which doesn't rely
+  on the node's keystore.
 
 Milestone 14
 ------------

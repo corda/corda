@@ -34,7 +34,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
-    val classCarpenter = ClassCarpenter(cl)
+    val classCarpenter = ClassCarpenter(cl, whitelist)
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
@@ -61,24 +61,24 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
         val serializer = when {
-            // Declared class may not be set to Collection, but actual class could be a collection.
-            // In this case use of CollectionSerializer is perfectly appropriate.
+        // Declared class may not be set to Collection, but actual class could be a collection.
+        // In this case use of CollectionSerializer is perfectly appropriate.
             (Collection::class.java.isAssignableFrom(declaredClass) ||
                     (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) &&
                     !EnumSet::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                    val declaredTypeAmended= CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                    serializersByType.computeIfAbsent(declaredTypeAmended) {
-                        CollectionSerializer(declaredTypeAmended, this)
-                    }
+                val declaredTypeAmended = CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                serializersByType.computeIfAbsent(declaredTypeAmended) {
+                    CollectionSerializer(declaredTypeAmended, this)
+                }
             }
-            // Declared class may not be set to Map, but actual class could be a map.
-            // In this case use of MapSerializer is perfectly appropriate.
+        // Declared class may not be set to Map, but actual class could be a map.
+        // In this case use of MapSerializer is perfectly appropriate.
             (Map::class.java.isAssignableFrom(declaredClass) ||
-                (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
-                    val declaredTypeAmended= MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                    serializersByType.computeIfAbsent(declaredTypeAmended) {
-                        makeMapSerializer(declaredTypeAmended)
-                    }
+                    (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
+                val declaredTypeAmended = MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                serializersByType.computeIfAbsent(declaredTypeAmended) {
+                    makeMapSerializer(declaredTypeAmended)
+                }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
                 EnumSerializer(actualType, actualClass ?: declaredClass, this)
@@ -99,7 +99,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: Type): Type? =
             when (declaredType) {
                 is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
-                // Nothing to infer, otherwise we'd have ParameterizedType
+            // Nothing to infer, otherwise we'd have ParameterizedType
                 is Class<*> -> actualClass
                 is GenericArrayType -> {
                     val declaredComponent = declaredType.genericComponentType

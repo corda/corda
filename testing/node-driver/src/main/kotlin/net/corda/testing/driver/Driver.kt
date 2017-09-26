@@ -23,16 +23,14 @@ import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -178,6 +176,10 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
 
 sealed class NodeHandle {
     abstract val nodeInfo: NodeInfo
+    /**
+     * Interface to the node's RPC system. The first RPC user will be used to login if are any, otherwise a default one
+     * will be added and that will be used.
+     */
     abstract val rpc: CordaRPCOps
     abstract val configuration: FullNodeConfiguration
     abstract val webAddress: NetworkHostAndPort
@@ -627,20 +629,21 @@ class DriverDSL(
         _executorService?.shutdownNow()
     }
 
-    private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
-        val client = CordaRPCClient(nodeAddress, sslConfig, initialiseSerialization = false)
+    private fun establishRpc(config: FullNodeConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
+        val rpcAddress = config.rpcAddress!!
+        val client = CordaRPCClient(rpcAddress, initialiseSerialization = false)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
-                client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+                client.start(config.rpcUsers[0].username, config.rpcUsers[0].password)
             } catch (e: Exception) {
                 if (processDeathFuture.isDone) throw e
-                log.error("Exception $e, Retrying RPC connection at $nodeAddress")
+                log.error("Exception $e, Retrying RPC connection at $rpcAddress")
                 null
             }
         }
         return firstOf(connectionFuture, processDeathFuture) {
             if (it == processDeathFuture) {
-                throw ListenProcessDeathException(nodeAddress, processDeathFuture.getOrThrow())
+                throw ListenProcessDeathException(rpcAddress, processDeathFuture.getOrThrow())
             }
             val connection = connectionFuture.getOrThrow()
             shutdownManager.registerShutdown(connection::close)
@@ -696,7 +699,7 @@ class DriverDSL(
                         "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                         "networkMapService" to networkMapServiceConfigLookup(name),
                         "useTestClock" to useTestClock,
-                        "rpcUsers" to rpcUsers.map { it.toMap() },
+                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers.map { it.toMap() },
                         "verifierType" to verifierType.name
                 ) + customOverrides
         )
@@ -709,14 +712,14 @@ class DriverDSL(
             portAllocation.nextHostAndPort() // rpcAddress
             val webAddress = portAllocation.nextHostAndPort()
             val name = CordaX500Name.parse(node.name)
-
+            val rpcUsers = node.rpcUsers
             val config = ConfigHelper.loadConfig(
                     baseDirectory = baseDirectory(name),
                     allowMissingConfig = true,
                     configOverrides = node.config + mapOf(
                             "extraAdvertisedServiceIds" to node.advertisedServices,
                             "networkMapService" to networkMapServiceConfigLookup(name),
-                            "rpcUsers" to node.rpcUsers,
+                            "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers,
                             "notaryClusterAddresses" to node.notaryClusterAddresses
                     )
             )
@@ -808,6 +811,7 @@ class DriverDSL(
 
     override fun startDedicatedNetworkMapService(startInProcess: Boolean?): CordaFuture<NodeHandle> {
         val webAddress = portAllocation.nextHostAndPort()
+        val rpcAddress = portAllocation.nextHostAndPort()
         val networkMapLegalName = networkMapStartStrategy.legalName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(networkMapLegalName),
@@ -817,6 +821,8 @@ class DriverDSL(
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to webAddress.toString(),
+                        "rpcAddress" to rpcAddress.toString(),
+                        "rpcUsers" to defaultRpcUserList,
                         "p2pAddress" to dedicatedNetworkMapAddress.toString(),
                         "useTestClock" to useTestClock,
                         "extraAdvertisedServiceIds" to listOf(ServiceInfo(NetworkMapService.type).toString())
@@ -838,7 +844,7 @@ class DriverDSL(
                     }
             )
             return nodeAndThreadFuture.flatMap { (node, thread) ->
-                establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, openFuture()).flatMap { rpc ->
+                establishRpc(nodeConfiguration, openFuture()).flatMap { rpc ->
                     rpc.waitUntilNetworkReady().map {
                         NodeHandle.InProcess(rpc.nodeInfo(), rpc, nodeConfiguration, webAddress, node, thread)
                     }
@@ -852,8 +858,7 @@ class DriverDSL(
                 val processDeathFuture = poll(executorService, "process death") {
                     if (process.isAlive) null else process
                 }
-                // We continue to use SSL enabled port for RPC when its for node user.
-                establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, processDeathFuture).flatMap { rpc ->
+                establishRpc(nodeConfiguration, processDeathFuture).flatMap { rpc ->
                     // Call waitUntilNetworkReady in background in case RPC is failing over:
                     val networkMapFuture = executorService.fork {
                         rpc.waitUntilNetworkReady()
@@ -877,6 +882,8 @@ class DriverDSL(
     }
 
     companion object {
+        private val defaultRpcUserList = listOf(User("default", "default", setOf("ALL")).toMap())
+
         private val names = arrayOf(
                 ALICE.name,
                 BOB.name,

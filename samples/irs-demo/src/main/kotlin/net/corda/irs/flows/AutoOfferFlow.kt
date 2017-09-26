@@ -2,6 +2,8 @@ package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
+import net.corda.core.identity.excludeHostNode
+import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.DealState
@@ -45,7 +47,7 @@ object AutoOfferFlow {
             require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
             val notary = serviceHub.networkMapCache.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
             // need to pick which ever party is not us
-            val otherParty = serviceHub.excludeMe(serviceHub.groupAbstractPartyByWellKnownParty(dealToBeOffered.participants)).keys.single()
+            val otherParty = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, dealToBeOffered.participants)).keys.single()
             progressTracker.currentStep = DEALING
             val session = initiateFlow(otherParty)
             val instigator = Instigator(

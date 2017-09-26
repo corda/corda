@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
@@ -8,7 +9,7 @@ import net.corda.nodeapi.internal.serialization.carpenter.*
 // those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
 // versions of them up using its own internal class carpenter (each carpenter houses it's own loader). This
 // replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
-class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
+class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelist) {
     companion object {
         /**
          * If you want to see the schema encoded into the envelope after serialisation change this to true
@@ -16,12 +17,12 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
         private const val VERBOSE = false
     }
 
-    private val sf  = testDefaultFactory()
+    private val sf = testDefaultFactory()
     private val sf2 = testDefaultFactory()
 
     @Test
     fun singleInt() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "int" to NonNullableField(Integer::class.javaPrimitiveType!!)
         )))
 
@@ -31,9 +32,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
         // despite being carpented, and thus not on the class path, we should've cached clazz
         // inside the serialiser object and thus we should have created the same type
-        assertEquals (db::class.java, clazz)
-        assertNotEquals (db2::class.java, clazz)
-        assertNotEquals (db::class.java, db2::class.java)
+        assertEquals(db::class.java, clazz)
+        assertNotEquals(db2::class.java, clazz)
+        assertNotEquals(db::class.java, db2::class.java)
 
         assertEquals(1, db::class.java.getMethod("getInt").invoke(db))
         assertEquals(1, db2::class.java.getMethod("getInt").invoke(db2))
@@ -41,7 +42,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleIntNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "int" to NullableField(Integer::class.java)
         )))
 
@@ -57,7 +58,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleIntNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "int" to NullableField(Integer::class.java)
         )))
 
@@ -73,7 +74,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleChar() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "char" to NonNullableField(Character::class.javaPrimitiveType!!)
         )))
 
@@ -86,7 +87,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleCharNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "char" to NullableField(Character::class.javaObjectType)
         )))
 
@@ -99,7 +100,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleCharNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "char" to NullableField(java.lang.Character::class.java)
         )))
 
@@ -112,11 +113,11 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleLong() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "long" to NonNullableField(Long::class.javaPrimitiveType!!)
         )))
 
-        val l : Long  = 1
+        val l: Long = 1
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(l))
         val db = DeserializationInput(sf2).deserialize(sb)
 
@@ -126,11 +127,11 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleLongNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "long" to NullableField(Long::class.javaObjectType)
         )))
 
-        val l : Long  = 1
+        val l: Long = 1
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(l))
         val db = DeserializationInput(sf2).deserialize(sb)
 
@@ -140,7 +141,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleLongNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "long" to NullableField(Long::class.javaObjectType)
         )))
 
@@ -153,7 +154,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleBoolean() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "boolean" to NonNullableField(Boolean::class.javaPrimitiveType!!)
         )))
 
@@ -166,7 +167,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleBooleanNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "boolean" to NullableField(Boolean::class.javaObjectType)
         )))
 
@@ -179,7 +180,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleBooleanNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "boolean" to NullableField(Boolean::class.javaObjectType)
         )))
 
@@ -192,7 +193,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleDouble() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "double" to NonNullableField(Double::class.javaPrimitiveType!!)
         )))
 
@@ -205,7 +206,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleDoubleNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "double" to NullableField(Double::class.javaObjectType)
         )))
 
@@ -218,7 +219,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleDoubleNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "double" to NullableField(Double::class.javaObjectType)
         )))
 
@@ -231,7 +232,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleShort() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "short" to NonNullableField(Short::class.javaPrimitiveType!!)
         )))
 
@@ -244,7 +245,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleShortNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "short" to NullableField(Short::class.javaObjectType)
         )))
 
@@ -257,7 +258,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleShortNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "short" to NullableField(Short::class.javaObjectType)
         )))
 
@@ -270,7 +271,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleFloat() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "float" to NonNullableField(Float::class.javaPrimitiveType!!)
         )))
 
@@ -283,7 +284,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleFloatNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "float" to NullableField(Float::class.javaObjectType)
         )))
 
@@ -296,7 +297,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleFloatNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "float" to NullableField(Float::class.javaObjectType)
         )))
 
@@ -309,11 +310,11 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleByte() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "byte" to NonNullableField(Byte::class.javaPrimitiveType!!)
         )))
 
-        val b : Byte = 0b0101
+        val b: Byte = 0b0101
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(b))
         val db = DeserializationInput(sf2).deserialize(sb)
 
@@ -324,11 +325,11 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleByteNullable() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "byte" to NullableField(Byte::class.javaObjectType)
         )))
 
-        val b : Byte = 0b0101
+        val b: Byte = 0b0101
         val sb = TestSerializationOutput(VERBOSE, sf).serialize(clazz.constructors.first().newInstance(b))
         val db = DeserializationInput(sf2).deserialize(sb)
 
@@ -339,7 +340,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun singleByteNullableNull() {
-        val clazz = ClassCarpenter().build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "byte" to NullableField(Byte::class.javaObjectType)
         )))
 
@@ -352,9 +353,9 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun simpleTypeKnownInterface() {
-        val clazz = ClassCarpenter().build (ClassSchema(
+        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(
                 testName(), mapOf("name" to NonNullableField(String::class.java)),
-                interfaces = listOf (I::class.java)))
+                interfaces = listOf(I::class.java)))
         val testVal = "Some Person"
         val classInstance = clazz.constructors[0].newInstance(testVal)
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(classInstance)
@@ -367,34 +368,34 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
 
     @Test
     fun manyTypes() {
-        val manyClass = ClassCarpenter().build (ClassSchema(testName(), mapOf(
-                "intA" to NonNullableField (Int::class.java),
-                "intB" to NullableField (Integer::class.java),
-                "intC" to NullableField (Integer::class.java),
-                "strA" to NonNullableField (String::class.java),
-                "strB" to NullableField (String::class.java),
-                "strC" to NullableField (String::class.java),
-                "charA" to NonNullableField (Char::class.java),
-                "charB" to NullableField (Character::class.javaObjectType),
-                "charC" to NullableField (Character::class.javaObjectType),
-                "shortA" to NonNullableField (Short::class.javaPrimitiveType!!),
-                "shortB" to NullableField (Short::class.javaObjectType),
-                "shortC" to NullableField (Short::class.javaObjectType),
-                "longA" to NonNullableField (Long::class.javaPrimitiveType!!),
+        val manyClass = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+                "intA" to NonNullableField(Int::class.java),
+                "intB" to NullableField(Integer::class.java),
+                "intC" to NullableField(Integer::class.java),
+                "strA" to NonNullableField(String::class.java),
+                "strB" to NullableField(String::class.java),
+                "strC" to NullableField(String::class.java),
+                "charA" to NonNullableField(Char::class.java),
+                "charB" to NullableField(Character::class.javaObjectType),
+                "charC" to NullableField(Character::class.javaObjectType),
+                "shortA" to NonNullableField(Short::class.javaPrimitiveType!!),
+                "shortB" to NullableField(Short::class.javaObjectType),
+                "shortC" to NullableField(Short::class.javaObjectType),
+                "longA" to NonNullableField(Long::class.javaPrimitiveType!!),
                 "longB" to NullableField(Long::class.javaObjectType),
                 "longC" to NullableField(Long::class.javaObjectType),
-                "booleanA" to NonNullableField (Boolean::class.javaPrimitiveType!!),
-                "booleanB" to NullableField (Boolean::class.javaObjectType),
-                "booleanC" to NullableField (Boolean::class.javaObjectType),
-                "doubleA" to NonNullableField (Double::class.javaPrimitiveType!!),
-                "doubleB" to NullableField (Double::class.javaObjectType),
-                "doubleC" to NullableField (Double::class.javaObjectType),
-                "floatA" to NonNullableField (Float::class.javaPrimitiveType!!),
-                "floatB" to NullableField (Float::class.javaObjectType),
-                "floatC" to NullableField (Float::class.javaObjectType),
-                "byteA" to NonNullableField (Byte::class.javaPrimitiveType!!),
-                "byteB" to NullableField (Byte::class.javaObjectType),
-                "byteC" to NullableField (Byte::class.javaObjectType))))
+                "booleanA" to NonNullableField(Boolean::class.javaPrimitiveType!!),
+                "booleanB" to NullableField(Boolean::class.javaObjectType),
+                "booleanC" to NullableField(Boolean::class.javaObjectType),
+                "doubleA" to NonNullableField(Double::class.javaPrimitiveType!!),
+                "doubleB" to NullableField(Double::class.javaObjectType),
+                "doubleC" to NullableField(Double::class.javaObjectType),
+                "floatA" to NonNullableField(Float::class.javaPrimitiveType!!),
+                "floatB" to NullableField(Float::class.javaObjectType),
+                "floatC" to NullableField(Float::class.javaObjectType),
+                "byteA" to NonNullableField(Byte::class.javaPrimitiveType!!),
+                "byteB" to NullableField(Byte::class.javaObjectType),
+                "byteC" to NullableField(Byte::class.javaObjectType))))
 
         val serialisedBytes = TestSerializationOutput(VERBOSE, factory).serialize(
                 manyClass.constructors.first().newInstance(
@@ -411,33 +412,33 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase() {
         val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
 
         assertNotEquals(manyClass, deserializedObj::class.java)
-        assertEquals(1,    deserializedObj::class.java.getMethod("getIntA").invoke(deserializedObj))
-        assertEquals(2,    deserializedObj::class.java.getMethod("getIntB").invoke(deserializedObj))
+        assertEquals(1, deserializedObj::class.java.getMethod("getIntA").invoke(deserializedObj))
+        assertEquals(2, deserializedObj::class.java.getMethod("getIntB").invoke(deserializedObj))
         assertEquals(null, deserializedObj::class.java.getMethod("getIntC").invoke(deserializedObj))
-        assertEquals("a",  deserializedObj::class.java.getMethod("getStrA").invoke(deserializedObj))
-        assertEquals("b",  deserializedObj::class.java.getMethod("getStrB").invoke(deserializedObj))
+        assertEquals("a", deserializedObj::class.java.getMethod("getStrA").invoke(deserializedObj))
+        assertEquals("b", deserializedObj::class.java.getMethod("getStrB").invoke(deserializedObj))
         assertEquals(null, deserializedObj::class.java.getMethod("getStrC").invoke(deserializedObj))
-        assertEquals('c',  deserializedObj::class.java.getMethod("getCharA").invoke(deserializedObj))
-        assertEquals('d',  deserializedObj::class.java.getMethod("getCharB").invoke(deserializedObj))
+        assertEquals('c', deserializedObj::class.java.getMethod("getCharA").invoke(deserializedObj))
+        assertEquals('d', deserializedObj::class.java.getMethod("getCharB").invoke(deserializedObj))
         assertEquals(null, deserializedObj::class.java.getMethod("getCharC").invoke(deserializedObj))
         assertEquals(3.toShort(), deserializedObj::class.java.getMethod("getShortA").invoke(deserializedObj))
         assertEquals(4.toShort(), deserializedObj::class.java.getMethod("getShortB").invoke(deserializedObj))
-        assertEquals(null,        deserializedObj::class.java.getMethod("getShortC").invoke(deserializedObj))
+        assertEquals(null, deserializedObj::class.java.getMethod("getShortC").invoke(deserializedObj))
         assertEquals(100.toLong(), deserializedObj::class.java.getMethod("getLongA").invoke(deserializedObj))
         assertEquals(200.toLong(), deserializedObj::class.java.getMethod("getLongB").invoke(deserializedObj))
-        assertEquals(null,         deserializedObj::class.java.getMethod("getLongC").invoke(deserializedObj))
-        assertEquals(true,  deserializedObj::class.java.getMethod("getBooleanA").invoke(deserializedObj))
+        assertEquals(null, deserializedObj::class.java.getMethod("getLongC").invoke(deserializedObj))
+        assertEquals(true, deserializedObj::class.java.getMethod("getBooleanA").invoke(deserializedObj))
         assertEquals(false, deserializedObj::class.java.getMethod("getBooleanB").invoke(deserializedObj))
-        assertEquals(null,  deserializedObj::class.java.getMethod("getBooleanC").invoke(deserializedObj))
+        assertEquals(null, deserializedObj::class.java.getMethod("getBooleanC").invoke(deserializedObj))
         assertEquals(10.0, deserializedObj::class.java.getMethod("getDoubleA").invoke(deserializedObj))
         assertEquals(20.0, deserializedObj::class.java.getMethod("getDoubleB").invoke(deserializedObj))
         assertEquals(null, deserializedObj::class.java.getMethod("getDoubleC").invoke(deserializedObj))
         assertEquals(10.0F, deserializedObj::class.java.getMethod("getFloatA").invoke(deserializedObj))
         assertEquals(20.0F, deserializedObj::class.java.getMethod("getFloatB").invoke(deserializedObj))
-        assertEquals(null,  deserializedObj::class.java.getMethod("getFloatC").invoke(deserializedObj))
+        assertEquals(null, deserializedObj::class.java.getMethod("getFloatC").invoke(deserializedObj))
         assertEquals(0b0101.toByte(), deserializedObj::class.java.getMethod("getByteA").invoke(deserializedObj))
         assertEquals(0b1010.toByte(), deserializedObj::class.java.getMethod("getByteB").invoke(deserializedObj))
-        assertEquals(null,            deserializedObj::class.java.getMethod("getByteC").invoke(deserializedObj))
+        assertEquals(null, deserializedObj::class.java.getMethod("getByteC").invoke(deserializedObj))
     }
 }
 

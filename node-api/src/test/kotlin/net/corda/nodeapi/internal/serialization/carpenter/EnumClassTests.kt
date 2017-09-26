@@ -1,10 +1,11 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class EnumClassTests : AmqpCarpenterBase() {
+class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun oneValue() {
@@ -84,7 +85,7 @@ class EnumClassTests : AmqpCarpenterBase() {
     // exception, hence the lack of asserts
     @Test
     fun assignAndTest() {
-        val cc2 = ClassCarpenter()
+        val cc2 = ClassCarpenter(whitelist = AllWhitelist)
 
         val schema1 = EnumSchema("gen.enum",
                 listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF").associateBy({ it }, { EnumField() }))

@@ -123,6 +123,9 @@ object DefaultKryoCustomizer {
             // Used by the remote verifier, and will possibly be removed in future.
             register(ContractAttachment::class.java, ContractAttachmentSerializer)
 
+            register(java.lang.invoke.SerializedLambda::class.java)
+            register(ClosureSerializer.Closure::class.java, CordaClosureBlacklistSerializer)
+
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }
         }
