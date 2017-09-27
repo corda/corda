@@ -249,7 +249,7 @@ We can continue to build the transaction until it ``verifies``:
                     input(inState)
                     command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
                     this `fails with` "the state is propagated"
-                    output("alice's paper") { inState `owned by` ALICE_PUBKEY }
+                    output(CommercialPaper.CP_PROGRAM_ID, "alice's paper") { inState `owned by` ALICE_PUBKEY }
                     this.verifies()
                 }
             }
@@ -265,7 +265,7 @@ We can continue to build the transaction until it ``verifies``:
                     tx.input(inState);
                     tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
                     tx.failsWith("the state is propagated");
-                    tx.output("alice's paper", inState.withOwner(getALICE_PUBKEY()));
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", inState.withOwner(getALICE_PUBKEY()));
                     return tx.verifies();
                 });
                 return Unit.INSTANCE;
@@ -289,7 +289,7 @@ What should we do if we wanted to test what happens when the wrong party signs t
         fun `simple issuance with tweak`() {
             ledger {
                 transaction {
-                    output("paper") { getPaper() } // Some CP is issued onto the ledger by MegaCorp.
+                    output(CommercialPaper.CP_PROGRAM_ID, "paper") { getPaper() } // Some CP is issued onto the ledger by MegaCorp.
                     tweak {
                         command(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue() }
                         timestamp(TEST_TX_TIME)
@@ -308,7 +308,7 @@ What should we do if we wanted to test what happens when the wrong party signs t
         public void simpleIssuanceWithTweak() {
             ledger(l -> {
                 l.transaction(tx -> {
-                    tx.output("paper", getPaper()); // Some CP is issued onto the ledger by MegaCorp.
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "paper", getPaper()); // Some CP is issued onto the ledger by MegaCorp.
                     tx.tweak(tw -> {
                         tw.command(getDUMMY_PUBKEY_1(), new JavaCommercialPaper.Commands.Issue());
                         tw.timestamp(getTEST_TX_TIME());
@@ -337,7 +337,7 @@ ledger with a single transaction:
         @Test
         fun `simple issuance with tweak and top level transaction`() {
             transaction {
-                output("paper") { getPaper() } // Some CP is issued onto the ledger by MegaCorp.
+                output(CommercialPaper.CP_PROGRAM_ID, "paper") { getPaper() } // Some CP is issued onto the ledger by MegaCorp.
                 tweak {
                     command(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue() }
                     timestamp(TEST_TX_TIME)
@@ -354,7 +354,7 @@ ledger with a single transaction:
         @Test
         public void simpleIssuanceWithTweakTopLevelTx() {
             transaction(tx -> {
-                tx.output("paper", getPaper()); // Some CP is issued onto the ledger by MegaCorp.
+                tx.output(CommercialPaper.CP_PROGRAM_ID, "paper", getPaper()); // Some CP is issued onto the ledger by MegaCorp.
                 tx.tweak(tw -> {
                     tw.command(getDUMMY_PUBKEY_1(), new JavaCommercialPaper.Commands.Issue());
                     tw.timestamp(getTEST_TX_TIME());
@@ -381,12 +381,12 @@ Now that we know how to define a single transaction, let's look at how to define
 
             ledger {
                 unverifiedTransaction {
-                    output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
+                    output(Cash.CP_PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
                 }
 
                 // Some CP is issued onto the ledger by MegaCorp.
                 transaction("Issuance") {
-                    output("paper") { getPaper() }
+                    output(CommercialPaper.CP_PROGRAM_ID, "paper") { getPaper() }
                     command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
                     timestamp(TEST_TX_TIME)
                     this.verifies()
@@ -396,8 +396,8 @@ Now that we know how to define a single transaction, let's look at how to define
                 transaction("Trade") {
                     input("paper")
                     input("alice's $900")
-                    output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                    output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
+                    output(Cash.CP_PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
+                    output(CommercialPaper.CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
                     command(ALICE_PUBKEY) { Cash.Commands.Move() }
                     command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
                     this.verifies()
@@ -412,14 +412,14 @@ Now that we know how to define a single transaction, let's look at how to define
             PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
             ledger(l -> {
                 l.unverifiedTransaction(tx -> {
-                            tx.output("alice's $900",
+                            tx.output(Cash.CP_PROGRAM_ID, "alice's $900",
                                     new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE_PUBKEY(), null));
                             return Unit.INSTANCE;
                         });
 
                 // Some CP is issued onto the ledger by MegaCorp.
                 l.transaction("Issuance", tx -> {
-                    tx.output("paper", getPaper());
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "paper", getPaper());
                     tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
                     tx.timestamp(getTEST_TX_TIME());
                     return tx.verifies();
@@ -428,9 +428,9 @@ Now that we know how to define a single transaction, let's look at how to define
                 l.transaction("Trade", tx -> {
                     tx.input("paper");
                     tx.input("alice's $900");
-                    tx.output("borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
+                    tx.output(Cash.CP_PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
                     JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
-                    tx.output("alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
                     tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
                     tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
                     return tx.verifies();
@@ -462,12 +462,12 @@ To do so let's create a simple example that uses the same input twice:
             val issuer = MEGA_CORP.ref(123)
             ledger {
                 unverifiedTransaction {
-                    output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
+                    output(Cash.CP_PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
                 }
 
                 // Some CP is issued onto the ledger by MegaCorp.
                 transaction("Issuance") {
-                    output("paper") { getPaper() }
+                    output(CommercialPaper.CP_PROGRAM_ID, "paper") { getPaper() }
                     command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
                     timestamp(TEST_TX_TIME)
                     this.verifies()
@@ -476,8 +476,8 @@ To do so let's create a simple example that uses the same input twice:
                 transaction("Trade") {
                     input("paper")
                     input("alice's $900")
-                    output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                    output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
+                    output(Cash.CP_PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
+                    output(CommercialPaper.CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
                     command(ALICE_PUBKEY) { Cash.Commands.Move() }
                     command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
                     this.verifies()
@@ -486,7 +486,7 @@ To do so let's create a simple example that uses the same input twice:
                 transaction {
                     input("paper")
                     // We moved a paper to another pubkey.
-                    output("bob's paper") { "paper".output<ICommercialPaperState>() `owned by` BOB_PUBKEY }
+                    output(CommercialPaper.CP_PROGRAM_ID, "bob's paper") { "paper".output<ICommercialPaperState>() `owned by` BOB_PUBKEY }
                     command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
                     this.verifies()
                 }
@@ -502,14 +502,14 @@ To do so let's create a simple example that uses the same input twice:
             PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
             ledger(l -> {
                 l.unverifiedTransaction(tx -> {
-                    tx.output("alice's $900",
+                    tx.output(Cash.CP_PROGRAM_ID, "alice's $900",
                             new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE_PUBKEY(), null));
                     return Unit.INSTANCE;
                 });
 
                 // Some CP is issued onto the ledger by MegaCorp.
                 l.transaction("Issuance", tx -> {
-                    tx.output("paper", getPaper());
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "paper", getPaper());
                     tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
                     tx.timestamp(getTEST_TX_TIME());
                     return tx.verifies();
@@ -518,9 +518,9 @@ To do so let's create a simple example that uses the same input twice:
                 l.transaction("Trade", tx -> {
                     tx.input("paper");
                     tx.input("alice's $900");
-                    tx.output("borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
+                    tx.output(Cash.CP_PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
                     JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
-                    tx.output("alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
                     tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
                     tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
                     return tx.verifies();
@@ -530,7 +530,7 @@ To do so let's create a simple example that uses the same input twice:
                     tx.input("paper");
                     JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                     // We moved a paper to other pubkey.
-                    tx.output("bob's paper", inputPaper.withOwner(getBOB_PUBKEY()));
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "bob's paper", inputPaper.withOwner(getBOB_PUBKEY()));
                     tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
                     return tx.verifies();
                 });
@@ -551,12 +551,12 @@ verification (``this.fails()`` at the end). As in previous examples we can use `
             val issuer = MEGA_CORP.ref(123)
             ledger {
                 unverifiedTransaction {
-                    output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
+                    output(Cash.CP_PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
                 }
 
                 // Some CP is issued onto the ledger by MegaCorp.
                 transaction("Issuance") {
-                    output("paper") { getPaper() }
+                    output(CommercialPaper.CP_PROGRAM_ID, "paper") { getPaper() }
                     command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
                     timestamp(TEST_TX_TIME)
                     this.verifies()
@@ -565,8 +565,8 @@ verification (``this.fails()`` at the end). As in previous examples we can use `
                 transaction("Trade") {
                     input("paper")
                     input("alice's $900")
-                    output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                    output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
+                    output(Cash.CP_PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
+                    output(CommercialPaper.CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
                     command(ALICE_PUBKEY) { Cash.Commands.Move() }
                     command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
                     this.verifies()
@@ -576,7 +576,7 @@ verification (``this.fails()`` at the end). As in previous examples we can use `
                     transaction {
                         input("paper")
                         // We moved a paper to another pubkey.
-                        output("bob's paper") { "paper".output<ICommercialPaperState>() `owned by` BOB_PUBKEY }
+                        output(CommercialPaper.CP_PROGRAM_ID, "bob's paper") { "paper".output<ICommercialPaperState>() `owned by` BOB_PUBKEY }
                         command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
                         this.verifies()
                     }
@@ -594,14 +594,14 @@ verification (``this.fails()`` at the end). As in previous examples we can use `
             PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
             ledger(l -> {
                 l.unverifiedTransaction(tx -> {
-                    tx.output("alice's $900",
+                    tx.output(Cash.CP_PROGRAM_ID, "alice's $900",
                             new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE_PUBKEY(), null));
                     return Unit.INSTANCE;
                 });
 
                 // Some CP is issued onto the ledger by MegaCorp.
                 l.transaction("Issuance", tx -> {
-                    tx.output("paper", getPaper());
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "paper", getPaper());
                     tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
                     tx.timestamp(getTEST_TX_TIME());
                     return tx.verifies();
@@ -610,9 +610,9 @@ verification (``this.fails()`` at the end). As in previous examples we can use `
                 l.transaction("Trade", tx -> {
                     tx.input("paper");
                     tx.input("alice's $900");
-                    tx.output("borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
+                    tx.output(Cash.CP_PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP_PUBKEY(), null));
                     JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
-                    tx.output("alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
+                    tx.output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(getALICE_PUBKEY()));
                     tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
                     tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
                     return tx.verifies();
@@ -623,7 +623,7 @@ verification (``this.fails()`` at the end). As in previous examples we can use `
                         tx.input("paper");
                         JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                         // We moved a paper to another pubkey.
-                        tx.output("bob's paper", inputPaper.withOwner(getBOB_PUBKEY()));
+                        tx.output(CommercialPaper.CP_PROGRAM_ID, "bob's paper", inputPaper.withOwner(getBOB_PUBKEY()));
                         tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Move());
                         return tx.verifies();
                     });
