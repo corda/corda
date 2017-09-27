@@ -51,7 +51,7 @@ class CordappLoaderTest {
 
         val actualCordapp = actual.single { it != CordappLoader.coreCordapp }
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf(isolatedContractId))
-        assertThat(actualCordapp.initiatedFlows).isEmpty()
+        assertThat(actualCordapp.initiatedFlows.single().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
         assertThat(actualCordapp.rpcFlows).isEmpty()
         assertThat(actualCordapp.schedulableFlows).isEmpty()
         assertThat(actualCordapp.services).isEmpty()
@@ -67,8 +67,8 @@ class CordappLoaderTest {
         val actual = loader.cordapps.toTypedArray()
         // One core cordapp, one cordapp from this source tree, and two others due to identically named locations
         // in resources and the non-test part of node. This is okay due to this being test code. In production this
-        // cannot happen.
-        assertThat(actual).hasSize(4)
+        // cannot happen. In gradle it will also pick up the node jar. 
+        assertThat(actual.size == 4 || actual.size == 5).isTrue()
 
         val actualCordapp = actual.single { !it.initiatedFlows.isEmpty() }
         assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
