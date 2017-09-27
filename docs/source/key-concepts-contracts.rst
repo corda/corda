@@ -46,26 +46,6 @@ A transaction that is not contractually valid is not a valid proposal to update 
 committed to the ledger. In this way, contracts impose rules on the evolution of states over time that are
 independent of the willingness of the required signers to sign a given transaction.
 
-Contract constraints
---------------------
-
-Transaction states specify a constraint over the contract that will be used to verify it. A typical constraint is the
-hash of the CorDapp JAR that contains the contract and states but will in future releases include constraints that
-require specific signers of the JAR.
-
-By default every ``TransactionState`` has an ``AutomaticHashConstraint``. This will be automatically resolved when
-a ``TransactionBuilder`` is converted to a ``WireTransactions``. This exists to reduce the amount of boilerplate when
-writing transaction building code. It is possible to specify the constraint manually with any other class that
-implements the ``AttachmentConstraint`` interface. To specify a hash manually the ``HashAttachmentConstraint`` can be
-used and to not provide any constraint the ``AlwaysAcceptAttachmentConstraint`` can be used - though this is intended
-for testing only.
-
-This mechanism exists both for integrity and security reasons. It is important not to verify against the wrong contract,
-which could happen if the wrong version of the contract is attached. More importantly when resolving transaction chains
-there will, in a future release, be attachments loaded from the network into the an attachment sandbox that are used
-to verify the transaction chain. Ensuring the attachment used is the correct one ensures that the verification will
-not be tamperable by providing a fake contract.
-
 The contract sandbox
 --------------------
 Transaction verification must be *deterministic* - a contract should either **always accept** or **always reject** a
