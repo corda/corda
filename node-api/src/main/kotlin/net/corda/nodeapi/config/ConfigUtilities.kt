@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigUtil
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.noneOrSingle
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import org.slf4j.LoggerFactory
 import java.net.Proxy
@@ -25,7 +26,7 @@ import kotlin.reflect.jvm.jvmErasure
 annotation class OldConfig(val value: String)
 
 // TODO Move other config parsing to use parseAs and remove this
-operator fun <T> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
+operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
     return getValueInternal(metadata.name, metadata.returnType)
 }
 
@@ -52,9 +53,8 @@ fun Config.toProperties(): Properties {
             { it.value.unwrapped().toString() })
 }
 
-@Suppress("UNCHECKED_CAST")
-private fun <T> Config.getValueInternal(path: String, type: KType): T {
-    return (if (type.arguments.isEmpty()) getSingleValue(path, type) else getCollectionValue(path, type)) as T
+private fun <T : Any> Config.getValueInternal(path: String, type: KType): T {
+    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type) else getCollectionValue(path, type))
 }
 
 private fun Config.getSingleValue(path: String, type: KType): Any? {
@@ -122,8 +122,7 @@ private fun Config.defaultToOldPath(property: KProperty<*>): String {
     return property.name
 }
 
-@Suppress("UNCHECKED_CAST")
-private fun parseEnum(enumType: Class<*>, name: String): Enum<*> = enumBridge(enumType as Class<Proxy.Type>, name) // Any enum will do
+private fun parseEnum(enumType: Class<*>, name: String): Enum<*> = enumBridge<Proxy.Type>(uncheckedCast(enumType), name) // Any enum will do
 
 private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T = java.lang.Enum.valueOf(clazz, name)
 

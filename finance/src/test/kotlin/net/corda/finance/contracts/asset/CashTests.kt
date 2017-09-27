@@ -71,7 +71,7 @@ class CashTests : TestDependencyInjectionBase() {
                     ownedBy = OUR_IDENTITY_1, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
         }
         database.transaction {
-            vaultStatesUnconsumed = miniCorpServices.vaultQueryService.queryBy<Cash.State>().states
+            vaultStatesUnconsumed = miniCorpServices.vaultService.queryBy<Cash.State>().states
         }
         resetTestSerialization()
     }
@@ -594,7 +594,6 @@ class CashTests : TestDependencyInjectionBase() {
                 makeSpend(100.DOLLARS, THEIR_IDENTITY_1)
             }
         database.transaction {
-            @Suppress("UNCHECKED_CAST")
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             assertEquals(vaultState.ref, wtx.inputs[0])
             assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1), wtx.getOutput(0))
@@ -622,7 +621,6 @@ class CashTests : TestDependencyInjectionBase() {
                 makeSpend(10.DOLLARS, THEIR_IDENTITY_1)
             }
         database.transaction {
-            @Suppress("UNCHECKED_CAST")
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             val changeAmount = 90.DOLLARS `issued by` defaultIssuer
             val likelyChangeState = wtx.outputs.map(TransactionState<*>::data).filter { state ->
@@ -649,7 +647,6 @@ class CashTests : TestDependencyInjectionBase() {
                 makeSpend(500.DOLLARS, THEIR_IDENTITY_1)
             }
         database.transaction {
-            @Suppress("UNCHECKED_CAST")
             val vaultState0 = vaultStatesUnconsumed.elementAt(0)
             val vaultState1 = vaultStatesUnconsumed.elementAt(1)
             assertEquals(vaultState0.ref, wtx.inputs[0])

@@ -5,6 +5,7 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.SignedTransaction
@@ -190,8 +191,8 @@ data class TestLedgerDSLInterpreter private constructor(
                         nonVerifiedTransactionWithLocations[stateRef.txhash] ?:
                         throw TransactionResolutionException(stateRef.txhash)
         val output = transactionWithLocation.transaction.outputs[stateRef.index]
-        return if (S::class.java.isAssignableFrom(output.data.javaClass)) @Suppress("UNCHECKED_CAST") {
-            output as TransactionState<S>
+        return if (S::class.java.isAssignableFrom(output.data.javaClass)) {
+            uncheckedCast(output)
         } else {
             throw TypeMismatch(requested = S::class.java, actual = output.data.javaClass)
         }
@@ -315,8 +316,7 @@ data class TestLedgerDSLInterpreter private constructor(
         } else if (!clazz.isAssignableFrom(stateAndRef.state.data.javaClass)) {
             throw TypeMismatch(requested = clazz, actual = stateAndRef.state.data.javaClass)
         } else {
-            @Suppress("UNCHECKED_CAST")
-            return stateAndRef as StateAndRef<S>
+            return uncheckedCast(stateAndRef)
         }
     }
 

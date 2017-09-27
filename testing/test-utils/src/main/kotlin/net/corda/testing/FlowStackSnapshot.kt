@@ -16,6 +16,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.write
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.client.jackson.JacksonSupport
+import net.corda.core.internal.uncheckedCast
 import net.corda.node.services.statemachine.FlowStackSnapshotFactory
 import java.nio.file.Path
 import java.time.Instant
@@ -54,7 +55,8 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
         val objectStack = getObjectStack(stack).toList()
         val frameOffsets = getFrameOffsets(stack)
         val frameObjects = frameOffsets.map { (frameOffset, frameSize) ->
-            objectStack.subList(frameOffset + 1, frameOffset + frameSize + 1)
+            // We need to convert the sublist to a list due to the Kryo lack of support when serializing
+            objectStack.subList(frameOffset + 1, frameOffset + frameSize + 1).toList()
         }
         // We drop the first element as it is corda internal call irrelevant from the perspective of a CordApp developer
         val relevantStackTrace = removeConstructorStackTraceElements(stackTrace).drop(1)
@@ -134,11 +136,10 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
 
 }
 
-private inline fun <reified R, A> R.getField(name: String): A {
+private inline fun <reified R, A : Any> R.getField(name: String): A {
     val field = R::class.java.getDeclaredField(name)
     field.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    return field.get(this) as A
+    return uncheckedCast(field.get(this))
 }
 
 private fun getFiberStack(fiber: Fiber<*>): Stack {

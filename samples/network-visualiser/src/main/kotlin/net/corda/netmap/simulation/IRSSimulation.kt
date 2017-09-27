@@ -11,6 +11,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.queryBy
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -96,7 +97,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val swaps =
                 node1.database.transaction {
-                    node1.services.vaultQueryService.queryBy<InterestRateSwap.State>().states
+                    node1.services.vaultService.queryBy<InterestRateSwap.State>().states
                 }
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.single()
 
@@ -155,9 +156,8 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val acceptDealFlows: Observable<AcceptDealFlow> = node2.internals.registerInitiatedFlow(AcceptDealFlow::class.java)
 
-        @Suppress("UNCHECKED_CAST")
         val acceptorTxFuture = acceptDealFlows.toFuture().toCompletableFuture().thenCompose {
-            (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture.toCompletableFuture()
+            uncheckedCast<FlowStateMachine<*>, FlowStateMachine<SignedTransaction>>(it.stateMachine).resultFuture.toCompletableFuture()
         }
 
         showProgressFor(listOf(node1, node2))

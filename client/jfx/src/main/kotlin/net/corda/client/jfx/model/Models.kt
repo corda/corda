@@ -4,6 +4,7 @@ import javafx.beans.property.ObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.beans.value.WritableValue
 import javafx.collections.ObservableList
+import net.corda.core.internal.uncheckedCast
 import org.reactfx.EventSink
 import org.reactfx.EventStream
 import rx.Observable
@@ -78,9 +79,7 @@ object Models {
         if (model.javaClass != klass.java) {
             throw IllegalStateException("Model stored as ${klass.qualifiedName} has type ${model.javaClass}")
         }
-
-        @Suppress("UNCHECKED_CAST")
-        return model as M
+        return uncheckedCast(model)
     }
 
     inline fun <reified M : Any> get(origin: KClass<*>): M = get(M::class, origin)

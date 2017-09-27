@@ -18,6 +18,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.toX509CertHolder
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -32,8 +33,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
@@ -60,7 +61,6 @@ import net.corda.node.services.statemachine.appName
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
-import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
@@ -80,11 +80,9 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.collections.ArrayList
 import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -320,11 +318,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             } else {
                 log.warn(deprecatedFlowConstructorMessage(initiatedFlow))
             }
-            @Suppress("UNCHECKED_CAST")
-            { flowSession: FlowSession -> partyCtor.newInstance(flowSession.counterparty) as F }
+            { flowSession: FlowSession -> uncheckedCast(partyCtor.newInstance(flowSession.counterparty)) }
         } else {
-            @Suppress("UNCHECKED_CAST")
-            { flowSession: FlowSession -> flowSessionCtor.newInstance(flowSession) as F }
+            { flowSession: FlowSession -> uncheckedCast(flowSessionCtor.newInstance(flowSession)) }
         }
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
@@ -389,7 +385,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
 
-        val tokenizableServices = mutableListOf(attachments, network, services.vaultService, services.vaultQueryService,
+        val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
@@ -693,11 +689,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader) }
+        override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader, database.hibernateConfig) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
-        override val vaultQueryService by lazy {
-            HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
-        }
+
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.

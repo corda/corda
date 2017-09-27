@@ -24,7 +24,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.Clock
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
@@ -47,7 +46,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
 
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {
-                    val vaultService = NodeVaultService(clock, keyManagementService, stateLoader)
+                    val vaultService = NodeVaultService(clock, keyManagementService, stateLoader, database.hibernateConfig)
                     hibernatePersister = HibernateObserver(vaultService.rawUpdates, database.hibernateConfig)
                     return vaultService
                 }

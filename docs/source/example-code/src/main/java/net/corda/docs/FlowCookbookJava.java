@@ -223,7 +223,7 @@ public class FlowCookbookJava {
             // For example, we would extract any unconsumed ``DummyState``s
             // from our vault as follows:
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED);
-            Page<DummyState> results = getServiceHub().getVaultQueryService().queryBy(DummyState.class, criteria);
+            Page<DummyState> results = getServiceHub().getVaultService().queryBy(DummyState.class, criteria);
             List<StateAndRef<DummyState>> dummyStates = results.getStates();
 
             // For a full list of the available ways of extracting states from
@@ -546,7 +546,6 @@ public class FlowCookbookJava {
                 // DOCSTART 37
                 twiceSignedTx.checkSignaturesAreValid();
                 // DOCEND 37
-
             } catch (GeneralSecurityException e) {
                 // Handle this as required.
             }

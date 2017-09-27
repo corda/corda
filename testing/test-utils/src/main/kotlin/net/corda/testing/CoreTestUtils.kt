@@ -1,4 +1,4 @@
-@file:Suppress("UNUSED_PARAMETER", "UNCHECKED_CAST")
+@file:Suppress("UNUSED_PARAMETER")
 @file:JvmName("CoreTestUtils")
 
 package net.corda.testing

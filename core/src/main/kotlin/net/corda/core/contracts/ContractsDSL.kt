@@ -4,6 +4,7 @@ package net.corda.core.contracts
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import java.security.PublicKey
 import java.util.*
 
@@ -58,7 +59,7 @@ inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>
 
 /** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
 fun <C : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand(klass: Class<C>) =
-        mapNotNull { @Suppress("UNCHECKED_CAST") if (klass.isInstance(it.value)) it as CommandWithParties<C> else null }.single()
+        mapNotNull { if (klass.isInstance(it.value)) uncheckedCast<CommandWithParties<CommandData>, CommandWithParties<C>>(it) else null }.single()
 
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.

@@ -233,8 +233,7 @@ object InteractiveShell {
             return
         }
 
-        @Suppress("UNCHECKED_CAST")
-        val clazz = matches.single() as Class<FlowLogic<*>>
+        val clazz: Class<FlowLogic<*>> = uncheckedCast(matches.single())
         try {
             // TODO Flow invocation should use startFlowDynamic.
             val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell) }, inputData, clazz)
@@ -434,8 +433,6 @@ object InteractiveShell {
         }
     }
 
-    // Kotlin bug: USELESS_CAST warning is generated below but the IDE won't let us remove it.
-    @Suppress("USELESS_CAST", "UNCHECKED_CAST")
     private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): OpenFuture<Unit>? {
         // Match on a couple of common patterns for "important" observables. It's tough to do this in a generic
         // way because observables can be embedded anywhere in the object graph, and can emit other arbitrary
@@ -454,7 +451,7 @@ object InteractiveShell {
         } ?: return null
 
         val subscriber = PrintingSubscriber(printerFun, toStream)
-        (observable as Observable<Any>).subscribe(subscriber)
+        uncheckedCast(observable).subscribe(subscriber)
         return subscriber.future
     }
 

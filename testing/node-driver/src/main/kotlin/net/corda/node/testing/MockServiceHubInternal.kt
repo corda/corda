@@ -37,7 +37,6 @@ open class MockServiceHubInternal(
         override val database: CordaPersistence,
         override val configuration: NodeConfiguration,
         val customVault: VaultService? = null,
-        val customVaultQuery: VaultQueryService? = null,
         val keyManagement: KeyManagementService? = null,
         val network: MessagingService? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
@@ -53,8 +52,6 @@ open class MockServiceHubInternal(
         override val cordappProvider: CordappProvider = CordappProviderImpl(CordappLoader.createDefault(Paths.get("."))).start(attachments),
         protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
 ) : ServiceHubInternal, StateLoader by stateLoader {
-    override val vaultQueryService: VaultQueryService
-        get() = customVaultQuery ?: throw UnsupportedOperationException()
     override val transactionVerifierService: TransactionVerifierService
         get() = customTransactionVerifierService ?: throw UnsupportedOperationException()
     override val vaultService: VaultService

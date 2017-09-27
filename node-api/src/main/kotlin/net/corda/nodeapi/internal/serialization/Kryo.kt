@@ -14,6 +14,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
@@ -245,9 +246,8 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.privacySalt)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
-        val componentGroups = kryo.readClassAndObject(input) as List<ComponentGroup>
+        val componentGroups: List<ComponentGroup> = uncheckedCast(kryo.readClassAndObject(input))
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
         return WireTransaction(componentGroups, privacySalt)
     }
@@ -261,9 +261,8 @@ object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransa
         kryo.writeClassAndObject(output, obj.newNotary)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
-        val inputs = kryo.readClassAndObject(input) as List<StateRef>
+        val inputs: List<StateRef> = uncheckedCast(kryo.readClassAndObject(input))
         val notary = kryo.readClassAndObject(input) as Party
         val newNotary = kryo.readClassAndObject(input) as Party
 
@@ -278,11 +277,10 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
         kryo.writeClassAndObject(output, obj.sigs)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<SignedTransaction>): SignedTransaction {
         return SignedTransaction(
-                kryo.readClassAndObject(input) as SerializedBytes<CoreTransaction>,
-                kryo.readClassAndObject(input) as List<TransactionSignature>
+                uncheckedCast<Any?, SerializedBytes<CoreTransaction>>(kryo.readClassAndObject(input)),
+                uncheckedCast<Any?, List<TransactionSignature>>(kryo.readClassAndObject(input))
         )
     }
 }
@@ -600,8 +598,7 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private val delegate: Serializer<Throwable> = ReflectionSerializerFactory.makeSerializer(kryo, FieldSerializer::class.java, type) as Serializer<Throwable>
+    private val delegate: Serializer<Throwable> = uncheckedCast(ReflectionSerializerFactory.makeSerializer(kryo, FieldSerializer::class.java, type))
 
     override fun write(kryo: Kryo, output: Output, throwable: Throwable) {
         delegate.write(kryo, output, throwable)

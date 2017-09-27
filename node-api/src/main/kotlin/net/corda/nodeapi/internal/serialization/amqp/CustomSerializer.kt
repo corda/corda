@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -9,7 +10,7 @@ import java.lang.reflect.Type
  * Base class for serializers of core platform types that do not conform to the usual serialization rules and thus
  * cannot be automatically serialized.
  */
-abstract class CustomSerializer<T> : AMQPSerializer<T> {
+abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
     /**
      * This is a collection of custom serializers that this custom serializer depends on.  e.g. for proxy objects
      * that refer to other custom types etc.
@@ -36,8 +37,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         data.withDescribed(descriptor) {
-            @Suppress("UNCHECKED_CAST")
-            writeDescribedObject(obj as T, data, type, output)
+            writeDescribedObject(uncheckedCast(obj), data, type, output)
         }
     }
 
@@ -49,7 +49,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * subclass in the schema, so that we can distinguish between subclasses.
      */
     // TODO: should this be a custom serializer at all, or should it just be a plain AMQPSerializer?
-    class SubClass<T>(protected val clazz: Class<*>, protected val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
+    class SubClass<T : Any>(protected val clazz: Class<*>, protected val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
         // TODO: should this be empty or contain the schema of the super?
         override val schemaForDocumentation = Schema(emptyList())
 
@@ -76,7 +76,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * Additional base features for a custom serializer for a particular class [withInheritance] is false
      * or super class / interfaces [withInheritance] is true
      */
-    abstract class CustomSerializerImp<T>(protected val clazz: Class<T>, protected val withInheritance: Boolean) : CustomSerializer<T>() {
+    abstract class CustomSerializerImp<T : Any>(protected val clazz: Class<T>, protected val withInheritance: Boolean) : CustomSerializer<T>() {
         override val type: Type get() = clazz
         override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${nameForType(clazz)}")
         override fun writeClassInfo(output: SerializationOutput) {}
@@ -87,12 +87,12 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     /**
      * Additional base features for a custom serializer for a particular class, that excludes subclasses.
      */
-    abstract class Is<T>(clazz: Class<T>) : CustomSerializerImp<T>(clazz, false)
+    abstract class Is<T : Any>(clazz: Class<T>) : CustomSerializerImp<T>(clazz, false)
 
     /**
      * Additional base features for a custom serializer for all implementations of a particular interface or super class.
      */
-    abstract class Implements<T>(clazz: Class<T>) : CustomSerializerImp<T>(clazz, true)
+    abstract class Implements<T : Any>(clazz: Class<T>) : CustomSerializerImp<T>(clazz, true)
 
     /**
      * Additional base features over and above [Implements] or [Is] custom serializer for when the serialized form should be
@@ -101,7 +101,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * The proxy class must use only types which are either native AMQP or other types for which there are pre-registered
      * custom serializers.
      */
-    abstract class Proxy<T, P>(clazz: Class<T>,
+    abstract class Proxy<T : Any, P : Any>(clazz: Class<T>,
                                protected val proxyClass: Class<P>,
                                protected val factory: SerializerFactory,
                                withInheritance: Boolean = true) : CustomSerializerImp<T>(clazz, withInheritance) {
@@ -134,8 +134,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
         }
 
         override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T {
-            @Suppress("UNCHECKED_CAST")
-            val proxy = proxySerializer.readObject(obj, schema, input) as P
+            val proxy: P = uncheckedCast(proxySerializer.readObject(obj, schema, input))
             return fromProxy(proxy)
         }
     }
@@ -151,7 +150,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * @param make A lambda for constructing an instance, that defaults to calling a constructor that expects a string.
      * @param unmake A lambda that extracts the string value for an instance, that defaults to the [toString] method.
      */
-    abstract class ToString<T>(clazz: Class<T>, withInheritance: Boolean = false,
+    abstract class ToString<T : Any>(clazz: Class<T>, withInheritance: Boolean = false,
                                private val maker: (String) -> T = clazz.getConstructor(String::class.java).let {
                                    `constructor` ->
                                    { string -> `constructor`.newInstance(string) }
