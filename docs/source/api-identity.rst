@@ -82,8 +82,9 @@ The swap identities flow goes through the following key steps:
 8. Verify the confidential identities are owned by the expected well known identities.
 9. Store the confidential identities and return them to the calling flow.
 
-This ensures not only that the confidential identity certificates are signed by the correct well known identity, but
-also that the confidential identity private key is held by the counterparty.
+This ensures not only that the confidential identity X.509 certificates are signed by the correct well known identities,
+but also that the confidential identity private key is held by the counterparty, and that a party cannot claim ownership
+another party's confidential identities belong to its well known identity.
 
 Identity synchronization flow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,8 +102,27 @@ entities (counterparties) to require to know which well known identities those c
 
 The identity synchronization flow goes through the following key steps:
 
-1. Extract participant identities from all input and output states and remove any well known identities.
+1. Extract participant identities from all input and output states and remove any well known identities. Required signers
+   on commands are currently ignored as they are presumed to be included in the participants on states, or to be well
+   known identities of services (such as an oracle service).
 2. For each counterparty node, send a list of the public keys of the confidential identities, and receive back a list
    of those the counterparty needs the certificate path for.
 3. Verify the requested list of identities contains only confidential identities in the offered list, and abort otherwise.
 4. Send the requested confidential identities as ``PartyAndCertificate`` instances to the counterparty.
+
+.. note:: ``IdentitySyncFlow`` works on a push basis. The initiating node can only send confidential identities it has
+   the X.509 certificates for, and the remote nodes can only request confidential identities being offered (are
+   referenced in the transaction passed to the initiating flow). There is no standard flow for nodes to collect
+   confidential identities before assembling a transaction, and this is left for individual flows to manage if required.
+
+``IdentitySyncFlow`` will serve all confidential identities in the provided transaction, irrespective of well known
+identity. This is important for more complex transaction cases with 3+ parties, for example:
+
+* Alice is building the transaction, and provides some input state *x* owned by a confidential identity of Alice
+* Bob provides some input state *y* owned by a confidential identity of Bob
+* Charlie provides some input state *z* owned by a confidential identity of Charlie
+
+Alice may know all of the confidential identities ahead of time, but Bob not know about Charlie's and vice-versa.
+The assembled transactions therefore has three input states *x*, *y* and *z*, which only Alice knows the certificates for
+all confidential identities. ``IdentitySyncFlow`` must send not just Alice's confidential identity but also any other
+identities in the transaction to the Bob & Charlie.
