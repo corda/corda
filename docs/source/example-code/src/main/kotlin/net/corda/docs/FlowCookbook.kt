@@ -206,7 +206,7 @@ object FlowCookbook {
             // For example, we would extract any unconsumed ``DummyState``s
             // from our vault as follows:
             val criteria: VaultQueryCriteria = VaultQueryCriteria() // default is UNCONSUMED
-            val results: Page<DummyState> = serviceHub.vaultQueryService.queryBy<DummyState>(criteria)
+            val results: Page<DummyState> = serviceHub.vaultService.queryBy<DummyState>(criteria)
             val dummyStates: List<StateAndRef<DummyState>> = results.states
 
             // For a full list of the available ways of extracting states from

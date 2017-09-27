@@ -58,7 +58,7 @@ class CordaRPCOpsImpl(
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): Vault.Page<T> {
         return database.transaction {
-            services.vaultQueryService._queryBy(criteria, paging, sorting, contractStateType)
+            services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
         }
     }
 
@@ -68,7 +68,7 @@ class CordaRPCOpsImpl(
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return database.transaction {
-            services.vaultQueryService._trackBy(criteria, paging, sorting, contractStateType)
+            services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
         }
     }
 

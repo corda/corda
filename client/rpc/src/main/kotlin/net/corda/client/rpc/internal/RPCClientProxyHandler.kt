@@ -19,6 +19,7 @@ import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
@@ -208,11 +209,12 @@ class RPCClientProxyHandler(
         val rpcId = RPCApi.RpcRequestId(random63BitValue())
         callSiteMap?.set(rpcId.toLong, Throwable("<Call site of root RPC '${method.name}'>"))
         try {
-            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, rpcId, method.name, arguments?.toList() ?: emptyList())
+            val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
+            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, rpcId, method.name, serialisedArguments.bytes)
             val replyFuture = SettableFuture.create<Any>()
             sessionAndProducerPool.run {
                 val message = it.session.createMessage(false)
-                request.writeToClientMessage(serializationContextWithObservableContext, message)
+                request.writeToClientMessage(message)
 
                 log.debug {
                     val argumentsString = arguments?.joinToString() ?: ""

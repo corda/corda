@@ -55,7 +55,8 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
         val objectStack = getObjectStack(stack).toList()
         val frameOffsets = getFrameOffsets(stack)
         val frameObjects = frameOffsets.map { (frameOffset, frameSize) ->
-            objectStack.subList(frameOffset + 1, frameOffset + frameSize + 1)
+            // We need to convert the sublist to a list due to the Kryo lack of support when serializing
+            objectStack.subList(frameOffset + 1, frameOffset + frameSize + 1).toList()
         }
         // We drop the first element as it is corda internal call irrelevant from the perspective of a CordApp developer
         val relevantStackTrace = removeConstructorStackTraceElements(stackTrace).drop(1)

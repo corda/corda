@@ -99,7 +99,7 @@ class CordaRPCOpsImplTest {
 
         // Check the monitoring service wallet is empty
         aliceNode.database.transaction {
-            assertFalse(aliceNode.services.vaultQueryService.queryBy<ContractState>().totalStatesAvailable > 0)
+            assertFalse(aliceNode.services.vaultService.queryBy<ContractState>().totalStatesAvailable > 0)
         }
 
         // Tell the monitoring service node to issue some cash

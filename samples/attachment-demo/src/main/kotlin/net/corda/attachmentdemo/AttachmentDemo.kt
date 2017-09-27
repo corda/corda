@@ -93,6 +93,7 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
     // Make sure we have the file in storage
     if (!rpc.attachmentExists(hash)) {
         inputStream.use {
+            val avail = inputStream.available()
             val id = rpc.uploadAttachment(it)
             require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
