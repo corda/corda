@@ -1,20 +1,15 @@
 package net.corda.core.contracts
 
-import com.nhaarman.mockito_kotlin.mock
-import net.corda.testing.contracts.DummyContract
-import net.corda.testing.contracts.DummyContractV2
 import net.corda.core.crypto.SecureHash
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.internal.UpgradeCommand
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 import net.corda.testing.contracts.DUMMY_V2_PROGRAM_ID
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.node.MockServices
-import net.corda.testing.setCordappPackages
-import net.corda.testing.unsetCordappPackages
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
