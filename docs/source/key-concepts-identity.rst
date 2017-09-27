@@ -19,11 +19,13 @@ identities so that distributed services can exist on nodes owned by different or
 identities are based on ``CompositeKeys``, which describe the valid sets of signers for a signature from the service.
 See :doc:`api-core-types` for more technical detail on composite keys.
 
-Identities are either well known or confidential, depending on whether they are distributed publicly:
+Identities are either well known or confidential, depending on whether their X.509 certificate (and corresponding
+certificate path to a trusted root certificate) is published:
 
 * Well known identities are the generally identifiable public key of a legal entity or service, which makes them
-ill-suited to transactions where confidentiality of participants is required.
-* Confidential identities are only distributed to those who are involved in transactions with the identity. The public
+  ill-suited to transactions where confidentiality of participants is required. This certificate is published in the
+  network map service for anyone to access.
+* Confidential identities are only published to those who are involved in transactions with the identity. The public
   key may be exposed to third parties (for example to the notary service), but distribution of the name and X.500
   certificate is limited.
 
