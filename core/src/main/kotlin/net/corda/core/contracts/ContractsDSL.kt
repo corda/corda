@@ -58,8 +58,8 @@ inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>
 }
 
 /** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
-fun <C : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand(klass: Class<C>): CommandWithParties<C> =
-        mapNotNull { if (klass.isInstance(it.value)) uncheckedCast(it) else null }.single()
+fun <C : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand(klass: Class<C>) =
+        mapNotNull { if (klass.isInstance(it.value)) uncheckedCast<CommandWithParties<CommandData>, CommandWithParties<C>>(it) else null }.single()
 
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
