@@ -43,6 +43,9 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     class TransactionMissingEncumbranceException(txId: SecureHash, missing: Int, inOut: Direction)
         : TransactionVerificationException(txId, "Missing required encumbrance $missing in $inOut", null)
 
+    class UpgradeRejection(txId: SecureHash, message: String)
+        : TransactionVerificationException(txId, "Upgrade verification failed: $message", null)
+
     @CordaSerializable
     enum class Direction {
         INPUT,
