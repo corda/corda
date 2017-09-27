@@ -1,6 +1,5 @@
 package net.corda.client.rpc;
 
-import net.corda.client.rpc.internal.RPCClient;
 import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.contracts.Amount;
 import net.corda.core.messaging.CordaRPCOps;
@@ -42,7 +41,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     private StartedNode<Node> node;
     private CordaRPCClient client;
-    private RPCClient.RPCConnection<CordaRPCOps> connection = null;
+    private RPCConnection<CordaRPCOps> connection = null;
     private CordaRPCOps rpcProxy;
 
     private void login(String username, String password) {

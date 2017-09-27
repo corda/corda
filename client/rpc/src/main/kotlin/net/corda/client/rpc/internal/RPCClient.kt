@@ -1,5 +1,6 @@
 package net.corda.client.rpc.internal
 
+import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.logElapsedTime
@@ -18,7 +19,6 @@ import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import java.io.Closeable
 import java.lang.reflect.Proxy
 import java.time.Duration
 
@@ -80,12 +80,6 @@ data class RPCClientConfiguration(
     }
 }
 
-/**
- * An RPC client that may be used to create connections to an RPC server.
- *
- * @param transport The Artemis transport to use to connect to the server.
- * @param rpcConfiguration Configuration used to tweak client behaviour.
- */
 class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
         val rpcConfiguration: RPCClientConfiguration = RPCClientConfiguration.default,
@@ -102,54 +96,6 @@ class RPCClient<I : RPCOps>(
         private val log = loggerFor<RPCClient<*>>()
     }
 
-    /**
-     * Holds a proxy object implementing [I] that forwards requests to the RPC server.
-     *
-     * [Closeable.close] may be used to shut down the connection and release associated resources.
-     */
-    interface RPCConnection<out I : RPCOps> : Closeable {
-        val proxy: I
-        /** The RPC protocol version reported by the server */
-        val serverProtocolVersion: Int
-
-        /**
-         * Closes this client without notifying the server.
-         * The server will eventually clear out the RPC message queue and disconnect subscribed observers,
-         * but this may take longer than desired, so to conserve resources you should normally use [notifyServerAndClose].
-         * This method is helpful when the node may be shutting down or
-         * have already shut down and you don't want to block waiting for it to come back.
-         */
-        fun forceClose()
-
-        /**
-         * Closes this client gracefully by sending a notification to the server, so it can immediately clean up resources.
-         * If the server is not available this method may block for a short period until it's clear the server is not coming back.
-         */
-        fun notifyServerAndClose()
-    }
-
-    /**
-     * Returns an [RPCConnection] containing a proxy that lets you invoke RPCs on the server. Calls on it block, and if
-     * the server throws an exception then it will be rethrown on the client. Proxies are thread safe and may be used to
-     * invoke multiple RPCs in parallel.
-     *
-     * RPC sends and receives are logged on the net.corda.rpc logger.
-     *
-     * The [RPCOps] defines what client RPCs are available. If an RPC returns an [Observable] anywhere in the object
-     * graph returned then the server-side observable is transparently forwarded to the client side here.
-     * *You are expected to use it*. The server will begin sending messages immediately that will be buffered on the
-     * client, you are expected to drain by subscribing to the returned observer. You can opt-out of this by simply
-     * calling the [net.corda.client.rpc.notUsed] method on it. You don't have to explicitly close the observable if you actually
-     * subscribe to it: it will close itself and free up the server-side resources either when the client or JVM itself
-     * is shutdown, or when there are no more subscribers to it. Once all the subscribers to a returned observable are
-     * unsubscribed or the observable completes successfully or with an error, the observable is closed and you can't
-     * then re-subscribe again: you'll have to re-request a fresh observable with another RPC.
-     *
-     * @param rpcOpsClass The [Class] of the RPC interface.
-     * @param username The username to authenticate with.
-     * @param password The password to authenticate with.
-     * @throws RPCException if the server version is too low or if the server isn't reachable within the given time.
-     */
     fun start(
             rpcOpsClass: Class<I>,
             username: String,
