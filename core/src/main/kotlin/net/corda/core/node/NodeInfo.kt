@@ -7,7 +7,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 
 /**
  * Information about a network node that acts on behalf of some party. NodeInfos can be found via the network map
- * cache, accessible from a [net.corda.core.node.services.NetworkMapCache].
+ * cache, accessible from a [net.corda.core.node.services.NetworkMapCache]. They are also available via RPC
+ * using the [net.corda.core.messaging.CordaRPCOps.networkMapSnapshot] method.
  *
  * @property addresses An ordered list of IP addresses/hostnames where the node can be contacted.
  * @property legalIdentitiesAndCerts A non-empty list, where the first identity is assumed to be the default identity of the node.
