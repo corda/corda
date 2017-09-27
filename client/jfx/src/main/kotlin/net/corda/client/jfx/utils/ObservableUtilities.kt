@@ -119,7 +119,11 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>)
  */
 fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
     //TODO This is a tactical work round for an issue with SAM conversion (https://youtrack.jetbrains.com/issue/ALL-1552) so that the M10 explorer works.
-    return uncheckedCast(filtered { it != null })
+    return uncheckedCast(uncheckedCast<Any, ObservableList<A?>>(this).filtered(object : Predicate<A?> {
+        override fun test(t: A?): Boolean {
+            return t != null
+        }
+    }))
 }
 
 /**
