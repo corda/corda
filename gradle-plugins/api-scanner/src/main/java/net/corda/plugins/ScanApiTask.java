@@ -9,6 +9,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.OutputFiles;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.*;
@@ -18,6 +19,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+import static java.util.stream.Collectors.toList;
 
 @SuppressWarnings("unused")
 public class ScanApiTask extends DefaultTask {
@@ -26,11 +29,13 @@ public class ScanApiTask extends DefaultTask {
 
     private final ConfigurableFileCollection sources;
     private final ConfigurableFileCollection classpath;
+    private final File outputDir;
     private boolean verbose;
 
     public ScanApiTask() {
         sources = getProject().files();
         classpath = getProject().files();
+        outputDir = new File(getProject().getBuildDir(), "api");
     }
 
     @Input
@@ -51,6 +56,15 @@ public class ScanApiTask extends DefaultTask {
         this.classpath.setFrom(classpath);
     }
 
+    @OutputFiles
+    public FileCollection getTargets() {
+        return getProject().files(
+            StreamSupport.stream(sources.spliterator(), false)
+                .map(this::toTarget)
+                .collect(toList())
+        );
+    }
+
     public boolean isVerbose() {
         return verbose;
     }
@@ -59,16 +73,19 @@ public class ScanApiTask extends DefaultTask {
         this.verbose = verbose;
     }
 
+    private File toTarget(File source) {
+        return new File(outputDir, source.getName().replaceAll(".jar$", ".txt"));
+    }
+
     @TaskAction
     public void scan() {
-        File outputDir = new File(getProject().getBuildDir(), "api");
         if (outputDir.isDirectory() || outputDir.mkdirs()) {
-            try (Scanner scanner = new Scanner(outputDir, classpath)) {
+            try (Scanner scanner = new Scanner(classpath)) {
                 for (File source : sources) {
                     scanner.scan(source);
                 }
             } catch (IOException e) {
-                getLogger().error("", e);
+                getLogger().error("Failed to write API file", e);
             }
         } else {
             getLogger().error("Cannot create directory '{}'", outputDir.getAbsolutePath());
@@ -77,15 +94,13 @@ public class ScanApiTask extends DefaultTask {
 
     class Scanner implements Closeable {
         private final URLClassLoader classpathLoader;
-        private final File outputDir;
 
-        Scanner(File outputDir, URLClassLoader classpathLoader) {
+        Scanner(URLClassLoader classpathLoader) {
             this.classpathLoader = classpathLoader;
-            this.outputDir = outputDir;
         }
 
-        Scanner(File outputDir, FileCollection classpath) throws MalformedURLException {
-            this(outputDir, new URLClassLoader(toURLs(classpath)));
+        Scanner(FileCollection classpath) throws MalformedURLException {
+            this(new URLClassLoader(toURLs(classpath)));
         }
 
         @Override
@@ -94,10 +109,10 @@ public class ScanApiTask extends DefaultTask {
         }
 
         void scan(File source) {
-            File output = new File(outputDir, source.getName().replaceAll(".jar$", ".txt"));
+            File target = toTarget(source);
             try (
                 URLClassLoader appLoader = new URLClassLoader(new URL[]{ toURL(source) }, classpathLoader);
-                PrintWriter writer = new PrintWriter(output, "UTF-8")
+                PrintWriter writer = new PrintWriter(target, "UTF-8")
             ) {
                 scan(writer, appLoader);
             } catch (IOException e) {
