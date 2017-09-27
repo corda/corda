@@ -3,8 +3,6 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ContractUpgradeUtils
-import net.corda.core.internal.UpgradeCommand
-import net.corda.core.transactions.TransactionBuilder
 
 /**
  * A flow to be used for authorising and upgrading state objects of an old contract to a new contract.
@@ -28,7 +26,7 @@ object ContractUpgradeFlow {
     class Authorise(
             val stateAndRef: StateAndRef<*>,
             private val upgradedContractClass: Class<out UpgradedContract<*, *>>
-        ) : FlowLogic<Void?>() {
+    ) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
             val upgrade = upgradedContractClass.newInstance()
@@ -63,23 +61,6 @@ object ContractUpgradeFlow {
             originalState: StateAndRef<OldState>,
             newContractClass: Class<out UpgradedContract<OldState, NewState>>
     ) : AbstractStateReplacementFlow.Instigator<OldState, NewState, Class<out UpgradedContract<OldState, NewState>>>(originalState, newContractClass) {
-
-        companion object {
-            fun <OldState : ContractState, NewState : ContractState> assembleBareTx(
-                    stateRef: StateAndRef<OldState>,
-                    upgradedContractClass: Class<out UpgradedContract<OldState, NewState>>,
-                    privacySalt: PrivacySalt
-            ): TransactionBuilder {
-                val contractUpgrade = upgradedContractClass.newInstance()
-                return TransactionBuilder(stateRef.state.notary)
-                        .withItems(
-                                stateRef,
-                                StateAndContract(contractUpgrade.upgrade(stateRef.state.data), upgradedContractClass.name),
-                                Command(UpgradeCommand(upgradedContractClass.name), stateRef.state.data.participants.map { it.owningKey }),
-                                privacySalt
-                        )
-            }
-        }
 
         @Suspendable
         override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
