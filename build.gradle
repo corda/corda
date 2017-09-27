@@ -175,7 +175,6 @@ repositories {
     }
 }
 
-// TODO: Corda root project currently produces a dummy cordapp when it shouldn't.
 // Required for building out the fat JAR.
 dependencies {
     cordaCompile project(':node')
@@ -194,6 +193,11 @@ dependencies {
     cordaRuntime project(':finance')
     cordaRuntime project(':webserver')
     testCompile project(':test-utils')
+}
+
+jar {
+    // Prevent the root project from building an unwanted dummy CorDapp.
+    enabled = false
 }
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
