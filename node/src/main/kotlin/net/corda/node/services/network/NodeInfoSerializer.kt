@@ -40,12 +40,16 @@ class NodeInfoSerializer {
      * @param keyManager a KeyManagementService used to sign the NodeInfo data.
      */
     fun saveToFile(path: Path, nodeInfo: NodeInfo, keyManager: KeyManagementService) {
-        path.toFile().mkdirs()
-        val serializedBytes: SerializedBytes<NodeInfo> = nodeInfo.serialize()
-        val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
-        val signedData: SignedData<NodeInfo> = SignedData(serializedBytes, regSig)
-        val file: File = (path / ("nodeInfo-" + SecureHash.sha256(serializedBytes.bytes).toString())).toFile()
-        file.writeBytes(signedData.serialize().bytes)
+        try {
+            path.toFile().mkdirs()
+            val serializedBytes: SerializedBytes<NodeInfo> = nodeInfo.serialize()
+            val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
+            val signedData: SignedData<NodeInfo> = SignedData(serializedBytes, regSig)
+            val file: File = (path / ("nodeInfo-" + SecureHash.sha256(serializedBytes.bytes).toString())).toFile()
+            file.writeBytes(signedData.serialize().bytes)
+        } catch (e : Exception) {
+            logger.warn("Couldn't write node info to file: ${e.toString()}")
+        }
     }
 
     /**
