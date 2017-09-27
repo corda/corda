@@ -1,5 +1,6 @@
 package com.r3.enclaves.verify
 
+import com.r3.enclaves.txverify.MockContractAttachment
 import com.r3.enclaves.txverify.NativeSgxApi
 import com.r3.enclaves.txverify.TransactionVerificationRequest
 import net.corda.core.identity.AnonymousParty
@@ -20,8 +21,6 @@ class NativeSgxApiTest {
     companion object {
         val enclavePath = "../sgx-jvm/jvm-enclave/enclave/build/cordaenclave.signed.so"
     }
-
-    private val stubbedCashContractBytes = Cash.PROGRAM_ID.toByteArray()
 
     @Ignore("The SGX code is not part of the standard build yet")
     @Test
@@ -48,8 +47,8 @@ class NativeSgxApiTest {
                 command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
                 verifies()
             }
-
-            val req = TransactionVerificationRequest(wtx3.serialize(), arrayOf(wtx1.serialize(), wtx2.serialize()), arrayOf(stubbedCashContractBytes))
+            val cashContract = MockContractAttachment(interpreter.services.cordappProvider.getContractAttachmentID(Cash.PROGRAM_ID)!!, Cash.PROGRAM_ID)
+            val req = TransactionVerificationRequest(wtx3.serialize(), arrayOf(wtx1.serialize(), wtx2.serialize()), arrayOf(cashContract.serialize().bytes))
             val serialized = req.serialize()
             assertNull(NativeSgxApi.verify(enclavePath, serialized.bytes))
         }

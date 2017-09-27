@@ -17,9 +17,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class EnclaveletTest {
-
-    private val stubbedCashContractBytes = Cash.PROGRAM_ID.toByteArray()
-
     @Test
     fun success() {
         ledger {
@@ -44,7 +41,8 @@ class EnclaveletTest {
                 command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
                 verifies()
             }
-            val req = TransactionVerificationRequest(wtx3.serialize(), arrayOf(wtx1.serialize(), wtx2.serialize()), arrayOf(stubbedCashContractBytes))
+            val cashContract = MockContractAttachment(interpreter.services.cordappProvider.getContractAttachmentID(Cash.PROGRAM_ID)!!, Cash.PROGRAM_ID)
+            val req = TransactionVerificationRequest(wtx3.serialize(), arrayOf(wtx1.serialize(), wtx2.serialize()), arrayOf(cashContract.serialize().bytes))
             val serialized = req.serialize()
             Files.write(Paths.get("/tmp/req"), serialized.bytes)
             verifyInEnclave(serialized.bytes)
@@ -75,8 +73,8 @@ class EnclaveletTest {
                 output(Cash.PROGRAM_ID, "c3", Cash.State(3000.POUNDS `issued by` DUMMY_CASH_ISSUER, AnonymousParty(MINI_CORP_PUBKEY)))
                 failsWith("Required ${Cash.Commands.Move::class.java.canonicalName} command")
             }
-            // TODO need to add the CashContract Attachment Bytes
-            val req = TransactionVerificationRequest(wtx3.serialize(), arrayOf(wtx1.serialize(), wtx2.serialize()), arrayOf(stubbedCashContractBytes))
+            val cashContract = MockContractAttachment(interpreter.services.cordappProvider.getContractAttachmentID(Cash.PROGRAM_ID)!!, Cash.PROGRAM_ID)
+            val req = TransactionVerificationRequest(wtx3.serialize(), arrayOf(wtx1.serialize(), wtx2.serialize()), arrayOf(cashContract.serialize().bytes))
             val e = assertFailsWith<Exception> { verifyInEnclave(req.serialize().bytes) }
             assertTrue(e.message!!.contains("Required ${Cash.Commands.Move::class.java.canonicalName} command"))
         }

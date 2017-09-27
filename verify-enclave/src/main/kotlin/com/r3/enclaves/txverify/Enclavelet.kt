@@ -3,13 +3,11 @@
 package com.r3.enclaves.txverify
 
 import com.esotericsoftware.minlog.Log
-import net.corda.core.contracts.HashAttachmentConstraint
-import net.corda.core.crypto.sha256
+import net.corda.core.contracts.Attachment
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.WireTransaction
-import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import java.io.File
 
 // This file implements the functionality of the SGX transaction verification enclave.
@@ -35,11 +33,14 @@ fun verifyInEnclave(reqBytes: ByteArray) {
     val req = reqBytes.deserialize<TransactionVerificationRequest>()
     val wtxToVerify = req.wtxToVerify.deserialize()
     val dependencies = req.dependencies.map { it.deserialize() }.associateBy { it.id }
+    val attachments = req.attachments.map { it.deserialize<Attachment>() }
+    val attachmentMap = attachments.associateBy(Attachment::id)
+    val contractAttachmentMap = attachments.mapNotNull { it as? MockContractAttachment }.associateBy { it.contract }
     val ltx = wtxToVerify.toLedgerTransaction(
             resolveIdentity = { null },
-            resolveAttachment = { secureHash -> req.attachments.filter { it.sha256() == secureHash }.map { GeneratedAttachment(it) }.singleOrNull() },
+            resolveAttachment = { attachmentMap[it] },
             resolveStateRef = { dependencies[it.txhash]?.outputs?.get(it.index) },
-            resolveContractAttachment = { (it.constraint as HashAttachmentConstraint).attachmentId }
+            resolveContractAttachment = { contractAttachmentMap[it.contract]?.id }
     )
     ltx.verify()
 }
