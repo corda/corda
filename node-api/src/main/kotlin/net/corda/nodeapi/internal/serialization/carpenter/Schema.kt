@@ -2,9 +2,10 @@ package net.corda.nodeapi.internal.serialization.carpenter
 
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes.*
+import java.util.*
 
 enum class SchemaFlags {
-    NoSimpleFieldAccess, NotCordaSerializable
+    SimpleFieldAccess, CordaSerializable
 }
 
 /**
@@ -20,9 +21,10 @@ abstract class Schema(
         var fields: Map<String, Field>,
         val superclass: Schema? = null,
         val interfaces: List<Class<*>> = emptyList(),
-        updater: (String, Field) -> Unit,
-        var flags : MutableMap<SchemaFlags, Boolean> =  mutableMapOf()) {
+        updater: (String, Field) -> Unit) {
     private fun Map<String, Field>.descriptors() = LinkedHashMap(this.mapValues { it.value.descriptor })
+
+    var flags : EnumMap<SchemaFlags, Boolean> = EnumMap(SchemaFlags::class.java)
 
     init {
         fields.forEach { updater(it.key, it.value) }
@@ -46,19 +48,17 @@ abstract class Schema(
     val asArray: String
         get() = "[L$jvmName;"
 
-    @Suppress("Unused")
-    fun setNoSimpleFieldAccess() {
-        flags.replace (SchemaFlags.NoSimpleFieldAccess, true)
+    fun unsetCordaSerializable() {
+        flags.replace (SchemaFlags.CordaSerializable, false)
     }
+}
 
-    fun setNotCordaSerializable() {
-        flags.replace (SchemaFlags.NotCordaSerializable, true)
-    }
+fun EnumMap<SchemaFlags, Boolean>.cordaSerializable() : Boolean {
+    return this.getOrDefault(SchemaFlags.CordaSerializable, true) == true
+}
 
-    @Suppress("Unused")
-    fun setCordaSerializable() {
-        flags.replace (SchemaFlags.NotCordaSerializable, false)
-    }
+fun EnumMap<SchemaFlags, Boolean>.simpleFieldAccess() : Boolean {
+    return this.getOrDefault(SchemaFlags.SimpleFieldAccess, true) == true
 }
 
 /**

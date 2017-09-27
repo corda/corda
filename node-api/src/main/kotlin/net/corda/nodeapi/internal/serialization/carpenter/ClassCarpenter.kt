@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.serialization.amqp.whitelisted
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
@@ -134,7 +133,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
                 visit(TARGET_VERSION, ACC_PUBLIC + ACC_FINAL + ACC_SUPER + ACC_ENUM, schema.jvmName,
                         "L$jlEnum<L${schema.jvmName};>;", jlEnum, null)
 
-                if (schema.flags.getOrDefault(SchemaFlags.NotCordaSerializable, "false") == true) {
+                if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
                 }
 
@@ -155,7 +154,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
                 visit(TARGET_VERSION, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null,
                         jlObject, interfaces)
 
-                if (schema.flags.getOrDefault(SchemaFlags.NotCordaSerializable, "false") == true) {
+                if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
                 }
                 generateAbstractGetters(schema)
@@ -168,9 +167,9 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             val superName = schema.superclass?.jvmName ?: jlObject
             val interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
 
-            if (SimpleFieldAccess::class.java !in schema.interfaces && (
-                    (schema.flags.getOrDefault(SchemaFlags.NotCordaSerializable, "false") == true) ||
-                            (schema.flags.getOrDefault(SchemaFlags.NoSimpleFieldAccess, "false") == true))) {
+            if (SimpleFieldAccess::class.java !in schema.interfaces
+                    && schema.flags.cordaSerializable()
+                    && schema.flags.simpleFieldAccess()) {
                 interfaces.add(SimpleFieldAccess::class.java.name.jvm)
             }
 
@@ -178,7 +177,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
                 visit(TARGET_VERSION, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName,
                         interfaces.toTypedArray())
 
-                if (schema.flags.getOrDefault(SchemaFlags.NotCordaSerializable, "false") == true) {
+                if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
                 }
                 generateFields(schema)
@@ -411,7 +410,6 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
         require(isJavaName(schema.name.split(".").last())) { "Not a valid Java name: ${schema.name}" }
         schema.fields.forEach {
             require(isJavaName(it.key)) { "Not a valid Java name: $it" }
-            whitelist.whitelisted(it.value.field)
         }
 
         // Now check each interface we've been asked to implement, as the JVM will unfortunately only catch the

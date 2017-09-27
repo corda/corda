@@ -30,11 +30,11 @@ data class FactorySchemaAndDescriptor(val schema: Schema, val typeDescriptor: An
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
-class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
+open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
-    val classCarpenter = ClassCarpenter(cl, whitelist)
+    open val classCarpenter = ClassCarpenter(cl, whitelist)
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
@@ -81,7 +81,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                 }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
-                whitelisted(actualType)
+                whitelist.requireWhitelisted(actualType)
                 EnumSerializer(actualType, actualClass ?: declaredClass, this)
             }
             else -> makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
@@ -242,10 +242,10 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
-                    whitelist.whitelisted(clazz)
+                    whitelist.requireWhitelisted(clazz)
                     SingletonSerializer(clazz, clazz.kotlin.objectInstance!!, this)
                 } else {
-                    whitelist.whitelisted(type)
+                    whitelist.requireWhitelisted(type)
                     ObjectSerializer(type, this)
                 }
             }

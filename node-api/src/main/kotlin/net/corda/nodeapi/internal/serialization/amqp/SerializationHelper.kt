@@ -266,16 +266,14 @@ private fun Throwable.setMessage(newMsg: String) {
     detailMessageField.set(this, newMsg)
 }
 
-fun ClassWhitelist.whitelisted(type: Type) {
-    val clazz = type.asClass()!!
-    if (isNotWhitelisted(clazz)) {
+fun ClassWhitelist.requireWhitelisted(type: Type) {
+    if (!this.isWhitelisted(type.asClass()!!)) {
         throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
     }
 }
 
-// Ignore SimpleFieldAccess as we add it to anything we build in the carpenter.
-fun ClassWhitelist.isNotWhitelisted(clazz: Class<*>) =
-        !(hasListed(clazz) || hasAnnotationInHierarchy(clazz))
+fun ClassWhitelist.isWhitelisted(clazz: Class<*>) = (hasListed(clazz) || hasAnnotationInHierarchy(clazz))
+fun ClassWhitelist.isNotWhitelisted(clazz: Class<*>) = !(this.isWhitelisted(clazz))
 
 // Recursively check the class, interfaces and superclasses for our annotation.
 fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {

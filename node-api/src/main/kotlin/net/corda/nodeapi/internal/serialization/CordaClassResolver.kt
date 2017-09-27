@@ -11,6 +11,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.serialization.amqp.hasAnnotationInHierarchy
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets
@@ -115,13 +116,7 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         return (type.classLoader !is AttachmentsClassLoader)
                 && !KryoSerializable::class.java.isAssignableFrom(type)
                 && !type.isAnnotationPresent(DefaultSerializer::class.java)
-                && (type.isAnnotationPresent(CordaSerializable::class.java) || hasInheritedAnnotation(type))
-    }
-
-    // Recursively check interfaces for our annotation.
-    private fun hasInheritedAnnotation(type: Class<*>): Boolean {
-        return type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasInheritedAnnotation(it) }
-                || (type.superclass != null && hasInheritedAnnotation(type.superclass))
+                && (type.isAnnotationPresent(CordaSerializable::class.java) || whitelist.hasAnnotationInHierarchy(type))
     }
 
     // Need to clear out class names from attachments.
