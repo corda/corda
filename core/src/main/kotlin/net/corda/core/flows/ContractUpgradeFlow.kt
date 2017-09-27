@@ -3,10 +3,6 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ContractUpgradeUtils
-import net.corda.core.internal.uncheckedCast
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 
 /**
  * A flow to be used for authorising and upgrading state objects of an old contract to a new contract.
@@ -17,29 +13,6 @@ import java.security.PublicKey
  * use the new updated state for future transactions.
  */
 object ContractUpgradeFlow {
-
-    @JvmStatic
-    fun verify(tx: LedgerTransaction) {
-        // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
-        verify(tx.inputs.single().state,
-                tx.outputs.single(),
-                tx.commandsOfType<UpgradeCommand>().single())
-    }
-
-    @JvmStatic
-    fun verify(input: TransactionState<ContractState>, output: TransactionState<ContractState>, commandData: Command<UpgradeCommand>) {
-        val command = commandData.value
-        val participantKeys: Set<PublicKey> = input.data.participants.map { it.owningKey }.toSet()
-        val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
-        val upgradedContract: UpgradedContract<ContractState, *> = uncheckedCast(javaClass.classLoader.loadClass(command.upgradedContractClass).newInstance())
-        requireThat {
-            "The signing keys include all participant keys" using keysThatSigned.containsAll(participantKeys)
-            "Inputs state reference the legacy contract" using (input.contract == upgradedContract.legacyContract)
-            "Outputs state reference the upgraded contract" using (output.contract == command.upgradedContractClass)
-            "Output state must be an upgraded version of the input state" using (output.data == upgradedContract.upgrade(input.data))
-        }
-    }
-
     /**
      * Authorise a contract state upgrade.
      *
@@ -53,7 +26,7 @@ object ContractUpgradeFlow {
     class Authorise(
             val stateAndRef: StateAndRef<*>,
             private val upgradedContractClass: Class<out UpgradedContract<*, *>>
-        ) : FlowLogic<Void?>() {
+    ) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
             val upgrade = upgradedContractClass.newInstance()
@@ -88,23 +61,6 @@ object ContractUpgradeFlow {
             originalState: StateAndRef<OldState>,
             newContractClass: Class<out UpgradedContract<OldState, NewState>>
     ) : AbstractStateReplacementFlow.Instigator<OldState, NewState, Class<out UpgradedContract<OldState, NewState>>>(originalState, newContractClass) {
-
-        companion object {
-            fun <OldState : ContractState, NewState : ContractState> assembleBareTx(
-                    stateRef: StateAndRef<OldState>,
-                    upgradedContractClass: Class<out UpgradedContract<OldState, NewState>>,
-                    privacySalt: PrivacySalt
-            ): TransactionBuilder {
-                val contractUpgrade = upgradedContractClass.newInstance()
-                return TransactionBuilder(stateRef.state.notary)
-                        .withItems(
-                                stateRef,
-                                StateAndContract(contractUpgrade.upgrade(stateRef.state.data), upgradedContractClass.name),
-                                Command(UpgradeCommand(upgradedContractClass.name), stateRef.state.data.participants.map { it.owningKey }),
-                                privacySalt
-                        )
-            }
-        }
 
         @Suspendable
         override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
