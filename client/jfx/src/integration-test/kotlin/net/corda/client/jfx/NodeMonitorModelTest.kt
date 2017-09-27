@@ -27,9 +27,9 @@ import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.driver.driver
 import net.corda.testing.node.DriverBasedTest
@@ -71,7 +71,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
         vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
         networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-        monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password, initialiseSerialization = false)
+        monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
         rpc = monitor.proxyObservable.value!!
         notaryParty = notaryHandle.nodeInfo.legalIdentities[1]
 
@@ -79,7 +79,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
         bobNode = bobNodeHandle.nodeInfo
         val monitorBob = NodeMonitorModel()
         stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
-        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password, initialiseSerialization = false)
+        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
         rpcBob = monitorBob.proxyObservable.value!!
         runTest()
     }

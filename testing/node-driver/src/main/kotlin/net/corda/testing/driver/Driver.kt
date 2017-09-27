@@ -221,7 +221,7 @@ sealed class NodeHandle {
         }
     }
 
-    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!, initialiseSerialization = false)
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
 
     /**
      * Stops the referenced node.
@@ -635,7 +635,7 @@ class DriverDSL(
 
     private fun establishRpc(config: FullNodeConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.rpcAddress!!
-        val client = CordaRPCClient(rpcAddress, initialiseSerialization = false)
+        val client = CordaRPCClient(rpcAddress)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 client.start(config.rpcUsers[0].username, config.rpcUsers[0].password)
