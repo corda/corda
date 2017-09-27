@@ -18,6 +18,9 @@ public class ApiScanner implements Plugin<Project> {
     @Override
     public void apply(Project p) {
         p.getLogger().info("Applying API scanner to {}", p.getName());
+
+        ScannerExtension extension = p.getExtensions().create("scanApi", ScannerExtension.class);
+
         p.afterEvaluate(project -> {
             TaskCollection<Jar> jarTasks = project.getTasks()
                 .withType(Jar.class)
@@ -30,6 +33,7 @@ public class ApiScanner implements Plugin<Project> {
             project.getTasks().create("scanApi", ScanApiTask.class, scanTask -> {
                 scanTask.setClasspath(compilationClasspath(project.getConfigurations()));
                 scanTask.setSources(project.files(jarTasks));
+                scanTask.setVerbose(extension.isVerbose());
                 scanTask.dependsOn(jarTasks);
             });
         });

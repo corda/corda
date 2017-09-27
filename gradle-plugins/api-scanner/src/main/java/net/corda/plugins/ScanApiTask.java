@@ -51,7 +51,6 @@ public class ScanApiTask extends DefaultTask {
         this.classpath.setFrom(classpath);
     }
 
-    @Input
     public boolean getVerbose() {
         return verbose;
     }
