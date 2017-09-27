@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ContractUpgradeUtils
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
@@ -30,8 +31,7 @@ object ContractUpgradeFlow {
         val command = commandData.value
         val participantKeys: Set<PublicKey> = input.data.participants.map { it.owningKey }.toSet()
         val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
-        @Suppress("UNCHECKED_CAST")
-        val upgradedContract = javaClass.classLoader.loadClass(command.upgradedContractClass).newInstance() as UpgradedContract<ContractState, *>
+        val upgradedContract: UpgradedContract<ContractState, *> = uncheckedCast(javaClass.classLoader.loadClass(command.upgradedContractClass).newInstance())
         requireThat {
             "The signing keys include all participant keys" using keysThatSigned.containsAll(participantKeys)
             "Inputs state reference the legacy contract" using (input.contract == upgradedContract.legacyContract)

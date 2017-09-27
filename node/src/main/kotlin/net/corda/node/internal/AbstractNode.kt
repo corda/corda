@@ -18,6 +18,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.toX509CertHolder
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -322,11 +323,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             } else {
                 log.warn(deprecatedFlowConstructorMessage(initiatedFlow))
             }
-            @Suppress("UNCHECKED_CAST")
-            { flowSession: FlowSession -> partyCtor.newInstance(flowSession.counterparty) as F }
+            { flowSession: FlowSession -> uncheckedCast(partyCtor.newInstance(flowSession.counterparty)) }
         } else {
-            @Suppress("UNCHECKED_CAST")
-            { flowSession: FlowSession -> flowSessionCtor.newInstance(flowSession) as F }
+            { flowSession: FlowSession -> uncheckedCast(flowSessionCtor.newInstance(flowSession)) }
         }
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass

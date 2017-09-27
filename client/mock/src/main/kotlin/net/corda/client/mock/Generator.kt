@@ -1,6 +1,7 @@
 package net.corda.client.mock
 
 import net.corda.client.mock.Generator.Companion.choice
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.Try
 import java.util.*
 
@@ -115,14 +116,13 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
 
         fun <A> frequency(vararg generators: Pair<Double, Generator<A>>) = frequency(generators.toList())
 
-        fun <A> sequence(generators: List<Generator<A>>) = Generator {
+        fun <A> sequence(generators: List<Generator<A>>) = Generator<List<A>> {
             val result = mutableListOf<A>()
             for (generator in generators) {
                 val element = generator.generate(it)
-                @Suppress("UNCHECKED_CAST")
                 when (element) {
                     is Try.Success -> result.add(element.value)
-                    is Try.Failure -> return@Generator element as Try<List<A>>
+                    is Try.Failure -> return@Generator uncheckedCast(element)
                 }
             }
             Try.Success(result)
@@ -175,7 +175,7 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
         }
 
 
-        fun <A> replicatePoisson(meanSize: Double, generator: Generator<A>, atLeastOne: Boolean = false) = Generator {
+        fun <A> replicatePoisson(meanSize: Double, generator: Generator<A>, atLeastOne: Boolean = false) = Generator<List<A>> {
             val chance = (meanSize - 1) / meanSize
             val result = mutableListOf<A>()
             var finish = false
@@ -191,8 +191,7 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
                     }
                 }
                 if (res is Try.Failure) {
-                    @Suppress("UNCHECKED_CAST")
-                    return@Generator res as Try<List<A>>
+                    return@Generator uncheckedCast(res)
                 }
             }
             Try.Success(result)

@@ -17,6 +17,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
@@ -266,8 +267,7 @@ object JacksonSupport {
                 parser.nextToken()
             }
             try {
-                @Suppress("UNCHECKED_CAST")
-                return SecureHash.parse(parser.text) as T
+                return uncheckedCast(SecureHash.parse(parser.text))
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid hash ${parser.text}: ${e.message}")
             }

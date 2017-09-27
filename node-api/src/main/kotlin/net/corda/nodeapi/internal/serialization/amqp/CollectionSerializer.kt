@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NonEmptySet
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -36,8 +37,7 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
             if(supportedTypes.containsKey(declaredClass)) {
                 // Simple case - it is already known to be a collection.
-                @Suppress("UNCHECKED_CAST")
-                return deriveParametrizedType(declaredType, declaredClass as Class<out Collection<*>>)
+                return deriveParametrizedType(declaredType, uncheckedCast(declaredClass))
             }
             else if (actualClass != null && Collection::class.java.isAssignableFrom(actualClass)) {
                 // Declared class is not collection, but [actualClass] is - represent it accordingly.

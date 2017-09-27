@@ -7,6 +7,7 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
@@ -153,8 +154,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-            @Suppress("UNCHECKED_CAST")
-            val updates = vault.updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
+            val updates: Observable<Vault.Update<T>> = uncheckedCast(vault.updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
             DataFeed(snapshotResults, updates)
         }
     }
@@ -180,8 +180,7 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
 
             val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
             distinctTypes.forEach { type ->
-                @Suppress("UNCHECKED_CAST")
-                val concreteType = Class.forName(type) as Class<ContractState>
+                val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
                 val contractInterfaces = deriveContractInterfaces(concreteType)
                 contractInterfaces.map {
                     val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
@@ -196,9 +195,8 @@ class HibernateVaultQueryImpl(val hibernateConfig: HibernateConfiguration,
         val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
         clazz.interfaces.forEach {
             if (!it.equals(ContractState::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                myInterfaces.add(it as Class<T>)
-                myInterfaces.addAll(deriveContractInterfaces(it))
+                myInterfaces.add(uncheckedCast(it))
+                myInterfaces.addAll(deriveContractInterfaces(uncheckedCast(it)))
             }
         }
         return myInterfaces
