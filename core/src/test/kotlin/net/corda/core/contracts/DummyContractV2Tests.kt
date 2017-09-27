@@ -1,6 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.UpgradeCommand
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.TestDependencyInjectionBase
