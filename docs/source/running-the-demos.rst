@@ -157,7 +157,7 @@ by using the H2 web console:
   You can use the string on the right to connect to the h2 database: just paste it into the `JDBC URL` field and click *Connect*.
   You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL
 
-- The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table (for Raft) or ``BFT_SMART_NOTARY_COMMITTED_STATES`` (for BFT).
+- The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table (for Raft) or ``NODE_BFT_SMART_NOTARY_COMMITTED_STATES`` (for BFT).
   Note that in the Raft case the raw data is not human-readable, but we're only interested in the row count for this demo
 
 Bank Of Corda demo
