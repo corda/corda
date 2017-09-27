@@ -39,8 +39,15 @@ import kotlin.streams.toList
 class CordappLoader private constructor(private val cordappJarPaths: List<URL>) {
     val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
 
-    @VisibleForTesting
-    internal val appClassLoader: ClassLoader = javaClass.classLoader
+    internal val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
+
+    init {
+        if(cordappJarPaths.isEmpty()) {
+            logger.info("No CorDapp paths provided")
+        } else {
+            logger.info("Loading CorDapps from ${cordappJarPaths.joinToString()}")
+        }
+    }
 
     companion object {
         private val logger = loggerFor<CordappLoader>()
@@ -51,19 +58,31 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
          * @param baseDir The directory that this node is running in. Will use this to resolve the plugins directory
          *                  for classpath scanning.
          */
-        fun createDefault(baseDir: Path): CordappLoader {
-            val pluginsDir = getPluginsPath(baseDir)
-            return CordappLoader(if (!pluginsDir.exists()) emptyList<URL>() else pluginsDir.list {
-                it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
-            })
-        }
-
-        fun getPluginsPath(baseDir: Path): Path = baseDir / "plugins"
+        fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getPluginsPath(baseDir)))
 
         /**
-         * Create a dev mode CordappLoader for test environments
+         * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
+         * and plugins directory. This is intended mostly for use by the driver.
+         *
+         * @param baseDir See [createDefault.baseDir]
+         * @param testPackages See [createWithTestPackages.testPackages]
          */
-        fun createWithTestPackages(testPackages: List<String> = CordappLoader.testPackages) = CordappLoader(testPackages.flatMap(this::createScanPackage))
+        @VisibleForTesting
+        @JvmOverloads
+        fun createDefaultWithTestPackages(baseDir: Path, testPackages: List<String> = CordappLoader.testPackages)
+                = CordappLoader(getCordappsInDirectory(getPluginsPath(baseDir)) + testPackages.flatMap(this::createScanPackage))
+
+        /**
+         * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath.
+         * This is intended for use in unit and integration tests.
+         *
+         * @param testPackages List of package names that contain CorDapp classes that can be automatically turned into
+         * CorDapps.
+         */
+        @VisibleForTesting
+        @JvmOverloads
+        fun createWithTestPackages(testPackages: List<String> = CordappLoader.testPackages)
+                = CordappLoader(testPackages.flatMap(this::createScanPackage))
 
         /**
          * Creates a dev mode CordappLoader intended only to be used in test environments
@@ -72,6 +91,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
          */
         @VisibleForTesting
         fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars)
+
+        private fun getPluginsPath(baseDir: Path): Path = baseDir / "plugins"
 
         private fun createScanPackage(scanPackage: String): List<URL> {
             val resource = scanPackage.replace('.', '/')
@@ -113,6 +134,16 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             }
 
             return generatedCordapps[path]!!
+        }
+
+        private fun getCordappsInDirectory(pluginsDir: Path): List<URL> {
+            return if (!pluginsDir.exists()) {
+                emptyList<URL>()
+            } else {
+                pluginsDir.list {
+                    it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
+                }
+            }
         }
 
         /**

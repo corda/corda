@@ -13,6 +13,7 @@ import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.nodeapi.User
@@ -21,6 +22,7 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockServices
+import net.corda.testing.resetTestSerialization
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -37,9 +39,10 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
         override val cordappProvider: CordappProvider = provider
     }
 
-    companion object {
-        private val isolatedJAR = this::class.java.getResource("isolated.jar")!!
-        private val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+    private companion object {
+        val logger = loggerFor<AttachmentLoadingTests>()
+        val isolatedJAR = AttachmentLoadingTests::class.java.getResource("isolated.jar")!!
+        val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
     }
 
     private lateinit var services: Services
@@ -69,11 +72,12 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
 
     @Test
     fun `test that attachments retrieved over the network are not used for code`() {
-        driver(startNodesInProcess = true, initialiseSerialization = false) {
+        driver(initialiseSerialization = false) {
             val bankAName = CordaX500Name("BankA", "Zurich", "CH")
             val bankBName = CordaX500Name("BankB", "Zurich", "CH")
             // Copy the app jar to the first node. The second won't have it.
             val path = (baseDirectory(bankAName.toString()) / "plugins").createDirectories() / "isolated.jar"
+            logger.info("Installing isolated jar to $path")
             isolatedJAR.openStream().buffered().use { input ->
                 Files.newOutputStream(path).buffered().use { output ->
                     input.copyTo(output)

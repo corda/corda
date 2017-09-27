@@ -28,6 +28,8 @@ class DummyRPCFlow : FlowLogic<Unit>() {
 class CordappLoaderTest {
     private companion object {
         val testScanPackages = listOf("net.corda.node.internal.cordapp")
+        val isolatedContractId = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+        val isolatedFlowName = "net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator"
     }
 
     @Test
@@ -48,7 +50,7 @@ class CordappLoaderTest {
         assertThat(actual).hasSize(2)
 
         val actualCordapp = actual.single { it != CordappLoader.coreCordapp }
-        assertThat(actualCordapp.contractClassNames).isEqualTo(listOf("net.corda.finance.contracts.isolated.AnotherDummyContract"))
+        assertThat(actualCordapp.contractClassNames).isEqualTo(listOf(isolatedContractId))
         assertThat(actualCordapp.initiatedFlows).isEmpty()
         assertThat(actualCordapp.rpcFlows).isEmpty()
         assertThat(actualCordapp.schedulableFlows).isEmpty()
@@ -72,5 +74,14 @@ class CordappLoaderTest {
         assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
         assertThat(actualCordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
         assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
+    }
+
+    @Test
+    fun `cordapp classloader can create loaded cordapp classes`() {
+        val isolatedJAR = CordappLoaderTest::class.java.getResource("isolated.jar")!!
+        val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
+
+        loader.appClassLoader.loadClass(isolatedContractId)
+        loader.appClassLoader.loadClass(isolatedFlowName)
     }
 }
