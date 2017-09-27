@@ -3,9 +3,8 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ContractUpgradeUtils
-import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.internal.UpgradeCommand
 import net.corda.core.transactions.TransactionBuilder
-import java.security.PublicKey
 
 /**
  * A flow to be used for authorising and upgrading state objects of an old contract to a new contract.
@@ -16,30 +15,6 @@ import java.security.PublicKey
  * use the new updated state for future transactions.
  */
 object ContractUpgradeFlow {
-
-    @JvmStatic
-    fun verify(tx: LedgerTransaction) {
-        // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
-        verify(tx.inputs.single().state,
-                tx.outputs.single(),
-                tx.commandsOfType<UpgradeCommand>().single())
-    }
-
-    @JvmStatic
-    fun verify(input: TransactionState<ContractState>, output: TransactionState<ContractState>, commandData: Command<UpgradeCommand>) {
-        val command = commandData.value
-        val participantKeys: Set<PublicKey> = input.data.participants.map { it.owningKey }.toSet()
-        val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
-        @Suppress("UNCHECKED_CAST")
-        val upgradedContract = javaClass.classLoader.loadClass(command.upgradedContractClass).newInstance() as UpgradedContract<ContractState, *>
-        requireThat {
-            "The signing keys include all participant keys" using keysThatSigned.containsAll(participantKeys)
-            "Inputs state reference the legacy contract" using (input.contract == upgradedContract.legacyContract)
-            "Outputs state reference the upgraded contract" using (output.contract == command.upgradedContractClass)
-            "Output state must be an upgraded version of the input state" using (output.data == upgradedContract.upgrade(input.data))
-        }
-    }
-
     /**
      * Authorise a contract state upgrade.
      *
