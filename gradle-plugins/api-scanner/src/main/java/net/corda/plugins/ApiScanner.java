@@ -36,6 +36,12 @@ public class ApiScanner implements Plugin<Project> {
                 scanTask.setVerbose(extension.isVerbose());
                 scanTask.setEnabled(extension.isEnabled());
                 scanTask.dependsOn(jarTasks);
+
+                // Declare this ScanApi task to be a dependency of
+                // any GenerateApi tasks across the entire project.
+                project.getRootProject().getTasks()
+                    .withType(GenerateApi.class)
+                    .forEach(generateTask -> generateTask.dependsOn(scanTask));
             });
         });
     }

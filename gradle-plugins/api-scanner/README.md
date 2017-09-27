@@ -13,10 +13,14 @@ This will create a Gradle task called `scanApi` which will analyse the module's 
 it will analyse all of the Jar artifacts that have not been assigned a Maven classifier, on the basis
 that these should be the module's main artifacts.
 
-You can optionally make the scanning more verbose by adding the following configuration:
+The `scanApi` task supports the following configuration options:
 ```gradle
 scanApi {
-    verbose = true
+    // Make the classpath-scanning phase more verbose.
+    verbose = {true|false}
+
+    // Enable / disable the task within this module.
+    enabled = {true|false}
 }
 ```
 
