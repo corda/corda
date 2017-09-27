@@ -60,7 +60,7 @@ fun CordaRPCOps.getCashBalance(currency: Currency): Amount<Currency> {
 }
 
 fun ServiceHub.getCashBalance(currency: Currency): Amount<Currency> {
-    val results = this.vaultQueryService.queryBy<FungibleAsset<*>>(generateCashSumCriteria(currency))
+    val results = this.vaultService.queryBy<FungibleAsset<*>>(generateCashSumCriteria(currency))
     return rowsToAmount(currency, results)
 }
 
@@ -70,7 +70,7 @@ fun CordaRPCOps.getCashBalances(): Map<Currency, Amount<Currency>> {
 }
 
 fun ServiceHub.getCashBalances(): Map<Currency, Amount<Currency>> {
-    val sums = this.vaultQueryService.queryBy<FungibleAsset<*>>(generateCashSumsCriteria()).otherResults
+    val sums = this.vaultService.queryBy<FungibleAsset<*>>(generateCashSumsCriteria()).otherResults
     return rowsToBalances(sums)
 }
 

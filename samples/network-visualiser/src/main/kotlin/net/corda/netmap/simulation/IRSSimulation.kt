@@ -96,7 +96,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val swaps =
                 node1.database.transaction {
-                    node1.services.vaultQueryService.queryBy<InterestRateSwap.State>().states
+                    node1.services.vaultService.queryBy<InterestRateSwap.State>().states
                 }
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.single()
 

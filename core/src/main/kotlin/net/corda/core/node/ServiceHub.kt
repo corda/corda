@@ -64,11 +64,10 @@ interface ServiceHub : ServicesForResolution {
 
     /**
      * The vault service lets you observe, soft lock and add notes to states that involve you or are relevant to your
-     * node in some way.
+     * node in some way. Additionally you may query and track states that correspond to various criteria.
      */
     val vaultService: VaultService
-    /** The vault query service lets you select and track states that correspond to various criteria. */
-    val vaultQueryService: VaultQueryService
+
     /**
      * The key management service is responsible for storing and using private keys to sign things. An
      * implementation of this may, for example, call out to a hardware security module that enforces various
