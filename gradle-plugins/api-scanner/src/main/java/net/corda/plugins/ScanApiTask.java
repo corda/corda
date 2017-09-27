@@ -100,7 +100,7 @@ public class ScanApiTask extends DefaultTask {
                 URLClassLoader appLoader = new URLClassLoader(new URL[]{ toURL(source) }, classpathLoader);
                 PrintWriter writer = new PrintWriter(output, "UTF-8")
             ) {
-                ScanResult result = new FastClasspathScanner("-dir:")
+                ScanResult result = new FastClasspathScanner("!", "-dir:")
                     .overrideClassLoaders(appLoader)
                     .ignoreParentClassLoaders()
                     .ignoreMethodVisibility()
