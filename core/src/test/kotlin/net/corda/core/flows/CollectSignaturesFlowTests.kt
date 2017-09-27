@@ -26,21 +26,19 @@ class CollectSignaturesFlowTests {
     lateinit var mockNet: MockNetwork
     lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
     lateinit var bobNode: StartedNode<MockNetwork.MockNode>
-    lateinit var chalieNode: StartedNode<MockNetwork.MockNode>
+    lateinit var charlieNode: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
-    lateinit var services: MockServices
 
     @Before
     fun setup() {
         setCordappPackages("net.corda.testing.contracts")
-        services = MockServices()
         mockNet = MockNetwork()
         val notaryNode = mockNet.createNotaryNode()
         aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
         bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
-        chalieNode = mockNet.createPartyNode(notaryNode.network.myAddress, CHARLIE.name)
+        charlieNode = mockNet.createPartyNode(notaryNode.network.myAddress, CHARLIE.name)
         mockNet.runNetwork()
-        notary = aliceNode.services.getDefaultNotary()
+        notary = notaryNode.services.getDefaultNotary()
         aliceNode.internals.ensureRegistered()
     }
 
@@ -51,7 +49,7 @@ class CollectSignaturesFlowTests {
     }
 
     private fun registerFlowOnAllNodes(flowClass: KClass<out FlowLogic<*>>) {
-        listOf(aliceNode, bobNode, chalieNode).forEach {
+        listOf(aliceNode, bobNode, charlieNode).forEach {
             it.internals.registerInitiatedFlow(flowClass.java)
         }
     }
@@ -151,7 +149,7 @@ class CollectSignaturesFlowTests {
         }
         registerFlowOnAllNodes(TestFlowTwo.Responder::class)
         val magicNumber = 1337
-        val parties = listOf(aliceNode.info.chooseIdentity(), bConfidentialIdentity.party, chalieNode.info.chooseIdentity())
+        val parties = listOf(aliceNode.info.chooseIdentity(), bConfidentialIdentity.party, charlieNode.info.chooseIdentity())
         val state = DummyContract.MultiOwnerState(magicNumber, parties)
         val flow = aliceNode.services.startFlow(TestFlowTwo.Initiator(state))
         mockNet.runNetwork()
