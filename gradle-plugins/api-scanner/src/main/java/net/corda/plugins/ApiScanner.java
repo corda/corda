@@ -30,7 +30,7 @@ public class ApiScanner implements Plugin<Project> {
             }
 
             project.getLogger().info("Adding scanApi task to {}", project.getName());
-            project.getTasks().create("scanApi", ScanApiTask.class, scanTask -> {
+            project.getTasks().create("scanApi", ScanApi.class, scanTask -> {
                 scanTask.setClasspath(compilationClasspath(project.getConfigurations()));
                 scanTask.setSources(project.files(jarTasks));
                 scanTask.setVerbose(extension.isVerbose());

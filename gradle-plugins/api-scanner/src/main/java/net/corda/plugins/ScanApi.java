@@ -23,7 +23,7 @@ import java.util.stream.StreamSupport;
 import static java.util.stream.Collectors.toList;
 
 @SuppressWarnings("unused")
-public class ScanApiTask extends DefaultTask {
+public class ScanApi extends DefaultTask {
     private static final int CLASS_MASK = Modifier.classModifiers();
     private static final int INTERFACE_MASK = Modifier.interfaceModifiers() & ~Modifier.ABSTRACT;
 
@@ -32,7 +32,7 @@ public class ScanApiTask extends DefaultTask {
     private final File outputDir;
     private boolean verbose;
 
-    public ScanApiTask() {
+    public ScanApi() {
         sources = getProject().files();
         classpath = getProject().files();
         outputDir = new File(getProject().getBuildDir(), "api");
