@@ -126,7 +126,8 @@ public class ScanApiTask extends DefaultTask {
                 }
                 ClassInfo classInfo = allInfo.get(className);
                 if (classInfo.getClassLoaders() == null) {
-                    return;
+                     // Ignore classes that belong to one of our target ClassLoader's parents.
+                     return;
                 }
 
                 writeClass(writer, classInfo, result.classNameToClassRef(className));
