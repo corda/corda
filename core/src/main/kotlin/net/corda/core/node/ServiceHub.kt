@@ -6,6 +6,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -22,10 +23,13 @@ import java.time.Clock
 /**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
  * forms ready for verification.
- *
- * @see ServiceHub
  */
 interface ServicesForResolution {
+    /**
+     * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
+     * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
+     * identities back to the well known identity (i.e. the identity in the network map) of a party.
+     */
     val identityService: IdentityService
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
@@ -44,17 +48,42 @@ interface ServicesForResolution {
 }
 
 /**
- * A service hub simply vends references to the other services a node has. Some of those services may be missing or
- * mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
- * functionality and you don't want to hard-code which types in the interface.
+ * A service hub is the starting point for most operations you can do inside the node. You are provided with one
+ * when a class annotated with [CordaService] is constructed, and you have access to one inside flows. Most RPCs
+ * simply forward to the services found here after some access checking.
  *
- * Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid their internal
- * state from being serialized in checkpoints.
+ * The APIs are organised roughly by category, with a few very important top level APIs available on the ServiceHub
+ * itself. Inside a flow, it's safe to keep a reference to services found here on the stack: checkpointing will do the
+ * right thing (it won't try to serialise the internals of the service).
+ *
+ * In unit test environments, some of those services may be missing or mocked out.
  */
 interface ServiceHub : ServicesForResolution {
+    // NOTE: Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid
+    // their internal state from being serialized in checkpoints.
+
+    /**
+     * The vault service lets you observe, soft lock and add notes to states that involve you or are relevant to your
+     * node in some way.
+     */
     val vaultService: VaultService
+    /** The vault query service lets you select and track states that correspond to various criteria. */
     val vaultQueryService: VaultQueryService
+    /**
+     * The key management service is responsible for storing and using private keys to sign things. An
+     * implementation of this may, for example, call out to a hardware security module that enforces various
+     * auditing and frequency-of-use requirements.
+     *
+     * You don't normally need to use this directly. If you have a [TransactionBuilder] and wish to sign it to
+     * get a [SignedTransaction], look at [signInitialTransaction].
+     */
     val keyManagementService: KeyManagementService
+    /**
+     * The [ContractUpgradeService] is responsible for securely upgrading contract state objects according to
+     * a specified and mutually agreed (amongst participants) contract version.
+     *
+     * @see ContractUpgradeFlow to understand the workflow associated with contract upgrades.
+     */
     val contractUpgradeService: ContractUpgradeService
 
     /**
@@ -64,9 +93,27 @@ interface ServiceHub : ServicesForResolution {
      */
     val validatedTransactions: TransactionStorage
 
+    /**
+     * A network map contains lists of nodes on the network along with information about their identity keys, services
+     * they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
+     * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
+     * with a specified network map service, which it fetches data from and then subscribes to updates of.
+     */
     val networkMapCache: NetworkMapCache
+
+    /**
+     * INTERNAL. DO NOT USE.
+     * @suppress
+     */
     val transactionVerifierService: TransactionVerifierService
+
+    /**
+     * A [Clock] representing the node's current time. This should be used in preference to directly accessing the
+     * clock so the current time can be controlled during unit testing.
+     */
     val clock: Clock
+
+    /** The [NodeInfo] object corresponding to our own entry in the network map. */
     val myInfo: NodeInfo
 
     /**
@@ -268,9 +315,12 @@ interface ServiceHub : ServicesForResolution {
     /**
      * Exposes a JDBC connection (session) object using the currently configured database.
      * Applications can use this to execute arbitrary SQL queries (native, direct, prepared, callable)
-     * against its Node database tables (including custom contract tables defined by extending [Queryable]).
+     * against its Node database tables (including custom contract tables defined by extending
+     * [net.corda.core.schemas.QueryableState]).
+     *
      * When used within a flow, this session automatically forms part of the enclosing flow transaction boundary,
      * and thus queryable data will include everything committed as of the last checkpoint.
+     *
      * @throws IllegalStateException if called outside of a transaction.
      * @return A new [Connection]
      */
