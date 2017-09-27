@@ -64,7 +64,7 @@ Defining plugins
 ----------------
 Your CorDapp may need to define two types of plugins:
 
-* ``CordaPluginRegistry`` subclasses, which define additional serializable classes and vault schemas
+* ``CordaPluginRegistry`` subclasses, which define additional serializable classes
 * ``WebServerPluginRegistry`` subclasses, which define the APIs and static web content served by your CorDapp
 
 The fully-qualified class path of each ``CordaPluginRegistry`` subclass must then be added to the
