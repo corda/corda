@@ -230,7 +230,7 @@ data class LedgerTransaction(
      * @return the possibly empty list of inputs [StateAndRef] matching the clazz restriction.
      */
     fun <T : ContractState> inRefsOfType(clazz: Class<T>): List<StateAndRef<T>> {
-        return inputs.mapNotNull { if (clazz.isInstance(it.state.data)) uncheckedCast(it) else null }
+        return inputs.mapNotNull { if (clazz.isInstance(it.state.data)) uncheckedCast<StateAndRef<ContractState>, StateAndRef<T>>(it) else null }
     }
 
     inline fun <reified T : ContractState> inRefsOfType(): List<StateAndRef<T>> = inRefsOfType(T::class.java)
