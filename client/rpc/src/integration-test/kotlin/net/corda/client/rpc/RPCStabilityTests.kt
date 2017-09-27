@@ -7,6 +7,7 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
@@ -315,9 +316,9 @@ class RPCStabilityTests {
                     clientAddress = SimpleString(myQueue),
                     id = RPCApi.RpcRequestId(random63BitValue()),
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
-                    arguments = listOf(10.millis, 123456)
+                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT).bytes
             )
-            request.writeToClientMessage(SerializationDefaults.RPC_SERVER_CONTEXT, message)
+            request.writeToClientMessage(message)
             producer.send(message)
             session.commit()
 
