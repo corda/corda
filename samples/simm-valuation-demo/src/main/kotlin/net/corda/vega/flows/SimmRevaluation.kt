@@ -20,7 +20,7 @@ object SimmRevaluation {
     class Initiator(private val curStateRef: StateRef, private val valuationDate: LocalDate) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val stateAndRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(VaultQueryCriteria(stateRefs = listOf(curStateRef))).states.single()
+            val stateAndRef = serviceHub.vaultService.queryBy<PortfolioState>(VaultQueryCriteria(stateRefs = listOf(curStateRef))).states.single()
             val curState = stateAndRef.state.data
             if (ourIdentity == curState.participants[0]) {
                 val otherParty = serviceHub.identityService.wellKnownPartyFromAnonymous(curState.participants[1])

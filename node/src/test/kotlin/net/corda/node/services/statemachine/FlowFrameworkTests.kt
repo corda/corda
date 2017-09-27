@@ -1024,9 +1024,9 @@ class FlowFrameworkTests {
         override fun call(): List<StateAndRef<ContractState>> {
             val otherPartySession = initiateFlow(otherParty)
             otherPartySession.send(stx)
-            // hold onto reference here to force checkpoint of vaultQueryService and thus
+            // hold onto reference here to force checkpoint of vaultService and thus
             // prove it is registered as a tokenizableService in the node
-            val vaultQuerySvc = serviceHub.vaultQueryService
+            val vaultQuerySvc = serviceHub.vaultService
             waitForLedgerCommit(stx.id)
             return vaultQuerySvc.queryBy<ContractState>().states
         }
