@@ -67,7 +67,7 @@ different ``SignedTransaction``. For instance in a foreign exchange
 scenario we shouldn't send a ``SignedTransaction`` with only our sell
 side populated as that could be used to take the money without the
 expected return of the other currency. Also, it is best practice for
-flows to receive back the ``DigitalSignature.WithKey`` of other parties
+flows to receive back the ``TransactionSignature`` of other parties
 rather than a full ``SignedTransaction`` objects, because otherwise we
 have to separately check that this is still the same
 ``SignedTransaction`` and not a malicious substitute.
