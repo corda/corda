@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.internalCordaRPCClient
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
@@ -23,8 +24,6 @@ import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -33,6 +32,8 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -217,7 +218,7 @@ sealed class NodeHandle {
         }
     }
 
-    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!, initialiseSerialization = false)
+    fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
 
     /**
      * Stops the referenced node.
@@ -628,7 +629,7 @@ class DriverDSL(
     }
 
     private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
-        val client = CordaRPCClient(nodeAddress, sslConfig, initialiseSerialization = false)
+        val client = internalCordaRPCClient(nodeAddress, sslConfig)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
