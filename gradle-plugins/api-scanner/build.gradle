@@ -10,6 +10,7 @@ repositories {
 dependencies {
     compile gradleApi()
     compile "io.github.lukehutch:fast-classpath-scanner:2.7.0"
+    testCompile "junit:junit:4.12"
 }
 
 publish {

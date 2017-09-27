@@ -51,11 +51,11 @@ public class ScanApiTask extends DefaultTask {
         this.classpath.setFrom(classpath);
     }
 
-    public boolean getVerbose() {
+    public boolean isVerbose() {
         return verbose;
     }
 
-    public void setVerbose(boolean verbose) {
+    void setVerbose(boolean verbose) {
         this.verbose = verbose;
     }
 
@@ -75,7 +75,7 @@ public class ScanApiTask extends DefaultTask {
         }
     }
 
-    private class Scanner implements Closeable {
+    class Scanner implements Closeable {
         private final URLClassLoader classpathLoader;
         private final File outputDir;
 
@@ -99,19 +99,23 @@ public class ScanApiTask extends DefaultTask {
                 URLClassLoader appLoader = new URLClassLoader(new URL[]{ toURL(source) }, classpathLoader);
                 PrintWriter writer = new PrintWriter(output, "UTF-8")
             ) {
-                ScanResult result = new FastClasspathScanner("!", "-dir:")
-                    .overrideClassLoaders(appLoader)
-                    .ignoreParentClassLoaders()
-                    .ignoreMethodVisibility()
-                    .ignoreFieldVisibility()
-                    .enableMethodInfo()
-                    .enableFieldInfo()
-                    .verbose(verbose)
-                    .scan();
-                writeApis(writer, result);
+                scan(writer, appLoader);
             } catch (IOException e) {
                 getLogger().error("API scan has failed", e);
             }
+        }
+
+        void scan(PrintWriter writer, ClassLoader appLoader) {
+            ScanResult result = new FastClasspathScanner("!", "-dir:")
+                .overrideClassLoaders(appLoader)
+                .ignoreParentClassLoaders()
+                .ignoreMethodVisibility()
+                .ignoreFieldVisibility()
+                .enableMethodInfo()
+                .enableFieldInfo()
+                .verbose(verbose)
+                .scan();
+            writeApis(writer, result);
         }
 
         private void writeApis(PrintWriter writer, ScanResult result) {
