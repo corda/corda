@@ -17,11 +17,11 @@ inline fun <T> withTestSerialization(block: () -> T): T {
 }
 
 fun initialiseTestSerialization() {
+    // Stop the CordaRPCClient from trying to setup the defaults as we're about to do it now
+    KryoClientSerializationScheme.isInitialised.set(true)
     // Check that everything is configured for testing with mutable delegating instances.
     try {
-        check(SerializationDefaults.SERIALIZATION_FACTORY is TestSerializationFactory) {
-            "Found non-test serialization configuration: ${SerializationDefaults.SERIALIZATION_FACTORY}"
-        }
+        check(SerializationDefaults.SERIALIZATION_FACTORY is TestSerializationFactory)
     } catch(e: IllegalStateException) {
         SerializationDefaults.SERIALIZATION_FACTORY = TestSerializationFactory()
     }

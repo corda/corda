@@ -8,12 +8,12 @@ import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
 import net.corda.finance.flows.CashPaymentFlow;
-import net.corda.finance.schemas.*;
+import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
 import net.corda.node.services.transactions.ValidatingNotaryService;
-import net.corda.nodeapi.internal.ServiceInfo;
 import net.corda.nodeapi.User;
+import net.corda.nodeapi.internal.ServiceInfo;
 import net.corda.testing.CoreTestUtils;
 import net.corda.testing.node.NodeBasedTest;
 import org.junit.After;
@@ -24,14 +24,15 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
-import static java.util.Collections.*;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static kotlin.test.AssertionsKt.assertEquals;
-import static net.corda.client.rpc.CordaRPCClientConfiguration.getDefault;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.FlowPermissions.startFlowPermission;
-import static net.corda.testing.CoreTestUtils.*;
+import static net.corda.testing.CoreTestUtils.setCordappPackages;
+import static net.corda.testing.CoreTestUtils.unsetCordappPackages;
 import static net.corda.testing.TestConstants.getALICE;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
@@ -56,7 +57,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
         CordaFuture<StartedNode<Node>> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap());
         node = nodeFuture.get();
         node.getInternals().registerCustomSchemas(Collections.singleton(CashSchemaV1.INSTANCE));
-        client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()), getDefault(), false);
+        client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 
     @After
