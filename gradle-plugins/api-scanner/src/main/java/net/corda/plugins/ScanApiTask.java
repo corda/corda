@@ -163,7 +163,7 @@ public class ScanApiTask extends DefaultTask {
         }
 
         private void writeMethods(PrintWriter writer, List<MethodInfo> methods) {
-            methods.sort(new MethodComparator());
+            Collections.sort(methods);
             for (MethodInfo method : methods) {
                 if (method.isPublic() || method.isProtected()) {
                     writer.append("  ").println(method);
@@ -172,7 +172,7 @@ public class ScanApiTask extends DefaultTask {
         }
 
         private void writeFields(PrintWriter output, List<FieldInfo> fields) {
-            fields.sort(new FieldComparator());
+            Collections.sort(fields);
             for (FieldInfo field : fields) {
                 if (field.isPublic() || field.isProtected()) {
                     output.append("  ").println(field);
