@@ -41,7 +41,8 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         // Obtaining the counterparty's signature
-        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, CollectSignaturesFlow.tracker()))
+        val otherSession = initiateFlow(otherParty)
+        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, setOf(otherSession), CollectSignaturesFlow.tracker()))
 
         // Finalising the transaction.
         subFlow(FinalityFlow(fullySignedTx))
@@ -52,6 +53,7 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
 
         import com.google.common.collect.ImmutableList;
         import java.security.PublicKey;
+        import java.util.Collections;
         import java.util.List;
 
         ...
@@ -69,7 +71,8 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
         // Obtaining the counterparty's signature
-        final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(signedTx, CollectSignaturesFlow.Companion.tracker()));
+        final FlowSession otherSession = initiateFlow(otherParty)
+        final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(signedTx, Collections.singleton(otherSession), CollectSignaturesFlow.Companion.tracker()));
 
         // Finalising the transaction.
         subFlow(new FinalityFlow(fullySignedTx));
@@ -98,10 +101,10 @@ In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file i
         ...
 
         @InitiatedBy(IOUFlow::class)
-        class IOUFlowResponder(val otherParty: Party) : FlowLogic<Unit>() {
+        class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                val signTransactionFlow = object : SignTransactionFlow(otherParty, SignTransactionFlow.tracker()) {
+                val signTransactionFlow = object : SignTransactionFlow(otherPartySession, SignTransactionFlow.tracker()) {
                     override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val output = stx.tx.outputs.single().data
                         "This must be an IOU transaction." using (output is IOUState)
@@ -123,9 +126,9 @@ In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file i
         import net.corda.core.contracts.ContractState;
         import net.corda.core.flows.FlowException;
         import net.corda.core.flows.FlowLogic;
+        import net.corda.core.flows.FlowSession;
         import net.corda.core.flows.InitiatedBy;
         import net.corda.core.flows.SignTransactionFlow;
-        import net.corda.core.identity.Party;
         import net.corda.core.transactions.SignedTransaction;
         import net.corda.core.utilities.ProgressTracker;
 
@@ -133,18 +136,18 @@ In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file i
 
         @InitiatedBy(IOUFlow.class)
         public class IOUFlowResponder extends FlowLogic<Void> {
-            private final Party otherParty;
+            private final FlowSession otherPartySession;
 
-            public IOUFlowResponder(Party otherParty) {
-                this.otherParty = otherParty;
+            public IOUFlowResponder(FlowSession otherPartySession) {
+                this.otherPartySession = otherPartySession;
             }
 
             @Suspendable
             @Override
             public Void call() throws FlowException {
-                class signTxFlow extends SignTransactionFlow {
-                    private signTxFlow(Party otherParty, ProgressTracker progressTracker) {
-                        super(otherParty, progressTracker);
+                class SignTxFlow extends SignTransactionFlow {
+                    private signTxFlow(FlowSession otherPartySession, ProgressTracker progressTracker) {
+                        super(otherPartySession, progressTracker);
                     }
 
                     @Override
@@ -159,7 +162,7 @@ In a new ``IOUFlowResponder.java`` file in Java, or within the ``App.kt`` file i
                     }
                 }
 
-                subFlow(new signTxFlow(otherParty, SignTransactionFlow.Companion.tracker()));
+                subFlow(new SignTxFlow(otherPartySession, SignTransactionFlow.Companion.tracker()));
 
                 return null;
             }
