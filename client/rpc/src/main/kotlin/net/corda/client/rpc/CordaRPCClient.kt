@@ -34,8 +34,8 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
         /**
          * Returns the default configuration we recommend you use.
          */
-        @JvmStatic
-        val default = CordaRPCClientConfiguration(connectionMaxRetryInterval = RPCClientConfiguration.default.connectionMaxRetryInterval)
+        @JvmField
+        val DEFAULT = CordaRPCClientConfiguration(connectionMaxRetryInterval = RPCClientConfiguration.default.connectionMaxRetryInterval)
     }
 }
 
@@ -67,16 +67,11 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
  */
 class CordaRPCClient @JvmOverloads constructor(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default,
-        initialiseSerialization: Boolean = true
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
 ) {
     init {
-        // Init serialization.  It's plausible there are multiple clients in a single JVM, so be tolerant of
-        // others having registered first.
         // TODO: allow clients to have serialization factory etc injected and align with RPC protocol version?
-        if (initialiseSerialization) {
-            KryoClientSerializationScheme.initialiseSerialization()
-        }
+        KryoClientSerializationScheme.initialiseSerialization()
     }
 
     private val rpcClient = RPCClient<CordaRPCOps>(

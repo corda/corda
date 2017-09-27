@@ -112,13 +112,13 @@ Here is an extract from the ``NodeInterestRates.Oracle`` class and supporting ty
    class Oracle {
        fun query(queries: List<FixOf>, deadline: Instant): List<Fix>
 
-       fun sign(ftx: FilteredTransaction, txId: SecureHash): DigitalSignature.WithKey
+       fun sign(ftx: FilteredTransaction, txId: SecureHash): TransactionSignature
    }
 
 Because the fix contains a timestamp (the ``forDay`` field), that identifies the version of the data being requested,
 there can be an arbitrary delay between a fix being requested via ``query`` and the signature being requested via ``sign``
 as the Oracle can know which, potentially historical, value it is being asked to sign for.  This is an important
-technique for continously varying data.
+technique for continuously varying data.
 
 The ``query`` method takes a deadline, which is a point in time the requester is willing to wait until for the necessary
 data to be available.  Not every oracle will need this.  This can be useful where data is expected to be available on a

@@ -113,9 +113,8 @@ subclass's constructor can take any number of arguments of any type. The generic
 
 FlowLogic annotations
 ---------------------
-Any flow that you wish to start either directly via RPC or as a subflow must be annotated with the
-``@InitiatingFlow`` annotation. Additionally, if you wish to start the flow via RPC, you must annotate it with the
-``@StartableByRPC`` annotation:
+Any flow from which you want to initiate other flows must be annotated with the ``@InitiatingFlow`` annotation.
+Additionally, if you wish to start the flow via RPC, you must annotate it with the ``@StartableByRPC`` annotation:
 
 .. container:: codeset
 
@@ -139,7 +138,7 @@ Meanwhile, any flow that responds to a message from another flow must be annotat
    .. sourcecode:: kotlin
 
         @InitiatedBy(Initiator::class)
-        class Responder(val otherParty: Party) : FlowLogic<Unit>() { }
+        class Responder(val otherSideSession: FlowSession) : FlowLogic<Unit>() { }
 
    .. sourcecode:: java
 
@@ -270,18 +269,50 @@ Finally, we can use the map to identify nodes providing a specific service (e.g.
 
 Communication between parties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-``FlowLogic`` instances communicate using three functions:
 
-* ``send(otherParty: Party, payload: Any)``
-    * Sends the ``payload`` object to the ``otherParty``
-* ``receive(receiveType: Class<R>, otherParty: Party)``
-    * Receives an object of type ``receiveType`` from the ``otherParty``
-* ``sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any)``
-    * Sends the ``payload`` object to the ``otherParty``, and receives an object of type ``receiveType`` back
+In order to create a communication session between your initiator flow and the receiver flow you must call
+``initiateFlow(party: Party): FlowSession``
+
+``FlowSession`` instances in turn provide three functions:
+
+* ``send(payload: Any)``
+    * Sends the ``payload`` object
+* ``receive(receiveType: Class<R>): R``
+    * Receives an object of type ``receiveType``
+* ``sendAndReceive(receiveType: Class<R>, payload: Any): R``
+    * Sends the ``payload`` object and receives an object of type ``receiveType`` back
+
+
+InitiateFlow
+~~~~~~~~~~~~
+
+``initiateFlow`` creates a communication session with the passed in ``Party``.
+
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART initiateFlow
+        :end-before: DOCEND initiateFlow
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART initiateFlow
+        :end-before: DOCEND initiateFlow
+        :dedent: 12
+
+Note that at the time of call to this function no actual communication is done, this is deferred to the first
+send/receive, at which point the counterparty will either:
+
+1. Ignore the message if they are not registered to respond to messages from this flow.
+2. Start the flow they have registered to respond to this flow.
 
 Send
 ~~~~
-We can send arbitrary data to a counterparty:
+
+Once we have a ``FlowSession`` object we can send arbitrary data to a counterparty:
 
 .. container:: codeset
 
@@ -297,12 +328,7 @@ We can send arbitrary data to a counterparty:
         :end-before: DOCEND 4
         :dedent: 12
 
-If this is the first ``send``, the counterparty will either:
-
-1. Ignore the message if they are not registered to respond to messages from this flow.
-2. Start the flow they have registered to respond to this flow, and run the flow until the first call to ``receive``,
-   at which point they process the message. In other words, we are assuming that the counterparty is registered to
-   respond to this flow, and has a corresponding ``receive`` call.
+The flow on the other side must eventually reach a corresponding ``receive`` call to get this message.
 
 Receive
 ~~~~~~~
@@ -351,6 +377,11 @@ as it likes, and each party can invoke a different response flow:
         :end-before: DOCEND 6
         :dedent: 12
 
+.. warning:: If you initiate several counter flows from the same ``@InitiatingFlow`` flow then on the receiving side you
+   must be prepared to be initiated by any of the corresponding ``initiateFlow()`` calls! A good way of handling this
+   ambiguity is to send as a first message a "role" message to the initiated flow, indicating which part of the
+   initiating flow the rest of the counter-flow should conform to.
+
 SendAndReceive
 ~~~~~~~~~~~~~~
 We can also use a single call to send data to a counterparty and wait to receive data of a specific type back. The
@@ -395,19 +426,91 @@ Our side of the flow must mirror these calls. We could do this as follows:
         :end-before: DOCEND 8
         :dedent: 12
 
+Porting from the old Party-based API
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Before ``FlowSession`` s were introduced the send/receive API looked a bit different. They were functions on
+``FlowLogic`` and took the address ``Party`` as argument. The platform internally maintained a mapping from ``Party`` to
+session, hiding sessions from the user completely.
+
+However we realised that this could introduce subtle bugs and security issues where sends meant for different sessions
+may end up in the same session if the target ``Party`` happens to be the same.
+
+Therefore the session concept is now exposed through ``FlowSession`` which disambiguates which communication sequence a
+message is intended for.
+
+In the old API the first ``send`` or ``receive`` to a ``Party`` was the one kicking off the counterflow. This is now
+explicit in the ``initiateFlow`` function call. To port existing code:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART FlowSession porting
+        :end-before: DOCEND FlowSession porting
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART FlowSession porting
+        :end-before: DOCEND FlowSession porting
+        :dedent: 12
+
+
 Subflows
 --------
+
+Subflows are pieces of reusable flows that may be run by calling ``FlowLogic.subFlow``.
+
+Inlined subflows
+^^^^^^^^^^^^^^^^
+
+Inlined subflows inherit their calling flow's type when initiating a new session with a counterparty. For example say
+we have flow A calling an inlined subflow B, which in turn initiates a session with a party. The FlowLogic type used to
+determine which counterflow should be kicked off will be A, not B. Note that this means that the other side of this
+session must therefore be called explicitly in the kicked off flow as well.
+
+An example of such a flow is ``CollectSignaturesFlow``. It has a counter-flow ``SignTransactionFlow`` that isn't
+annotated with ``InitiatedBy``. This is because both of these flows are inlined, the kick-off relationship will be
+defined by the parent flows calling ``CollectSignaturesFlow`` and ``SignTransactionFlow``.
+
+In the code inlined subflows appear as regular ``FlowLogic`` instances, `without` either of the ``@InitiatingFlow`` or
+``@InitiatedBy`` annotation.
+
+.. note:: Inlined flows aren't versioned, they inherit their parent flow's version.
+
+Initiating subflows
+^^^^^^^^^^^^^^^^^^^
+
+Initiating subflows are ones annotated with the ``@InitiatingFlow`` annotation. When such a flow initiates a session its
+type will be used to determine which ``@InitiatedBy`` flow to kick off on the counterparty.
+
+An example is the ``@InitiatingFlow InitiatorFlow``/``@InitiatedBy ResponderFlow`` flow pair in the ``FlowCookbook``.
+
+.. note:: Initiating flows are versioned separately from their parents.
+
+Core initiating subflows
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Corda-provided initiating subflows are a little different to standard ones as they are versioned together with the
+platform, and their initiated counterflows are registered explicitly, so there is no need for the ``InitiatedBy``
+annotation.
+
+An example is the ``FinalityFlow``/``FinalityHandler`` flow pair.
+
+Built-in subflows
+^^^^^^^^^^^^^^^^^
+
 Corda provides a number of built-in flows that should be used for handling common tasks. The most important are:
 
-* ``CollectSignaturesFlow``, which should be used to collect a transaction's required signatures
-* ``FinalityFlow``, which should be used to notarise and record a transaction
-* ``SendTransactionFlow``, which should be used to send a signed transaction if it needed to be resolved on the other side.
-* ``ReceiveTransactionFlow``, which should be used receive a signed transaction
-* ``ContractUpgradeFlow``, which should be used to change a state's contract
-* ``NotaryChangeFlow``, which should be used to change a state's notary
+* ``CollectSignaturesFlow`` (inlined), which should be used to collect a transaction's required signatures
+* ``FinalityFlow`` (initiating), which should be used to notarise and record a transaction
+* ``SendTransactionFlow`` (inlined), which should be used to send a signed transaction if it needed to be resolved on the other side.
+* ``ReceiveTransactionFlow`` (inlined), which should be used receive a signed transaction
+* ``ContractUpgradeFlow`` (initiating), which should be used to change a state's contract
+* ``NotaryChangeFlow`` (initiating), which should be used to change a state's notary
 
-These flows are designed to be used as building blocks in your own flows. You invoke them by calling
-``FlowLogic.subFlow`` from within your flow's ``call`` method. Let's look at three very common examples.
+Let's look at three very common examples.
 
 FinalityFlow
 ^^^^^^^^^^^^
