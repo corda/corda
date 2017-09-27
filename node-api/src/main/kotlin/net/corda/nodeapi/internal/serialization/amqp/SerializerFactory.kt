@@ -82,6 +82,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                 }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
+                whitelisted(actualType)
                 EnumSerializer(actualType, actualClass ?: declaredClass, this)
             }
             else -> makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
