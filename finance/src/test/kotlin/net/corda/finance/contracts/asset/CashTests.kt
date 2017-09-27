@@ -71,7 +71,7 @@ class CashTests : TestDependencyInjectionBase() {
                     ownedBy = OUR_IDENTITY_1, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
         }
         database.transaction {
-            vaultStatesUnconsumed = miniCorpServices.vaultQueryService.queryBy<Cash.State>().states
+            vaultStatesUnconsumed = miniCorpServices.vaultService.queryBy<Cash.State>().states
         }
         resetTestSerialization()
     }

@@ -96,7 +96,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
-                override val vaultService: VaultService = NodeVaultService(this)
+                override val vaultService: VaultService = NodeVaultService(this, database.hibernateConfig)
                 override val testReference = this@NodeSchedulerServiceTest
                 override val cordappProvider: CordappProviderImpl = CordappProviderImpl(CordappLoader.createWithTestPackages()).start(attachments)
             }
