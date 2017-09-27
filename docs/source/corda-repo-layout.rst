@@ -7,7 +7,6 @@ The Corda repository comprises the following folders:
 * **client** contains libraries for connecting to a node, working with it remotely and binding server-side data to
   JavaFX UI
 * **config** contains logging configurations and the default node configuration file
-* **cordform-common** contains utilities related to building and running nodes
 * **core** containing the core Corda libraries such as crypto functions, types for Corda's building blocks: states,
   contracts, transactions, attachments, etc. and some interfaces for nodes and protocols
 * **docs** contains the Corda docsite in restructured text format as well as the built docs in html. The docs can be

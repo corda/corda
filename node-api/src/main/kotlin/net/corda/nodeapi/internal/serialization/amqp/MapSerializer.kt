@@ -18,7 +18,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
  */
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
-    override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
+    override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")
 
     companion object {
         // NB: Order matters in this map, the most specific classes should be listed at the end
@@ -29,7 +29,11 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
                 NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) },
                 // concrete classes for user convenience
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
-                TreeMap::class.java to { map -> TreeMap(map) }
+                TreeMap::class.java to { map -> TreeMap(map) },
+                EnumMap::class.java to { map ->
+                    @Suppress("UNCHECKED_CAST")
+                    EnumMap(map as Map<EnumJustUsedForCasting, Any>)
+                }
         ))
 
         private fun findConcreteType(clazz: Class<*>): MapCreationFunction {
@@ -37,6 +41,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
 
         fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
+            declaredClass.checkSupportedMapType()
             if(supportedTypes.containsKey(declaredClass)) {
                 // Simple case - it is already known to be a map.
                 @Suppress("UNCHECKED_CAST")
@@ -63,15 +68,15 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 
     private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
 
-    override fun writeClassInfo(output: SerializationOutput) {
+    override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({declaredType.typeName}) {
         if (output.writeTypeNotations(typeNotation)) {
             output.requireSerializer(declaredType.actualTypeArguments[0])
             output.requireSerializer(declaredType.actualTypeArguments[1])
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        obj.javaClass.checkNotUnsupportedHashMap()
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({declaredType.typeName}) {
+        obj.javaClass.checkSupportedMapType()
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             // Write map
@@ -85,18 +90,22 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({declaredType.typeName}) {
         // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
         val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schema, input, it) }
-        return concreteBuilder(entries.toMap())
+        concreteBuilder(entries.toMap())
     }
 
     private fun readEntry(schema: Schema, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) =
             input.readObjectOrNull(entry.key, schema, declaredType.actualTypeArguments[0]) to
                     input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
+
+    // Cannot use * as a bound for EnumMap and EnumSet since * is not an enum.  So, we use a sample enum instead.
+    // We don't actually care about the type, we just need to make the compiler happier.
+    internal enum class EnumJustUsedForCasting { NOT_USED }
 }
 
-internal fun Class<*>.checkNotUnsupportedHashMap() {
+internal fun Class<*>.checkSupportedMapType() {
     if (HashMap::class.java.isAssignableFrom(this) && !LinkedHashMap::class.java.isAssignableFrom(this)) {
         throw IllegalArgumentException(
                 "Map type $this is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")

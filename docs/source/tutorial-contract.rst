@@ -47,8 +47,7 @@ Starting the commercial paper class
 A smart contract is a class that implements the ``Contract`` interface. This can be either implemented directly, as done
 here, or by subclassing an abstract contract such as ``OnLedgerAsset``. The heart of any contract in Corda is the
 ``verify()`` function, which determined whether any given transaction is valid. This example shows how to write a
-``verify()`` function from scratch. A later tutorial will introduce "clauses", which are reusable chunks of verification
-logic, but first it's worth understanding how a contract is built without them.
+``verify()`` function from scratch.
 
 You can see the full Kotlin version of this contract in the code as ``CommercialPaperLegacy``. The code in this
 tutorial is available in both Kotlin and Java. You can quickly switch between them to get a feeling for how
@@ -102,7 +101,7 @@ A state is a class that stores data that is checked by the contract. A commercia
               val faceValue: Amount<Issued<Currency>>,
               val maturityDate: Instant
       ) : OwnableState {
-          override val contract = CommercialPaper()
+          override val contract = "net.corda.finance.contracts.CommercialPaper"
           override val participants = listOf(owner)
 
           fun withoutOwner() = copy(owner = AnonymousParty(NullPublicKey))
@@ -816,12 +815,3 @@ the all future cash states stemming from this one.
 We will also consider marking states that are capable of being encumbrances as such. This will prevent states being used
 as encumbrances inadvertently. For example, the time-lock above would be usable as an encumbrance, but it makes no sense to
 be able to encumber a cash state with another one.
-
-Clauses
--------
-
-It is typical for slightly different contracts to have lots of common logic that can be shared. For example, the
-concept of being issued, being exited and being upgraded are all usually required in any contract. Corda calls these
-frequently needed chunks of logic "clauses", and they can simplify development considerably.
-
-Clauses and how to use them are addressed in the next tutorial, ":doc:`tutorial-contract-clauses`".

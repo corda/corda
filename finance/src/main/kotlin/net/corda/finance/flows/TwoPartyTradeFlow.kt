@@ -1,15 +1,11 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.OwnableState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.withoutIssuer
+import net.corda.confidential.IdentitySyncFlow
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -59,11 +55,10 @@ object TwoPartyTradeFlow {
             val payToIdentity: PartyAndCertificate
     )
 
-    open class Seller(val otherParty: Party,
-                      val notaryNode: NodeInfo,
-                      val assetToSell: StateAndRef<OwnableState>,
-                      val price: Amount<Currency>,
-                      val me: PartyAndCertificate,
+    open class Seller(private val otherSideSession: FlowSession,
+                      private val assetToSell: StateAndRef<OwnableState>,
+                      private val price: Amount<Currency>,
+                      private val myParty: PartyAndCertificate, // TODO Left because in tests it's used to pass anonymous party.
                       override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
@@ -82,37 +77,42 @@ object TwoPartyTradeFlow {
         override fun call(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
-            val hello = SellerTradeInfo(price, me)
+            val hello = SellerTradeInfo(price, myParty)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
-            // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
-            subFlow(SendStateAndRefFlow(otherParty, listOf(assetToSell)))
-            send(otherParty, hello)
+            // SendTransactionFlow allows seller to access our data to resolve the transaction.
+            subFlow(SendStateAndRefFlow(otherSideSession, listOf(assetToSell)))
+            otherSideSession.send(hello)
 
             // Verify and sign the transaction.
             progressTracker.currentStep = VERIFYING_AND_SIGNING
 
             // Sync identities to ensure we know all of the identities involved in the transaction we're about to
             // be asked to sign
-            subFlow(IdentitySyncFlow.Receive(otherParty))
+            subFlow(IdentitySyncFlow.Receive(otherSideSession))
 
             // DOCSTART 5
-            val signTransactionFlow = object : SignTransactionFlow(otherParty, VERIFYING_AND_SIGNING.childProgressTracker()) {
+            val signTransactionFlow = object : SignTransactionFlow(otherSideSession, VERIFYING_AND_SIGNING.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) {
                     // Verify that we know who all the participants in the transaction are
-                    val states: Iterable<ContractState> = (stx.tx.inputs.map { serviceHub.loadState(it).data } + stx.tx.outputs.map { it.data })
+                    val states: Iterable<ContractState> = stx.tx.inputs.map { serviceHub.loadState(it).data } + stx.tx.outputs.map { it.data }
                     states.forEach { state ->
                         state.participants.forEach { anon ->
-                            require(serviceHub.identityService.partyFromAnonymous(anon) != null) { "Transaction state ${state} involves unknown participant ${anon}" }
+                            require(serviceHub.identityService.wellKnownPartyFromAnonymous(anon) != null) {
+                                "Transaction state $state involves unknown participant $anon"
+                            }
                         }
                     }
 
-                    if (stx.tx.outputStates.sumCashBy(me.party).withoutIssuer() != price)
+                    if (stx.tx.outputStates.sumCashBy(myParty.party).withoutIssuer() != price)
                         throw FlowException("Transaction is not sending us the right amount of cash")
                 }
             }
-            return subFlow(signTransactionFlow)
+
+            val txId = subFlow(signTransactionFlow).id
             // DOCEND 5
+
+            return waitForLedgerCommit(txId)
         }
         // DOCEND 4
 
@@ -129,12 +129,13 @@ object TwoPartyTradeFlow {
         // express flow state machines on top of the messaging layer.
     }
 
-    open class Buyer(val otherParty: Party,
-                     val notary: Party,
-                     val acceptablePrice: Amount<Currency>,
-                     val typeToBuy: Class<out OwnableState>,
-                     val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
-        constructor(otherParty: Party, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>): this(otherParty, notary, acceptablePrice, typeToBuy, true)
+    open class Buyer(private val sellerSession: FlowSession,
+                     private val notary: Party,
+                     private val acceptablePrice: Amount<Currency>,
+                     private val typeToBuy: Class<out OwnableState>,
+                     private val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
+        constructor(otherSideSession: FlowSession, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>) :
+                this(otherSideSession, notary, acceptablePrice, typeToBuy, true)
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
 
@@ -161,10 +162,9 @@ object TwoPartyTradeFlow {
 
             // Create the identity we'll be paying to, and send the counterparty proof we own the identity
             val buyerAnonymousIdentity = if (anonymous)
-                serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
+                serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
             else
-                serviceHub.myInfo.legalIdentityAndCert
-
+                ourIdentityAndCert
             // Put together a proposed transaction that performs the trade, and sign it.
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(assetForSale, tradeRequest, buyerAnonymousIdentity)
@@ -173,22 +173,23 @@ object TwoPartyTradeFlow {
             val partSignedTx = serviceHub.signInitialTransaction(ptx, cashSigningPubKeys)
 
             // Sync up confidential identities in the transaction with our counterparty
-            subFlow(IdentitySyncFlow.Send(otherParty, ptx.toWireTransaction()))
+            subFlow(IdentitySyncFlow.Send(sellerSession, ptx.toWireTransaction(serviceHub)))
 
             // Send the signed transaction to the seller, who must then sign it themselves and commit
             // it to the ledger by sending it to the notary.
             progressTracker.currentStep = COLLECTING_SIGNATURES
-            val twiceSignedTx = subFlow(CollectSignaturesFlow(partSignedTx, cashSigningPubKeys, COLLECTING_SIGNATURES.childProgressTracker()))
+            val sellerSignature = subFlow(CollectSignatureFlow(partSignedTx, sellerSession, sellerSession.counterparty.owningKey))
+            val twiceSignedTx = partSignedTx + sellerSignature
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
-            return subFlow(FinalityFlow(twiceSignedTx)).single()
+            return subFlow(FinalityFlow(twiceSignedTx))
         }
 
         @Suspendable
         private fun receiveAndValidateTradeRequest(): Pair<StateAndRef<OwnableState>, SellerTradeInfo> {
-            val assetForSale = subFlow(ReceiveStateAndRefFlow<OwnableState>(otherParty)).single()
-            return assetForSale to receive<SellerTradeInfo>(otherParty).unwrap {
+            val assetForSale = subFlow(ReceiveStateAndRefFlow<OwnableState>(sellerSession)).single()
+            return assetForSale to sellerSession.receive<SellerTradeInfo>().unwrap {
                 progressTracker.currentStep = VERIFYING
                 // What is the seller trying to sell us?
                 val asset = assetForSale.state.data
@@ -196,13 +197,13 @@ object TwoPartyTradeFlow {
 
                 // The asset must either be owned by the well known identity of the counterparty, or we must be able to
                 // prove the owner is a confidential identity of the counterparty.
-                val assetForSaleIdentity = serviceHub.identityService.partyFromAnonymous(asset.owner)
-                require(assetForSaleIdentity == otherParty)
+                val assetForSaleIdentity = serviceHub.identityService.wellKnownPartyFromAnonymous(asset.owner)
+                require(assetForSaleIdentity == sellerSession.counterparty)
 
                 // Register the identity we're about to send payment to. This shouldn't be the same as the asset owner
                 // identity, so that anonymity is enforced.
                 val wellKnownPayToIdentity = serviceHub.identityService.verifyAndRegisterIdentity(it.payToIdentity)
-                require(wellKnownPayToIdentity?.party == otherParty) { "Well known identity to pay to must match counterparty identity" }
+                require(wellKnownPayToIdentity?.party == sellerSession.counterparty) { "Well known identity to pay to must match counterparty identity" }
 
                 if (it.price > acceptablePrice)
                     throw UnacceptablePriceException(it.price)
@@ -218,13 +219,13 @@ object TwoPartyTradeFlow {
             val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = Cash.generateSpend(serviceHub, ptx, tradeRequest.price, tradeRequest.payToIdentity.party)
+            val (tx, cashSigningPubKeys) = Cash.generateSpend(serviceHub, ptx, tradeRequest.price, ourIdentityAndCert, tradeRequest.payToIdentity.party)
 
             // Add inputs/outputs/a command for the movement of the asset.
             tx.addInputState(assetForSale)
 
             val (command, state) = assetForSale.state.data.withNewOwner(buyerAnonymousIdentity.party)
-            tx.addOutputState(state, assetForSale.state.notary)
+            tx.addOutputState(state, assetForSale.state.contract, assetForSale.state.notary)
             tx.addCommand(command, assetForSale.state.data.owner.owningKey)
 
             // We set the transaction's time-window: it may be that none of the contracts need this!

@@ -18,5 +18,5 @@ class APIServerImpl(val rpcOps: CordaRPCOps) : APIServer {
         return Response.ok("started").build()
     }
 
-    override fun info() = rpcOps.nodeIdentity()
+    override fun info() = rpcOps.nodeInfo()
 }

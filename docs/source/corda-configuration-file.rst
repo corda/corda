@@ -49,7 +49,7 @@ NetworkMapService plus Simple Notary configuration file.
 Fields
 ------
 
-The available config fields are listed below. ``basedir`` is available as a substitution value, containing the absolute
+The available config fields are listed below. ``baseDirectory`` is available as a substitution value, containing the absolute
 path to the node's base directory.
 
 :myLegalName: The legal identity of the node acts as a human readable alias to the node's public key and several demos use

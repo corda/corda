@@ -7,7 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.Party
+import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.serialization.CordaSerializable
@@ -38,7 +38,7 @@ import java.util.*
  */
 sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         protected val requests: Set<SecureHash>,
-        protected val otherSide: Party,
+        protected val otherSideSession: FlowSession,
         protected val dataType: DataType) : FlowLogic<FetchDataFlow.Result<T>>() {
 
     @CordaSerializable
@@ -72,7 +72,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         return if (toFetch.isEmpty()) {
             Result(fromDisk, emptyList())
         } else {
-            logger.info("Requesting ${toFetch.size} dependency(s) for verification from ${otherSide.name}")
+            logger.info("Requesting ${toFetch.size} dependency(s) for verification from ${otherSideSession.counterparty.name}")
 
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
             // We can then switch to requesting items in large batches to minimise the latency penalty.
@@ -85,11 +85,11 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             for (hash in toFetch) {
                 // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
                 // The only thing checked is the object type. It is a protocol violation to send results out of order.
-                maybeItems += sendAndReceive<List<W>>(otherSide, Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
+                maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
             }
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
-            logger.info("Fetched ${downloaded.size} elements from ${otherSide.name}")
+            logger.info("Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}")
             maybeWriteToDisk(downloaded)
             Result(fromDisk, downloaded)
         }
@@ -140,7 +140,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
  * attachments are saved to local storage automatically.
  */
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
-                           otherSide: Party) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide, DataType.ATTACHMENT) {
+                           otherSide: FlowSession) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide, DataType.ATTACHMENT) {
 
     override fun load(txid: SecureHash): Attachment? = serviceHub.attachments.openAttachment(txid)
 
@@ -171,7 +171,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
  * results in a [FetchDataFlow.HashNotFound] exception. Note that returned transactions are not inserted into
  * the database, because it's up to the caller to actually verify the transactions are valid.
  */
-class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: Party) :
+class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)

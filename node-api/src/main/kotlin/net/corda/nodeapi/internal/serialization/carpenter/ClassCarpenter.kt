@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
@@ -20,10 +21,20 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
-class CarpenterClassLoader (parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
+class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
         ClassLoader(parentClassLoader) {
     fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
 }
+
+/**
+ * Which version of the java runtime are we constructing objects against
+ */
+private const val TARGET_VERSION = V1_8
+
+private val jlEnum get() = Type.getInternalName(Enum::class.java)
+private val jlString get() = Type.getInternalName(String::class.java)
+private val jlObject get() = Type.getInternalName(Object::class.java)
+private val jlClass get() = Type.getInternalName(Class::class.java)
 
 /**
  * A class carpenter generates JVM bytecodes for a class given a schema and then loads it into a sub-classloader.
@@ -69,7 +80,8 @@ class CarpenterClassLoader (parentClassLoader: ClassLoader = Thread.currentThrea
  *
  * Equals/hashCode methods are not yet supported.
  */
-class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader) {
+class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader,
+                     val whitelist: ClassWhitelist) {
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.
@@ -107,49 +119,66 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             when (it) {
                 is InterfaceSchema -> generateInterface(it)
                 is ClassSchema -> generateClass(it)
+                is EnumSchema -> generateEnum(it)
             }
         }
 
-        assert (schema.name in _loaded)
+        assert(schema.name in _loaded)
 
         return _loaded[schema.name]!!
+    }
+
+    private fun generateEnum(enumSchema: Schema): Class<*> {
+        return generate(enumSchema) { cw, schema ->
+            cw.apply {
+                visit(TARGET_VERSION, ACC_PUBLIC + ACC_FINAL + ACC_SUPER + ACC_ENUM, schema.jvmName,
+                        "L$jlEnum<L${schema.jvmName};>;", jlEnum, null)
+
+                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+                generateFields(schema)
+                generateStaticEnumConstructor(schema)
+                generateEnumConstructor()
+                generateEnumValues(schema)
+                generateEnumValueOf(schema)
+            }.visitEnd()
+        }
     }
 
     private fun generateInterface(interfaceSchema: Schema): Class<*> {
         return generate(interfaceSchema) { cw, schema ->
             val interfaces = schema.interfaces.map { it.name.jvm }.toTypedArray()
 
-            with(cw) {
-                visit(V1_8, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null, "java/lang/Object", interfaces)
+            cw.apply {
+                visit(TARGET_VERSION, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null,
+                        jlObject, interfaces)
                 visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
                 generateAbstractGetters(schema)
-
-                visitEnd()
-            }
+            }.visitEnd()
         }
     }
 
     private fun generateClass(classSchema: Schema): Class<*> {
         return generate(classSchema) { cw, schema ->
-            val superName = schema.superclass?.jvmName ?: "java/lang/Object"
+            val superName = schema.superclass?.jvmName ?: jlObject
             val interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
 
-            if (SimpleFieldAccess::class.java !in schema.interfaces) interfaces.add(SimpleFieldAccess::class.java.name.jvm)
+            if (SimpleFieldAccess::class.java !in schema.interfaces) {
+                interfaces.add(SimpleFieldAccess::class.java.name.jvm)
+            }
 
-            with(cw) {
-                visit(V1_8, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName, interfaces.toTypedArray())
+            cw.apply {
+                visit(TARGET_VERSION, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName,
+                        interfaces.toTypedArray())
                 visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
                 generateFields(schema)
-                generateConstructor(schema)
+                generateClassConstructor(schema)
                 generateGetters(schema)
                 if (schema.superclass == null)
                     generateGetMethod()   // From SimplePropertyAccess
                 generateToString(schema)
-
-                visitEnd()
-            }
+            }.visitEnd()
         }
     }
 
@@ -165,25 +194,26 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     private fun ClassWriter.generateFields(schema: Schema) {
-        schema.fields.forEach { it.value.generateField(this) }
+        schema.generateFields(this)
     }
 
     private fun ClassWriter.generateToString(schema: Schema) {
         val toStringHelper = "com/google/common/base/MoreObjects\$ToStringHelper"
-        with(visitMethod(ACC_PUBLIC, "toString", "()Ljava/lang/String;", null, null)) {
+        with(visitMethod(ACC_PUBLIC, "toString", "()L$jlString;", null, null)) {
             visitCode()
             // com.google.common.base.MoreObjects.toStringHelper("TypeName")
             visitLdcInsn(schema.name.split('.').last())
-            visitMethodInsn(INVOKESTATIC, "com/google/common/base/MoreObjects", "toStringHelper", "(Ljava/lang/String;)L$toStringHelper;", false)
+            visitMethodInsn(INVOKESTATIC, "com/google/common/base/MoreObjects", "toStringHelper",
+                    "(L$jlString;)L$toStringHelper;", false)
             // Call the add() methods.
             for ((name, field) in schema.fieldsIncludingSuperclasses().entries) {
                 visitLdcInsn(name)
                 visitVarInsn(ALOAD, 0)  // this
                 visitFieldInsn(GETFIELD, schema.jvmName, name, schema.descriptorsIncludingSuperclasses()[name])
-                visitMethodInsn(INVOKEVIRTUAL, toStringHelper, "add", "(Ljava/lang/String;${field.type})L$toStringHelper;", false)
+                visitMethodInsn(INVOKEVIRTUAL, toStringHelper, "add", "(L$jlString;${field.type})L$toStringHelper;", false)
             }
             // call toString() on the builder and return.
-            visitMethodInsn(INVOKEVIRTUAL, toStringHelper, "toString", "()Ljava/lang/String;", false)
+            visitMethodInsn(INVOKEVIRTUAL, toStringHelper, "toString", "()L$jlString;", false)
             visitInsn(ARETURN)
             visitMaxs(0, 0)
             visitEnd()
@@ -192,14 +222,14 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
     private fun ClassWriter.generateGetMethod() {
         val ourJvmName = ClassCarpenter::class.java.name.jvm
-        with(visitMethod(ACC_PUBLIC, "get", "(Ljava/lang/String;)Ljava/lang/Object;", null, null)) {
+        with(visitMethod(ACC_PUBLIC, "get", "(L$jlString;)L$jlObject;", null, null)) {
             visitCode()
             visitVarInsn(ALOAD, 0)  // Load 'this'
             visitVarInsn(ALOAD, 1)  // Load the name argument
             // Using this generic helper method is slow, as it relies on reflection. A faster way would be
             // to use a tableswitch opcode, or just push back on the user and ask them to use actual reflection
             // or MethodHandles (super fast reflection) to access the object instead.
-            visitMethodInsn(INVOKESTATIC, ourJvmName, "getField", "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
+            visitMethodInsn(INVOKESTATIC, ourJvmName, "getField", "(L$jlObject;L$jlString;)L$jlObject;", false)
             visitInsn(ARETURN)
             visitMaxs(0, 0)
             visitEnd()
@@ -207,45 +237,113 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     private fun ClassWriter.generateGetters(schema: Schema) {
-        for ((name, type) in schema.fields) {
-            with(visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null)) {
+        @Suppress("UNCHECKED_CAST")
+        for ((name, type) in (schema.fields as Map<String, ClassField>)) {
+            visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null).apply {
                 type.addNullabilityAnnotation(this)
                 visitCode()
                 visitVarInsn(ALOAD, 0)  // Load 'this'
                 visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
                 when (type.field) {
                     java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-                            java.lang.Character.TYPE -> visitInsn(IRETURN)
+                    java.lang.Character.TYPE -> visitInsn(IRETURN)
                     java.lang.Long.TYPE -> visitInsn(LRETURN)
                     java.lang.Double.TYPE -> visitInsn(DRETURN)
                     java.lang.Float.TYPE -> visitInsn(FRETURN)
                     else -> visitInsn(ARETURN)
                 }
                 visitMaxs(0, 0)
-                visitEnd()
-            }
+            }.visitEnd()
         }
     }
 
     private fun ClassWriter.generateAbstractGetters(schema: Schema) {
-        for ((name, field) in schema.fields) {
+        @Suppress("UNCHECKED_CAST")
+        for ((name, field) in (schema.fields as Map<String, ClassField>)) {
             val opcodes = ACC_ABSTRACT + ACC_PUBLIC
-            with(visitMethod(opcodes, "get" + name.capitalize(), "()${field.descriptor}", null, null)) {
-                // abstract method doesn't have any implementation so just end
-                visitEnd()
-            }
+            // abstract method doesn't have any implementation so just end
+            visitMethod(opcodes, "get" + name.capitalize(), "()${field.descriptor}", null, null).visitEnd()
         }
     }
 
-    private fun ClassWriter.generateConstructor(schema: Schema) {
-        with(visitMethod(
+    private fun ClassWriter.generateStaticEnumConstructor(schema: Schema) {
+        visitMethod(ACC_STATIC, "<clinit>", "()V", null, null).apply {
+            visitCode()
+            visitIntInsn(BIPUSH, schema.fields.size)
+            visitTypeInsn(ANEWARRAY, schema.jvmName)
+            visitInsn(DUP)
+
+            var idx = 0
+            schema.fields.forEach {
+                visitInsn(DUP)
+                visitIntInsn(BIPUSH, idx)
+                visitTypeInsn(NEW, schema.jvmName)
+                visitInsn(DUP)
+                visitLdcInsn(it.key)
+                visitIntInsn(BIPUSH, idx++)
+                visitMethodInsn(INVOKESPECIAL, schema.jvmName, "<init>", "(L$jlString;I)V", false)
+                visitInsn(DUP)
+                visitFieldInsn(PUTSTATIC, schema.jvmName, it.key, "L${schema.jvmName};")
+                visitInsn(AASTORE)
+            }
+
+            visitFieldInsn(PUTSTATIC, schema.jvmName, "\$VALUES", schema.asArray)
+            visitInsn(RETURN)
+
+            visitMaxs(0, 0)
+        }.visitEnd()
+    }
+
+    private fun ClassWriter.generateEnumValues(schema: Schema) {
+        visitMethod(ACC_PUBLIC + ACC_STATIC, "values", "()${schema.asArray}", null, null).apply {
+            visitCode()
+            visitFieldInsn(GETSTATIC, schema.jvmName, "\$VALUES", schema.asArray)
+            visitMethodInsn(INVOKEVIRTUAL, schema.asArray, "clone", "()L$jlObject;", false)
+            visitTypeInsn(CHECKCAST, schema.asArray)
+            visitInsn(ARETURN)
+            visitMaxs(0, 0)
+        }.visitEnd()
+    }
+
+    private fun ClassWriter.generateEnumValueOf(schema: Schema) {
+        visitMethod(ACC_PUBLIC + ACC_STATIC, "valueOf", "(L$jlString;)L${schema.jvmName};", null, null).apply {
+            visitCode()
+            visitLdcInsn(Type.getType("L${schema.jvmName};"))
+            visitVarInsn(ALOAD, 0)
+            visitMethodInsn(INVOKESTATIC, jlEnum, "valueOf", "(L$jlClass;L$jlString;)L$jlEnum;", true)
+            visitTypeInsn(CHECKCAST, schema.jvmName)
+            visitInsn(ARETURN)
+            visitMaxs(0, 0)
+        }.visitEnd()
+
+    }
+
+    private fun ClassWriter.generateEnumConstructor() {
+        visitMethod(ACC_PROTECTED, "<init>", "(L$jlString;I)V", "()V", null).apply {
+            visitParameter("\$enum\$name", ACC_SYNTHETIC)
+            visitParameter("\$enum\$ordinal", ACC_SYNTHETIC)
+
+            visitCode()
+
+            visitVarInsn(ALOAD, 0) // this
+            visitVarInsn(ALOAD, 1)
+            visitVarInsn(ILOAD, 2)
+            visitMethodInsn(INVOKESPECIAL, jlEnum, "<init>", "(L$jlString;I)V", false)
+            visitInsn(RETURN)
+
+            visitMaxs(0, 0)
+        }.visitEnd()
+    }
+
+    private fun ClassWriter.generateClassConstructor(schema: Schema) {
+        visitMethod(
                 ACC_PUBLIC,
                 "<init>",
                 "(" + schema.descriptorsIncludingSuperclasses().values.joinToString("") + ")V",
                 null,
-                null))
-        {
+                null).apply {
             var idx = 0
+
             schema.fields.values.forEach { it.visitParameter(this, idx++) }
 
             visitCode()
@@ -255,7 +353,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             visitVarInsn(ALOAD, 0)
             val sc = schema.superclass
             if (sc == null) {
-                visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false)
+                visitMethodInsn(INVOKESPECIAL, jlObject, "<init>", "()V", false)
             } else {
                 var slot = 1
                 superclassFields.values.forEach { slot += load(slot, it) }
@@ -265,7 +363,8 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
             // Assign the fields from parameters.
             var slot = 1 + superclassFields.size
-            for ((name, field) in schema.fields.entries) {
+            @Suppress("UNCHECKED_CAST")
+            for ((name, field) in (schema.fields as Map<String, ClassField>)) {
                 field.nullTest(this, slot)
 
                 visitVarInsn(ALOAD, 0)  // Load 'this' onto the stack
@@ -274,14 +373,13 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             }
             visitInsn(RETURN)
             visitMaxs(0, 0)
-            visitEnd()
-        }
+        }.visitEnd()
     }
 
     private fun MethodVisitor.load(slot: Int, type: Field): Int {
         when (type.field) {
             java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-                    java.lang.Character.TYPE -> visitVarInsn(ILOAD, slot)
+            java.lang.Character.TYPE -> visitVarInsn(ILOAD, slot)
             java.lang.Long.TYPE -> visitVarInsn(LLOAD, slot)
             java.lang.Double.TYPE -> visitVarInsn(DLOAD, slot)
             java.lang.Float.TYPE -> visitVarInsn(FLOAD, slot)
@@ -325,7 +423,8 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     companion object {
-        @JvmStatic @Suppress("UNUSED")
+        @JvmStatic
+        @Suppress("UNUSED")
         fun getField(obj: Any, name: String): Any? = obj.javaClass.getMethod("get" + name.capitalize()).invoke(obj)
     }
 }

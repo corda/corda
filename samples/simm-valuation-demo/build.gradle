@@ -63,9 +63,9 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "O=Notary Service,OU=corda,L=Zurich,C=CH"
+    networkMap "O=Notary Service,L=Zurich,C=CH"
     node {
-        name "O=Notary Service,OU=corda,L=Zurich,C=CH"
+        name "O=Notary Service,L=Zurich,C=CH"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = ["net.corda:finance:$corda_release_version"]
@@ -85,7 +85,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapps = ["net.corda:finance:$corda_release_version"]
     }
     node {
-        name "O=Bank C,L=Tokyo,C=Japan"
+        name "O=Bank C,L=Tokyo,C=JP"
         advertisedServices = []
         p2pPort 10008
         webPort 10009
@@ -96,43 +96,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-task npmInstall(type: Exec) {
-    workingDir 'src/main/web'
-    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-        commandLine 'cmd', '/c', 'npm', 'install'
-    } else {
-        commandLine 'npm', 'install'
-    }
-
-    outputs.upToDateWhen { file('src/main/web/node_modules').exists() }
-}
-
-task cleanWeb() {
-    doLast {
-        delete 'src/main/resources/simmvaluationweb'
-        delete 'src/main/web/dist'
-    }
-}
-
-task buildWeb(type: Exec, dependsOn: [cleanWeb, npmInstall]) {
-    workingDir 'src/main/web'
-    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-        commandLine 'cmd', '/c', 'ng', 'build'
-    } else {
-        commandLine 'node_modules/angular-cli/bin/ng', 'build'
-    }
-}
-
-task installWeb(type: Copy, dependsOn: [buildWeb]) {
-    from 'src/main/web/dist'
-    into 'src/main/resources/simmvaluationweb'
-    ['**/*.js', '**/*.js.map', '**/*.ts'].each {
-        filesMatching(it) {
-            filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.LF, fixlast: false)
-        }
-    }
 }
 
 publishing {

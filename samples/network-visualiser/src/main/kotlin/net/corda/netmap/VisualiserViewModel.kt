@@ -7,13 +7,12 @@ import javafx.scene.layout.StackPane
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
-import net.corda.core.node.ScreenCoordinate
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.getX500Name
-import net.corda.core.utilities.organisation
+import net.corda.finance.utils.ScreenCoordinate
 import net.corda.netmap.simulation.IRSSimulation
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 
 class VisualiserViewModel {
@@ -88,7 +87,7 @@ class VisualiserViewModel {
         try {
             return node.place.coordinate.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
         } catch(e: Exception) {
-            throw Exception("Cannot project ${node.info.legalIdentity}", e)
+            throw Exception("Cannot project ${node.started!!.info.chooseIdentity()}", e)
         }
     }
 
@@ -128,7 +127,7 @@ class VisualiserViewModel {
         }
     }
 
-    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: X500Name = getX500Name(O = "Bank of Bologna", OU = "Corda QA Department", L = "Bologna", C = "IT"),
+    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: CordaX500Name = CordaX500Name(organisation = "Bank of Bologna", locality = "Bologna", country = "IT"),
                        nodeType: NetworkMapVisualiser.NodeType, index: Int): NodeWidget {
         fun emitRadarPulse(initialRadius: Double, targetRadius: Double, duration: Double): Pair<Circle, Animation> {
             val pulse = Circle(initialRadius).apply {

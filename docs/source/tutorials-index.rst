@@ -7,7 +7,6 @@ Tutorials
    hello-world-index
    tut-two-party-index
    tutorial-contract
-   tutorial-contract-clauses
    tutorial-test-dsl
    contract-upgrade
    tutorial-integration-testing

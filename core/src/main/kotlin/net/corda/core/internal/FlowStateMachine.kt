@@ -5,6 +5,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
@@ -13,7 +14,10 @@ import org.slf4j.Logger
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 interface FlowStateMachine<R> {
     @Suspendable
-    fun getFlowContext(otherParty: Party, sessionFlow: FlowLogic<*>): FlowContext
+    fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>): FlowInfo
+
+    @Suspendable
+    fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession
 
     @Suspendable
     fun <T : Any> sendAndReceive(receiveType: Class<T>,
@@ -46,4 +50,5 @@ interface FlowStateMachine<R> {
     val id: StateMachineRunId
     val resultFuture: CordaFuture<R>
     val flowInitiator: FlowInitiator
+    val ourIdentityAndCert: PartyAndCertificate
 }

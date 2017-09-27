@@ -1,12 +1,9 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
+import net.corda.core.flows.*
+import net.corda.core.identity.excludeHostNode
+import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.DealState
@@ -47,25 +44,22 @@ object AutoOfferFlow {
 
         @Suspendable
         override fun call(): SignedTransaction {
-            require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
-            val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
+            require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
+            val notary = serviceHub.networkMapCache.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
             // need to pick which ever party is not us
-            val otherParty = notUs(dealToBeOffered.participants).map { serviceHub.identityService.partyFromAnonymous(it) }.requireNoNulls().single()
+            val otherParty = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, dealToBeOffered.participants)).keys.single()
             progressTracker.currentStep = DEALING
+            val session = initiateFlow(otherParty)
             val instigator = Instigator(
-                    otherParty,
+                    session,
                     AutoOffer(notary, dealToBeOffered),
                     progressTracker.getChildProgressTracker(DEALING)!!
             )
             val stx = subFlow(instigator)
             return stx
         }
-
-        private fun <T : AbstractParty> notUs(parties: List<T>): List<T> {
-            return parties.filter { serviceHub.myInfo.legalIdentity != it }
-        }
     }
 
     @InitiatedBy(Requester::class)
-    class AutoOfferAcceptor(otherParty: Party) : Acceptor(otherParty)
+    class AutoOfferAcceptor(otherSideSession: FlowSession) : Acceptor(otherSideSession)
 }

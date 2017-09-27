@@ -1,12 +1,13 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
+import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
@@ -28,10 +29,11 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_MAP
+import net.corda.testing.chooseIdentity
+import net.corda.testing.chooseIdentityAndCert
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -43,11 +45,11 @@ import java.util.concurrent.LinkedBlockingQueue
 
 abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> {
     lateinit var mockNet: MockNetwork
-    lateinit var mapServiceNode: MockNode
-    lateinit var alice: MockNode
+    lateinit var mapServiceNode: StartedNode<MockNode>
+    lateinit var alice: StartedNode<MockNode>
 
     companion object {
-        val subscriberLegalName = getX500Name(O="Subscriber",L="New York",C="US")
+        val subscriberLegalName = CordaX500Name(organisation ="Subscriber", locality ="New York", country ="US")
     }
 
     @Before
@@ -189,7 +191,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         assertThat(updates.last().wireReg.verified().serial).isEqualTo(serial)
     }
 
-    private fun MockNode.fetchMap(subscribe: Boolean = false, ifChangedSinceVersion: Int? = null): List<Changed> {
+    private fun StartedNode<*>.fetchMap(subscribe: Boolean = false, ifChangedSinceVersion: Int? = null): List<Changed> {
         val request = FetchMapRequest(subscribe, ifChangedSinceVersion, network.myAddress)
         val response = services.networkService.sendRequest<FetchMapResponse>(FETCH_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
@@ -201,8 +203,8 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         REMOVE -> Removed(node)
     }
 
-    private fun MockNode.identityQuery(): NodeInfo? {
-        val request = QueryIdentityRequest(info.legalIdentityAndCert, network.myAddress)
+    private fun StartedNode<*>.identityQuery(): NodeInfo? {
+        val request = QueryIdentityRequest(services.myInfo.chooseIdentityAndCert(), network.myAddress)
         val response = services.networkService.sendRequest<QueryIdentityResponse>(QUERY_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         return response.getOrThrow().node
@@ -210,7 +212,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
 
     private var lastSerial = Long.MIN_VALUE
 
-    private fun MockNode.registration(addOrRemove: AddOrRemove,
+    private fun StartedNode<*>.registration(addOrRemove: AddOrRemove,
                                       serial: Long? = null): CordaFuture<RegistrationResponse> {
         val distinctSerial = if (serial == null) {
             ++lastSerial
@@ -220,13 +222,13 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         }
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val nodeRegistration = NodeRegistration(info, distinctSerial, addOrRemove, expires)
-        val request = RegistrationRequest(nodeRegistration.toWire(services.keyManagementService, services.legalIdentityKey), network.myAddress)
+        val request = RegistrationRequest(nodeRegistration.toWire(services.keyManagementService, info.chooseIdentity().owningKey), network.myAddress)
         val response = services.networkService.sendRequest<RegistrationResponse>(REGISTER_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         return response
     }
 
-    private fun MockNode.subscribe(): Queue<Update> {
+    private fun StartedNode<*>.subscribe(): Queue<Update> {
         val request = SubscribeRequest(true, network.myAddress)
         val updates = LinkedBlockingQueue<Update>()
         services.networkService.addMessageHandler(PUSH_TOPIC) { message, _ ->
@@ -238,37 +240,37 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         return updates
     }
 
-    private fun MockNode.unsubscribe() {
+    private fun StartedNode<*>.unsubscribe() {
         val request = SubscribeRequest(false, network.myAddress)
         val response = services.networkService.sendRequest<SubscribeResponse>(SUBSCRIPTION_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         assertThat(response.getOrThrow().confirmed).isTrue()
     }
 
-    private fun MockNode.ackUpdate(mapVersion: Int) {
+    private fun StartedNode<*>.ackUpdate(mapVersion: Int) {
         val request = UpdateAcknowledge(mapVersion, services.networkService.myAddress)
         services.networkService.send(PUSH_ACK_TOPIC, MessagingService.DEFAULT_SESSION_ID, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
     }
 
-    private fun addNewNodeToNetworkMap(legalName: X500Name): MockNode {
+    private fun addNewNodeToNetworkMap(legalName: CordaX500Name): StartedNode<MockNode> {
         val node = mockNet.createNode(mapServiceNode.network.myAddress, legalName = legalName)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node
     }
 
-    private fun newNodeSeparateFromNetworkMap(legalName: X500Name): MockNode {
+    private fun newNodeSeparateFromNetworkMap(legalName: CordaX500Name): StartedNode<MockNode> {
         return mockNet.createNode(legalName = legalName, nodeFactory = NoNMSNodeFactory)
     }
 
     sealed class Changed {
         data class Added(val node: NodeInfo) : Changed() {
-            constructor(node: MockNode) : this(node.info)
+            constructor(node: StartedNode<*>) : this(node.info)
         }
 
         data class Removed(val node: NodeInfo) : Changed() {
-            constructor(node: MockNode) : this(node.info)
+            constructor(node: StartedNode<*>) : this(node.info)
         }
     }
 
@@ -281,7 +283,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
                             overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNode {
             return object : MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
-                override fun makeNetworkMapService() {}
+                override fun makeNetworkMapService() = NullNetworkMapService
             }
         }
     }

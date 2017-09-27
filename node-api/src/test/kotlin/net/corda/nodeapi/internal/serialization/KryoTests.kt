@@ -25,9 +25,8 @@ import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import java.util.Collections
+import kotlin.test.*
 
 class KryoTests : TestDependencyInjectionBase() {
     private lateinit var factory: SerializationFactory
@@ -111,6 +110,27 @@ class KryoTests : TestDependencyInjectionBase() {
         val serialised = TestSingleton.serialize(factory, context)
         val deserialised = serialised.deserialize(factory, context)
         assertThat(deserialised).isSameAs(TestSingleton)
+    }
+
+    @Test
+    fun `check Kotlin EmptyList can be serialised`() {
+        val deserialisedList: List<Int> = emptyList<Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedList.size)
+        assertEquals<Any>(Collections.emptyList<Int>().javaClass, deserialisedList.javaClass)
+    }
+
+    @Test
+    fun `check Kotlin EmptySet can be serialised`() {
+        val deserialisedSet: Set<Int> = emptySet<Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedSet.size)
+        assertEquals<Any>(Collections.emptySet<Int>().javaClass, deserialisedSet.javaClass)
+    }
+
+    @Test
+    fun `check Kotlin EmptyMap can be serialised`() {
+        val deserialisedMap: Map<Int, Int> = emptyMap<Int, Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedMap.size)
+        assertEquals<Any>(Collections.emptyMap<Int, Int>().javaClass, deserialisedMap.javaClass)
     }
 
     @Test

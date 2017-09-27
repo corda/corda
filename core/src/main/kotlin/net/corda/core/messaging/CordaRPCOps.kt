@@ -2,13 +2,12 @@ package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -21,7 +20,6 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -58,15 +56,14 @@ interface CordaRPCOps : RPCOps {
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
      * to be present.
      */
-    override val protocolVersion: Int get() = nodeIdentity().platformVersion
+    override val protocolVersion: Int get() = nodeInfo().platformVersion
 
-    /**
-     * Returns a list of currently in-progress state machine infos.
-     */
+    /** Returns a list of currently in-progress state machine infos. */
     fun stateMachinesSnapshot(): List<StateMachineInfo>
 
     /**
-     * Returns a data feed of currently in-progress state machine infos and an observable of future state machine adds/removes.
+     * Returns a data feed of currently in-progress state machine infos and an observable of
+     * future state machine adds/removes.
      */
     @RPCReturnsObservables
     fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate>
@@ -97,24 +94,24 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
                                          paging: PageSpecification,
                                          sorting: Sort,
-                                         contractType: Class<out T>): Vault.Page<T>
+                                         contractStateType: Class<out T>): Vault.Page<T>
     // DOCEND VaultQueryByAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
     // Java Helpers
 
     // DOCSTART VaultQueryAPIHelpers
-    fun <T : ContractState> vaultQuery(contractType: Class<out T>): Vault.Page<T> {
-        return vaultQueryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {
+        return vaultQueryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
-    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractType: Class<out T>): Vault.Page<T> {
-        return vaultQueryBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T> {
+        return vaultQueryBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
     }
-    fun <T : ContractState> vaultQueryByWithPagingSpec(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
-        return vaultQueryBy(criteria, paging, Sort(emptySet()), contractType)
+    fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
+        return vaultQueryBy(criteria, paging, Sort(emptySet()), contractStateType)
     }
-    fun <T : ContractState> vaultQueryByWithSorting(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
-        return vaultQueryBy(criteria, PageSpecification(), sorting, contractType)
+    fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
+        return vaultQueryBy(criteria, PageSpecification(), sorting, contractStateType)
     }
     // DOCEND VaultQueryAPIHelpers
 
@@ -135,24 +132,24 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                          paging: PageSpecification,
                                          sorting: Sort,
-                                         contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>>
+                                         contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>>
     // DOCEND VaultTrackByAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
     // Java Helpers
 
     // DOCSTART VaultTrackAPIHelpers
-    fun <T : ContractState> vaultTrack(contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
-    fun <T : ContractState> vaultTrackByCriteria(contractType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
+    fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
     }
-    fun <T : ContractState> vaultTrackByWithPagingSpec(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, paging, Sort(emptySet()), contractType)
+    fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return vaultTrackBy(criteria, paging, Sort(emptySet()), contractStateType)
     }
-    fun <T : ContractState> vaultTrackByWithSorting(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, PageSpecification(), sorting, contractType)
+    fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
     // DOCEND VaultTrackAPIHelpers
 
@@ -173,9 +170,7 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
 
-    /**
-     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings.
-     */
+    /** Returns a snapshot list of existing state machine id - recorded transaction hash mappings. */
     fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping>
 
     /**
@@ -185,19 +180,19 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping>
 
-    /**
-     * Returns all parties currently visible on the network with their advertised services.
-     */
+    /** Returns all parties currently visible on the network with their advertised services. */
     fun networkMapSnapshot(): List<NodeInfo>
 
     /**
-     * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
+     * Returns all parties currently visible on the network with their advertised services and an observable of
+     * future updates to the network.
      */
     @RPCReturnsObservables
     fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
 
     /**
-     * Start the given flow with the given arguments. [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
+     * Start the given flow with the given arguments. [logicType] must be annotated
+     * with [net.corda.core.flows.StartableByRPC].
      */
     @RPCReturnsObservables
     fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
@@ -209,39 +204,32 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
 
-    /**
-     * Returns Node's identity, assuming this will not change while the node is running.
-     */
-    fun nodeIdentity(): NodeInfo
+    /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
+    fun nodeInfo(): NodeInfo
 
-    /*
-     * Add note(s) to an existing Vault transaction
+    /**
+     * Returns network's notary identities, assuming this will not change while the node is running.
+     *
+     * Note that the identities are sorted based on legal name, and the ordering might change once new notaries are introduced.
      */
+    fun notaryIdentities(): List<Party>
+
+    /** Add note(s) to an existing Vault transaction. */
     fun addVaultTransactionNote(txnId: SecureHash, txnNote: String)
 
-    /*
-     * Retrieve existing note(s) for a given Vault transaction
-     */
+    /** Retrieve existing note(s) for a given Vault transaction. */
     fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String>
 
-    /**
-     * Checks whether an attachment with the given hash is stored on the node.
-     */
+    /** Checks whether an attachment with the given hash is stored on the node. */
     fun attachmentExists(id: SecureHash): Boolean
 
-    /**
-     * Download an attachment JAR by ID
-     */
+    /** Download an attachment JAR by ID. */
     fun openAttachment(id: SecureHash): InputStream
 
-    /**
-     * Uploads a jar to the node, returns it's hash.
-     */
+    /** Uploads a jar to the node, returns it's hash. */
     fun uploadAttachment(jar: InputStream): SecureHash
 
-    /**
-     * Returns the node's current time.
-     */
+    /** Returns the node's current time. */
     fun currentNodeTime(): Instant
 
     /**
@@ -261,16 +249,12 @@ interface CordaRPCOps : RPCOps {
      * @param party identity to determine well known identity for.
      * @return well known identity, if found.
      */
-    fun partyFromAnonymous(party: AbstractParty): Party?
-    /**
-     * Returns the [Party] corresponding to the given key, if found.
-     */
+    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party?
+    /** Returns the [Party] corresponding to the given key, if found. */
     fun partyFromKey(key: PublicKey): Party?
 
-    /**
-     * Returns the [Party] with the X.500 principal as it's [Party.name]
-     */
-    fun partyFromX500Name(x500Name: X500Name): Party?
+    /** Returns the [Party] with the X.500 principal as it's [Party.name]. */
+    fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party?
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
@@ -286,15 +270,13 @@ interface CordaRPCOps : RPCOps {
     fun registeredFlows(): List<String>
 
     /**
-     * Returns a node's identity from the network map cache, where known.
+     * Returns a node's info from the network map cache, where known.
      *
      * @return the node info if available.
      */
-    fun nodeIdentityFromParty(party: AbstractParty): NodeInfo?
+    fun nodeInfoFromParty(party: AbstractParty): NodeInfo?
 
-    /**
-     * Clear all network map data from local node cache.
-     */
+    /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
 }
 
@@ -310,15 +292,9 @@ inline fun <reified T : ContractState> CordaRPCOps.vaultTrackBy(criteria: QueryC
     return vaultTrackBy(criteria, paging, sorting, T::class.java)
 }
 
-/**
- * These allow type safe invocations of flows from Kotlin, e.g.:
- *
- * val rpc: CordaRPCOps = (..)
- * rpc.startFlow(::ResolveTransactionsFlow, setOf<SecureHash>(), aliceIdentity)
- *
- * Note that the passed in constructor function is only used for unification of other type parameters and reification of
- * the Class instance of the flow. This could be changed to use the constructor function directly.
- */
+// Note that the passed in constructor function is only used for unification of other type parameters and reification of
+// the Class instance of the flow. This could be changed to use the constructor function directly.
+
 inline fun <T, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: () -> R
@@ -330,6 +306,12 @@ inline fun <T , A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         arg0: A
 ): FlowHandle<T> = startFlowDynamic(R::class.java, arg0)
 
+/**
+ * Extension function for type safe invocation of flows from Kotlin, for example:
+ *
+ * val rpc: CordaRPCOps = (..)
+ * rpc.startFlow(::ResolveTransactionsFlow, setOf<SecureHash>(), aliceIdentity)
+ */
 inline fun <T, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: (A, B) -> R,
@@ -376,7 +358,7 @@ inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startFlow
 ): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
 
 /**
- * Same again, except this time with progress-tracking enabled.
+ * Extension function for type safe invocation of flows from Kotlin, with progress tracking enabled.
  */
 @Suppress("unused")
 inline fun <T, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(

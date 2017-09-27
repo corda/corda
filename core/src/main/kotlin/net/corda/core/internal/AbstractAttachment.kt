@@ -10,6 +10,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.CodeSigner
+import java.security.cert.X509Certificate
 import java.util.jar.JarInputStream
 
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
@@ -23,7 +24,6 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
 
         /** @see <https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File> */
         private val unsignableEntryName = "META-INF/(?:.*[.](?:SF|DSA|RSA)|SIG-.*)".toRegex()
-        private val shredder = ByteArray(1024)
     }
 
     protected val attachmentData: ByteArray by lazy(dataLoader)
@@ -32,6 +32,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
         // Can't start with empty set if we're doing intersections. Logically the null means "all possible signers":
         var attachmentSigners: MutableSet<CodeSigner>? = null
         openAsJAR().use { jar ->
+            val shredder = ByteArray(1024)
             while (true) {
                 val entry = jar.nextJarEntry ?: break
                 if (entry.isDirectory || unsignableEntryName.matches(entry.name)) continue
@@ -44,7 +45,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
             }
         }
         (attachmentSigners ?: emptySet<CodeSigner>()).map {
-            Party(it.signerCertPath.certificates[0].toX509CertHolder())
+            Party(it.signerCertPath.certificates[0] as X509Certificate)
         }.sortedBy { it.name.toString() } // Determinism.
     }
 

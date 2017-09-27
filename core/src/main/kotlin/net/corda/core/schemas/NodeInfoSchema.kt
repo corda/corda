@@ -2,7 +2,6 @@ package net.corda.core.schemas
 
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceEntry
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
@@ -34,14 +33,10 @@ object NodeInfoSchemaV1 : MappedSchema(
             @JoinTable(name = "link_nodeinfo_party",
                     joinColumns = arrayOf(JoinColumn(name="node_info_id")),
                     inverseJoinColumns = arrayOf(JoinColumn(name="party_name")))
-            val legalIdentitiesAndCerts: Set<DBPartyAndCertificate>,
+            val legalIdentitiesAndCerts: List<DBPartyAndCertificate>,
 
             @Column(name = "platform_version")
             val platformVersion: Int,
-
-            @Column(name = "advertised_services")
-            @ElementCollection
-            var advertisedServices: List<DBServiceEntry> = emptyList(),
 
             /**
              * serial is an increasing value which represents the version of [NodeInfo].
@@ -54,12 +49,8 @@ object NodeInfoSchemaV1 : MappedSchema(
         fun toNodeInfo(): NodeInfo {
             return NodeInfo(
                     this.addresses.map { it.toHostAndPort() },
-                    this.legalIdentitiesAndCerts.filter { it.isMain }.single().toLegalIdentityAndCert(), // TODO Workaround, it will be changed after PR with services removal.
-                    this.legalIdentitiesAndCerts.filter { !it.isMain }.map { it.toLegalIdentityAndCert() }.toSet(),
+                    (this.legalIdentitiesAndCerts.filter { it.isMain } + this.legalIdentitiesAndCerts.filter { !it.isMain }).map { it.toLegalIdentityAndCert() },
                     this.platformVersion,
-                    this.advertisedServices.map {
-                        it.serviceEntry?.deserialize<ServiceEntry>() ?: throw IllegalStateException("Service entry shouldn't be null")
-                    },
                     this.serial
             )
         }
@@ -85,12 +76,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             return NetworkHostAndPort(this.pk.host!!, this.pk.port!!)
         }
     }
-
-    @Embeddable // TODO To be removed with services.
-    data class DBServiceEntry(
-            @Column(length = 65535)
-            val serviceEntry: ByteArray? = null
-    )
 
     /**
      *  PartyAndCertificate entity (to be replaced by referencing final Identity Schema).

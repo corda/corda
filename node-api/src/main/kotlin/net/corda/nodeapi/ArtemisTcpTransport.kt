@@ -1,18 +1,17 @@
 package net.corda.nodeapi
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import org.bouncycastle.asn1.x500.X500Name
-import java.nio.file.FileSystems
-import java.nio.file.Path
 
 sealed class ConnectionDirection {
     data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
     data class Outbound(
-            val expectedCommonName: X500Name? = null,
+            val expectedCommonNames: Set<CordaX500Name> = emptySet(), // TODO SNI? Or we need a notion of node's network identity?
             val connectorFactoryClassName: String = NettyConnectorFactory::class.java.name
     ) : ConnectionDirection()
 }
@@ -53,8 +52,8 @@ class ArtemisTcpTransport {
             )
 
             if (config != null && enableSSL) {
-                config.sslKeystore.expectedOnDefaultFileSystem()
-                config.trustStoreFile.expectedOnDefaultFileSystem()
+                config.sslKeystore.requireOnDefaultFileSystem()
+                config.trustStoreFile.requireOnDefaultFileSystem()
                 val tlsOptions = mapOf(
                         // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
                         // and AES encryption
@@ -68,7 +67,7 @@ class ArtemisTcpTransport {
                         TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                         TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
                         TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true,
-                        VERIFY_PEER_LEGAL_NAME to (direction as? ConnectionDirection.Outbound)?.expectedCommonName
+                        VERIFY_PEER_LEGAL_NAME to (direction as? ConnectionDirection.Outbound)?.expectedCommonNames
                 )
                 options.putAll(tlsOptions)
             }
@@ -79,8 +78,4 @@ class ArtemisTcpTransport {
             return TransportConfiguration(factoryName, options)
         }
     }
-}
-
-fun Path.expectedOnDefaultFileSystem() {
-    require(fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
 }

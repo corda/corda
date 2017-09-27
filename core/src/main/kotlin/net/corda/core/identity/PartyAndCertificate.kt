@@ -1,8 +1,6 @@
 package net.corda.core.identity
 
-import net.corda.core.internal.toX509CertHolder
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
+import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.cert.*
 
@@ -11,23 +9,23 @@ import java.security.cert.*
  * [PartyAndCertificate] instances is based on the party only, as certificate and path are data associated with the party,
  * not part of the identifier themselves.
  */
-//TODO Is VerifiableIdentity a better name?
+@CordaSerializable
 class PartyAndCertificate(val certPath: CertPath) {
-    @Transient val certificate: X509CertificateHolder
+    @Transient val certificate: X509Certificate
     init {
         require(certPath.type == "X.509") { "Only X.509 certificates supported" }
         val certs = certPath.certificates
         require(certs.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
-        certificate = certs[0].toX509CertHolder()
+        certificate = certs[0] as X509Certificate
     }
 
     @Transient val party: Party = Party(certificate)
 
     val owningKey: PublicKey get() = party.owningKey
-    val name: X500Name get() = party.name
+    val name: CordaX500Name get() = party.name
 
     operator fun component1(): Party = party
-    operator fun component2(): X509CertificateHolder = certificate
+    operator fun component2(): X509Certificate = certificate
 
     override fun equals(other: Any?): Boolean = other === this || other is PartyAndCertificate && other.party == party
     override fun hashCode(): Int = party.hashCode()

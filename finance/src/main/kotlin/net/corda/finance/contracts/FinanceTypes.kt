@@ -13,7 +13,6 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TokenizableAssetInfo
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.asset.CommodityContract
@@ -416,7 +415,7 @@ interface FixableDealState : DealState {
     /**
      * What oracle service to use for the fixing
      */
-    val oracleType: ServiceType
+    val oracle: Party
 
     /**
      * Generate a fixing command for this deal and fix.

@@ -5,14 +5,17 @@ import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.contracts.Amount;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.FlowHandle;
-import net.corda.core.node.services.ServiceInfo;
 import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
 import net.corda.finance.flows.CashPaymentFlow;
+import net.corda.finance.schemas.*;
 import net.corda.node.internal.Node;
+import net.corda.node.internal.StartedNode;
 import net.corda.node.services.transactions.ValidatingNotaryService;
+import net.corda.nodeapi.internal.ServiceInfo;
 import net.corda.nodeapi.User;
+import net.corda.testing.CoreTestUtils;
 import net.corda.testing.node.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
@@ -22,14 +25,14 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonList;
+import static java.util.Collections.*;
 import static java.util.Objects.requireNonNull;
 import static kotlin.test.AssertionsKt.assertEquals;
 import static net.corda.client.rpc.CordaRPCClientConfiguration.getDefault;
-import static net.corda.finance.CurrencyUtils.DOLLARS;
+import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.FlowPermissions.startFlowPermission;
+import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.getALICE;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
@@ -37,7 +40,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
 
-    private Node node;
+    private StartedNode<Node> node;
     private CordaRPCClient client;
     private RPCClient.RPCConnection<CordaRPCOps> connection = null;
     private CordaRPCOps rpcProxy;
@@ -49,15 +52,18 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     @Before
     public void setUp() throws ExecutionException, InterruptedException {
+        setCordappPackages("net.corda.finance.contracts");
         Set<ServiceInfo> services = new HashSet<>(singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
-        CordaFuture<Node> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap());
+        CordaFuture<StartedNode<Node>> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap());
         node = nodeFuture.get();
-        client = new CordaRPCClient(requireNonNull(node.getConfiguration().getRpcAddress()), null, getDefault(), false);
+        node.getInternals().registerCustomSchemas(Collections.singleton(CashSchemaV1.INSTANCE));
+        client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()), getDefault(), false);
     }
 
     @After
     public void done() throws IOException {
         connection.close();
+        unsetCordappPackages();
     }
 
     @Test
@@ -71,7 +77,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 DOLLARS(123), OpaqueBytes.of("1".getBytes()),
-                node.info.getLegalIdentity());
+                CoreTestUtils.chooseIdentity(node.getInfo()));
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

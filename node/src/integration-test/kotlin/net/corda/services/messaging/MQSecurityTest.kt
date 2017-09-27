@@ -3,19 +3,19 @@ package net.corda.services.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.utilities.toBase58String
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
+import net.corda.core.utilities.toBase58String
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
@@ -24,6 +24,9 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.chooseIdentity
 import net.corda.testing.configureTestSSL
 import net.corda.testing.messaging.SimpleMQClient
 import net.corda.testing.node.NodeBasedTest
@@ -43,7 +46,7 @@ import kotlin.test.assertEquals
  */
 abstract class MQSecurityTest : NodeBasedTest() {
     val rpcUser = User("user1", "pass", permissions = emptySet())
-    lateinit var alice: Node
+    lateinit var alice: StartedNode<Node>
     lateinit var attacker: SimpleMQClient
     private val clients = ArrayList<SimpleMQClient>()
 
@@ -85,7 +88,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     @Test
     fun `create queue for peer which has not been communicated with`() {
         val bob = startNode(BOB.name).getOrThrow()
-        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.legalIdentity.owningKey.toBase58String()}")
+        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toBase58String()}")
     }
 
     @Test
@@ -150,14 +153,14 @@ abstract class MQSecurityTest : NodeBasedTest() {
         return client
     }
 
-    fun loginToRPC(target: NetworkHostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): CordaRPCOps {
-        return CordaRPCClient(target, sslConfiguration, initialiseSerialization = false).start(rpcUser.username, rpcUser.password).proxy
+    fun loginToRPC(target: NetworkHostAndPort, rpcUser: User): CordaRPCOps {
+        return CordaRPCClient(target, initialiseSerialization = false).start(rpcUser.username, rpcUser.password).proxy
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        loginToRPC(alice.configuration.rpcAddress!!, rpcUser)
+        loginToRPC(alice.internals.configuration.rpcAddress!!, rpcUser)
         val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
-        val client = clientTo(alice.configuration.rpcAddress!!)
+        val client = clientTo(alice.internals.configuration.rpcAddress!!)
         client.start(rpcUser.username, rpcUser.password, false)
         return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }
@@ -217,8 +220,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     private fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode(BOB.name).getOrThrow()
-        bob.registerInitiatedFlow(ReceiveFlow::class.java)
-        val bobParty = bob.info.legalIdentity
+        bob.internals.registerInitiatedFlow(ReceiveFlow::class.java)
+        val bobParty = bob.info.chooseIdentity()
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()
         return bobParty
@@ -227,12 +230,12 @@ abstract class MQSecurityTest : NodeBasedTest() {
     @InitiatingFlow
     private class SendFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() = send(otherParty, payload)
+        override fun call() = initiateFlow(otherParty).send(payload)
     }
 
     @InitiatedBy(SendFlow::class)
-    private class ReceiveFlow(val otherParty: Party) : FlowLogic<Any>() {
+    private class ReceiveFlow(val otherPartySession: FlowSession) : FlowLogic<Any>() {
         @Suspendable
-        override fun call() = receive<Any>(otherParty).unwrap { it }
+        override fun call() = otherPartySession.receive<Any>().unwrap { it }
     }
 }

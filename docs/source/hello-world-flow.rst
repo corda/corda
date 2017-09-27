@@ -59,8 +59,6 @@ with the following:
             /** The flow logic is encapsulated within the call() method. */
             @Suspendable
             override fun call() {
-                // We retrieve the required identities from the network map.
-                val me = serviceHub.myInfo.legalIdentity
                 val notary = serviceHub.networkMapCache.getAnyNotary()
 
                 // We create a transaction builder
@@ -124,7 +122,6 @@ with the following:
             @Override
             public Void call() throws FlowException {
                 // We retrieve the required identities from the network map.
-                final Party me = getServiceHub().getMyInfo().getLegalIdentity();
                 final Party notary = getServiceHub().getNetworkMapCache().getAnyNotary(null);
 
                 // We create a transaction builder.

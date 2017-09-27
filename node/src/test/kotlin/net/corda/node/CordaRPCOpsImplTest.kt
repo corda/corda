@@ -9,8 +9,8 @@ import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
 import net.corda.core.messaging.*
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
@@ -23,18 +23,18 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.nodeapi.PermissionException
+import net.corda.client.rpc.PermissionException
 import net.corda.nodeapi.User
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.sequence
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -55,8 +55,9 @@ class CordaRPCOpsImplTest {
     }
 
     lateinit var mockNet: MockNetwork
-    lateinit var aliceNode: MockNode
-    lateinit var notaryNode: MockNode
+    lateinit var aliceNode: StartedNode<MockNode>
+    lateinit var notaryNode: StartedNode<MockNode>
+    lateinit var notary: Party
     lateinit var rpc: CordaRPCOps
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
@@ -64,6 +65,8 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
+        setCordappPackages("net.corda.finance.contracts.asset")
+
         mockNet = MockNetwork()
         val networkMap = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         aliceNode = mockNet.createNode(networkMapAddress = networkMap.network.myAddress)
@@ -75,12 +78,14 @@ class CordaRPCOpsImplTest {
         ))))
 
         mockNet.runNetwork()
-        networkMap.ensureRegistered()
+        networkMap.internals.ensureRegistered()
+        notary = rpc.notaryIdentities().first()
     }
 
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        unsetCordappPackages()
     }
 
     @Test
@@ -99,8 +104,8 @@ class CordaRPCOpsImplTest {
         }
 
         // Tell the monitoring service node to issue some cash
-        val recipient = aliceNode.info.legalIdentity
-        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notaryNode.info.notaryIdentity)
+        val recipient = aliceNode.info.chooseIdentity()
+        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notary)
         mockNet.runNetwork()
 
         var issueSmId: StateMachineRunId? = null
@@ -116,10 +121,10 @@ class CordaRPCOpsImplTest {
             )
         }
 
-        result.returnValue.getOrThrow()
+        val anonymisedRecipient = result.returnValue.getOrThrow().recipient!!
         val expectedState = Cash.State(Amount(quantity,
-                Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
-                recipient)
+                Issued(aliceNode.info.chooseIdentity().ref(ref), GBP)),
+                anonymisedRecipient)
 
         // Query vault via RPC
         val cash = rpc.vaultQueryBy<Cash.State>()
@@ -141,16 +146,15 @@ class CordaRPCOpsImplTest {
             vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
         }
 
-        val anonymous = false
         val result = rpc.startFlow(::CashIssueFlow,
                 100.DOLLARS,
                 OpaqueBytes(ByteArray(1, { 1 })),
-                notaryNode.info.notaryIdentity
+                notary
         )
 
         mockNet.runNetwork()
 
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.info.legalIdentity, anonymous)
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.info.chooseIdentity())
 
         mockNet.runNetwork()
 
@@ -183,8 +187,8 @@ class CordaRPCOpsImplTest {
                         require(stx.tx.inputs.isEmpty())
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
-                        // Only Alice signed
-                        val aliceKey = aliceNode.info.legalIdentity.owningKey
+                        // Only Alice signed, as issuer
+                        val aliceKey = aliceNode.info.chooseIdentity().owningKey
                         require(signaturePubKeys.size <= aliceKey.keys.size)
                         require(aliceKey.isFulfilledBy(signaturePubKeys))
                     },
@@ -194,8 +198,8 @@ class CordaRPCOpsImplTest {
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(aliceNode.info.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
-                        require(notaryNode.info.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(aliceNode.services.keyManagementService.filterMyKeys(signaturePubKeys).toList().isNotEmpty())
+                        require(notary.owningKey.isFulfilledBy(signaturePubKeys))
                     }
             )
         }
@@ -220,7 +224,7 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = emptySet())))
         assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-            rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notaryNode.info.notaryIdentity)
+            rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notary)
         }
     }
 

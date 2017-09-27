@@ -11,9 +11,6 @@ description 'Corda node modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-
     compile {
         // We don't need these because we already include netty-all.
         exclude group: 'io.netty', module: 'netty-transport'
@@ -77,8 +74,9 @@ processSmokeTestResources {
 
 dependencies {
     compile project(':node-api')
+    compile project(":confidential-identities")
     compile project(':client:rpc')
-    compile project(':cordform-common')
+    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 

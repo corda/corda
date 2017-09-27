@@ -2,6 +2,7 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
@@ -9,7 +10,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
 import net.corda.core.utilities.unwrap
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
@@ -29,7 +29,7 @@ class CordappSmokeTest {
     private val factory = NodeProcess.Factory()
 
     private val aliceConfig = NodeConfig(
-            legalName = getX500Name(O = "Alice Corp", L = "Madrid", C = "ES"),
+            legalName = CordaX500Name(organisation = "Alice Corp", locality = "Madrid", country = "ES"),
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             webPort = port.andIncrement,
@@ -48,7 +48,7 @@ class CordappSmokeTest {
 
         factory.create(aliceConfig).use { alice ->
             alice.connect().use { connectionToAlice ->
-                val aliceIdentity = connectionToAlice.proxy.nodeIdentity().legalIdentity
+                val aliceIdentity = connectionToAlice.proxy.nodeInfo().legalIdentitiesAndCerts.first().party
                 val future = connectionToAlice.proxy.startFlow(::GatherContextsFlow, aliceIdentity).returnValue
                 val (sessionInitContext, sessionConfirmContext) = future.getOrThrow()
                 val selfCordappName = selfCordapp.fileName.toString().removeSuffix(".jar")
@@ -66,26 +66,27 @@ class CordappSmokeTest {
 
     @InitiatingFlow
     @StartableByRPC
-    class GatherContextsFlow(private val otherParty: Party) : FlowLogic<Pair<FlowContext, FlowContext>>() {
+    class GatherContextsFlow(private val otherParty: Party) : FlowLogic<Pair<FlowInfo, FlowInfo>>() {
         @Suspendable
-        override fun call(): Pair<FlowContext, FlowContext> {
+        override fun call(): Pair<FlowInfo, FlowInfo> {
             // This receive will kick off SendBackInitiatorFlowContext by sending a session-init with our app name.
             // SendBackInitiatorFlowContext will send back our context using the information from this session-init
-            val sessionInitContext = receive<FlowContext>(otherParty).unwrap { it }
+            val session = initiateFlow(otherParty)
+            val sessionInitContext = session.receive<FlowInfo>().unwrap { it }
             // This context is taken from the session-confirm message
-            val sessionConfirmContext = getFlowContext(otherParty)
+            val sessionConfirmContext = session.getCounterpartyFlowInfo()
             return Pair(sessionInitContext, sessionConfirmContext)
         }
     }
 
     @Suppress("unused")
     @InitiatedBy(GatherContextsFlow::class)
-    class SendBackInitiatorFlowContext(private val otherParty: Party) : FlowLogic<Unit>() {
+    class SendBackInitiatorFlowContext(private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             // An initiated flow calling getFlowContext on its initiator will get the context from the session-init
-            val sessionInitContext = getFlowContext(otherParty)
-            send(otherParty, sessionInitContext)
+            val sessionInitContext = otherPartySession.getCounterpartyFlowInfo()
+            otherPartySession.send(sessionInitContext)
         }
     }
 }

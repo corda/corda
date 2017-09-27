@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import org.junit.Test
 import java.beans.Introspector
 import java.lang.reflect.Field
@@ -15,12 +16,12 @@ class ClassCarpenterTest {
         val b: Int
     }
 
-    val cc = ClassCarpenter()
+    private val cc = ClassCarpenter(whitelist = AllWhitelist)
 
     // We have to ignore synthetic fields even though ClassCarpenter doesn't create any because the JaCoCo
     // coverage framework auto-magically injects one method and one field into every class loaded into the JVM.
-    val Class<*>.nonSyntheticFields: List<Field> get() = declaredFields.filterNot { it.isSynthetic }
-    val Class<*>.nonSyntheticMethods: List<Method> get() = declaredMethods.filterNot { it.isSynthetic }
+    private val Class<*>.nonSyntheticFields: List<Field> get() = declaredFields.filterNot { it.isSynthetic }
+    private val Class<*>.nonSyntheticMethods: List<Method> get() = declaredMethods.filterNot { it.isSynthetic }
 
     @Test
     fun empty() {
@@ -266,7 +267,7 @@ class ClassCarpenterTest {
                 mapOf("a" to NonNullableField(Int::class.java)))
 
         val clazz = cc.build(schema)
-        val a : Int? = null
+        val a: Int? = null
         clazz.constructors[0].newInstance(a)
     }
 
@@ -288,10 +289,10 @@ class ClassCarpenterTest {
                 mapOf("a" to NullableField(Integer::class.java)))
 
         val clazz = cc.build(schema)
-        val a1 : Int? = null
+        val a1: Int? = null
         clazz.constructors[0].newInstance(a1)
 
-        val a2 : Int? = 10
+        val a2: Int? = 10
         clazz.constructors[0].newInstance(a2)
     }
 
@@ -304,7 +305,7 @@ class ClassCarpenterTest {
 
         val clazz = cc.build(schema)
 
-        val a : Int? = 10
+        val a: Int? = 10
         clazz.constructors[0].newInstance(a)
     }
 
@@ -317,7 +318,7 @@ class ClassCarpenterTest {
 
         val clazz = cc.build(schema)
 
-        val a : Int? = null
+        val a: Int? = null
         clazz.constructors[0].newInstance(a)
     }
 
@@ -350,7 +351,7 @@ class ClassCarpenterTest {
 
         val clazz = cc.build(schema)
 
-        val a : IntArray? = null
+        val a: IntArray? = null
         clazz.constructors[0].newInstance(a)
     }
 
@@ -472,14 +473,14 @@ class ClassCarpenterTest {
 
         val clazz = cc.build(schema)
 
-        assertEquals (2, clazz.declaredFields.size)
-        assertEquals (1, clazz.getDeclaredField("a").annotations.size)
+        assertEquals(2, clazz.declaredFields.size)
+        assertEquals(1, clazz.getDeclaredField("a").annotations.size)
         assertEquals(Nullable::class.java, clazz.getDeclaredField("a").annotations[0].annotationClass.java)
-        assertEquals (1, clazz.getDeclaredField("b").annotations.size)
+        assertEquals(1, clazz.getDeclaredField("b").annotations.size)
         assertEquals(Nonnull::class.java, clazz.getDeclaredField("b").annotations[0].annotationClass.java)
-        assertEquals (1, clazz.getMethod("getA").annotations.size)
+        assertEquals(1, clazz.getMethod("getA").annotations.size)
         assertEquals(Nullable::class.java, clazz.getMethod("getA").annotations[0].annotationClass.java)
-        assertEquals (1, clazz.getMethod("getB").annotations.size)
+        assertEquals(1, clazz.getMethod("getB").annotations.size)
         assertEquals(Nonnull::class.java, clazz.getMethod("getB").annotations[0].annotationClass.java)
     }
 

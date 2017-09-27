@@ -3,13 +3,12 @@ package net.corda.node.internal
 import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
@@ -26,7 +25,6 @@ import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -56,9 +54,9 @@ class CordaRPCOpsImpl(
     override fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
-                                                  contractType: Class<out T>): Vault.Page<T> {
+                                                  contractStateType: Class<out T>): Vault.Page<T> {
         return database.transaction {
-            services.vaultQueryService._queryBy(criteria, paging, sorting, contractType)
+            services.vaultQueryService._queryBy(criteria, paging, sorting, contractStateType)
         }
     }
 
@@ -66,9 +64,9 @@ class CordaRPCOpsImpl(
     override fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
-                                                  contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+                                                  contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return database.transaction {
-            services.vaultQueryService._trackBy(criteria, paging, sorting, contractType)
+            services.vaultQueryService._trackBy(criteria, paging, sorting, contractStateType)
         }
     }
 
@@ -112,8 +110,12 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun nodeIdentity(): NodeInfo {
+    override fun nodeInfo(): NodeInfo {
         return services.myInfo
+    }
+
+    override fun notaryIdentities(): List<Party> {
+        return services.networkMapCache.notaryIdentities
     }
 
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
@@ -147,6 +149,7 @@ class CordaRPCOpsImpl(
         val rpcContext = getRpcContext()
         rpcContext.requirePermission(startFlowPermission(logicType))
         val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
+        // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
         return services.invokeFlowAsync(logicType, currentUser, *args)
     }
 
@@ -179,9 +182,9 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         return database.transaction {
-            services.identityService.partyFromAnonymous(party)
+            services.identityService.wellKnownPartyFromAnonymous(party)
         }
     }
 
@@ -191,9 +194,9 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun partyFromX500Name(x500Name: X500Name): Party? {
+    override fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party? {
         return database.transaction {
-            services.identityService.partyFromX500Name(x500Name)
+            services.identityService.wellKnownPartyFromX500Name(x500Name)
         }
     }
 
@@ -203,7 +206,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? {
+    override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
         return database.transaction {
             services.networkMapCache.getNodeByLegalIdentity(party)
         }

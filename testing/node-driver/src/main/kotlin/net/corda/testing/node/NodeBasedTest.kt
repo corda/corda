@@ -1,13 +1,15 @@
 package net.corda.testing.node
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.*
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf
@@ -23,11 +25,9 @@ import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import org.apache.logging.log4j.Level
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
-import java.util.*
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
@@ -37,14 +37,18 @@ import kotlin.concurrent.thread
  */
 // TODO Some of the logic here duplicates what's in the driver
 abstract class NodeBasedTest : TestDependencyInjectionBase() {
+    companion object {
+        private val WHITESPACE = "\\s++".toRegex()
+    }
+
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    private val nodes = ArrayList<Node>()
-    private var _networkMapNode: Node? = null
+    private val nodes = mutableListOf<StartedNode<Node>>()
+    private var _networkMapNode: StartedNode<Node>? = null
 
-    val networkMapNode: Node get() = _networkMapNode ?: startNetworkMapNode()
+    val networkMapNode: StartedNode<Node> get() = _networkMapNode ?: startNetworkMapNode()
 
     init {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
@@ -57,12 +61,12 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
     @After
     fun stopAllNodes() {
         val shutdownExecutor = Executors.newScheduledThreadPool(nodes.size)
-        nodes.map { shutdownExecutor.fork(it::stop) }.transpose().getOrThrow()
+        nodes.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
         // Wait until ports are released
         val portNotBoundChecks = nodes.flatMap {
             listOf(
-                    it.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
-                    it.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
+                    it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
+                    it.internals.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
             )
         }.filterNotNull()
         nodes.clear()
@@ -81,38 +85,38 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
      * You can use this method to start the network map node in a more customised manner. Otherwise it
      * will automatically be started with the default parameters.
      */
-    fun startNetworkMapNode(legalName: X500Name = DUMMY_MAP.name,
+    fun startNetworkMapNode(legalName: CordaX500Name = DUMMY_MAP.name,
                             platformVersion: Int = 1,
                             advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
-                            configOverrides: Map<String, Any> = emptyMap()): Node {
-        check(_networkMapNode == null || _networkMapNode!!.info.legalIdentity.name == legalName)
+                            configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
+        check(_networkMapNode == null || _networkMapNode!!.info.legalIdentitiesAndCerts.first().name == legalName)
         return startNodeInternal(legalName, platformVersion, advertisedServices + ServiceInfo(NetworkMapService.type), rpcUsers, configOverrides).apply {
             _networkMapNode = this
         }
     }
 
     @JvmOverloads
-    fun startNode(legalName: X500Name,
+    fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = 1,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap(),
                   noNetworkMap: Boolean = false,
-                  waitForConnection: Boolean = true): CordaFuture<Node> {
+                  waitForConnection: Boolean = true): CordaFuture<StartedNode<Node>> {
         val networkMapConf = if (noNetworkMap) {
             // Nonexistent network map service address.
             mapOf(
                     "networkMapService" to mapOf(
                             "address" to "localhost:10000",
-                            "legalName" to networkMapNode.info.legalIdentity.name.toString()
+                            "legalName" to networkMapNode.info.legalIdentitiesAndCerts.first().name.toString()
                     )
             )
         } else {
             mapOf(
                     "networkMapService" to mapOf(
-                            "address" to networkMapNode.configuration.p2pAddress.toString(),
-                            "legalName" to networkMapNode.info.legalIdentity.name.toString()
+                            "address" to networkMapNode.internals.configuration.p2pAddress.toString(),
+                            "legalName" to networkMapNode.info.legalIdentitiesAndCerts.first().name.toString()
                     )
             )
         }
@@ -123,29 +127,28 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 rpcUsers,
                 networkMapConf + configOverrides,
                 noNetworkMap)
-        return if (waitForConnection) node.nodeReadyFuture.map { node } else doneFuture(node)
+        return if (waitForConnection) node.internals.nodeReadyFuture.map { node } else doneFuture(node)
     }
 
-    fun startNotaryCluster(notaryName: X500Name,
+    fun startNotaryCluster(notaryName: CordaX500Name,
                            clusterSize: Int,
-                           serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<Node>> {
+                           serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<StartedNode<Node>>> {
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { baseDirectory(getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country)) },
-                serviceType.id,
+                (0 until clusterSize).map { baseDirectory(notaryName.copy(organisation = "${notaryName.organisation}-$it")) },
                 notaryName)
 
         val serviceInfo = ServiceInfo(serviceType, notaryName)
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                getX500Name(O = "${notaryName.organisation}-0", L = notaryName.locality, C = notaryName.country),
+                CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
                         "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    getX500Name(O = "${notaryName.organisation}-$it", L = notaryName.locality, C = notaryName.country),
+                    CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
@@ -158,14 +161,14 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         }
     }
 
-    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.organisation.replace(WHITESPACE, "")
+    protected fun baseDirectory(legalName: CordaX500Name) = tempFolder.root.toPath() / legalName.organisation.replace(WHITESPACE, "")
 
-    private fun startNodeInternal(legalName: X500Name,
+    private fun startNodeInternal(legalName: CordaX500Name,
                                   platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>,
-                                  noNetworkMap: Boolean = false): Node {
+                                  noNetworkMap: Boolean = false): StartedNode<Node> {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
@@ -184,11 +187,10 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
         val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
-                initialiseSerialization = false)
-        node.start()
+                initialiseSerialization = false).start()
         nodes += node
         thread(name = legalName.organisation) {
-            node.run()
+            node.internals.run()
         }
         return node
     }

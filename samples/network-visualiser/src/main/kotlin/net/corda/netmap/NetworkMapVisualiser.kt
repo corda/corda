@@ -11,7 +11,6 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import javafx.util.Duration
-import net.corda.core.utilities.organisation
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
@@ -21,6 +20,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.SessionConfirm
 import net.corda.node.services.statemachine.SessionEnd
 import net.corda.node.services.statemachine.SessionInit
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import rx.Scheduler
@@ -225,7 +225,7 @@ class NetworkMapVisualiser : Application() {
                         // Flow done; schedule it for removal in a few seconds. We batch them up to make nicer
                         // animations.
                         updateProgressTrackerWidget(change)
-                        println("Flow done for ${node.info.legalIdentity.name}")
+                        println("Flow done for ${node.started!!.info.chooseIdentity().name}")
                         viewModel.doneTrackers += tracker
                     } else {
                         // Subflow is done; ignore it.
@@ -233,7 +233,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = if (extraLabel != null) "${node.info.legalIdentity.name.organisation}: $extraLabel" else node.info.legalIdentity.name.organisation
+                    val label = node.started!!.info.chooseIdentity().name.organisation.let { if (extraLabel != null) "$it: $extraLabel" else it }
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget

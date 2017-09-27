@@ -1,3 +1,5 @@
+@file:JvmName("AMQPSerializationScheme")
+
 package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.node.CordaPluginRegistry
@@ -19,6 +21,11 @@ class AMQPSerializationCustomization(val factory: SerializerFactory) : Serializa
 }
 
 fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
+    require(types.toSet().size == types.size) {
+        val duplicates = types.toMutableList()
+        types.toSet().forEach { duplicates -= it }
+        "Cannot add duplicate classes to the whitelist ($duplicates)."
+    }
     for (type in types) {
         (this.whitelist as? MutableClassWhitelist)?.add(type)
     }
@@ -54,6 +61,11 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.ClassSerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.StringBufferSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.SimpleStringSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.InputStreamSerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.BitSetSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.EnumSetSerializer(this))
             }
             val customizer = AMQPSerializationCustomization(factory)
             pluginRegistries.forEach { it.customizeSerialization(customizer) }

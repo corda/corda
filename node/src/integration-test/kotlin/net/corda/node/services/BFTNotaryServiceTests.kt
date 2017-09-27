@@ -1,30 +1,33 @@
 package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.getX500Name
-import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Test
@@ -34,23 +37,23 @@ import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
     companion object {
-        private val clusterName = getX500Name(O = "BFT", OU = "corda", L = "Zurich", C = "CH")
         private val serviceType = BFTNonValidatingNotaryService.type
+        private val clusterName = CordaX500Name(serviceType.id, "BFT", "Zurich", "CH")
     }
 
     private val mockNet = MockNetwork()
     private val node = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+
     @After
     fun stopNodes() {
         mockNet.stopNodes()
     }
 
-    private fun bftNotaryCluster(clusterSize: Int, exposeRaces: Boolean = false): Party {
+    private fun bftNotaryCluster(clusterSize: Int, exposeRaces: Boolean = false) {
         Files.deleteIfExists("config" / "currentView") // XXX: Make config object warn if this exists?
         val replicaIds = (0 until clusterSize)
-        val party = ServiceIdentityGenerator.generateToDisk(
+        ServiceIdentityGenerator.generateToDisk(
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                serviceType.id,
                 clusterName)
         val bftNotaryService = ServiceInfo(serviceType, clusterName)
         val notaryClusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
@@ -63,16 +66,17 @@ class BFTNotaryServiceTests {
                         whenever(it.notaryClusterAddresses).thenReturn(notaryClusterAddresses)
                     })
         }
-        return party
+        mockNet.runNetwork() // Exchange initial network map registration messages.
     }
 
     /** Failure mode is the redundant replica gets stuck in startup, so we can't dispose it cleanly at the end. */
     @Test
     fun `all replicas start even if there is a new consensus during startup`() {
-        val notary = bftNotaryCluster(minClusterSize(1), true) // This true adds a sleep to expose the race.
+        bftNotaryCluster(minClusterSize(1), true) // This true adds a sleep to expose the race.
+        val notary = node.services.getDefaultNotary()
         val f = node.run {
             val trivialTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity))
+                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             // Create a new consensus while the redundant replica is sleeping:
             services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
@@ -93,10 +97,11 @@ class BFTNotaryServiceTests {
 
     private fun detectDoubleSpend(faultyReplicas: Int) {
         val clusterSize = minClusterSize(faultyReplicas)
-        val notary = bftNotaryCluster(clusterSize)
+        bftNotaryCluster(clusterSize)
+        val notary = node.services.getDefaultNotary()
         node.run {
             val issueTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity))
+                addOutputState(DummyContract.SingleOwnerState(owner = info.chooseIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             database.transaction {
                 services.recordTransactions(issueTx)
@@ -131,20 +136,20 @@ class BFTNotaryServiceTests {
                     assertEquals(StateRef(issueTx.id, 0), stateRef)
                     assertEquals(spendTxs[successfulIndex].id, consumingTx.id)
                     assertEquals(0, consumingTx.inputIndex)
-                    assertEquals(info.legalIdentity, consumingTx.requestingParty)
+                    assertEquals(info.chooseIdentity(), consumingTx.requestingParty)
                 }
             }
         }
     }
 }
 
-private fun AbstractNode.signInitialTransaction(
+private fun StartedNode<*>.signInitialTransaction(
         notary: Party,
         block: TransactionBuilder.() -> Any?
 ): SignedTransaction {
     return services.signInitialTransaction(
             TransactionBuilder(notary).apply {
-                addCommand(dummyCommand(services.legalIdentityKey))
+                addCommand(dummyCommand(services.myInfo.chooseIdentity().owningKey))
                 block()
             })
 }

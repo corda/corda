@@ -2,41 +2,37 @@ package net.corda.node.services.network
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
-import net.corda.core.utilities.toBase58String
-import net.corda.core.utilities.unwrap
+import net.corda.core.utilities.*
 import net.corda.node.internal.Node
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.CHARLIE
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.node.internal.StartedNode
+import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertTrue
 
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val partiesList = listOf(DUMMY_NOTARY, ALICE, BOB)
-    val addressesMap: HashMap<X500Name, NetworkHostAndPort> = HashMap()
+    val addressesMap: HashMap<CordaX500Name, NetworkHostAndPort> = HashMap()
     val infos: MutableSet<NodeInfo> = HashSet()
 
     @Before
     fun start() {
         val nodes = startNodesWithPort(partiesList)
-        nodes.forEach { it.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
+        nodes.forEach { it.internals.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
         nodes.forEach {
             infos.add(it.info)
-            addressesMap[it.info.legalIdentity.name] = it.info.addresses[0]
-            it.stop() // We want them to communicate with NetworkMapService to save data to cache.
+            addressesMap[it.info.chooseIdentity().name] = it.info.addresses[0]
+            it.dispose() // We want them to communicate with NetworkMapService to save data to cache.
         }
     }
 
@@ -45,10 +41,10 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
         val netCache = alice.services.networkMapCache as PersistentNetworkMapCache
         alice.database.transaction {
-            val res = netCache.getNodeByLegalIdentity(alice.info.legalIdentity)
+            val res = netCache.getNodeByLegalIdentity(alice.info.chooseIdentity())
             assertEquals(alice.info, res)
             val res2 = netCache.getNodeByLegalName(DUMMY_NOTARY.name)
-            assertEquals(infos.filter { it.legalIdentity.name == DUMMY_NOTARY.name }.singleOrNull(), res2)
+            assertEquals(infos.filter { DUMMY_NOTARY.name in it.legalIdentitiesAndCerts.map { it.name } }.singleOrNull(), res2)
         }
     }
 
@@ -65,23 +61,21 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     @Test
     fun `restart node with DB map cache and no network map`() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
-        val partyNodes = alice.services.networkMapCache.partyNodes
-        assert(NetworkMapService.type !in alice.info.advertisedServices.map { it.info.type })
-        assertEquals(null, alice.inNodeNetworkMapService)
+        val partyNodes = alice.services.networkMapCache.allNodes
+        assertEquals(NullNetworkMapService, alice.inNodeNetworkMapService)
         assertEquals(infos.size, partyNodes.size)
-        assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
+        assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
     }
 
     @Test
     fun `start 2 nodes without pointing at NetworkMapService and communicate with each other`() {
         val parties = partiesList.subList(1, partiesList.size)
         val nodes = startNodesWithPort(parties, noNetworkMap = true)
-        assert(nodes.all { it.inNodeNetworkMapService == null })
-        assert(nodes.all { NetworkMapService.type !in it.info.advertisedServices.map { it.info.type } })
+        assertTrue(nodes.all { it.inNodeNetworkMapService == NullNetworkMapService })
         nodes.forEach {
-            val partyNodes = it.services.networkMapCache.partyNodes
+            val partyNodes = it.services.networkMapCache.allNodes
             assertEquals(infos.size, partyNodes.size)
-            assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
+            assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
         }
         checkConnectivity(nodes)
     }
@@ -90,12 +84,11 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     fun `start 2 nodes pointing at NetworkMapService but don't start network map node`() {
         val parties = partiesList.subList(1, partiesList.size)
         val nodes = startNodesWithPort(parties, noNetworkMap = false)
-        assert(nodes.all { it.inNodeNetworkMapService == null })
-        assert(nodes.all { NetworkMapService.type !in it.info.advertisedServices.map { it.info.type } })
+        assertTrue(nodes.all { it.inNodeNetworkMapService == NullNetworkMapService })
         nodes.forEach {
-            val partyNodes = it.services.networkMapCache.partyNodes
+            val partyNodes = it.services.networkMapCache.allNodes
             assertEquals(infos.size, partyNodes.size)
-            assertEquals(infos.map { it.legalIdentity }.toSet(), partyNodes.map { it.legalIdentity }.toSet())
+            assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
         }
         checkConnectivity(nodes)
     }
@@ -118,35 +111,35 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         // Start 2 nodes pointing at network map, but don't start network map service.
         val otherNodes = startNodesWithPort(parties, noNetworkMap = false)
         otherNodes.forEach { node ->
-            assert(infos.any { it.legalIdentity == node.info.legalIdentity })
+            assertTrue(infos.any { it.legalIdentitiesAndCerts.toSet() == node.info.legalIdentitiesAndCerts.toSet() })
         }
         // Start node that is not in databases of other nodes. Point to NMS. Which has't started yet.
         val charlie = startNodesWithPort(listOf(CHARLIE), noNetworkMap = false)[0]
         otherNodes.forEach {
-            assert(charlie.info.legalIdentity !in it.services.networkMapCache.partyNodes.map { it.legalIdentity })
+            assertThat(it.services.networkMapCache.allNodes).doesNotContain(charlie.info)
         }
         // Start Network Map and see that charlie node appears in caches.
         val nms = startNodesWithPort(listOf(DUMMY_NOTARY), noNetworkMap = false)[0]
-        nms.startupComplete.get()
-        assert(nms.inNodeNetworkMapService != null)
-        assert(infos.any {it.legalIdentity == nms.info.legalIdentity})
+        nms.internals.startupComplete.get()
+        assertTrue(nms.inNodeNetworkMapService != NullNetworkMapService)
+        assertTrue(infos.any { it.legalIdentities.toSet() == nms.info.legalIdentities.toSet() })
         otherNodes.forEach {
-            assert(nms.info.legalIdentity in it.services.networkMapCache.partyNodes.map { it.legalIdentity })
+            assertTrue(nms.info.chooseIdentity() in it.services.networkMapCache.allNodes.map { it.chooseIdentity() })
         }
-        charlie.nodeReadyFuture.get() // Finish registration.
+        charlie.internals.nodeReadyFuture.get() // Finish registration.
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
-        val cacheA = otherNodes[0].services.networkMapCache.partyNodes
-        val cacheB = otherNodes[1].services.networkMapCache.partyNodes
-        val cacheC = charlie.services.networkMapCache.partyNodes
+        val cacheA = otherNodes[0].services.networkMapCache.allNodes
+        val cacheB = otherNodes[1].services.networkMapCache.allNodes
+        val cacheC = charlie.services.networkMapCache.allNodes
         assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
-        assert(charlie.info.legalIdentity in cacheB.map { it.legalIdentity }) // Other nodes also fetched data from Network Map with node C.
+        assertThat(cacheB).contains(charlie.info)
         assertEquals(cacheA.toSet(), cacheB.toSet())
         assertEquals(cacheA.toSet(), cacheC.toSet())
     }
 
     // HELPERS
     // Helper function to restart nodes with the same host and port.
-    private fun startNodesWithPort(nodesToStart: List<Party>, noNetworkMap: Boolean = false): List<Node> {
+    private fun startNodesWithPort(nodesToStart: List<Party>, noNetworkMap: Boolean = false): List<StartedNode<Node>> {
         return nodesToStart.map { party ->
             val configOverrides = addressesMap[party.name]?.let { mapOf("p2pAddress" to it.toString()) } ?: emptyMap()
             if (party == DUMMY_NOTARY) {
@@ -162,11 +155,11 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     }
 
     // Check that nodes are functional, communicate each with each.
-    private fun checkConnectivity(nodes: List<Node>) {
+    private fun checkConnectivity(nodes: List<StartedNode<*>>) {
         nodes.forEach { node1 ->
             nodes.forEach { node2 ->
-                node2.registerInitiatedFlow(SendBackFlow::class.java)
-                val resultFuture = node1.services.startFlow(SendFlow(node2.info.legalIdentity)).resultFuture
+                node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
+                val resultFuture = node1.services.startFlow(SendFlow(node2.info.chooseIdentity())).resultFuture
                 assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
             }
         }
@@ -178,17 +171,18 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         override fun call(): String {
             println("SEND FLOW to $otherParty")
             println("Party key ${otherParty.owningKey.toBase58String()}")
-            return sendAndReceive<String>(otherParty, "Hi!").unwrap { it }
+            val session = initiateFlow(otherParty)
+            return session.sendAndReceive<String>("Hi!").unwrap { it }
         }
     }
 
     @InitiatedBy(SendFlow::class)
-    private class SendBackFlow(val otherParty: Party) : FlowLogic<Unit>() {
+    private class SendBackFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            println("SEND BACK FLOW to $otherParty")
-            println("Party key ${otherParty.owningKey.toBase58String()}")
-            send(otherParty, "Hello!")
+            println("SEND BACK FLOW to ${otherSideSession.counterparty}")
+            println("Party key ${otherSideSession.counterparty.owningKey.toBase58String()}")
+            otherSideSession.send("Hello!")
         }
     }
 }

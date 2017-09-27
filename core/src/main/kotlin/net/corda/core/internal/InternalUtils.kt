@@ -3,6 +3,7 @@ package net.corda.core.internal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -15,6 +16,8 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
+import java.security.cert.Certificate
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
@@ -26,6 +29,7 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.reflect.KClass
+import kotlin.reflect.full.createInstance
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
 fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
@@ -166,8 +170,8 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
     }
 }
 
-fun java.security.cert.Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
-fun javax.security.cert.Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
+fun Certificate.toX509CertHolder() = X509CertificateHolder(encoded)
+val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
@@ -239,6 +243,11 @@ fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaCl
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
+/** creates a new instance if not a Kotlin object */
+fun <T: Any> KClass<T>.objectOrNewInstance(): T {
+    return this.objectInstance ?: this.createInstance()
+}
+
 /**
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
  * visibility.
@@ -260,3 +269,8 @@ class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?
 @Retention(AnnotationRetention.SOURCE)
 @MustBeDocumented
 annotation class VisibleForTesting
+
+@Suppress("UNCHECKED_CAST")
+fun <T, U : T> uncheckedCast(obj: T) = obj as U
+
+fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }

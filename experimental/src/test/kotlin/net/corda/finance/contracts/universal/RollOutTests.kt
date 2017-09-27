@@ -2,7 +2,11 @@ package net.corda.finance.contracts.universal
 
 import net.corda.finance.contracts.Frequency
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.setCordappPackages
 import net.corda.testing.transaction
+import net.corda.testing.unsetCordappPackages
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -118,6 +122,15 @@ class RollOutTests {
         next()
     }
 
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.finance.contracts.universal")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
+    }
 
     @Test
     fun `arrangement equality transfer`() {
@@ -142,7 +155,7 @@ class RollOutTests {
     @Test
     fun issue() {
         transaction {
-            output { stateStart }
+            output(UNIVERSAL_PROGRAM_ID) { stateStart }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -159,9 +172,9 @@ class RollOutTests {
     @Test
     fun `execute`() {
         transaction {
-            input { stateStart }
-            output { stateStep1a }
-            output { stateStep1b }
+            input(UNIVERSAL_PROGRAM_ID) { stateStart }
+            output(UNIVERSAL_PROGRAM_ID) { stateStep1a }
+            output(UNIVERSAL_PROGRAM_ID) { stateStep1b }
             timeWindow(TEST_TX_TIME_1)
 
             /*   tweak {

@@ -62,14 +62,14 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     @Before
     public void setUp() {
+        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset");
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
         keys.add(getDUMMY_NOTARY_KEY());
-        Set<MappedSchema> requiredSchemas = new HashSet<>();
-        requiredSchemas.add(CashSchemaV1.INSTANCE);
+        Set<MappedSchema> requiredSchemas = Collections.singleton(CashSchemaV1.INSTANCE);
         IdentityService identitySvc = makeTestIdentityService();
         @SuppressWarnings("unchecked")
-        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(requiredSchemas, keys, () -> identitySvc);
+        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(requiredSchemas, keys, () -> identitySvc, Collections.EMPTY_LIST);
         issuerServices = new MockServices(getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
@@ -79,6 +79,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
     @After
     public void cleanUp() throws IOException {
         database.close();
+        unsetCordappPackages();
     }
 
     /**

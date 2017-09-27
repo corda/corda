@@ -3,11 +3,16 @@ package net.corda.nodeapi.internal.serialization
 import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
-import net.corda.nodeapi.AttachmentClassLoaderTests
+import net.corda.nodeapi.internal.AttachmentsClassLoader
+import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
 import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Rule
 import org.junit.Test
@@ -15,6 +20,7 @@ import org.junit.rules.ExpectedException
 import java.lang.IllegalStateException
 import java.sql.Connection
 import java.util.*
+import kotlin.test.*
 
 @CordaSerializable
 enum class Foo {
@@ -52,7 +58,6 @@ open class SerializableViaSubInterface : SerializableSubInterface
 
 class SerializableViaSuperSubInterface : SerializableViaSubInterface()
 
-
 @CordaSerializable
 class CustomSerializable : KryoSerializable {
     override fun read(kryo: Kryo?, input: Input?) {
@@ -75,16 +80,25 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     }
 }
 
+object EmptyWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = false
+}
+
 class CordaClassResolverTests {
+    private companion object {
+        val emptyListClass = listOf<Any>().javaClass
+        val emptySetClass = setOf<Any>().javaClass
+        val emptyMapClass = mapOf<Any, Any>().javaClass
+    }
+
     val factory: SerializationFactory = object : SerializationFactory() {
         override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            TODO("not implemented")
         }
 
         override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            TODO("not implemented")
         }
-
     }
 
     private val emptyWhitelistContext: SerializationContext = SerializationContextImpl(KryoHeaderV0_1, this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, SerializationContext.UseCase.P2P)
@@ -156,14 +170,14 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(DefaultSerializable::class.java)
     }
 
-    private fun importJar(storage: AttachmentStorage) = AttachmentClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
+    private fun importJar(storage: AttachmentStorage) = AttachmentsClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
 
     @Test(expected = KryoException::class)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage)
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
-        val attachedClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, classLoader)
+        val attachedClass = Class.forName("net.corda.finance.contracts.isolated.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 
@@ -191,6 +205,69 @@ class CordaClassResolverTests {
         val resolver = CordaClassResolver(allButBlacklistedContext)
         // HashSet is blacklisted.
         resolver.getRegistration(HashSet::class.java)
+    }
+
+    @Test
+    fun `Kotlin EmptyList not registered`() {
+        val resolver = CordaClassResolver(allButBlacklistedContext)
+        assertNull(resolver.getRegistration(emptyListClass))
+    }
+
+    @Test
+    fun `Kotlin EmptyList registers as Java emptyList`() {
+        val javaEmptyListClass = Collections.emptyList<Any>().javaClass
+        val kryo = mock<Kryo>()
+        val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
+        whenever(kryo.getDefaultSerializer(javaEmptyListClass)).thenReturn(DefaultSerializableSerializer())
+
+        val registration = resolver.registerImplicit(emptyListClass)
+        assertNotNull(registration)
+        assertEquals(javaEmptyListClass, registration.type)
+        assertEquals(DefaultClassResolver.NAME.toInt(), registration.id)
+        verify(kryo).getDefaultSerializer(javaEmptyListClass)
+        assertEquals(registration, resolver.getRegistration(emptyListClass))
+    }
+
+    @Test
+    fun `Kotlin EmptySet not registered`() {
+        val resolver = CordaClassResolver(allButBlacklistedContext)
+        assertNull(resolver.getRegistration(emptySetClass))
+    }
+
+    @Test
+    fun `Kotlin EmptySet registers as Java emptySet`() {
+        val javaEmptySetClass = Collections.emptySet<Any>().javaClass
+        val kryo = mock<Kryo>()
+        val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
+        whenever(kryo.getDefaultSerializer(javaEmptySetClass)).thenReturn(DefaultSerializableSerializer())
+
+        val registration = resolver.registerImplicit(emptySetClass)
+        assertNotNull(registration)
+        assertEquals(javaEmptySetClass, registration.type)
+        assertEquals(DefaultClassResolver.NAME.toInt(), registration.id)
+        verify(kryo).getDefaultSerializer(javaEmptySetClass)
+        assertEquals(registration, resolver.getRegistration(emptySetClass))
+    }
+
+    @Test
+    fun `Kotlin EmptyMap not registered`() {
+        val resolver = CordaClassResolver(allButBlacklistedContext)
+        assertNull(resolver.getRegistration(emptyMapClass))
+    }
+
+    @Test
+    fun `Kotlin EmptyMap registers as Java emptyMap`() {
+        val javaEmptyMapClass = Collections.emptyMap<Any, Any>().javaClass
+        val kryo = mock<Kryo>()
+        val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
+        whenever(kryo.getDefaultSerializer(javaEmptyMapClass)).thenReturn(DefaultSerializableSerializer())
+
+        val registration = resolver.registerImplicit(emptyMapClass)
+        assertNotNull(registration)
+        assertEquals(javaEmptyMapClass, registration.type)
+        assertEquals(DefaultClassResolver.NAME.toInt(), registration.id)
+        verify(kryo).getDefaultSerializer(javaEmptyMapClass)
+        assertEquals(registration, resolver.getRegistration(emptyMapClass))
     }
 
     open class SubHashSet<E> : HashSet<E>()

@@ -1,7 +1,11 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.setCordappPackages
 import net.corda.testing.transaction
+import net.corda.testing.unsetCordappPackages
+import org.junit.After
+import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
@@ -38,11 +42,21 @@ class FXSwap {
 
     val inState = UniversalContract.State(listOf(DUMMY_NOTARY), contract)
 
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.finance.contracts.universal")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
+    }
+
     @Test
     fun `issue - signature`() {
 
         transaction {
-            output { inState }
+            output(UNIVERSAL_PROGRAM_ID) { inState }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -63,9 +77,9 @@ class FXSwap {
     @Test
     fun `execute`() {
         transaction {
-            input { inState }
-            output { outState1 }
-            output { outState2 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            output(UNIVERSAL_PROGRAM_ID) { outState2 }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -82,9 +96,9 @@ class FXSwap {
     @Test
     fun `execute - reversed order`() {
         transaction {
-            input { inState }
-            output { outState2 }
-            output { outState1 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState2 }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -101,9 +115,9 @@ class FXSwap {
     @Test
     fun `execute - not authorized`() {
         transaction {
-            input { inState }
-            output { outState1 }
-            output { outState2 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            output(UNIVERSAL_PROGRAM_ID) { outState2 }
             timeWindow(TEST_TX_TIME_1)
 
             command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
@@ -114,9 +128,9 @@ class FXSwap {
     @Test
     fun `execute - before maturity`() {
         transaction {
-            input { inState }
-            output { outState1 }
-            output { outState2 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            output(UNIVERSAL_PROGRAM_ID) { outState2 }
             timeWindow(TEST_TX_TIME_TOO_EARLY)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
@@ -127,8 +141,8 @@ class FXSwap {
     @Test
     fun `execute - outState mismatch 1`() {
         transaction {
-            input { inState }
-            output { outState1 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
             timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
@@ -139,9 +153,9 @@ class FXSwap {
     @Test
     fun `execute - outState mismatch 2`() {
         transaction {
-            input { inState }
-            output { outState1 }
-            output { outStateBad2 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            output(UNIVERSAL_PROGRAM_ID) { outStateBad2 }
             timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
@@ -152,9 +166,9 @@ class FXSwap {
     @Test
     fun `execute - outState mismatch 3`() {
         transaction {
-            input { inState }
-            output { outStateBad1 }
-            output { outState2 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outStateBad1 }
+            output(UNIVERSAL_PROGRAM_ID) { outState2 }
             timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
@@ -165,9 +179,9 @@ class FXSwap {
     @Test
     fun `execute - outState mismatch 4`() {
         transaction {
-            input { inState }
-            output { outState1 }
-            output { outStateBad3 }
+            input(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            output(UNIVERSAL_PROGRAM_ID) { outStateBad3 }
             timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }

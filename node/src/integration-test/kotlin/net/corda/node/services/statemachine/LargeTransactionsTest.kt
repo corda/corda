@@ -3,13 +3,13 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
-import net.corda.core.identity.Party
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.aliceBobAndNotary
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.driver.driver
 import net.corda.testing.dummyCommand
@@ -22,31 +22,35 @@ import kotlin.test.assertEquals
  */
 class LargeTransactionsTest {
     @StartableByRPC @InitiatingFlow
-    class SendLargeTransactionFlow(val hash1: SecureHash, val hash2: SecureHash, val hash3: SecureHash, val hash4: SecureHash) : FlowLogic<Unit>() {
+    class SendLargeTransactionFlow(private val hash1: SecureHash,
+                                   private val hash2: SecureHash,
+                                   private val hash3: SecureHash,
+                                   private val hash4: SecureHash) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val tx = TransactionBuilder(notary = DUMMY_NOTARY)
-                    .addOutputState(DummyState())
-                    .addCommand(dummyCommand(serviceHub.legalIdentityKey))
+                    .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
+                    .addCommand(dummyCommand(ourIdentity.owningKey))
                     .addAttachment(hash1)
                     .addAttachment(hash2)
                     .addAttachment(hash3)
                     .addAttachment(hash4)
-            val stx = serviceHub.signInitialTransaction(tx, serviceHub.legalIdentityKey)
+            val stx = serviceHub.signInitialTransaction(tx, ourIdentity.owningKey)
             // Send to the other side and wait for it to trigger resolution from us.
-            val bob = serviceHub.networkMapCache.getNodeByLegalName(BOB.name)!!.legalIdentity
-            subFlow(SendTransactionFlow(bob, stx))
-            receive<Unit>(bob)
+            val bob = serviceHub.identityService.wellKnownPartyFromX500Name(BOB.name)!!
+            val bobSession = initiateFlow(bob)
+            subFlow(SendTransactionFlow(bobSession, stx))
+            bobSession.receive<Unit>()
         }
     }
 
     @InitiatedBy(SendLargeTransactionFlow::class) @Suppress("UNUSED")
-    class ReceiveLargeTransactionFlow(private val counterParty: Party) : FlowLogic<Unit>() {
+    class ReceiveLargeTransactionFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            subFlow(ReceiveTransactionFlow(counterParty))
+            subFlow(ReceiveTransactionFlow(otherSide))
             // Unblock the other side by sending some dummy object (Unit is fine here as it's a singleton).
-            send(counterParty, Unit)
+            otherSide.send(Unit)
         }
     }
 
@@ -58,7 +62,7 @@ class LargeTransactionsTest {
         val bigFile2 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 1)
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 2)
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 3)
-        driver(startNodesInProcess = true) {
+        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.testing.contracts")) {
             val (alice, _, _) = aliceBobAndNotary()
             alice.useRPC {
                 val hash1 = it.uploadAttachment(bigFile1.inputStream)

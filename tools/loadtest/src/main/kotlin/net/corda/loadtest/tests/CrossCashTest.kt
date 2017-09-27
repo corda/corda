@@ -37,13 +37,13 @@ data class CrossCashCommand(
     override fun toString(): String {
         return when (request) {
             is IssueAndPaymentRequest -> {
-                "ISSUE ${node.info.legalIdentity} -> ${request.recipient} : ${request.amount}"
+                "ISSUE ${node.mainIdentity} -> ${request.recipient} : ${request.amount}"
             }
             is PaymentRequest -> {
-                "MOVE ${node.info.legalIdentity} -> ${request.recipient} : ${request.amount}"
+                "MOVE ${node.mainIdentity} -> ${request.recipient} : ${request.amount}"
             }
             is ExitRequest -> {
-                "EXIT ${node.info.legalIdentity} : ${request.amount}"
+                "EXIT ${node.mainIdentity} : ${request.amount}"
             }
             else -> throw IllegalArgumentException("Unexpected request type: $request")
         }
@@ -122,27 +122,27 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
         "Creating Cash transactions randomly",
 
         generate = { (nodeVaults), parallelism ->
-            val nodeMap = simpleNodes.associateBy { it.info.legalIdentity }
-            val anonymous = true
+            val nodeMap = simpleNodes.associateBy { it.mainIdentity }
+            val notaryIdentity = simpleNodes[0].proxy.notaryIdentities().first()
             Generator.pickN(parallelism, simpleNodes).flatMap { nodes ->
                 Generator.sequence(
                         nodes.map { node ->
-                            val quantities = nodeVaults[node.info.legalIdentity] ?: mapOf()
+                            val quantities = nodeVaults[node.mainIdentity] ?: mapOf()
                             val possibleRecipients = nodeMap.keys.toList()
                             val moves = quantities.map {
-                                it.value.toDouble() / 1000 to generateMove(it.value, USD, node.info.legalIdentity, possibleRecipients, anonymous)
+                                it.value.toDouble() / 1000 to generateMove(it.value, USD, node.mainIdentity, possibleRecipients)
                             }
                             val exits = quantities.mapNotNull {
-                                if (it.key == node.info.legalIdentity) {
+                                if (it.key == node.mainIdentity) {
                                     it.value.toDouble() / 3000 to generateExit(it.value, USD)
                                 } else {
                                     null
                                 }
                             }
                             val command = Generator.frequency(
-                                    listOf(1.0 to generateIssue(10000, USD, notary.info.notaryIdentity, possibleRecipients, anonymous)) + moves + exits
+                                    listOf(1.0 to generateIssue(10000, USD, notaryIdentity, possibleRecipients)) + moves + exits
                             )
-                            command.map { CrossCashCommand(it, nodeMap[node.info.legalIdentity]!!) }
+                            command.map { CrossCashCommand(it, nodeMap[node.mainIdentity]!!) }
                         }
                 )
             }
@@ -153,7 +153,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                 is IssueAndPaymentRequest -> {
                     val newDiffQueues = state.copyQueues()
                     val originators = newDiffQueues.getOrPut(command.request.recipient, { HashMap() })
-                    val issuer = command.node.info.legalIdentity
+                    val issuer = command.node.mainIdentity
                     val quantity = command.request.amount.quantity
                     val queue = originators.getOrPut(issuer, { ArrayList() })
                     queue.add(Pair(issuer, quantity))
@@ -163,17 +163,17 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                     val newNodeVaults = state.copyVaults()
                     val newDiffQueues = state.copyQueues()
                     val recipientOriginators = newDiffQueues.getOrPut(command.request.recipient, { HashMap() })
-                    val senderQuantities = newNodeVaults[command.node.info.legalIdentity]!!
+                    val senderQuantities = newNodeVaults[command.node.mainIdentity]!!
                     val amount = command.request.amount
                     val issuer = command.request.issuerConstraint.single()
-                    val originator = command.node.info.legalIdentity
+                    val originator = command.node.mainIdentity
                     val senderQuantity = senderQuantities[issuer] ?: throw Exception(
-                            "Generated payment of ${command.request.amount} from ${command.node.info.legalIdentity}, " +
+                            "Generated payment of ${command.request.amount} from ${command.node.mainIdentity}, " +
                                     "however there is no cash from $issuer!"
                     )
                     if (senderQuantity < amount.quantity) {
                         throw Exception(
-                                "Generated payment of ${command.request.amount} from ${command.node.info.legalIdentity}, " +
+                                "Generated payment of ${command.request.amount} from ${command.node.mainIdentity}, " +
                                         "however they only have $senderQuantity!"
                         )
                     }
@@ -188,7 +188,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                 }
                 is ExitRequest -> {
                     val newNodeVaults = state.copyVaults()
-                    val issuer = command.node.info.legalIdentity
+                    val issuer = command.node.mainIdentity
                     val quantity = command.request.amount.quantity
                     val issuerQuantities = newNodeVaults[issuer]!!
                     val issuerQuantity = issuerQuantities[issuer] ?: throw Exception(
@@ -237,7 +237,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                     val issuer = state.amount.token.issuer.party
                     quantities.put(issuer, (quantities[issuer] ?: 0L) + state.amount.quantity)
                 }
-                currentNodeVaults.put(it.info.legalIdentity, quantities)
+                currentNodeVaults.put(it.mainIdentity, quantities)
             }
             val (consistentVaults, diffQueues) = if (previousState == null) {
                 Pair(currentNodeVaults, mapOf<AbstractParty, Map<AbstractParty, List<Pair<AbstractParty, Long>>>>())
@@ -277,7 +277,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                         minimumMatches.forEach { originator, consumedTxs ->
                             if (consumedTxs > 0) {
                                 newNodeDiffQueues!!
-                                for (i in 0..consumedTxs - 1) {
+                                for (i in 0 until consumedTxs) {
                                     val (issuer, quantity) = newNodeDiffQueues[originator]!!.removeAt(0)
                                     newNodeVault.put(issuer, (newNodeVault[issuer] ?: 0L) + quantity)
                                 }

@@ -1,29 +1,43 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.User
-import net.corda.testing.BOC
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.*
 import net.corda.testing.driver.poll
 import net.corda.testing.node.NodeBasedTest
+import net.corda.testing.setCordappPackages
+import net.corda.testing.unsetCordappPackages
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.Executors
 
 class TraderDemoTest : NodeBasedTest() {
+
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.finance.contracts.asset", "net.corda.finance.contracts")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
+    }
+
     @Test
     fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlowPermission<SellerFlow>()))
@@ -37,14 +51,16 @@ class TraderDemoTest : NodeBasedTest() {
         val bankNodeFuture = startNode(BOC.name, rpcUsers = listOf(bankUser))
         val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).map { it.getOrThrow() }
 
-        nodeA.registerInitiatedFlow(BuyerFlow::class.java)
+        nodeA.internals.registerInitiatedFlow(BuyerFlow::class.java)
+        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1, CommercialPaperSchemaV1))
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-            val client = CordaRPCClient(it.configuration.rpcAddress!!, initialiseSerialization = false)
+            val client = CordaRPCClient(it.internals.configuration.rpcAddress!!, initialiseSerialization = false)
             client.start(demoUser.username, demoUser.password).proxy
         }
         val nodeBankRpc = let {
-            val client = CordaRPCClient(bankNode.configuration.rpcAddress!!, initialiseSerialization = false)
+            val client = CordaRPCClient(bankNode.internals.configuration.rpcAddress!!, initialiseSerialization = false)
             client.start(bankUser.username, bankUser.password).proxy
         }
 
@@ -56,9 +72,8 @@ class TraderDemoTest : NodeBasedTest() {
         val expectedBCash = clientB.cashCount + 1
         val expectedPaper = listOf(clientA.commercialPaperCount + 1, clientB.commercialPaperCount)
 
-        // TODO: Enable anonymisation
-        clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.info.legalIdentity.name, sellerName = nodeB.info.legalIdentity.name)
-        clientB.runSeller(buyerName = nodeA.info.legalIdentity.name, amount = 5.DOLLARS)
+        clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.info.chooseIdentity().name, sellerName = nodeB.info.chooseIdentity().name)
+        clientB.runSeller(buyerName = nodeA.info.chooseIdentity().name, amount = 5.DOLLARS)
 
         assertThat(clientA.cashCount).isGreaterThan(originalACash)
         assertThat(clientB.cashCount).isEqualTo(expectedBCash)

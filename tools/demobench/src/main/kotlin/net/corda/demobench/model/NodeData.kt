@@ -4,7 +4,7 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
-import net.corda.core.node.CityDatabase
+import net.corda.finance.utils.CityDatabase
 import tornadofx.*
 
 object SuggestedDetails {

@@ -131,9 +131,6 @@ open class OpaqueBytes(override val bytes: ByteArray) : ByteSequence() {
     override val offset: Int get() = 0
 }
 
-@Deprecated("Use sequence instead")
-fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
-
 fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of(this, offset, size)
 
 fun ByteArray.toHexString(): String = DatatypeConverter.printHexBinary(this)

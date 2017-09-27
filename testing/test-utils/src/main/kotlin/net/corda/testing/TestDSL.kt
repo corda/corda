@@ -1,15 +1,16 @@
 package net.corda.testing
 
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.node.MockCordappProvider
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PublicKey
@@ -39,38 +40,6 @@ import kotlin.collections.set
 //     }
 // }
 //
-
-/**
- * Here follows implementations of the [LedgerDSLInterpreter] and [TransactionDSLInterpreter] interfaces to be used in
- * tests. Top level primitives [ledger] and [transaction] that bind the interpreter types are also defined here.
- */
-
-@Deprecated(
-        message = "ledger doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun TransactionDSLInterpreter.ledger(
-        dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
-}
-
-@Deprecated(
-        message = "transaction doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun TransactionDSLInterpreter.transaction(
-        dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) {
-}
-
-@Deprecated(
-        message = "ledger doesn't nest, use tweak",
-        replaceWith = ReplaceWith("tweak"),
-        level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER", "unused")
-fun LedgerDSLInterpreter<TransactionDSLInterpreter>.ledger(
-        dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
-}
 
 /**
  * If you jumped here from a compiler error make sure the last line of your test tests for a transaction verify or fail.
@@ -103,6 +72,7 @@ data class TestTransactionDSLInterpreter private constructor(
 
     val services = object : ServiceHub by ledgerInterpreter.services {
         override fun loadState(stateRef: StateRef) = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+        override val cordappProvider: CordappProvider = ledgerInterpreter.services.cordappProvider
     }
 
     private fun copy(): TestTransactionDSLInterpreter =
@@ -112,15 +82,21 @@ data class TestTransactionDSLInterpreter private constructor(
                     labelToIndexMap = HashMap(labelToIndexMap)
             )
 
-    internal fun toWireTransaction() = transactionBuilder.toWireTransaction()
+    internal fun toWireTransaction() = transactionBuilder.toWireTransaction(services)
 
     override fun input(stateRef: StateRef) {
         val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
         transactionBuilder.addInputState(StateAndRef(state, stateRef))
     }
 
-    override fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState) {
-        transactionBuilder.addOutputState(contractState, notary, encumbrance)
+    override fun _output(contractClassName: ContractClassName,
+                         label: String?,
+                         notary: Party,
+                         encumbrance: Int?,
+                         attachmentConstraint: AttachmentConstraint,
+                         contractState: ContractState
+    ) {
+        transactionBuilder.addOutputState(contractState, contractClassName, notary, encumbrance, attachmentConstraint)
         if (label != null) {
             if (label in labelToIndexMap) {
                 throw DuplicateOutputLabel(label)
@@ -156,6 +132,10 @@ data class TestTransactionDSLInterpreter private constructor(
     override fun tweak(
             dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
     ) = dsl(TransactionDSL(copy()))
+
+    override fun _attachment(contractClassName: ContractClassName) {
+        (services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services)
+    }
 }
 
 data class TestLedgerDSLInterpreter private constructor(
@@ -276,7 +256,7 @@ data class TestLedgerDSLInterpreter private constructor(
     private fun fillTransaction(transactionBuilder: TransactionBuilder) {
         if (transactionBuilder.commands().isEmpty()) transactionBuilder.addCommand(dummyCommand())
         if (transactionBuilder.inputStates().isEmpty() && transactionBuilder.outputStates().isEmpty()) {
-            transactionBuilder.addOutputState(DummyContract.SingleOwnerState(owner = ALICE))
+            transactionBuilder.addOutputState(DummyContract.SingleOwnerState(owner = ALICE), DummyContract.PROGRAM_ID)
         }
     }
 

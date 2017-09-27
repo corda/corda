@@ -1,18 +1,25 @@
 package net.corda.nodeapi.internal.serialization
 
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
+import net.corda.testing.kryoSpecific
 import org.assertj.core.api.Assertions
+import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import org.bouncycastle.asn1.x500.X500Name
-import java.io.NotSerializableException
+import java.io.ByteArrayOutputStream
+import java.util.*
 
 class MapsSerializationTest : TestDependencyInjectionBase() {
-
-    private val smallMap = mapOf("foo" to "bar", "buzz" to "bull")
+    private companion object {
+        val javaEmptyMapClass = Collections.emptyMap<Any, Any>().javaClass
+        val smallMap = mapOf("foo" to "bar", "buzz" to "bull")
+    }
 
     @Test
     fun `check EmptyMap serialization`() = amqpSpecific<MapsSerializationTest>("kotlin.collections.EmptyMap is not enabled for Kryo serialization") {
@@ -38,7 +45,8 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
         val payload = HashMap<String, String>(smallMap)
         val wrongPayloadType = WrongPayloadType(payload)
         Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
-                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
+                .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining(
+                "Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
     @CordaSerializable
@@ -53,5 +61,19 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
                 MyKey(1.0) to MyValue(X500Name("CN=one")),
                 MyKey(10.0) to MyValue(X500Name("CN=ten")))
         assertEqualAfterRoundTripSerialization(myMap)
+    }
+
+    @Test
+    fun `check empty map serialises as Java emptyMap`() = kryoSpecific<MapsSerializationTest>("Specifically checks Kryo serialization") {
+        val nameID = 0
+        val serializedForm = emptyMap<Int, Int>().serialize()
+        val output = ByteArrayOutputStream().apply {
+            write(KryoHeaderV0_1.bytes)
+            write(DefaultClassResolver.NAME + 2)
+            write(nameID)
+            write(javaEmptyMapClass.name.toAscii())
+            write(Kryo.NOT_NULL.toInt())
+        }
+        assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }
 }

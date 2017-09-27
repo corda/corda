@@ -7,9 +7,34 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.EUR
-import net.corda.finance.contracts.*
-import net.corda.testing.*
+import net.corda.finance.contracts.AccrualAdjustment
+import net.corda.finance.contracts.BusinessCalendar
+import net.corda.finance.contracts.DateRollConvention
+import net.corda.finance.contracts.DayCountBasisDay
+import net.corda.finance.contracts.DayCountBasisYear
+import net.corda.finance.contracts.Expression
+import net.corda.finance.contracts.Fix
+import net.corda.finance.contracts.FixOf
+import net.corda.finance.contracts.Frequency
+import net.corda.finance.contracts.PaymentRule
+import net.corda.finance.contracts.Tenor
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.DUMMY_PARTY
+import net.corda.testing.LedgerDSL
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.MEGA_CORP_PUBKEY
+import net.corda.testing.MINI_CORP
+import net.corda.testing.MINI_CORP_KEY
+import net.corda.testing.ORACLE_PUBKEY
+import net.corda.testing.TEST_TX_TIME
+import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.TestLedgerDSLInterpreter
+import net.corda.testing.TestTransactionDSLInterpreter
+import net.corda.testing.ledger
 import net.corda.testing.node.MockServices
+import net.corda.testing.transaction
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -102,7 +127,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
-            InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
+            InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, oracle = DUMMY_PARTY)
         }
         2 -> {
             // 10y swap, we pay 1.3% fixed 30/360 semi, rec 3m usd libor act/360 Q on 25m notional (mod foll/adj on both sides)
@@ -190,7 +215,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
-            return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
+            return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, oracle = DUMMY_PARTY)
 
         }
         else -> TODO("IRS number $irsSelect not defined")
@@ -198,9 +223,9 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
 }
 
 class IRSTests : TestDependencyInjectionBase() {
-    val megaCorpServices = MockServices(MEGA_CORP_KEY)
-    val miniCorpServices = MockServices(MINI_CORP_KEY)
-    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP_KEY)
+    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), MINI_CORP_KEY)
+    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), DUMMY_NOTARY_KEY)
 
     @Test
     fun ok() {
@@ -215,7 +240,7 @@ class IRSTests : TestDependencyInjectionBase() {
     /**
      * Generate an IRS txn - we'll need it for a few things.
      */
-    fun generateIRSTxn(irsSelect: Int): SignedTransaction {
+    private fun generateIRSTxn(irsSelect: Int): SignedTransaction {
         val dummyIRS = createDummyIRS(irsSelect)
         val genTX: SignedTransaction = run {
             val gtx = InterestRateSwap().generateAgreement(
@@ -223,6 +248,7 @@ class IRSTests : TestDependencyInjectionBase() {
                     floatingLeg = dummyIRS.floatingLeg,
                     calculation = dummyIRS.calculation,
                     common = dummyIRS.common,
+                    oracle = DUMMY_PARTY,
                     notary = DUMMY_NOTARY).apply {
                 setTimeWindow(TEST_TX_TIME, 30.seconds)
             }
@@ -278,7 +304,7 @@ class IRSTests : TestDependencyInjectionBase() {
             newCalculation = newCalculation.applyFixing(key, FixedRate(PercentageRatioUnit(value)))
         }
 
-        val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common)
+        val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common, DUMMY_PARTY)
         println(newIRS.exportIRSToCSV())
     }
 
@@ -296,7 +322,7 @@ class IRSTests : TestDependencyInjectionBase() {
      */
     @Test
     fun generateIRSandFixSome() {
-        val services = MockServices()
+        val services = MockServices(listOf("net.corda.irs.contract"))
         var previousTXN = generateIRSTxn(1)
         previousTXN.toLedgerTransaction(services).verify()
         services.recordTransactions(previousTXN)
@@ -369,16 +395,18 @@ class IRSTests : TestDependencyInjectionBase() {
 
         return ledger(initialiseSerialization = false) {
             transaction("Agreement") {
-                output("irs post agreement") { singleIRS() }
+                attachments(IRS_PROGRAM_ID)
+                output(IRS_PROGRAM_ID, "irs post agreement") { singleIRS() }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
 
             transaction("Fix") {
+                attachments(IRS_PROGRAM_ID)
                 input("irs post agreement")
                 val postAgreement = "irs post agreement".output<InterestRateSwap.State>()
-                output("irs post first fixing") {
+                output(IRS_PROGRAM_ID, "irs post first fixing") {
                     postAgreement.copy(
                             postAgreement.fixedLeg,
                             postAgreement.floatingLeg,
@@ -399,8 +427,9 @@ class IRSTests : TestDependencyInjectionBase() {
     fun `ensure failure occurs when there are inbound states for an agreement command`() {
         val irs = singleIRS()
         transaction(initialiseSerialization = false) {
-            input { irs }
-            output("irs post agreement") { irs }
+            attachments(IRS_PROGRAM_ID)
+            input(IRS_PROGRAM_ID, irs)
+            output(IRS_PROGRAM_ID, "irs post agreement", irs)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "There are no in states for an agreement"
@@ -412,9 +441,8 @@ class IRSTests : TestDependencyInjectionBase() {
         val irs = singleIRS()
         val emptySchedule = mutableMapOf<LocalDate, FixedRatePaymentEvent>()
         transaction(initialiseSerialization = false) {
-            output {
-                irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule))
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule)))
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "There are events in the fix schedule"
@@ -426,9 +454,8 @@ class IRSTests : TestDependencyInjectionBase() {
         val irs = singleIRS()
         val emptySchedule = mutableMapOf<LocalDate, FloatingRatePaymentEvent>()
         transaction(initialiseSerialization = false) {
-            output {
-                irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule))
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule)))
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "There are events in the float schedule"
@@ -439,18 +466,16 @@ class IRSTests : TestDependencyInjectionBase() {
     fun `ensure notionals are non zero`() {
         val irs = singleIRS()
         transaction(initialiseSerialization = false) {
-            output {
-                irs.copy(irs.fixedLeg.copy(notional = irs.fixedLeg.notional.copy(quantity = 0)))
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, irs.copy(irs.fixedLeg.copy(notional = irs.fixedLeg.notional.copy(quantity = 0))))
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "All notionals must be non zero"
         }
 
         transaction(initialiseSerialization = false) {
-            output {
-                irs.copy(irs.fixedLeg.copy(notional = irs.floatingLeg.notional.copy(quantity = 0)))
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, irs.copy(irs.fixedLeg.copy(notional = irs.floatingLeg.notional.copy(quantity = 0))))
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "All notionals must be non zero"
@@ -462,9 +487,8 @@ class IRSTests : TestDependencyInjectionBase() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(fixedRate = FixedRate(PercentageRatioUnit("-0.1"))))
         transaction(initialiseSerialization = false) {
-            output {
-                modifiedIRS
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, modifiedIRS)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "The fixed leg rate must be positive"
@@ -479,9 +503,8 @@ class IRSTests : TestDependencyInjectionBase() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.fixedLeg.notional.quantity, Currency.getInstance("JPY"))))
         transaction(initialiseSerialization = false) {
-            output {
-                modifiedIRS
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, modifiedIRS)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "The currency of the notionals must be the same"
@@ -493,9 +516,8 @@ class IRSTests : TestDependencyInjectionBase() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.floatingLeg.notional.quantity + 1, irs.floatingLeg.notional.token)))
         transaction(initialiseSerialization = false) {
-            output {
-                modifiedIRS
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, modifiedIRS)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "All leg notionals must be the same"
@@ -507,9 +529,8 @@ class IRSTests : TestDependencyInjectionBase() {
         val irs = singleIRS()
         val modifiedIRS1 = irs.copy(fixedLeg = irs.fixedLeg.copy(terminationDate = irs.fixedLeg.effectiveDate.minusDays(1)))
         transaction(initialiseSerialization = false) {
-            output {
-                modifiedIRS1
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, modifiedIRS1)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "The effective date is before the termination date for the fixed leg"
@@ -517,9 +538,8 @@ class IRSTests : TestDependencyInjectionBase() {
 
         val modifiedIRS2 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.floatingLeg.effectiveDate.minusDays(1)))
         transaction(initialiseSerialization = false) {
-            output {
-                modifiedIRS2
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, modifiedIRS2)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "The effective date is before the termination date for the floating leg"
@@ -532,9 +552,8 @@ class IRSTests : TestDependencyInjectionBase() {
 
         val modifiedIRS3 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.fixedLeg.terminationDate.minusDays(1)))
         transaction(initialiseSerialization = false) {
-            output {
-                modifiedIRS3
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, modifiedIRS3)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "The termination dates are aligned"
@@ -543,9 +562,8 @@ class IRSTests : TestDependencyInjectionBase() {
 
         val modifiedIRS4 = irs.copy(floatingLeg = irs.floatingLeg.copy(effectiveDate = irs.fixedLeg.effectiveDate.minusDays(1)))
         transaction(initialiseSerialization = false) {
-            output {
-                modifiedIRS4
-            }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, modifiedIRS4)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this `fails with` "The effective dates are aligned"
@@ -559,7 +577,8 @@ class IRSTests : TestDependencyInjectionBase() {
         val bd = BigDecimal("0.0063518")
 
         transaction(initialiseSerialization = false) {
-            output("irs post agreement") { singleIRS() }
+            attachments(IRS_PROGRAM_ID)
+            output(IRS_PROGRAM_ID, "irs post agreement") { singleIRS() }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
             this.verifies()
@@ -572,10 +591,8 @@ class IRSTests : TestDependencyInjectionBase() {
                 oldIRS.common)
 
         transaction(initialiseSerialization = false) {
-            input {
-                oldIRS
-
-            }
+            attachments(IRS_PROGRAM_ID)
+            input(IRS_PROGRAM_ID, oldIRS)
 
             // Templated tweak for reference. A corrent fixing applied should be ok
             tweak {
@@ -583,7 +600,7 @@ class IRSTests : TestDependencyInjectionBase() {
                     InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd))
                 }
                 timeWindow(TEST_TX_TIME)
-                output { newIRS }
+                output(IRS_PROGRAM_ID, newIRS)
                 this.verifies()
             }
 
@@ -591,7 +608,7 @@ class IRSTests : TestDependencyInjectionBase() {
             tweak {
                 command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)) }
                 timeWindow(TEST_TX_TIME)
-                output { oldIRS }
+                output(IRS_PROGRAM_ID, oldIRS)
                 this `fails with` "There is at least one difference in the IRS floating leg payment schedules"
             }
 
@@ -604,7 +621,7 @@ class IRSTests : TestDependencyInjectionBase() {
                 val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
                 val modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
 
-                output {
+                output(IRS_PROGRAM_ID) {
                     newIRS.copy(
                             newIRS.fixedLeg,
                             newIRS.floatingLeg,
@@ -624,7 +641,7 @@ class IRSTests : TestDependencyInjectionBase() {
                 val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
                 val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
 
-                output {
+                output(IRS_PROGRAM_ID) {
                     newIRS.copy(
                             newIRS.fixedLeg,
                             newIRS.floatingLeg,
@@ -653,7 +670,8 @@ class IRSTests : TestDependencyInjectionBase() {
 
         return ledger(initialiseSerialization = false) {
             transaction("Agreement") {
-                output("irs post agreement1") {
+                attachments(IRS_PROGRAM_ID)
+                output(IRS_PROGRAM_ID, "irs post agreement1") {
                     irs.copy(
                             irs.fixedLeg,
                             irs.floatingLeg,
@@ -667,7 +685,8 @@ class IRSTests : TestDependencyInjectionBase() {
             }
 
             transaction("Agreement") {
-                output("irs post agreement2") {
+                attachments(IRS_PROGRAM_ID)
+                output(IRS_PROGRAM_ID, "irs post agreement2") {
                     irs.copy(
                             linearId = UniqueIdentifier("t2"),
                             fixedLeg = irs.fixedLeg,
@@ -682,10 +701,11 @@ class IRSTests : TestDependencyInjectionBase() {
             }
 
             transaction("Fix") {
+                attachments(IRS_PROGRAM_ID)
                 input("irs post agreement1")
                 input("irs post agreement2")
                 val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State>()
-                output("irs post first fixing1") {
+                output(IRS_PROGRAM_ID, "irs post first fixing1") {
                     postAgreement1.copy(
                             postAgreement1.fixedLeg,
                             postAgreement1.floatingLeg,
@@ -694,7 +714,7 @@ class IRSTests : TestDependencyInjectionBase() {
                     )
                 }
                 val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State>()
-                output("irs post first fixing2") {
+                output(IRS_PROGRAM_ID, "irs post first fixing2") {
                     postAgreement2.copy(
                             postAgreement2.fixedLeg,
                             postAgreement2.floatingLeg,

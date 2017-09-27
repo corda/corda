@@ -7,17 +7,20 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
+import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DummyContract
@@ -38,7 +41,7 @@ object FlowCookbook {
     @StartableByRPC
     // Every flow must subclass ``FlowLogic``. The generic indicates the
     // flow's return type.
-    class InitiatorFlow(val arg1: Boolean, val arg2: Int, val counterparty: Party) : FlowLogic<Unit>() {
+    class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: Party, val regulator: Party) : FlowLogic<Unit>() {
 
         /**---------------------------------
          * WIRING UP THE PROGRESS TRACKER *
@@ -102,27 +105,21 @@ object FlowCookbook {
             //   - To serve as a timestamping authority if the transaction has a time-window
             // We retrieve the notary from the network map.
             // DOCSTART 1
-            val specificNotary: Party? = serviceHub.networkMapCache.getNotary(getX500Name(O = "Notary Service", OU = "corda", L = "London", C = "UK"))
-            val anyNotary: Party? = serviceHub.networkMapCache.getAnyNotary()
-            // Unlike the first two methods, ``getNotaryNodes`` returns a
-            // ``List<NodeInfo>``. We have to extract the notary identity of
-            // the node we want.
-            val firstNotary: Party = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
+            val specificNotary: Party = serviceHub.networkMapCache.getNotary(CordaX500Name(organisation = "Notary Service", locality = "London", country = "UK"))!!
+            // Alternatively, we can pick an arbitrary notary from the notary list. However, it is always preferable to
+            // specify which notary to use explicitly, as the notary list might change when new notaries are introduced,
+            // or old ones decommissioned.
+            val firstNotary: Party = serviceHub.networkMapCache.notaryIdentities.first()
             // DOCEND 1
 
-            // We may also need to identify a specific counterparty. Again, we
-            // do so using the network map.
+            // We may also need to identify a specific counterparty. We
+            // do so using identity service.
             // DOCSTART 2
-            val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(getX500Name(O = "NodeA", L = "London", C = "UK"))?.legalIdentity
-            val keyedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalIdentityKey(dummyPubKey)?.legalIdentity
-            val firstCounterparty: Party = serviceHub.networkMapCache.partyNodes[0].legalIdentity
+            val namedCounterparty: Party = serviceHub.identityService.wellKnownPartyFromX500Name(CordaX500Name(organisation = "NodeA", locality = "London", country = "UK")) ?:
+                    throw IllegalArgumentException("Couldn't find counterparty for NodeA in identity service")
+            val keyedCounterparty: Party = serviceHub.identityService.partyFromKey(dummyPubKey) ?:
+                    throw IllegalArgumentException("Couldn't find counterparty with key: $dummyPubKey in identity service")
             // DOCEND 2
-
-            // Finally, we can use the map to identify nodes providing a
-            // specific service (e.g. a regulator or an oracle).
-            // DOCSTART 3
-            val regulator: Party = serviceHub.networkMapCache.getNodesWithService(ServiceType.regulator)[0].legalIdentity
-            // DOCEND 3
 
             /**-----------------------------
              * SENDING AND RECEIVING DATA *
@@ -140,7 +137,8 @@ object FlowCookbook {
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
             // DOCSTART 4
-            send(counterparty, Any())
+            val counterpartySession = initiateFlow(counterparty)
+            counterpartySession.send(Any())
             // DOCEND 4
 
             // We can wait to receive arbitrary data of a specific type from a
@@ -163,7 +161,7 @@ object FlowCookbook {
             // be what it appears to be! We must unwrap the
             // ``UntrustworthyData`` using a lambda.
             // DOCSTART 5
-            val packet1: UntrustworthyData<Int> = receive<Int>(counterparty)
+            val packet1: UntrustworthyData<Int> = counterpartySession.receive<Int>()
             val int: Int = packet1.unwrap { data ->
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -177,7 +175,7 @@ object FlowCookbook {
             // data sent doesn't need to match the type of the data received
             // back.
             // DOCSTART 7
-            val packet2: UntrustworthyData<Boolean> = sendAndReceive<Boolean>(counterparty, "You can send and receive any class!")
+            val packet2: UntrustworthyData<Boolean> = counterpartySession.sendAndReceive<Boolean>("You can send and receive any class!")
             val boolean: Boolean = packet2.unwrap { data ->
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
@@ -190,8 +188,9 @@ object FlowCookbook {
             // counterparty. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
             // DOCSTART 6
-            send(regulator, Any())
-            val packet3: UntrustworthyData<Any> = receive<Any>(regulator)
+            val regulatorSession = initiateFlow(regulator)
+            regulatorSession.send(Any())
+            val packet3: UntrustworthyData<Any> = regulatorSession.receive<Any>()
             // DOCEND 6
 
             /**-----------------------------------
@@ -234,19 +233,25 @@ object FlowCookbook {
 
             // Output states are constructed from scratch.
             // DOCSTART 22
-            val ourOutput: DummyState = DummyState()
+            val ourOutputState: DummyState = DummyState()
             // DOCEND 22
             // Or as copies of other states with some properties changed.
             // DOCSTART 23
-            val ourOtherOutput: DummyState = ourOutput.copy(magicNumber = 77)
+            val ourOtherOutputState: DummyState = ourOutputState.copy(magicNumber = 77)
             // DOCEND 23
+
+            // We then need to pair our output state with a contract.
+            // DOCSTART 47
+            val contractName: String = "net.corda.testing.contracts.DummyContract"
+            val ourOutput: StateAndContract = StateAndContract(ourOutputState, contractName)
+            // DOCEND 47
 
             // Commands pair a ``CommandData`` instance with a list of
             // public keys. To be valid, the transaction requires a signature
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
             val commandData: DummyContract.Commands.Create = DummyContract.Commands.Create()
-            val ourPubKey: PublicKey = serviceHub.legalIdentityKey
+            val ourPubKey: PublicKey = serviceHub.myInfo.legalIdentitiesAndCerts.first().owningKey
             val counterpartyPubKey: PublicKey = counterparty.owningKey
             val requiredSigners: List<PublicKey> = listOf(ourPubKey, counterpartyPubKey)
             val ourCommand: Command<DummyContract.Commands.Create> = Command(commandData, requiredSigners)
@@ -278,11 +283,11 @@ object FlowCookbook {
             // We can also define a time window as an ``Instant`` +/- a time
             // tolerance (e.g. 30 seconds):
             // DOCSTART 42
-            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(Instant.now(), 30.seconds)
+            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(serviceHub.clock.instant(), 30.seconds)
             // DOCEND 42
             // Or as a start-time plus a duration:
             // DOCSTART 43
-            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(Instant.now(), 30.seconds)
+            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(serviceHub.clock.instant(), 30.seconds)
             // DOCEND 43
 
             /**-----------------------
@@ -290,36 +295,70 @@ object FlowCookbook {
             -----------------------**/
             progressTracker.currentStep = TX_BUILDING
 
+            // If our transaction has input states or a time-window, we must instantiate it with a
+            // notary.
             // DOCSTART 19
             val txBuilder: TransactionBuilder = TransactionBuilder(specificNotary)
             // DOCEND 19
 
+            // Otherwise, we can choose to instantiate it without one:
+            // DOCSTART 46
+            val txBuilderNoNotary: TransactionBuilder = TransactionBuilder()
+            // DOCEND 46
+
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
             // DOCSTART 27
             txBuilder.withItems(
-                    // Inputs, as ``StateRef``s that reference the outputs of previous transactions
+                    // Inputs, as ``StateAndRef``s that reference the outputs of previous transactions
                     ourStateAndRef,
-                    // Outputs, as ``ContractState``s
+                    // Outputs, as ``StateAndContract``s
                     ourOutput,
                     // Commands, as ``Command``s
-                    ourCommand
+                    ourCommand,
+                    // Attachments, as ``SecureHash``es
+                    ourAttachment,
+                    // A time-window, as ``TimeWindow``
+                    ourTimeWindow
             )
             // DOCEND 27
 
-            // We can also add items using methods for the individual components:
+            // We can also add items using methods for the individual components.
+
+            // The individual methods for adding input states and attachments:
             // DOCSTART 28
             txBuilder.addInputState(ourStateAndRef)
-            txBuilder.addOutputState(ourOutput)
-            txBuilder.addCommand(ourCommand)
             txBuilder.addAttachment(ourAttachment)
             // DOCEND 28
 
-            // There are several ways of setting the transaction's time-window.
-            // We can set a time-window directly:
+            // An output state can be added as a ``ContractState``, contract class name and notary.
+            // DOCSTART 49
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary)
+            // DOCEND 49
+            // We can also leave the notary field blank, in which case the transaction's default
+            // notary is used.
+            // DOCSTART 50
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID)
+            // DOCEND 50
+            // Or we can add the output state as a ``TransactionState``, which already specifies
+            // the output's contract and notary.
+            // DOCSTART 51
+            val txState: TransactionState<DummyState> = TransactionState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary)
+            // DOCEND 51
+
+            // Commands can be added as ``Command``s.
+            // DOCSTART 52
+            txBuilder.addCommand(ourCommand)
+            // DOCEND 52
+            // Or as ``CommandData`` and a ``vararg PublicKey``.
+            // DOCSTART 53
+            txBuilder.addCommand(commandData, ourPubKey, counterpartyPubKey)
+            // DOCEND 53
+
+            // We can set a time-window directly.
             // DOCSTART 44
             txBuilder.setTimeWindow(ourTimeWindow)
             // DOCEND 44
-            // Or as a start time plus a duration (e.g. 45 seconds):
+            // Or as a start time plus a duration (e.g. 45 seconds).
             // DOCSTART 45
             txBuilder.setTimeWindow(serviceHub.clock.instant(), 45.seconds)
             // DOCEND 45
@@ -383,10 +422,10 @@ object FlowCookbook {
             // for data request until the transaction is resolved and verified
             // on the other side:
             // DOCSTART 12
-            subFlow(SendTransactionFlow(counterparty, twiceSignedTx))
+            subFlow(SendTransactionFlow(counterpartySession, twiceSignedTx))
 
             // Optional request verification to further restrict data access.
-            subFlow(object : SendTransactionFlow(counterparty, twiceSignedTx) {
+            subFlow(object : SendTransactionFlow(counterpartySession, twiceSignedTx) {
                 override fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
                     // Extra request verification.
                 }
@@ -397,16 +436,16 @@ object FlowCookbook {
             // which will automatically download all the dependencies and verify
             // the transaction
             // DOCSTART 13
-            val verifiedTransaction = subFlow(ReceiveTransactionFlow(counterparty))
+            val verifiedTransaction = subFlow(ReceiveTransactionFlow(counterpartySession))
             // DOCEND 13
 
             // We can also send and receive a `StateAndRef` dependency chain
             // and automatically resolve its dependencies.
             // DOCSTART 14
-            subFlow(SendStateAndRefFlow(counterparty, dummyStates))
+            subFlow(SendStateAndRefFlow(counterpartySession, dummyStates))
 
             // On the receive side ...
-            val resolvedStateAndRef = subFlow(ReceiveStateAndRefFlow<DummyState>(counterparty))
+            val resolvedStateAndRef = subFlow(ReceiveStateAndRefFlow<DummyState>(counterpartySession))
             // DOCEND 14
 
             // We can now verify the transaction to ensure that it satisfies
@@ -457,7 +496,7 @@ object FlowCookbook {
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()))
+            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, emptySet(), SIGS_GATHERING.childProgressTracker()))
             // DOCEND 15
 
             /**-----------------------
@@ -493,13 +532,13 @@ object FlowCookbook {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 9
-            val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).single()
+            val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()))
             // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
             val additionalParties: Set<Party> = setOf(regulator)
-            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
+            val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()))
             // DOCEND 10
         }
     }
@@ -512,7 +551,7 @@ object FlowCookbook {
     // Each node also has several flow pairs registered by default - see
     // ``AbstractNode.installCoreFlows``.
     @InitiatedBy(InitiatorFlow::class)
-    class ResponderFlow(val counterparty: Party) : FlowLogic<Unit>() {
+    class ResponderFlow(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
 
         companion object {
             object RECEIVING_AND_SENDING_DATA : Step("Sending data between parties.")
@@ -546,9 +585,9 @@ object FlowCookbook {
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
             // DOCSTART 8
-            val any: Any = receive<Any>(counterparty).unwrap { data -> data }
-            val string: String = sendAndReceive<String>(counterparty, 99).unwrap { data -> data }
-            send(counterparty, true)
+            val any: Any = counterpartySession.receive<Any>().unwrap { data -> data }
+            val string: String = counterpartySession.sendAndReceive<String>(99).unwrap { data -> data }
+            counterpartySession.send(true)
             // DOCEND 8
 
             /**----------------------------------------
@@ -560,7 +599,7 @@ object FlowCookbook {
             // ``CollectSignaturesFlow``. It does so my invoking its own
             // ``SignTransactionFlow`` subclass.
             // DOCSTART 16
-            val signTransactionFlow: SignTransactionFlow = object : SignTransactionFlow(counterparty) {
+            val signTransactionFlow: SignTransactionFlow = object : SignTransactionFlow(counterpartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     // Any additional checking we see fit...
                     val outputState = stx.tx.outputsOfType<DummyState>().single()

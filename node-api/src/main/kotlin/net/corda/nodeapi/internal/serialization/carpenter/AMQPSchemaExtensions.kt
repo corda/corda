@@ -1,11 +1,14 @@
+@file:JvmName("AMQPSchemaExtensions")
+
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
+import net.corda.nodeapi.internal.serialization.amqp.RestrictedType
 import net.corda.nodeapi.internal.serialization.amqp.Field as AMQPField
 import net.corda.nodeapi.internal.serialization.amqp.Schema as AMQPSchema
 
-fun AMQPSchema.carpenterSchema(classloader: ClassLoader) : CarpenterSchemas {
-    val rtn = CarpenterSchemas.newInstance()
+fun AMQPSchema.carpenterSchema(classloader: ClassLoader): CarpenterMetaSchema {
+    val rtn = CarpenterMetaSchema.newInstance()
 
     types.filterIsInstance<CompositeType>().forEach {
         it.carpenterSchema(classloader, carpenterSchemas = rtn)
@@ -38,7 +41,7 @@ fun AMQPField.typeAsString() = if (type == "*") requires[0] else type
  *  on the class path. For testing purposes schema generation can be forced
  */
 fun CompositeType.carpenterSchema(classloader: ClassLoader,
-                                  carpenterSchemas: CarpenterSchemas,
+                                  carpenterSchemas: CarpenterMetaSchema,
                                   force: Boolean = false) {
     if (classloader.exists(name)) {
         validatePropertyTypes(classloader)
@@ -81,6 +84,18 @@ fun CompositeType.carpenterSchema(classloader: ClassLoader,
                 interfaces = providesList,
                 isInterface = isInterface))
     }
+}
+
+// This is potentially problematic as we're assuming the only type of restriction we will be
+// carpenting for, an enum, but actually trying to split out RestrictedType into something
+// more polymorphic is hard. Additionally, to conform to AMQP we're really serialising
+// this as a list so...
+fun RestrictedType.carpenterSchema(carpenterSchemas: CarpenterMetaSchema) {
+    val m: MutableMap<String, Field> = mutableMapOf()
+
+    choices.forEach { m[it.name] = EnumField() }
+
+    carpenterSchemas.carpenterSchemas.add(EnumSchema(name = name, fields = m))
 }
 
 // map a pair of (typename, mandatory) to the corresponding class type

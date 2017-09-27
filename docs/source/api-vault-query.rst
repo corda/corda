@@ -69,7 +69,8 @@ There are four implementations of this interface which can be chained together t
 
 4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the :doc:`Persistence </api-persistence>` documentation and associated examples. Custom criteria expressions are expressed using one of several type-safe ``CriteriaExpression``: BinaryLogical, Not, ColumnPredicateExpression, AggregateFunctionExpression. The ``ColumnPredicateExpression`` allows for specification arbitrary criteria using the previously enumerated operator types. The ``AggregateFunctionExpression`` allows for the specification of an aggregate function type (sum, avg, max, min, count) with optional grouping and sorting. Furthermore, a rich DSL is provided to enable simple construction of custom criteria using any combination of ``ColumnPredicate``. See the ``Builder`` object in ``QueryCriteriaUtils`` for a complete specification of the DSL. 
 
-    .. note:: It is a requirement to register any custom contract schemas to be used in Vault Custom queries in the associated `CordaPluginRegistry` configuration for the respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`)
+    .. note:: custom contract schemas are automatically registered upon node startup for CorDapps. Please refer to
+    :doc:`Persistence </api-persistence>` for mechanisms of registering custom schemas for different testing purposes.
 
 All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators.
 
@@ -374,7 +375,7 @@ Behavioural notes
 -----------------
 1. **TrackBy** updates do not take into account the full criteria specification due to different and more restrictive syntax
    in `observables <https://github.com/ReactiveX/RxJava/wiki>`_ filtering (vs full SQL-92 JDBC filtering as used in snapshot views).
-   Specifically, dynamic updates are filtered by ``contractType`` and ``stateType`` (UNCONSUMED, CONSUMED, ALL) only.
+   Specifically, dynamic updates are filtered by ``contractStateType`` and ``stateType`` (UNCONSUMED, CONSUMED, ALL) only.
 2. **QueryBy** and **TrackBy snapshot views** using pagination may return different result sets as each paging request is a
    separate SQL query on the underlying database, and it is entirely conceivable that state modifications are taking
    place in between and/or in parallel to paging requests.

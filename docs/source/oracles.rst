@@ -211,8 +211,7 @@ done:
    :end-before: DOCEND 3
 
 The Corda node scans for any class with this annotation and initialises them. The only requirement is that the class provide
-a constructor with a single parameter of type ``PluginServiceHub```. In our example the oracle class has two constructors.
-The second is used for testing.
+a constructor with a single parameter of type ``ServiceHub``.
 
 .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
    :language: kotlin
@@ -220,7 +219,7 @@ The second is used for testing.
    :end-before: DOCEND 2
 
 These two flows leverage the oracle to provide the querying and signing operations. They get reference to the oracle,
-which will have already been initialised by the node, using ``ServiceHub.cordappService``. Both flows are annotated with
+which will have already been initialised by the node, using ``ServiceHub.cordappProvider``. Both flows are annotated with
 ``@InitiatedBy``. This tells the node which initiating flow (which are discussed in the next section) they are meant to
 be executed with.
 

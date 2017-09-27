@@ -1,6 +1,6 @@
 package net.corda.testing
 
-import net.corda.client.rpc.serialization.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence

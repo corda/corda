@@ -5,7 +5,11 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.setCordappPackages
 import net.corda.testing.transaction
+import net.corda.testing.unsetCordappPackages
+import org.junit.After
+import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
@@ -163,10 +167,20 @@ class Cap {
         }
     }
 
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.finance.contracts.universal")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
+    }
+
     @Test
     fun issue() {
         transaction {
-            output { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID) { stateInitial }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -183,8 +197,8 @@ class Cap {
     @Test
     fun `first fixing`() {
         transaction {
-            input { stateInitial }
-            output { stateAfterFixingFirst }
+            input(UNIVERSAL_PROGRAM_ID) { stateInitial }
+            output(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFirst }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
@@ -228,9 +242,9 @@ class Cap {
     @Test
     fun `first execute`() {
         transaction {
-            input { stateAfterFixingFirst }
-            output { stateAfterExecutionFirst }
-            output { statePaymentFirst }
+            input(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFirst }
+            output(UNIVERSAL_PROGRAM_ID) { stateAfterExecutionFirst }
+            output(UNIVERSAL_PROGRAM_ID) { statePaymentFirst }
 
             timeWindow(TEST_TX_TIME_1)
 
@@ -248,8 +262,8 @@ class Cap {
     @Test
     fun `final execute`() {
         transaction {
-            input { stateAfterFixingFinal }
-            output { statePaymentFinal }
+            input(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFinal }
+            output(UNIVERSAL_PROGRAM_ID) { statePaymentFinal }
 
             timeWindow(TEST_TX_TIME_1)
 
@@ -267,8 +281,8 @@ class Cap {
     @Test
     fun `second fixing`() {
         transaction {
-            input { stateAfterExecutionFirst }
-            output { stateAfterFixingFinal }
+            input(UNIVERSAL_PROGRAM_ID) { stateAfterExecutionFirst }
+            output(UNIVERSAL_PROGRAM_ID) { stateAfterFixingFinal }
             timeWindow(TEST_TX_TIME_1)
 
             tweak {

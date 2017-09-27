@@ -60,6 +60,7 @@ class Cordformation implements Plugin<Project> {
         def excludes = [
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib'],
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jre8'],
+                [group: 'org.jetbrains.kotlin', name: 'kotlin-reflect'],
                 [group: 'co.paralleluniverse', name: 'quasar-core']
         ]
 
@@ -70,8 +71,8 @@ class Cordformation implements Plugin<Project> {
             // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
             def filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
             filteredDeps.each {
-                // net.corda may be a core dependency which shouldn't be included in this cordapp so give a warning
-                if(it.group && it.group.contains('net.corda.')) {
+                // net.corda or com.r3.corda.enterprise may be a core dependency which shouldn't be included in this cordapp so give a warning
+                if (it.group && (it.group.startsWith('net.corda.') || it.group.startsWith('com.r3.corda.enterprise.'))) {
                     logger.warn("You appear to have included a Corda platform component ($it) using a 'compile' or 'runtime' dependency." +
                                 "This can cause node stability problems. Please use 'corda' instead." +
                                 "See http://docs.corda.net/cordapp-build-systems.html")

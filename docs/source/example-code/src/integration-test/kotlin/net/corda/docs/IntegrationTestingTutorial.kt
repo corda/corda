@@ -3,7 +3,6 @@ package net.corda.docs
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultTrackBy
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -12,6 +11,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
@@ -23,7 +23,8 @@ class IntegrationTestingTutorial {
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
-        driver {
+        driver(startNodesInProcess = true,
+               extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlowPermission<CashIssueFlow>(),
                     startFlowPermission<CashPaymentFlow>()
@@ -56,18 +57,19 @@ class IntegrationTestingTutorial {
 
             // START 4
             val issueRef = OpaqueBytes.of(0)
+            val notaryParty = aliceProxy.notaryIdentities().first()
             (1..10).map { i ->
                 aliceProxy.startFlow(::CashIssueFlow,
                         i.DOLLARS,
                         issueRef,
-                        notary.nodeInfo.notaryIdentity
+                        notaryParty
                 ).returnValue
             }.transpose().getOrThrow()
             // We wait for all of the issuances to run before we start making payments
             (1..10).map { i ->
                 aliceProxy.startFlow(::CashPaymentFlow,
                         i.DOLLARS,
-                        bob.nodeInfo.legalIdentity,
+                        bob.nodeInfo.chooseIdentity(),
                         true
                 ).returnValue
             }.transpose().getOrThrow()
@@ -89,7 +91,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1..10) {
-                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
+                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.chooseIdentity()).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

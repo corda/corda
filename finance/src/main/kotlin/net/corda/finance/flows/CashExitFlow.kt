@@ -26,7 +26,9 @@ import java.util.*
  * issuer.
  */
 @StartableByRPC
-class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+class CashExitFlow(private val amount: Amount<Currency>,
+                   private val issuerRef: OpaqueBytes,
+                   progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
     constructor(request: ExitRequest) : this(request.amount, request.issueRef, tracker())
 
@@ -42,9 +44,11 @@ class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, pro
     @Throws(CashException::class)
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = null as Party?)
-        val issuer = serviceHub.myInfo.legalIdentity.ref(issuerRef)
-        val exitStates = CashSelection.getInstance({serviceHub.jdbcSession().metaData}).unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+        val builder = TransactionBuilder(notary = null)
+        val issuer = ourIdentity.ref(issuerRef)
+        val exitStates = CashSelection
+                .getInstance { serviceHub.jdbcSession().metaData }
+                .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
             Cash().generateExit(
                     builder,
@@ -61,9 +65,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, pro
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
         //       count as a reason to fail?
         val participants: Set<Party> = inputStates
-                .filterIsInstance<Cash.State>()
-                .map { serviceHub.identityService.partyFromAnonymous(it.owner) }
-                .filterNotNull()
+                .mapNotNull { serviceHub.identityService.wellKnownPartyFromAnonymous(it.state.data.owner) }
                 .toSet()
         // Sign transaction
         progressTracker.currentStep = SIGNING_TX
@@ -71,8 +73,8 @@ class CashExitFlow(val amount: Amount<Currency>, val issuerRef: OpaqueBytes, pro
 
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
-        finaliseTx(participants, tx, "Unable to notarise exit")
-        return Result(tx, null)
+        val notarised = finaliseTx(tx, participants, "Unable to notarise exit")
+        return Result(notarised, null)
     }
 
     @CordaSerializable

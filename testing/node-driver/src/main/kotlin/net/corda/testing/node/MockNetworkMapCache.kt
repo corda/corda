@@ -2,12 +2,12 @@ package net.corda.testing.node
 
 import co.paralleluniverse.common.util.VisibleForTesting
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.getX500Name
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.testing.getTestPartyAndCertificate
@@ -20,8 +20,8 @@ import java.math.BigInteger
  */
 class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMapCache(serviceHub) {
     private companion object {
-        val BANK_C = getTestPartyAndCertificate(getX500Name(O = "Bank C", L = "London", C = "GB"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
-        val BANK_D = getTestPartyAndCertificate(getX500Name(O = "Bank D", L = "London", C = "GB"), entropyToKeyPair(BigInteger.valueOf(2000)).public)
+        val BANK_C = getTestPartyAndCertificate(CordaX500Name(organisation = "Bank C", locality = "London", country = "GB"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
+        val BANK_D = getTestPartyAndCertificate(CordaX500Name(organisation = "Bank D", locality = "London", country = "GB"), entropyToKeyPair(BigInteger.valueOf(2000)).public)
         val BANK_C_ADDR = NetworkHostAndPort("bankC", 8080)
         val BANK_D_ADDR = NetworkHostAndPort("bankD", 8080)
     }
@@ -29,10 +29,10 @@ class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMap
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
     init {
-        val mockNodeA = NodeInfo(listOf(BANK_C_ADDR), BANK_C, NonEmptySet.of(BANK_C), 1, serial = 1L)
-        val mockNodeB = NodeInfo(listOf(BANK_D_ADDR), BANK_D, NonEmptySet.of(BANK_D), 1, serial = 1L)
-        registeredNodes[mockNodeA.legalIdentity.owningKey] = mockNodeA
-        registeredNodes[mockNodeB.legalIdentity.owningKey] = mockNodeB
+        val mockNodeA = NodeInfo(listOf(BANK_C_ADDR), listOf(BANK_C), 1, serial = 1L)
+        val mockNodeB = NodeInfo(listOf(BANK_D_ADDR), listOf(BANK_D), 1, serial = 1L)
+        partyNodes.add(mockNodeA)
+        partyNodes.add(mockNodeB)
         runWithoutMapService()
     }
 
@@ -42,7 +42,9 @@ class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMap
      */
     @VisibleForTesting
     fun addRegistration(node: NodeInfo) {
-        registeredNodes[node.legalIdentity.owningKey] = node
+        val previousIndex = partyNodes.indexOfFirst { it.legalIdentitiesAndCerts == node.legalIdentitiesAndCerts }
+        if (previousIndex != -1) partyNodes[previousIndex] = node
+        else partyNodes.add(node)
     }
 
     /**
@@ -51,6 +53,6 @@ class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMap
      */
     @VisibleForTesting
     fun deleteRegistration(legalIdentity: Party): Boolean {
-        return registeredNodes.remove(legalIdentity.owningKey) != null
+        return partyNodes.removeIf { legalIdentity.owningKey in it.legalIdentitiesAndCerts.map { it.owningKey }}
     }
 }

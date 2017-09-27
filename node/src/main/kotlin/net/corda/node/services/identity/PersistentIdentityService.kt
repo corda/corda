@@ -3,19 +3,16 @@ package net.corda.node.services.identity
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.*
+import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.cert
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
 import java.security.InvalidAlgorithmParameterException
@@ -56,11 +53,11 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             )
         }
 
-        fun createX500Map(): AppendOnlyPersistentMap<X500Name, SecureHash, PersistentIdentityNames, String> {
+        fun createX500Map(): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
-                    fromPersistentEntity = { Pair(X500Name(it.name), SecureHash.parse(it.publicKeyHash)) },
-                    toPersistentEntity = { key: X500Name, value: SecureHash ->
+                    fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
+                    toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
                         PersistentIdentityNames(key.toString(), value.toString())
                     },
                     persistentEntityClass = PersistentIdentityNames::class.java
@@ -95,7 +92,6 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     )
 
     override val caCertStore: CertStore
-    override val trustRootHolder = trustRoot.toX509CertHolder()
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
 
     private val keyToParties = createPKMap()
@@ -106,49 +102,52 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
         identities.forEach {
             val key = mapToKey(it)
-            keyToParties.addWithDuplicatesAllowed(key, it)
-            principalToParties.addWithDuplicatesAllowed(it.name, key)
+            keyToParties.addWithDuplicatesAllowed(key, it, false)
+            principalToParties.addWithDuplicatesAllowed(it.name, key, false)
         }
         confidentialIdentities.forEach {
-            principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it))
+            principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
         }
-    }
-
-    override fun registerIdentity(party: PartyAndCertificate) {
-        verifyAndRegisterIdentity(party)
     }
 
     // TODO: Check the certificate validation logic
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
-        identity.verify(trustAnchor)
+        try {
+            identity.verify(trustAnchor)
+        } catch (e: CertPathValidatorException) {
+            log.error(e.localizedMessage)
+            log.error("Path = ")
+            identity.certPath.certificates.reversed().forEach {
+                log.error(it.toX509CertHolder().subject.toString())
+            }
+            throw e
+        }
 
-        log.info("Registering identity $identity")
+        log.debug { "Registering identity $identity" }
         val key = mapToKey(identity)
         keyToParties.addWithDuplicatesAllowed(key, identity)
         // Always keep the first party we registered, as that's the well known identity
-        principalToParties.addWithDuplicatesAllowed(identity.name, key)
+        principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
         val parentId = mapToKey(identity.certPath.certificates[1].publicKey)
         return keyToParties[parentId]
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[mapToKey(owningKey)]
-    private fun certificateFromX500Name(name: X500Name): PartyAndCertificate? {
+    private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
         val partyId = principalToParties[name]
         return if (partyId != null) {
             keyToParties[partyId]
         } else null
     }
 
-    override fun certificateFromParty(party: Party): PartyAndCertificate = certificateFromX500Name(party.name) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
-
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = keyToParties.allPersisted().map { it.second }.asIterable()
 
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
-    override fun partyFromX500Name(principal: X500Name): Party? = certificateFromX500Name(principal)?.party
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
+    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
@@ -156,24 +155,24 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         return if (candidate != null) {
             // If we have a well known identity by that name, use it in preference to the candidate. Otherwise default
             // back to the candidate.
-            val res = partyFromX500Name(candidate.name) ?: candidate
+            val res = wellKnownPartyFromX500Name(candidate.name) ?: candidate
             res
         } else {
             null
         }
     }
 
-    override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
-    override fun requirePartyFromAnonymous(party: AbstractParty): Party {
-        return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
+    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
+        return wellKnownPartyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
         for ((x500name, partyId) in principalToParties.allPersisted()) {
             val party = keyToParties[partyId]!!.party
-            for (rdn in x500name.rdNs) {
-                val component = rdn.first.value.toString()
+            val components = listOf(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country).filterNotNull()
+            components.forEach { component ->
                 if (exactMatch && component == query) {
                     results += party
                 } else if (!exactMatch) {

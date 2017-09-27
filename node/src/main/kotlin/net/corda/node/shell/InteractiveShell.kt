@@ -24,10 +24,12 @@ import net.corda.core.utilities.loggerFor
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.ANSIProgressRenderer
+import net.corda.node.utilities.CordaPersistence
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import org.crsh.command.InvocationContext
@@ -75,14 +77,17 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = loggerFor<InteractiveShell>()
-    private lateinit var node: Node
+    private lateinit var node: StartedNode<Node>
+    @VisibleForTesting
+    internal lateinit var database: CordaPersistence
 
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(dir: Path, runLocalShell: Boolean, runSSHServer: Boolean, node: Node) {
+    fun startShell(dir: Path, runLocalShell: Boolean, runSSHServer: Boolean, node: StartedNode<Node>) {
         this.node = node
+        this.database = node.database
         var runSSH = runSSHServer
 
         val config = Properties()
@@ -136,7 +141,7 @@ object InteractiveShell {
             jlineProcessor.closed()
             log.info("Command shell has exited")
             terminal.restore()
-            node.stop()
+            node.dispose()
         }
     }
 
@@ -168,7 +173,7 @@ object InteractiveShell {
                 }
             }
             val attributes = mapOf(
-                    "node" to node,
+                    "node" to node.internals,
                     "services" to node.services,
                     "ops" to node.rpcOps,
                     "mapper" to yamlInputMapper
@@ -286,8 +291,10 @@ object InteractiveShell {
 
             try {
                 // Attempt construction with the given arguments.
-                paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
-                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.parameterTypes), inputData)
+                val args = database.transaction {
+                    paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
+                    parser.parseArguments(clazz.name, paramNamesFromConstructor!!.zip(ctor.parameterTypes), inputData)
+                }
                 if (args.size != ctor.parameterTypes.size) {
                     errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
                     continue
@@ -357,7 +364,7 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val call = parser.parse(context.attributes["ops"] as CordaRPCOps, cmd)
+            val call = database.transaction { parser.parse(context.attributes["ops"] as CordaRPCOps, cmd) }
             result = call.call()
             if (result != null && result !is kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)

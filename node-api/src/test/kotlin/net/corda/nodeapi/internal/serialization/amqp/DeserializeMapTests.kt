@@ -2,10 +2,9 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import org.assertj.core.api.Assertions
 import org.junit.Test
-import java.io.NotSerializableException
 import java.util.*
 
-class DeserializeCollectionTests {
+class DeserializeMapTests {
     companion object {
         /**
          * If you want to see the schema encoded into the envelope after serialisation change this to true
@@ -82,7 +81,7 @@ class DeserializeCollectionTests {
 
         // expected to throw
         Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
-                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
+                .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Unable to serialise deprecated type class java.util.Hashtable. Suggested fix: prefer java.util.map implementations")
     }
 
     @Test
@@ -92,7 +91,7 @@ class DeserializeCollectionTests {
 
         // expect this to throw
         Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
-                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
+                .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
     @Test
@@ -101,7 +100,7 @@ class DeserializeCollectionTests {
         val c = C (WeakHashMap (mapOf("A" to 1, "B" to 2)))
 
         Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
-                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive map type for declaredType")
+                .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Weak references with map types not supported. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
     @Test

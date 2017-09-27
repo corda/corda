@@ -1,12 +1,13 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
+class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
     @Test
     fun singleInteger() {
         @CordaSerializable
@@ -29,14 +30,14 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("int", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -60,14 +61,14 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assert(obj.envelope.schema.types[0] is CompositeType)
 
         val amqpSchema = obj.envelope.schema.types[0] as CompositeType
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -95,14 +96,14 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("long", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -130,14 +131,14 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("short", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -165,14 +166,14 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("double", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -183,7 +184,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         @CordaSerializable
         data class A(val a: Float)
 
-        val test: Float = 10.0F
+        val test = 10.0F
         val a = A(test)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
@@ -200,14 +201,14 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("float", amqpSchema.fields[0].type)
 
-        val carpenterSchema = CarpenterSchemas.newInstance()
+        val carpenterSchema = CarpenterMetaSchema.newInstance()
         amqpSchema.carpenterSchema(
                 classloader = ClassLoader.getSystemClassLoader(),
                 carpenterSchemas = carpenterSchema,
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)

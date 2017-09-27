@@ -3,7 +3,6 @@ package net.corda.node.services.persistence
 import net.corda.core.internal.castIfPossible
 import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.converters.AbstractPartyToX500NameAsStringConverter
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.api.SchemaService

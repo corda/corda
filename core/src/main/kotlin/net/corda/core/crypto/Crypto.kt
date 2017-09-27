@@ -1,10 +1,8 @@
 package net.corda.core.crypto
 
+import net.corda.core.internal.X509EdDSAEngine
 import net.corda.core.serialization.serialize
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
+import net.i2p.crypto.eddsa.*
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
@@ -22,7 +20,6 @@ import org.bouncycastle.asn1.sec.SECObjectIdentifiers
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
@@ -42,6 +39,8 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.*
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -201,6 +200,8 @@ object Crypto {
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
         putAll(EdDSASecurityProvider())
+        // Override the normal EdDSA engine with one which can handle X509 keys.
+        put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", X509EdDSAEngine::class.qualifiedName)
         addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID.algorithm, KeyInfoConverter(EDDSA_ED25519_SHA512))
     }
 
@@ -920,8 +921,7 @@ object Crypto {
     }
 
     /**
-     * Convert a public key to a supported implementation. This method is usually required to retrieve a key from an
-     * [X509CertificateHolder].
+     * Convert a public key to a supported implementation.
      *
      * @param key a public key.
      * @return a supported implementation of the input public key.
