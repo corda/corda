@@ -2,6 +2,7 @@
 
 package net.corda.core.node.services.vault
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
@@ -88,8 +89,7 @@ fun <O, R> resolveEnclosingObjectFromExpression(expression: CriteriaExpression<O
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-fun <O, C> resolveEnclosingObjectFromColumn(column: Column<O, C>): Class<O> = column.declaringClass as Class<O>
+fun <O, C> resolveEnclosingObjectFromColumn(column: Column<O, C>): Class<O> = uncheckedCast(column.declaringClass)
 fun <O, C> getColumnName(column: Column<O, C>): String = column.name
 
 /**

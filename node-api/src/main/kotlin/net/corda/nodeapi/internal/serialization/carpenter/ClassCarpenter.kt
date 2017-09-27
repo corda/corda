@@ -237,10 +237,9 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     private fun ClassWriter.generateGetters(schema: Schema) {
-        @Suppress("UNCHECKED_CAST")
-        for ((name, type) in (schema.fields as Map<String, ClassField>)) {
+        for ((name, type) in schema.fields) {
             visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null).apply {
-                type.addNullabilityAnnotation(this)
+                (type as ClassField).addNullabilityAnnotation(this)
                 visitCode()
                 visitVarInsn(ALOAD, 0)  // Load 'this'
                 visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
@@ -258,8 +257,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     private fun ClassWriter.generateAbstractGetters(schema: Schema) {
-        @Suppress("UNCHECKED_CAST")
-        for ((name, field) in (schema.fields as Map<String, ClassField>)) {
+        for ((name, field) in schema.fields) {
             val opcodes = ACC_ABSTRACT + ACC_PUBLIC
             // abstract method doesn't have any implementation so just end
             visitMethod(opcodes, "get" + name.capitalize(), "()${field.descriptor}", null, null).visitEnd()
@@ -363,9 +361,8 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
             // Assign the fields from parameters.
             var slot = 1 + superclassFields.size
-            @Suppress("UNCHECKED_CAST")
-            for ((name, field) in (schema.fields as Map<String, ClassField>)) {
-                field.nullTest(this, slot)
+            for ((name, field) in schema.fields) {
+                (field as ClassField).nullTest(this, slot)
 
                 visitVarInsn(ALOAD, 0)  // Load 'this' onto the stack
                 slot += load(slot, field)  // Load the contents of the parameter onto the stack.

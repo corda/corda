@@ -1,6 +1,7 @@
 package net.corda.testing
 
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.getOrThrow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -213,9 +214,8 @@ private sealed class ExpectComposeState<E : Any> {
     class Single<E : Any, T : E>(val single: ExpectCompose.Single<E, T>) : ExpectComposeState<E>() {
         override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? =
                 if (single.expect.clazz.isAssignableFrom(event.javaClass)) {
-                    @Suppress("UNCHECKED_CAST")
-                    val coercedEvent = event as T
-                    if (single.expect.match(event)) {
+                    val coercedEvent: T = uncheckedCast(event)
+                    if (single.expect.match(coercedEvent)) {
                         Pair({ single.expect.expectClosure(coercedEvent) }, Finished())
                     } else {
                         null
@@ -285,8 +285,7 @@ private sealed class ExpectComposeState<E : Any> {
                 is ExpectCompose.Single<E, *> -> {
                     // This coercion should not be needed but kotlin can't reason about existential type variables(T)
                     // so here we're coercing T into E (even though T is invariant).
-                    @Suppress("UNCHECKED_CAST")
-                    Single(expectCompose as ExpectCompose.Single<E, E>)
+                    Single(uncheckedCast(expectCompose))
                 }
                 is ExpectCompose.Sequential -> {
                     if (expectCompose.sequence.size > 0) {

@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.Try.Failure
 import net.corda.core.utilities.Try.Success
@@ -35,30 +36,27 @@ sealed class Try<out A> {
     abstract fun getOrThrow(): A
 
     /** Maps the given function to the value from this [Success], or returns `this` if this is a [Failure]. */
-    @Suppress("UNCHECKED_CAST")
     inline fun <B> map(function: (A) -> B): Try<B> = when (this) {
         is Success -> Success(function(value))
-        is Failure -> this as Try<B>
+        is Failure -> uncheckedCast(this)
     }
 
     /** Returns the given function applied to the value from this [Success], or returns `this` if this is a [Failure]. */
-    @Suppress("UNCHECKED_CAST")
     inline fun <B> flatMap(function: (A) -> Try<B>): Try<B> = when (this) {
         is Success -> function(value)
-        is Failure -> this as Try<B>
+        is Failure -> uncheckedCast(this)
     }
 
     /**
      * Maps the given function to the values from this [Success] and [other], or returns `this` if this is a [Failure]
      * or [other] if [other] is a [Failure].
      */
-    @Suppress("UNCHECKED_CAST")
     inline fun <B, C> combine(other: Try<B>, function: (A, B) -> C): Try<C> = when (this) {
         is Success -> when (other) {
             is Success -> Success(function(value, other.value))
-            is Failure -> other as Try<C>
+            is Failure -> uncheckedCast(other)
         }
-        is Failure -> this as Try<C>
+        is Failure -> uncheckedCast(this)
     }
 
     data class Success<out A>(val value: A) : Try<A>() {
