@@ -48,9 +48,9 @@ There are currently three implemented ``AttachmentConstraints`` provided by defa
 
 ``AlwaysAcceptAttachmentConstraint``: Any attachment (except a missing one) will satisfy this constraint.
 
-``AutomaticHashConstraint``: This will be resolved in ``TransactionBuilder`` to a ``HashAttachmentConstraint``. The
-result will be the attachment hash of the CorDapp that contains the ``ContractState`` on the
-``TransactionState.contract`` field.
+``AutomaticHashConstraint``: This will be resolved to a ``HashAttachmentConstraint`` when a ``TransactionBuilder`` is
+converted to a ``WireTransaction``. The ``HashAttachmentConstraint`` will include the attachment hash of the CorDapp
+that contains the ``ContractState`` on the ``TransactionState.contract`` field.
 
 ``HashAttachmentConstraint``: Will require that the hash of the attachment containing the contract matches the hash
 stored in the constraint.
