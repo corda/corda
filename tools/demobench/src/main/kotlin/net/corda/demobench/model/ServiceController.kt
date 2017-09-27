@@ -27,7 +27,7 @@ class ServiceController(resourceName: String = "/services.conf") : Controller() 
                     sq.forEach { line ->
                         val service = line.split(":").map { it.trim() }
                         if (service.size != 2) {
-                            log.info("Encountered corrupted line while reading the service config from: $url")
+                            log.warning("Encountered corrupted line $line while reading services from config: $url")
                         }
                         else {
                             map[service[1]] = service[0]
