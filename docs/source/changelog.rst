@@ -12,6 +12,9 @@ UNRELEASED
 Release 1.0
 -----------
 
+* Unification of VaultQuery And VaultService APIs
+  Developers now only need to work with a single Vault Service API for all needs.
+
 * Java 8 lambdas now work property with Kryo during check-pointing.
 
 * String constants have been marked as ``const`` type in Kotlin, eliminating cases where functions of the form
