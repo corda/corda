@@ -1,5 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.CordaSerializable
 import org.junit.Test
 import java.time.DayOfWeek
 
@@ -10,9 +12,15 @@ import java.io.File
 import java.io.NotSerializableException
 
 import net.corda.core.serialization.SerializedBytes
+import org.assertj.core.api.Assertions
 
 class EnumTests {
     enum class Bras {
+        TSHIRT, UNDERWIRE, PUSHUP, BRALETTE, STRAPLESS, SPORTS, BACKLESS, PADDED
+    }
+
+    @CordaSerializable
+    enum class AnnotatedBras {
         TSHIRT, UNDERWIRE, PUSHUP, BRALETTE, STRAPLESS, SPORTS, BACKLESS, PADDED
     }
 
@@ -185,5 +193,75 @@ class EnumTests {
 
         // we expect this to throw
         DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
+    }
+
+    @Test
+    fun enumNotWhitelistedFails() {
+        data class C (val c: Bras)
+
+        class WL (val allowed: String): ClassWhitelist {
+            override fun hasListed(type: Class<*>): Boolean {
+                return type.name == allowed
+            }
+        }
+
+        val factory = SerializerFactory(WL(classTestName("C")), ClassLoader.getSystemClassLoader())
+
+        Assertions.assertThatThrownBy {
+            TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
+        }.isInstanceOf(NotSerializableException::class.java)
+    }
+
+    @Test
+    fun enumWhitelisted() {
+        data class C (val c: Bras)
+
+        class WL : ClassWhitelist {
+            override fun hasListed(type: Class<*>): Boolean {
+                return type.name == "net.corda.nodeapi.internal.serialization.amqp.EnumTests\$enumWhitelisted\$C" ||
+                        type.name == "net.corda.nodeapi.internal.serialization.amqp.EnumTests\$Bras"
+            }
+        }
+
+        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+
+        // if it all works, this won't explode
+        TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
+    }
+
+    @Test
+    fun enumAnnotated() {
+        @CordaSerializable data class C (val c: AnnotatedBras)
+
+        class WL : ClassWhitelist {
+            override fun hasListed(type: Class<*>) = false
+        }
+
+        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+
+        // if it all works, this won't explode
+        TestSerializationOutput(VERBOSE, factory).serialize(C(AnnotatedBras.UNDERWIRE))
+    }
+
+    @Test
+    fun deserializeNonWhitlistedEnum() {
+        data class C (val c: Bras)
+
+        class WL (val allowed: List<String>) : ClassWhitelist {
+            override fun hasListed(type: Class<*>) = type.name in allowed
+        }
+
+        // first serialise the class using a context in which Bras are whitelisted
+        val factory = SerializerFactory(WL(listOf (classTestName("C"),
+                "net.corda.nodeapi.internal.serialization.amqp.EnumTests\$Bras")),
+                ClassLoader.getSystemClassLoader())
+        val bytes = TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
+
+        // then take that serialised object and attempt to deserialize it in a context that
+        // disallows the Bras enum
+        val factory2 = SerializerFactory(WL(listOf (classTestName("C"))), ClassLoader.getSystemClassLoader())
+        Assertions.assertThatThrownBy {
+            DeserializationInput(factory2).deserialize(bytes)
+        }.isInstanceOf(NotSerializableException::class.java)
     }
 }
