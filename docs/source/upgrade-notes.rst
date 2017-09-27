@@ -63,6 +63,10 @@ Milestone 14
   A new test driver module dependency needs to be including in your project: `corda-node-driver`.
   To continue using the mock network for testing, replace
   `testCompile "net.corda:corda-test-utils:$corda_release_version"` with `testCompile "net.corda:corda-node-driver:$corda_release_version"`
+  
+* CorDapps must be specifiucally registerted in `MockNetwork` unit tests. 
+  This is done by calling `setCordappPackages` on the first line of your `@Before` method. It takes a variable number of `String` arguments which should be the package names of the CorDapps you wish to load. 
+  You should unset CorDapp packages in your `@After` method by using `unsetCordappPackages()` after `stopNodes()`.
 
 * Overrides nothing: isRelevant in LinearState.
   Removed the concept of relevancy from ``LinearState``. The ``ContractState``'s relevancy to the vault can be determined
