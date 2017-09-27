@@ -14,11 +14,11 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
-import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -26,6 +26,8 @@ import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDete
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectResponseProperty
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.TestClock
@@ -63,7 +65,7 @@ open class Node(override val configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
                 private val versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true
-) : AbstractNode(configuration, advertisedServices, createClock(configuration)) {
+) : AbstractNode(configuration, advertisedServices, createClock(configuration), versionInfo.platformVersion) {
     companion object {
         private val logger = loggerFor<Node>()
         var renderBasicInfoToConsole = true
@@ -89,7 +91,6 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 
     override val log: Logger get() = logger
-    override val platformVersion: Int get() = versionInfo.platformVersion
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 
@@ -274,6 +275,10 @@ open class Node(override val configuration: FullNodeConfiguration,
     override fun myAddresses(): List<NetworkHostAndPort> {
         val address = network.myAddress as ArtemisMessagingComponent.ArtemisPeerAddress
         return listOf(address.hostAndPort)
+    }
+
+    override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
+        return PersistentNetworkMapService(network, versionInfo.platformVersion, networkMapCache, configuration.minimumPlatformVersion)
     }
 
     /**
