@@ -76,8 +76,10 @@ class CordappLoaderTest {
         assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
     }
 
+    // This test exists because the appClassLoader is used by serialisation and we need to ensure it is the classloader
+    // being used internally. Later iterations will use a classloader per cordapp and this test can be retired.
     @Test
-    fun `cordapp classloader can create loaded cordapp classes`() {
+    fun `cordapp classloader can load cordapp classes`() {
         val isolatedJAR = CordappLoaderTest::class.java.getResource("isolated.jar")!!
         val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
 

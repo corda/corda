@@ -42,7 +42,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
     internal val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
 
     init {
-        if(cordappJarPaths.isEmpty()) {
+        if (cordappJarPaths.isEmpty()) {
             logger.info("No CorDapp paths provided")
         } else {
             logger.info("Loading CorDapps from ${cordappJarPaths.joinToString()}")

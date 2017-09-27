@@ -17,7 +17,7 @@ import java.net.URL
  * @property contractClassNames List of contracts
  * @property initiatedFlows List of initiatable flow classes
  * @property rpcFlows List of RPC initiable flows classes
- * @property schedulableFlows List of flows initiated by scheduler
+ * @property schedulableFlows List of flows startable by the scheduler
  * @property servies List of RPC services
  * @property plugins List of Corda plugin registries
  * @property customSchemas List of custom schemas

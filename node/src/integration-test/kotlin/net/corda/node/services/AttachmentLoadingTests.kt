@@ -1,5 +1,6 @@
 package net.corda.node.services
 
+import net.corda.client.rpc.RPCException
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.cordapp.CordappProvider
@@ -99,7 +100,7 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
                     val proxy = rpc.proxy
                     val party = proxy.wellKnownPartyFromX500Name(bankBName)!!
 
-                    assertFailsWith<Exception>("xxx") {
+                    assertFailsWith<RPCException>("net.corda.client.rpc.RPCException: net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
                         proxy.startFlowDynamic(clazz, party).returnValue.getOrThrow()
                     }
                 }
