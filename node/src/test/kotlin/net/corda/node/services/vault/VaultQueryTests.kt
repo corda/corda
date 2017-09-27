@@ -48,8 +48,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
     private lateinit var services: MockServices
     private lateinit var notaryServices: MockServices
-    private val vaultSvc: VaultService get() = services.vaultService
-    private val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
+    private val vaultService: VaultService get() = services.vaultService
     private val identitySvc: IdentityService = makeTestIdentityService()
     private lateinit var database: CordaPersistence
 
@@ -146,7 +145,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             // DOCSTART VaultQueryExample1
-            val result = vaultQuerySvc.queryBy<ContractState>()
+            val result = vaultService.queryBy<ContractState>()
 
             /**
              * Query result returns a [Vault.Page] which contains:
@@ -173,7 +172,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = VaultQueryCriteria() // default is UNCONSUMED
-            val result = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val result = vaultService.queryBy<ContractState>(criteria)
 
             assertThat(result.states).hasSize(16)
             assertThat(result.statesMetadata).hasSize(16)
@@ -191,7 +190,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val resultsBeforeConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
+            val resultsBeforeConsume = vaultService.queryBy<ContractState>(criteria, paging)
             assertThat(resultsBeforeConsume.states).hasSize(4)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
         }
@@ -200,7 +199,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)
-            val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
+            val resultsAfterConsume = vaultService.queryBy<ContractState>(consumedCriteria, paging)
             assertThat(resultsAfterConsume.states).hasSize(1)
             assertThat(resultsAfterConsume.totalStatesAvailable).isEqualTo(1)
         }
@@ -214,7 +213,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
         }
         database.transaction {
-            val result = vaultQuerySvc.queryBy<Cash.State>()
+            val result = vaultService.queryBy<Cash.State>()
 
             assertThat(result.states).hasSize(3)
             assertThat(result.statesMetadata).hasSize(3)
@@ -230,7 +229,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = VaultQueryCriteria() // default is UNCONSUMED
-            val result = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val result = vaultService.queryBy<Cash.State>(criteria)
 
             assertThat(result.states).hasSize(3)
             assertThat(result.statesMetadata).hasSize(3)
@@ -254,7 +253,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
             val criteria = VaultQueryCriteria()
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria, Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC))))
+            val results = vaultService.queryBy<Cash.State>(criteria, Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC))))
 
             // default StateRef sort is by index then txnId:
             // order by
@@ -285,7 +284,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val sortBy = Sort(setOf(Sort.SortColumn(sortAttributeTxnId, Sort.Direction.ASC),
                     Sort.SortColumn(sortAttributeIndex, Sort.Direction.ASC)))
             val criteria = VaultQueryCriteria()
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria, sortBy)
+            val results = vaultService.queryBy<Cash.State>(criteria, sortBy)
 
             results.statesMetadata.forEach {
                 println(" ${it.ref}")
@@ -309,7 +308,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // DOCSTART VaultQueryExample2
             val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID)
             val criteria = VaultQueryCriteria(stateRefs = listOf(stateRefs.first(), stateRefs.last()))
-            val results = vaultQuerySvc.queryBy<DummyLinearContract.State>(criteria, Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC))))
+            val results = vaultService.queryBy<DummyLinearContract.State>(criteria, Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC))))
             // DOCEND VaultQueryExample2
 
             assertThat(results.states).hasSize(2)
@@ -331,7 +330,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // default State.Status is UNCONSUMED
             // DOCSTART VaultQueryExample3
             val criteria = VaultQueryCriteria(contractStateTypes = setOf(Cash.State::class.java, DealState::class.java))
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample3
             assertThat(results.states).hasSize(6)
         }
@@ -351,7 +350,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
             assertThat(results.states).hasSize(5)
         }
     }
@@ -367,7 +366,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val resultsBeforeConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
+            val resultsBeforeConsume = vaultService.queryBy<ContractState>(criteria, paging)
             assertThat(resultsBeforeConsume.states).hasSize(4)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
         }
@@ -376,7 +375,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-            val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
+            val resultsAfterConsume = vaultService.queryBy<ContractState>(consumedCriteria, paging)
             assertThat(resultsAfterConsume.states).hasSize(3)
             assertThat(resultsAfterConsume.totalStatesAvailable).isEqualTo(3)
         }
@@ -396,7 +395,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
             assertThat(results.states).hasSize(17)
         }
     }
@@ -409,7 +408,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
         val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
         database.transaction {
-            val resultsBeforeConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
+            val resultsBeforeConsume = vaultService.queryBy<ContractState>(criteria, paging)
             assertThat(resultsBeforeConsume.states).hasSize(1)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(1)
         }
@@ -417,7 +416,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)    // consumed 100 (spent), produced 50 (change)
         }
         database.transaction {
-            val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
+            val resultsAfterConsume = vaultService.queryBy<ContractState>(criteria, paging)
             assertThat(resultsAfterConsume.states).hasSize(2)
             assertThat(resultsAfterConsume.totalStatesAvailable).isEqualTo(2)
         }
@@ -433,7 +432,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // DOCSTART VaultQueryExample4
             val criteria = VaultQueryCriteria(notary = listOf(CASH_NOTARY))
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample4
             assertThat(results.states).hasSize(3)
         }
@@ -450,7 +449,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = LinearStateQueryCriteria(participants = listOf(BIG_CORP))
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
             assertThat(results.states).hasSize(3)
         }
     }
@@ -467,7 +466,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // DOCSTART VaultQueryExample5
             val criteria = LinearStateQueryCriteria(participants = listOf(BIG_CORP, MINI_CORP))
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample5
 
             assertThat(results.states).hasSize(3)
@@ -479,44 +478,44 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val (lockId1, lockId2) =
                 database.transaction {
                     val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 10, 10, Random(0L)).states.toList()
-                    vaultSvc.softLockReserve(UUID.randomUUID(), NonEmptySet.of(issuedStates[1].ref, issuedStates[2].ref, issuedStates[3].ref))
+                    vaultService.softLockReserve(UUID.randomUUID(), NonEmptySet.of(issuedStates[1].ref, issuedStates[2].ref, issuedStates[3].ref))
                     val lockId1 = UUID.randomUUID()
-                    vaultSvc.softLockReserve(lockId1, NonEmptySet.of(issuedStates[4].ref, issuedStates[5].ref))
+                    vaultService.softLockReserve(lockId1, NonEmptySet.of(issuedStates[4].ref, issuedStates[5].ref))
                     val lockId2 = UUID.randomUUID()
-                    vaultSvc.softLockReserve(lockId2, NonEmptySet.of(issuedStates[6].ref))
+                    vaultService.softLockReserve(lockId2, NonEmptySet.of(issuedStates[6].ref))
                     Pair(lockId1, lockId2)
                 }
         database.transaction {
             // excluding soft locked states
             val criteriaExclusive = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_ONLY))
-            val resultsExclusive = vaultQuerySvc.queryBy<ContractState>(criteriaExclusive)
+            val resultsExclusive = vaultService.queryBy<ContractState>(criteriaExclusive)
             assertThat(resultsExclusive.states).hasSize(4)
 
             // only soft locked states
             val criteriaLockedOnly = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.LOCKED_ONLY))
-            val resultsLockedOnly = vaultQuerySvc.queryBy<ContractState>(criteriaLockedOnly)
+            val resultsLockedOnly = vaultService.queryBy<ContractState>(criteriaLockedOnly)
             assertThat(resultsLockedOnly.states).hasSize(6)
 
             // soft locked states by single lock id
             val criteriaByLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(lockId1)))
-            val resultsByLockId = vaultQuerySvc.queryBy<ContractState>(criteriaByLockId)
+            val resultsByLockId = vaultService.queryBy<ContractState>(criteriaByLockId)
             assertThat(resultsByLockId.states).hasSize(2)
 
             // soft locked states by multiple lock ids
             val criteriaByLockIds = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.SPECIFIED, listOf(lockId1, lockId2)))
-            val resultsByLockIds = vaultQuerySvc.queryBy<ContractState>(criteriaByLockIds)
+            val resultsByLockIds = vaultService.queryBy<ContractState>(criteriaByLockIds)
             assertThat(resultsByLockIds.states).hasSize(3)
 
             // unlocked and locked by `lockId2`
             val criteriaUnlockedAndByLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId2)))
-            val resultsUnlockedAndByLockIds = vaultQuerySvc.queryBy<ContractState>(criteriaUnlockedAndByLockId)
+            val resultsUnlockedAndByLockIds = vaultService.queryBy<ContractState>(criteriaUnlockedAndByLockId)
             assertThat(resultsUnlockedAndByLockIds.states).hasSize(5)
 
             // missing lockId
             expectedEx.expect(IllegalArgumentException::class.java)
             expectedEx.expectMessage("Must specify one or more lockIds")
             val criteriaMissingLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED))
-            vaultQuerySvc.queryBy<ContractState>(criteriaMissingLockId)
+            vaultService.queryBy<ContractState>(criteriaMissingLockId)
         }
     }
 
@@ -530,7 +529,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(GBP.currencyCode) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(1)
         }
     }
@@ -545,7 +544,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notEqual(GBP.currencyCode) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -560,7 +559,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.greaterThan(1000L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(1)
         }
     }
@@ -575,7 +574,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.greaterThanOrEqual(1000L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -590,7 +589,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.lessThan(1000L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(1)
         }
     }
@@ -605,7 +604,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.lessThanOrEqual(1000L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -620,7 +619,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.between(500L, 1500L) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(1)
         }
     }
@@ -636,7 +635,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val currencies = listOf(CHF.currencyCode, GBP.currencyCode)
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.`in`(currencies) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -652,7 +651,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val currencies = listOf(CHF.currencyCode, GBP.currencyCode)
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notIn(currencies) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(1)
         }
     }
@@ -667,7 +666,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.like("%BP") }  // GPB
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(1)
         }
     }
@@ -682,7 +681,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notLike("%BP") }  // GPB
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -697,7 +696,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::issuerParty.isNull() }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(0)
         }
     }
@@ -712,7 +711,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val logicalExpression = builder { CashSchemaV1.PersistentCashState::issuerParty.notNull() }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(3)
         }
     }
@@ -743,7 +742,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val avg = builder { CashSchemaV1.PersistentCashState::pennies.avg() }
             val avgCriteria = VaultCustomQueryCriteria(avg)
 
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria
+            val results = vaultService.queryBy<FungibleAsset<*>>(sumCriteria
                     .and(countCriteria)
                     .and(maxCriteria)
                     .and(minCriteria)
@@ -782,7 +781,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val avg = builder { CashSchemaV1.PersistentCashState::pennies.avg(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val avgCriteria = VaultCustomQueryCriteria(avg)
 
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria
+            val results = vaultService.queryBy<FungibleAsset<*>>(sumCriteria
                     .and(maxCriteria)
                     .and(minCriteria)
                     .and(avgCriteria))
@@ -837,7 +836,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                         orderBy = Sort.Direction.DESC)
             }
 
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum))
+            val results = vaultService.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum))
             // DOCEND VaultQueryExample23
 
             assertThat(results.otherResults).hasSize(12)
@@ -871,15 +870,15 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // count fungible assets
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
             val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
-            val fungibleStateCount = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
+            val fungibleStateCount = vaultService.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
             assertThat(fungibleStateCount).isEqualTo(10L)
 
             // count linear states
-            val linearStateCount = vaultQuerySvc.queryBy<LinearState>(countCriteria).otherResults.single() as Long
+            val linearStateCount = vaultService.queryBy<LinearState>(countCriteria).otherResults.single() as Long
             assertThat(linearStateCount).isEqualTo(9L)
 
             // count deal states
-            val dealStateCount = vaultQuerySvc.queryBy<DealState>(countCriteria).otherResults.single() as Long
+            val dealStateCount = vaultService.queryBy<DealState>(countCriteria).otherResults.single() as Long
             assertThat(dealStateCount).isEqualTo(3L)
         }
     }
@@ -900,15 +899,15 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // count fungible assets
             val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
-            val fungibleStateCount = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
+            val fungibleStateCount = vaultService.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
             assertThat(fungibleStateCount).isEqualTo(10L)
 
             // count linear states
-            val linearStateCount = vaultQuerySvc.queryBy<LinearState>(countCriteria).otherResults.single() as Long
+            val linearStateCount = vaultService.queryBy<LinearState>(countCriteria).otherResults.single() as Long
             assertThat(linearStateCount).isEqualTo(9L)
 
             // count deal states
-            val dealStateCount = vaultQuerySvc.queryBy<DealState>(countCriteria).otherResults.single() as Long
+            val dealStateCount = vaultService.queryBy<DealState>(countCriteria).otherResults.single() as Long
             assertThat(dealStateCount).isEqualTo(3L)
         }
         val cashUpdates =
@@ -924,30 +923,30 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // count fungible assets
             val countCriteriaUnconsumed = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.UNCONSUMED)
-            val fungibleStateCountUnconsumed = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteriaUnconsumed).otherResults.single() as Long
+            val fungibleStateCountUnconsumed = vaultService.queryBy<FungibleAsset<*>>(countCriteriaUnconsumed).otherResults.single() as Long
             assertThat(fungibleStateCountUnconsumed.toInt()).isEqualTo(10 - cashUpdates.consumed.size + cashUpdates.produced.size)
 
             // count linear states
-            val linearStateCountUnconsumed = vaultQuerySvc.queryBy<LinearState>(countCriteriaUnconsumed).otherResults.single() as Long
+            val linearStateCountUnconsumed = vaultService.queryBy<LinearState>(countCriteriaUnconsumed).otherResults.single() as Long
             assertThat(linearStateCountUnconsumed).isEqualTo(5L)
 
             // count deal states
-            val dealStateCountUnconsumed = vaultQuerySvc.queryBy<DealState>(countCriteriaUnconsumed).otherResults.single() as Long
+            val dealStateCountUnconsumed = vaultService.queryBy<DealState>(countCriteriaUnconsumed).otherResults.single() as Long
             assertThat(dealStateCountUnconsumed).isEqualTo(2L)
 
             // CONSUMED states
 
             // count fungible assets
             val countCriteriaConsumed = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.CONSUMED)
-            val fungibleStateCountConsumed = vaultQuerySvc.queryBy<FungibleAsset<*>>(countCriteriaConsumed).otherResults.single() as Long
+            val fungibleStateCountConsumed = vaultService.queryBy<FungibleAsset<*>>(countCriteriaConsumed).otherResults.single() as Long
             assertThat(fungibleStateCountConsumed.toInt()).isEqualTo(cashUpdates.consumed.size)
 
             // count linear states
-            val linearStateCountConsumed = vaultQuerySvc.queryBy<LinearState>(countCriteriaConsumed).otherResults.single() as Long
+            val linearStateCountConsumed = vaultService.queryBy<LinearState>(countCriteriaConsumed).otherResults.single() as Long
             assertThat(linearStateCountConsumed).isEqualTo(4L)
 
             // count deal states
-            val dealStateCountConsumed = vaultQuerySvc.queryBy<DealState>(countCriteriaConsumed).otherResults.single() as Long
+            val dealStateCountConsumed = vaultService.queryBy<DealState>(countCriteriaConsumed).otherResults.single() as Long
             assertThat(dealStateCountConsumed).isEqualTo(1L)
         }
     }
@@ -967,7 +966,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                     QueryCriteria.TimeInstantType.RECORDED,
                     ColumnPredicate.Between(start, end))
             val criteria = VaultQueryCriteria(timeCondition = recordedBetweenExpression)
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample6
             assertThat(results.states).hasSize(3)
 
@@ -976,7 +975,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val recordedBetweenExpressionFuture = TimeCondition(
                     QueryCriteria.TimeInstantType.RECORDED, ColumnPredicate.Between(startFuture, end))
             val criteriaFuture = VaultQueryCriteria(timeCondition = recordedBetweenExpressionFuture)
-            assertThat(vaultQuerySvc.queryBy<ContractState>(criteriaFuture).states).isEmpty()
+            assertThat(vaultService.queryBy<ContractState>(criteriaFuture).states).isEmpty()
         }
     }
 
@@ -996,7 +995,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                     QueryCriteria.TimeInstantType.CONSUMED, ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED,
                     timeCondition = consumedAfterExpression)
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
 
             assertThat(results.states).hasSize(3)
         }
@@ -1012,7 +1011,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // DOCSTART VaultQueryExample7
             val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, 10)
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
+            val results = vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
             // DOCEND VaultQueryExample7
             assertThat(results.states).hasSize(10)
             assertThat(results.totalStatesAvailable).isEqualTo(100)
@@ -1031,7 +1030,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val pagingSpec = PageSpecification(10, 10)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
+            val results = vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
             assertThat(results.states).hasSize(5) // should retrieve states 90..94
             assertThat(results.totalStatesAvailable).isEqualTo(95)
         }
@@ -1050,7 +1049,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val pagingSpec = PageSpecification(0, 10)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
+            vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
         }
     }
 
@@ -1067,7 +1066,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             @Suppress("EXPECTED_CONDITION")
             val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, @Suppress("INTEGER_OVERFLOW")MAX_PAGE_SIZE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
+            vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
         }
     }
 
@@ -1082,7 +1081,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            vaultQuerySvc.queryBy<ContractState>(criteria)
+            vaultService.queryBy<ContractState>(criteria)
         }
     }
 
@@ -1098,7 +1097,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val sortCol2 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.STATE_STATUS), Sort.Direction.ASC)
             val sortCol3 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONSUMED_TIME), Sort.Direction.DESC)
             val sorting = Sort(setOf(sortCol1, sortCol2, sortCol3))
-            val result = vaultQuerySvc.queryBy<ContractState>(VaultQueryCriteria(status = Vault.StateStatus.ALL), sorting = sorting)
+            val result = vaultService.queryBy<ContractState>(VaultQueryCriteria(status = Vault.StateStatus.ALL), sorting = sorting)
 
             val states = result.states
             val metadata = result.statesMetadata
@@ -1123,7 +1122,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(10)
         }
         database.transaction {
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>()
+            val results = vaultService.queryBy<FungibleAsset<*>>()
             assertThat(results.states).hasSize(4)
         }
     }
@@ -1142,7 +1141,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+            val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -1154,7 +1153,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(10)
         }
         database.transaction {
-            val results = vaultQuerySvc.queryBy<Cash.State>()
+            val results = vaultService.queryBy<Cash.State>()
             assertThat(results.states).hasSize(3)
         }
     }
@@ -1169,7 +1168,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         // should now have x2 CONSUMED + x2 UNCONSUMED (one spent + one change)
         database.transaction {
-            val results = vaultQuerySvc.queryBy<Cash.State>(FungibleAssetQueryCriteria())
+            val results = vaultService.queryBy<Cash.State>(FungibleAssetQueryCriteria())
             assertThat(results.statesMetadata).hasSize(2)
             assertThat(results.states).hasSize(2)
         }
@@ -1192,7 +1191,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-            val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
+            val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -1205,7 +1204,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
         }
         database.transaction {
-            val results = vaultQuerySvc.queryBy<LinearState>()
+            val results = vaultService.queryBy<LinearState>()
             assertThat(results.states).hasSize(13)
         }
     }
@@ -1224,7 +1223,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-            val results = vaultQuerySvc.queryBy<LinearState>(criteria)
+            val results = vaultService.queryBy<LinearState>(criteria)
             assertThat(results.states).hasSize(3)
         }
     }
@@ -1241,7 +1240,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // DOCSTART VaultQueryExample8
             val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
             val criteria = LinearStateQueryCriteria(linearId = listOf(linearIds.first(), linearIds.last()))
-            val results = vaultQuerySvc.queryBy<LinearState>(criteria)
+            val results = vaultService.queryBy<LinearState>(criteria)
             // DOCEND VaultQueryExample8
             assertThat(results.states).hasSize(2)
         }
@@ -1259,7 +1258,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val linearIds = listOf(linearState1.states.first().state.data.linearId, linearState3.states.first().state.data.linearId)
             val criteria = LinearStateQueryCriteria(linearId = linearIds)
-            val results = vaultQuerySvc.queryBy<LinearState>(criteria)
+            val results = vaultService.queryBy<LinearState>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -1276,7 +1275,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val externalIds = listOf(linearState1.states.first().state.data.linearId.externalId!!, linearState3.states.first().state.data.linearId.externalId!!)
             val criteria = LinearStateQueryCriteria(externalId = externalIds)
-            val results = vaultQuerySvc.queryBy<LinearState>(criteria)
+            val results = vaultService.queryBy<LinearState>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -1297,7 +1296,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // DOCSTART VaultQueryExample9
             val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(linearId), status = Vault.StateStatus.ALL)
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria and vaultCriteria)
+            val results = vaultService.queryBy<LinearState>(linearStateCriteria and vaultCriteria)
             // DOCEND VaultQueryExample9
             assertThat(results.states).hasSize(4)
         }
@@ -1320,7 +1319,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC)))
 
-            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), sorting = sorting)
+            val results = vaultService.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), sorting = sorting)
             results.states.forEach { println("${it.state.data.linearId.id}") }
             assertThat(results.states).hasSize(8)
         }
@@ -1337,7 +1336,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val vaultCriteria = VaultQueryCriteria()
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.EXTERNAL_ID), Sort.Direction.DESC)))
 
-            val results = vaultQuerySvc.queryBy<DummyLinearContract.State>((vaultCriteria), sorting = sorting)
+            val results = vaultService.queryBy<DummyLinearContract.State>((vaultCriteria), sorting = sorting)
             results.states.forEach { println(it.state.data.linearString) }
             assertThat(results.states).hasSize(6)
         }
@@ -1358,7 +1357,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.EXTERNAL_ID), Sort.Direction.DESC)))
 
-            val results = vaultQuerySvc.queryBy<LinearState>(compositeCriteria, sorting = sorting)
+            val results = vaultService.queryBy<LinearState>(compositeCriteria, sorting = sorting)
             assertThat(results.statesMetadata).hasSize(4)
             assertThat(results.states).hasSize(4)
         }
@@ -1375,7 +1374,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val vaultCriteria = VaultQueryCriteria()
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "linearString"), Sort.Direction.DESC)))
 
-            val results = vaultQuerySvc.queryBy<DummyLinearContract.State>((vaultCriteria), sorting = sorting)
+            val results = vaultService.queryBy<DummyLinearContract.State>((vaultCriteria), sorting = sorting)
             results.states.forEach { println(it.state.data.linearString) }
             assertThat(results.states).hasSize(6)
         }
@@ -1397,7 +1396,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val linearStateCriteria = LinearStateQueryCriteria(linearId = txns.states.map { it.state.data.linearId }, status = Vault.StateStatus.CONSUMED)
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC)))
-            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), sorting = sorting)
+            val results = vaultService.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), sorting = sorting)
             assertThat(results.states).hasSize(3)
         }
     }
@@ -1411,7 +1410,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
         }
         database.transaction {
-            val results = vaultQuerySvc.queryBy<DealState>()
+            val results = vaultService.queryBy<DealState>()
             assertThat(results.states).hasSize(3)
         }
     }
@@ -1424,7 +1423,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // DOCSTART VaultQueryExample10
             val criteria = LinearStateQueryCriteria(externalId = listOf("456", "789"))
-            val results = vaultQuerySvc.queryBy<DealState>(criteria)
+            val results = vaultService.queryBy<DealState>(criteria)
             // DOCEND VaultQueryExample10
 
             assertThat(results.states).hasSize(2)
@@ -1439,11 +1438,11 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "789"))
         }
         database.transaction {
-            val all = vaultQuerySvc.queryBy<DealState>()
+            val all = vaultService.queryBy<DealState>()
             all.states.forEach { println(it.state) }
 
             val criteria = LinearStateQueryCriteria(externalId = listOf("456"))
-            val results = vaultQuerySvc.queryBy<DealState>(criteria)
+            val results = vaultService.queryBy<DealState>(criteria)
             assertThat(results.states).hasSize(1)
         }
     }
@@ -1459,7 +1458,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // DOCSTART VaultQueryExample11
             val criteria = LinearStateQueryCriteria(participants = parties)
-            val results = vaultQuerySvc.queryBy<DealState>(criteria)
+            val results = vaultService.queryBy<DealState>(criteria)
             // DOCEND VaultQueryExample11
 
             assertThat(results.states).hasSize(1)
@@ -1481,7 +1480,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val criteria = FungibleAssetQueryCriteria(issuer = listOf(BOC),
                     issuerRef = listOf(BOC.ref(1).reference, BOC.ref(2).reference))
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+            val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -1509,7 +1508,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = FungibleAssetQueryCriteria(issuer = listOf(gbpCashIssuer.party, usdCashIssuer.party))
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+            val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
         }
     }
@@ -1523,7 +1522,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+            val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(1)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
         }
     }
@@ -1540,7 +1539,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // DOCSTART VaultQueryExample5.2
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP, BOC))
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria)
+            val results = vaultService.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample5.2
 
             assertThat(results.states).hasSize(2)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
@@ -1560,7 +1559,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // DOCSTART VaultQueryExample12
             val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(USD.currencyCode) }
             val criteria = VaultCustomQueryCriteria(ccyIndex)
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+            val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             // DOCEND VaultQueryExample12
 
             assertThat(results.states).hasSize(3)
@@ -1580,7 +1579,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(USD.currencyCode) }
             val ccyCriteria = VaultCustomQueryCriteria(ccyIndex)
 
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria.and(ccyCriteria))
+            val results = vaultService.queryBy<FungibleAsset<*>>(sumCriteria.and(ccyCriteria))
 
             assertThat(results.otherResults).hasSize(2)
             assertThat(results.otherResults[0]).isEqualTo(30000L)
@@ -1601,7 +1600,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val ccyIndex = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val criteria = VaultCustomQueryCriteria(ccyIndex)
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+            val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
 
             assertThat(results.otherResults).hasSize(6)
             assertThat(results.otherResults[0]).isEqualTo(110000L)
@@ -1624,7 +1623,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // DOCSTART VaultQueryExample13
             val fungibleAssetCriteria = FungibleAssetQueryCriteria(quantity = builder { greaterThan(2500L) })
-            val results = vaultQuerySvc.queryBy<Cash.State>(fungibleAssetCriteria)
+            val results = vaultService.queryBy<Cash.State>(fungibleAssetCriteria)
             // DOCEND VaultQueryExample13
 
             assertThat(results.states).hasSize(4)  // POUNDS, SWISS_FRANCS
@@ -1642,7 +1641,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             // DOCSTART VaultQueryExample14
             val criteria = FungibleAssetQueryCriteria(issuer = listOf(BOC))
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+            val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             // DOCEND VaultQueryExample14
 
             assertThat(results.states).hasSize(1)
@@ -1661,7 +1660,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(GBP.currencyCode) }
             val customCriteria = VaultCustomQueryCriteria(ccyIndex)
             val fungibleAssetCriteria = FungibleAssetQueryCriteria(quantity = builder { greaterThan(5000L) })
-            val results = vaultQuerySvc.queryBy<Cash.State>(fungibleAssetCriteria.and(customCriteria))
+            val results = vaultService.queryBy<Cash.State>(fungibleAssetCriteria.and(customCriteria))
 
             assertThat(results.states).hasSize(1)   // POUNDS > 50
         }
@@ -1700,7 +1699,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val ccyIndex = builder { CommercialPaperSchemaV1.PersistentCommercialPaperState::currency.equal(USD.currencyCode) }
             val criteria1 = QueryCriteria.VaultCustomQueryCriteria(ccyIndex)
 
-            val result = vaultQuerySvc.queryBy<CommercialPaper.State>(criteria1)
+            val result = vaultService.queryBy<CommercialPaper.State>(criteria1)
 
             Assertions.assertThat(result.states).hasSize(1)
             Assertions.assertThat(result.statesMetadata).hasSize(1)
@@ -1746,7 +1745,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 val criteria2 = QueryCriteria.VaultCustomQueryCriteria(maturityIndex)
                 val criteria3 = QueryCriteria.VaultCustomQueryCriteria(faceValueIndex)
 
-                vaultQuerySvc.queryBy<CommercialPaper.State>(criteria1.and(criteria3).and(criteria2))
+                vaultService.queryBy<CommercialPaper.State>(criteria1.and(criteria3).and(criteria2))
             }
             Assertions.assertThat(result.states).hasSize(1)
             Assertions.assertThat(result.statesMetadata).hasSize(1)
@@ -1766,7 +1765,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val criteria = VaultCustomQueryCriteria(logicalExpression)
 
             assertThatThrownBy {
-                vaultQuerySvc.queryBy<Cash.State>(criteria)
+                vaultService.queryBy<Cash.State>(criteria)
             }.isInstanceOf(VaultQueryException::class.java).hasMessageContaining("Please register the entity")
         }
     }
@@ -1794,7 +1793,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 val customCriteria2 = VaultCustomQueryCriteria(quantityIndex)
 
                 val criteria = generalCriteria.and(customCriteria1.and(customCriteria2))
-                vaultQuerySvc.queryBy<Cash.State>(criteria)
+                vaultService.queryBy<Cash.State>(criteria)
             }
             // DOCEND VaultQueryExample20
 
@@ -1819,7 +1818,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val recordedBetweenExpression = TimeCondition(TimeInstantType.RECORDED, builder { between(start, end) })
             val basicCriteria = VaultQueryCriteria(timeCondition = recordedBetweenExpression)
 
-            val results = vaultQuerySvc.queryBy<LinearState>(basicCriteria)
+            val results = vaultService.queryBy<LinearState>(basicCriteria)
 
             assertThat(results.states).hasSize(1)
         }
@@ -1837,7 +1836,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val externalIdCondition = builder { VaultSchemaV1.VaultLinearStates::externalId.equal("TEST2") }
             val externalIdCustomCriteria = VaultCustomQueryCriteria(externalIdCondition)
 
-            val results = vaultQuerySvc.queryBy<LinearState>(externalIdCustomCriteria)
+            val results = vaultService.queryBy<LinearState>(externalIdCustomCriteria)
 
             assertThat(results.states).hasSize(1)
         }
@@ -1866,7 +1865,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 val basicCriteria = VaultQueryCriteria(timeCondition = recordedBetweenExpression)
 
                 val criteria = basicCriteria.and(customCriteria)
-                vaultQuerySvc.queryBy<LinearState>(criteria)
+                vaultService.queryBy<LinearState>(criteria)
             }
 
             assertThat(results.states).hasSize(1)
@@ -1894,7 +1893,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 val uuidCustomCriteria = VaultCustomQueryCriteria(uuidCondition)
 
                 val criteria = externalIdCustomCriteria or uuidCustomCriteria
-                vaultQuerySvc.queryBy<LinearState>(criteria)
+                vaultService.queryBy<LinearState>(criteria)
             }
             assertThat(results.statesMetadata).hasSize(2)
             assertThat(results.states).hasSize(2)
@@ -1911,7 +1910,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE))
-            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria)
+            val results = vaultService.queryBy<LinearState>(linearStateCriteria)
 
             assertThat(results.states).hasSize(1)
             assertThat(results.states[0].state.data.linearId.externalId).isEqualTo("TEST1")
@@ -1931,7 +1930,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE, BOB, CHARLIE))
-            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria)
+            val results = vaultService.queryBy<LinearState>(linearStateCriteria)
 
             assertThat(results.states).hasSize(1)
             assertThat(results.states[0].state.data.linearId.externalId).isEqualTo("TEST1")
@@ -1952,7 +1951,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 val externalIdCondition = VaultSchemaV1.VaultLinearStates::externalId.isNull()
                 val externalIdCustomCriteria = VaultCustomQueryCriteria(externalIdCondition)
 
-                vaultQuerySvc.queryBy<LinearState>(externalIdCustomCriteria)
+                vaultService.queryBy<LinearState>(externalIdCustomCriteria)
             }
             assertThat(results.states).hasSize(1)
         }
@@ -1972,7 +1971,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 val externalIdCondition = VaultSchemaV1.VaultLinearStates::externalId.notNull()
                 val externalIdCustomCriteria = VaultCustomQueryCriteria(externalIdCondition)
 
-                vaultQuerySvc.queryBy<LinearState>(externalIdCustomCriteria)
+                vaultService.queryBy<LinearState>(externalIdCustomCriteria)
             }
             assertThat(results.states).hasSize(2)
         }
@@ -2001,7 +2000,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
 
             // Execute query
-            val results = services.vaultQueryService.queryBy<FungibleAsset<*>>(baseCriteria and enrichedCriteria, sorter).states
+            val results = services.vaultService.queryBy<FungibleAsset<*>>(baseCriteria and enrichedCriteria, sorter).states
             assertThat(results).hasSize(4)
         }
     }
@@ -2015,7 +2014,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
                 database.transaction {
                     // DOCSTART VaultQueryExample15
-                    vaultQuerySvc.trackBy<Cash.State>().updates     // UNCONSUMED default
+                    vaultService.trackBy<Cash.State>().updates     // UNCONSUMED default
                     // DOCEND VaultQueryExample15
                 }
         val (linearStates, dealStates) =
@@ -2057,7 +2056,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
                 database.transaction {
                     val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-                    vaultQuerySvc.trackBy<Cash.State>(criteria).updates
+                    vaultService.trackBy<Cash.State>(criteria).updates
                 }
         val (linearStates, dealStates) =
                 database.transaction {
@@ -2103,7 +2102,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
                 database.transaction {
                     val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-                    vaultQuerySvc.trackBy<Cash.State>(criteria).updates
+                    vaultService.trackBy<Cash.State>(criteria).updates
                 }
         val (linearStates, dealStates) =
                 database.transaction {
@@ -2158,7 +2157,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
                 database.transaction {
                     // DOCSTART VaultQueryExample16
-                    val (snapshot, updates) = vaultQuerySvc.trackBy<LinearState>()
+                    val (snapshot, updates) = vaultService.trackBy<LinearState>()
                     // DOCEND VaultQueryExample16
                     assertThat(snapshot.states).hasSize(0)
                     updates
@@ -2207,7 +2206,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         val updates =
                 database.transaction {
                     // DOCSTART VaultQueryExample17
-                    val (snapshot, updates) = vaultQuerySvc.trackBy<DealState>()
+                    val (snapshot, updates) = vaultService.trackBy<DealState>()
                     // DOCEND VaultQueryExample17
                     assertThat(snapshot.states).hasSize(0)
                     updates
