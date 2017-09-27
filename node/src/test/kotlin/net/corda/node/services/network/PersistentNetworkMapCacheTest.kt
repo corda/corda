@@ -131,10 +131,13 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
             assertTrue(nms.info.chooseIdentity() in it.services.networkMapCache.allNodes.map { it.chooseIdentity() })
         }
         charlie.internals.nodeReadyFuture.get() // Finish registration.
+        logger.info("Checking connectivity")
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
+        logger.info("Loading caches")
         val cacheA = otherNodes[0].services.networkMapCache.allNodes
         val cacheB = otherNodes[1].services.networkMapCache.allNodes
         val cacheC = charlie.services.networkMapCache.allNodes
+        logger.info("Performing verification")
         assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
         assertThat(cacheB).contains(charlie.info)
         assertEquals(cacheA.toSet(), cacheB.toSet())
@@ -162,9 +165,11 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     private fun checkConnectivity(nodes: List<StartedNode<*>>) {
         nodes.forEach { node1 ->
             nodes.forEach { node2 ->
-                node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
-                val resultFuture = node1.services.startFlow(SendFlow(node2.info.chooseIdentity())).resultFuture
-                assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
+                if(!(node1 === node2)) { // Do not check connectivity to itself
+                    node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
+                    val resultFuture = node1.services.startFlow(SendFlow(node2.info.chooseIdentity())).resultFuture
+                    assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
+                }
             }
         }
     }
