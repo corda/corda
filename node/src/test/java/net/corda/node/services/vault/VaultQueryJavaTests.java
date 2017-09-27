@@ -1,63 +1,44 @@
 package net.corda.node.services.vault;
 
-import com.google.common.collect.ImmutableSet;
-import kotlin.Pair;
-import kotlin.Triple;
+import com.google.common.collect.*;
+import kotlin.*;
 import net.corda.core.contracts.*;
-import net.corda.core.identity.AbstractParty;
-import net.corda.core.messaging.DataFeed;
-import net.corda.core.node.services.IdentityService;
-import net.corda.core.node.services.Vault;
-import net.corda.core.node.services.VaultQueryException;
-import net.corda.core.node.services.VaultQueryService;
+import net.corda.core.identity.*;
+import net.corda.core.messaging.*;
+import net.corda.core.node.services.*;
 import net.corda.core.node.services.vault.*;
-import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
-import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
-import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
-import net.corda.core.schemas.MappedSchema;
-import net.corda.core.utilities.EncodingUtils;
-import net.corda.core.utilities.OpaqueBytes;
-import net.corda.finance.contracts.DealState;
-import net.corda.finance.contracts.asset.Cash;
-import net.corda.finance.contracts.asset.CashUtilities;
-import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.node.utilities.CordaPersistence;
-import net.corda.node.utilities.DatabaseTransaction;
-import net.corda.testing.TestConstants;
-import net.corda.testing.TestDependencyInjectionBase;
-import net.corda.testing.contracts.DummyLinearContract;
-import net.corda.testing.contracts.VaultFiller;
-import net.corda.testing.node.MockServices;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import net.corda.core.node.services.vault.QueryCriteria.*;
+import net.corda.core.schemas.*;
+import net.corda.core.utilities.*;
+import net.corda.finance.contracts.*;
+import net.corda.finance.contracts.asset.*;
+import net.corda.finance.schemas.*;
+import net.corda.node.utilities.*;
+import net.corda.testing.*;
+import net.corda.testing.contracts.*;
+import net.corda.testing.node.*;
+import org.junit.*;
 import rx.Observable;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.security.KeyPair;
+import java.io.*;
+import java.lang.reflect.*;
+import java.security.*;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.stream.*;
 
-import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
-import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
-import static net.corda.core.utilities.ByteArrays.toHexString;
-import static net.corda.finance.contracts.asset.CashUtilities.getDUMMY_CASH_ISSUER;
-import static net.corda.finance.contracts.asset.CashUtilities.getDUMMY_CASH_ISSUER_KEY;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
+import static net.corda.core.utilities.ByteArrays.*;
+import static net.corda.finance.contracts.asset.CashUtilities.*;
 import static net.corda.testing.CoreTestUtils.*;
-import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
-import static net.corda.testing.TestConstants.getDUMMY_NOTARY_KEY;
-import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
-import static net.corda.testing.node.MockServices.makeTestIdentityService;
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.corda.testing.TestConstants.*;
+import static net.corda.testing.node.MockServices.*;
+import static org.assertj.core.api.Assertions.*;
 
 public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     private MockServices services;
     private MockServices issuerServices;
-    private VaultQueryService vaultQuerySvc;
+    private VaultService vaultService;
     private CordaPersistence database;
 
     @Before
@@ -73,7 +54,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         issuerServices = new MockServices(getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
-        vaultQuerySvc = services.getVaultQueryService();
+        vaultService = services.getVaultService();
     }
 
     @After
@@ -98,7 +79,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         });
         database.transaction(tx -> {
             // DOCSTART VaultJavaQueryExample0
-            Vault.Page<LinearState> results = vaultQuerySvc.queryBy(LinearState.class);
+            Vault.Page<LinearState> results = vaultService.queryBy(LinearState.class);
             // DOCEND VaultJavaQueryExample0
 
             assertThat(results.getStates()).hasSize(3);
@@ -121,7 +102,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             SortAttribute.Standard sortAttribute = new SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID);
             Sort sorting = new Sort(Collections.singletonList(new Sort.SortColumn(sortAttribute, Sort.Direction.ASC)));
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, null, stateRefs);
-            Vault.Page<DummyLinearContract.State> results = vaultQuerySvc.queryBy(DummyLinearContract.State.class, criteria, sorting);
+            Vault.Page<DummyLinearContract.State> results = vaultService.queryBy(DummyLinearContract.State.class, criteria, sorting);
 
             assertThat(results.getStates()).hasSize(2);
 
@@ -156,7 +137,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
         database.transaction(tx -> {
             // DOCSTART VaultJavaQueryExample1
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.CONSUMED);
-            Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
+            Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, criteria);
             // DOCEND VaultJavaQueryExample1
 
             assertThat(results.getStates()).hasSize(3);
@@ -202,7 +183,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             PageSpecification pageSpec = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
-            Vault.Page<LinearState> results = vaultQuerySvc.queryBy(LinearState.class, compositeCriteria2, pageSpec, sorting);
+            Vault.Page<LinearState> results = vaultService.queryBy(LinearState.class, compositeCriteria2, pageSpec, sorting);
             // DOCEND VaultJavaQueryExample2
 
             assertThat(results.getStates()).hasSize(4);
@@ -243,7 +224,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
 
                 QueryCriteria criteria = generalCriteria.and(customCriteria1).and(customCriteria2);
-                Vault.Page<ContractState> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
+                Vault.Page<ContractState> results = vaultService.queryBy(Cash.State.class, criteria);
                 // DOCEND VaultJavaQueryExample3
 
                 assertThat(results.getStates()).hasSize(2);
@@ -279,7 +260,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
 
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
-            DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultQuerySvc.trackBy(ContractState.class, criteria);
+            DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultService.trackBy(ContractState.class, criteria);
 
             Vault.Page<ContractState> snapshot = results.getSnapshot();
             Observable<Vault.Update<ContractState>> updates = results.getUpdates();
@@ -318,7 +299,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             PageSpecification pageSpec = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
-            DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);
+            DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultService.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);
 
             Vault.Page<ContractState> snapshot = results.getSnapshot();
             // DOCEND VaultJavaQueryExample5
@@ -364,7 +345,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
                 QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.avg(pennies));
 
                 QueryCriteria criteria = sumCriteria.and(countCriteria).and(maxCriteria).and(minCriteria).and(avgCriteria);
-                Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
+                Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, criteria);
                 // DOCEND VaultJavaQueryExample21
 
                 assertThat(results.getOtherResults()).hasSize(5);
@@ -413,7 +394,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
                 QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.avg(pennies, Collections.singletonList(currency)));
 
                 QueryCriteria criteria = sumCriteria.and(countCriteria).and(maxCriteria).and(minCriteria).and(avgCriteria);
-                Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
+                Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, criteria);
                 // DOCEND VaultJavaQueryExample22
 
                 assertThat(results.getOtherResults()).hasSize(27);
@@ -480,7 +461,7 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
                 QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Arrays.asList(issuerParty, currency), Sort.Direction.DESC));
 
-                Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, sumCriteria);
+                Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, sumCriteria);
                 // DOCEND VaultJavaQueryExample23
 
                 assertThat(results.getOtherResults()).hasSize(12);

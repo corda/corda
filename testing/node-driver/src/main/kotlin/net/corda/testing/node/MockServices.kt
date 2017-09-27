@@ -24,7 +24,6 @@ import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransacti
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -117,8 +116,6 @@ open class MockServices(cordappPackages: List<String> = emptyList(), vararg val 
                         (vaultService as NodeVaultService).notifyAll(txs.map { it.tx })
                     }
 
-                    override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
-
                     override fun jdbcSession(): Connection = database.createSession()
                 }
             }
@@ -149,7 +146,6 @@ open class MockServices(cordappPackages: List<String> = emptyList(), vararg val 
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
-    override val vaultQueryService: VaultQueryService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo get() {
@@ -163,7 +159,7 @@ open class MockServices(cordappPackages: List<String> = emptyList(), vararg val 
     lateinit var hibernatePersister: HibernateObserver
 
     fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties(), { identityService })): VaultService {
-        val vaultService = NodeVaultService(this)
+        val vaultService = NodeVaultService(this, hibernateConfig)
         hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }

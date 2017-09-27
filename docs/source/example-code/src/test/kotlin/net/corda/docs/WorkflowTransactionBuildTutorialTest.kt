@@ -27,7 +27,7 @@ class WorkflowTransactionBuildTutorialTest {
 
     // Helper method to locate the latest Vault version of a LinearState
     private inline fun <reified T : LinearState> ServiceHub.latest(ref: UniqueIdentifier): StateAndRef<T> {
-        val linearHeads = vaultQueryService.queryBy<T>(QueryCriteria.LinearStateQueryCriteria(uuid = listOf(ref.id)))
+        val linearHeads = vaultService.queryBy<T>(QueryCriteria.LinearStateQueryCriteria(uuid = listOf(ref.id)))
         return linearHeads.states.single()
     }
 
