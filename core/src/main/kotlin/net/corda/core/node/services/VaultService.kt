@@ -149,7 +149,6 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
  * Note that transactions we've seen are held by the storage service, not the vault.
  */
 interface VaultService {
-
     /**
      * Prefer the use of [updates] unless you know why you want to use this instead.
      *
