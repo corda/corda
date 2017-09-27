@@ -35,8 +35,6 @@ class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : S
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return if (stx.isNotaryChangeTransaction()) {
-            stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
-        } else stx.tx.outputs[stateRef.index]
+        return stx.resolveBaseTransaction(this).outputs[stateRef.index]
     }
 }
