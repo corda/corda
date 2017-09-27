@@ -24,7 +24,7 @@ public class ApiScanner implements Plugin<Project> {
         p.afterEvaluate(project -> {
             TaskCollection<Jar> jarTasks = project.getTasks()
                 .withType(Jar.class)
-                .matching(jarTask -> jarTask.getClassifier().isEmpty());
+                .matching(jarTask -> jarTask.getClassifier().isEmpty() && jarTask.isEnabled());
             if (jarTasks.isEmpty()) {
                 return;
             }
@@ -34,6 +34,7 @@ public class ApiScanner implements Plugin<Project> {
                 scanTask.setClasspath(compilationClasspath(project.getConfigurations()));
                 scanTask.setSources(project.files(jarTasks));
                 scanTask.setVerbose(extension.isVerbose());
+                scanTask.setEnabled(extension.isEnabled());
                 scanTask.dependsOn(jarTasks);
             });
         });
