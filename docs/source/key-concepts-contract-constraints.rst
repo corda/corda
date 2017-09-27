@@ -28,7 +28,7 @@ CorDapps JARs (:doc:`cordapp-overview`) that are installed to the node and conta
 interface are automatically loaded into the ``AttachmentStorage`` of a node at startup. When the CorDapp is loaded by
 the node the CorDapp JAR and it's contract classes are associated so that one can be used to lookup the other, this
 is how the automatic resolution of attachments is done by the TransactionBuilder and how, when verifying the constraints
-and contracts, attachment in the attachments are associated with which Contract. 
+and contracts, attachment in the attachments are associated with which Contract.
 
 Implementations
 ---------------

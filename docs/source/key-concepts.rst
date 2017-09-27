@@ -15,6 +15,7 @@ This section should be read in order:
    key-concepts-ledger
    key-concepts-states
    key-concepts-contracts
+   key-concepts-contract-constraints
    key-concepts-transactions
    key-concepts-flows
    key-concepts-consensus
