@@ -21,6 +21,8 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 public class ScanApiTask extends DefaultTask {
+    private static final int CLASS_MASK = Modifier.classModifiers();
+    private static final int INTERFACE_MASK = Modifier.interfaceModifiers() & ~Modifier.ABSTRACT;
 
     private final ConfigurableFileCollection sources;
     private final ConfigurableFileCollection classpath;
@@ -133,21 +135,25 @@ public class ScanApiTask extends DefaultTask {
 
         private void writeClass(PrintWriter writer, ClassInfo classInfo, Class<?> javaClass) {
             if (classInfo.isAnnotation()) {
-                writer.append("@interface ").print(classInfo);
+                writer.append(Modifier.toString(javaClass.getModifiers() & INTERFACE_MASK));
+                writer.append(" @interface ").print(classInfo);
             } else if (classInfo.isStandardClass()) {
-                if (Modifier.isAbstract(javaClass.getModifiers())) {
-                    writer.append("abstract ");
-                } else if (Modifier.isFinal(javaClass.getModifiers())) {
-                    writer.append("final ");
+                writer.append(Modifier.toString(javaClass.getModifiers() & CLASS_MASK));
+                writer.append(" class ").print(classInfo);
+                Set<ClassInfo> superclasses = classInfo.getDirectSuperclasses();
+                if (!superclasses.isEmpty()) {
+                    writer.append(" extends ").print(stringOf(superclasses));
                 }
-                writer.append("class ").print(classInfo);
-                if (classInfo.getDirectSuperclass() != null) {
-                    writer.append(" extends ").print(classInfo.getDirectSuperclass());
+                Set<ClassInfo> interfaces = classInfo.getDirectlyImplementedInterfaces();
+                if (!interfaces.isEmpty()) {
+                    writer.append(" implements ").print(stringOf(interfaces));
                 }
             } else {
-                writer.append("interface ").print(classInfo);
-                if (!classInfo.getDirectSuperinterfaces().isEmpty()) {
-                    writer.append(" extends ").print(stringOf(classInfo.getDirectSuperinterfaces()));
+                writer.append(Modifier.toString(javaClass.getModifiers() & INTERFACE_MASK));
+                writer.append(" interface ").print(classInfo);
+                Set<ClassInfo> superinterfaces = classInfo.getDirectSuperinterfaces();
+                if (!superinterfaces.isEmpty()) {
+                    writer.append(" extends ").print(stringOf(superinterfaces));
                 }
             }
             writer.println();
