@@ -7,8 +7,10 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 
+/**
+ * The vault query service lets you select and track states that correspond to various criteria.
+ */
 interface VaultQueryService {
-
     // DOCSTART VaultQueryAPI
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
