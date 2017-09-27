@@ -378,33 +378,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
     }
 
-    /**
-     * A bundle that separates the generic user nodes and service-providing nodes. A real network might not be so
-     * clearly separated, but this is convenient for testing.
-     */
-    data class BasketOfNodes(val partyNodes: List<StartedNode<MockNode>>, val notaryNode: StartedNode<MockNode>, val mapNode: StartedNode<MockNode>)
-
-    /**
-     * Sets up a network with the requested number of nodes (defaulting to two), with one or more service nodes that
-     * run a notary, network map, any oracles etc.
-     */
-    @JvmOverloads
-    fun createSomeNodes(numPartyNodes: Int = 2, nodeFactory: Factory<*> = defaultFactory, notaryKeyPair: KeyPair? = DUMMY_NOTARY_KEY): BasketOfNodes {
-        require(nodes.isEmpty())
-        val notaryServiceInfo = ServiceInfo(ValidatingNotaryService.type)
-        val notaryOverride = if (notaryKeyPair != null)
-            mapOf(Pair(notaryServiceInfo, notaryKeyPair))
-        else
-            null
-        val mapNode = createNode(nodeFactory = nodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type))
-        val mapAddress = mapNode.network.myAddress
-        val notaryNode = createNode(mapAddress, nodeFactory = nodeFactory, overrideServices = notaryOverride, advertisedServices = notaryServiceInfo)
-        val nodes = (1..numPartyNodes).map {
-            createPartyNode(mapAddress)
-        }
-        return BasketOfNodes(nodes, notaryNode, mapNode)
-    }
-
     // Convenience method for Java
     fun createNotaryNode() = createNotaryNode(null, DUMMY_NOTARY.name, null, null)
 
