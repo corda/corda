@@ -689,7 +689,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader, database.hibernateConfig) }
+        override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader, this@AbstractNode.database.hibernateConfig) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because

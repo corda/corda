@@ -14,6 +14,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.utilities.NonEmptySet
 import rx.Observable
+import rx.subjects.PublishSubject
 import java.time.Instant
 import java.util.*
 

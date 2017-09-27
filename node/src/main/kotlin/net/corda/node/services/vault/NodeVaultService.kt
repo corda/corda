@@ -4,10 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.tee
+import net.corda.core.internal.*
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
 import net.corda.core.node.services.StatesNotAvailableException
@@ -445,8 +442,8 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
                 // pagination checks
                 if (!paging.isDefault) {
                     // pagination
-                    if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from ${DEFAULT_PAGE_NUM}]")
-                    if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and ${MAX_PAGE_SIZE}]")
+                    if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
+                    if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
                 }
 
                 query.firstResult = (paging.pageNumber - 1) * paging.pageSize
@@ -457,7 +454,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
 
                 // final pagination check (fail-fast on too many results when no pagination specified)
                 if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
-                    throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [${DEFAULT_PAGE_SIZE}]")
+                    throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
 
                 val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
                 val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
@@ -500,8 +497,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-            @Suppress("UNCHECKED_CAST")
-            val updates = _updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
+            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
             DataFeed(snapshotResults, updates)
         }
     }
@@ -527,8 +523,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
 
             val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
             distinctTypes.forEach { type ->
-                @Suppress("UNCHECKED_CAST")
-                val concreteType = Class.forName(type) as Class<ContractState>
+                val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
                 val contractInterfaces = deriveContractInterfaces(concreteType)
                 contractInterfaces.map {
                     val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
@@ -542,10 +537,9 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
         val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
         clazz.interfaces.forEach {
-            if (!it.equals(ContractState::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                myInterfaces.add(it as Class<T>)
-                myInterfaces.addAll(deriveContractInterfaces(it))
+            if (it != ContractState::class.java) {
+                myInterfaces.add(uncheckedCast(it))
+                myInterfaces.addAll(deriveContractInterfaces(uncheckedCast(it)))
             }
         }
         return myInterfaces
