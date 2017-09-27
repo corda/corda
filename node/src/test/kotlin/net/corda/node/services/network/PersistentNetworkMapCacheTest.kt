@@ -25,6 +25,10 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val addressesMap: HashMap<CordaX500Name, NetworkHostAndPort> = HashMap()
     val infos: MutableSet<NodeInfo> = HashSet()
 
+    companion object {
+        val logger = loggerFor<PersistentNetworkMapCacheTest>()
+    }
+
     @Before
     fun start() {
         val nodes = startNodesWithPort(partiesList)
@@ -169,8 +173,8 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     private class SendFlow(val otherParty: Party) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String {
-            println("SEND FLOW to $otherParty")
-            println("Party key ${otherParty.owningKey.toBase58String()}")
+            logger.info("SEND FLOW to $otherParty")
+            logger.info("Party key ${otherParty.owningKey.toBase58String()}")
             val session = initiateFlow(otherParty)
             return session.sendAndReceive<String>("Hi!").unwrap { it }
         }
@@ -180,8 +184,8 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     private class SendBackFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            println("SEND BACK FLOW to ${otherSideSession.counterparty}")
-            println("Party key ${otherSideSession.counterparty.owningKey.toBase58String()}")
+            logger.info("SEND BACK FLOW to ${otherSideSession.counterparty}")
+            logger.info("Party key ${otherSideSession.counterparty.owningKey.toBase58String()}")
             otherSideSession.send("Hello!")
         }
     }
