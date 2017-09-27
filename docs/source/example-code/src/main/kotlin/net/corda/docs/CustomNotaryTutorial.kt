@@ -1,13 +1,14 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionWithSignatures
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import java.security.PublicKey
 import java.security.SignatureException
@@ -35,10 +36,17 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
     override fun receiveAndVerifyTx(): TransactionParts {
         try {
             val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
-            checkNotary(stx.notary)
-            checkSignatures(stx)
-            val wtx = stx.tx
-            return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow, wtx.notary)
+            val notary = stx.notary
+            checkNotary(notary)
+            var timeWindow: TimeWindow? = null
+            val transactionWithSignatures = if (stx.isNotaryChangeTransaction()) {
+                stx.resolveNotaryChangeTransaction(serviceHub)
+            } else {
+                timeWindow = stx.tx.timeWindow
+                stx
+            }
+            checkSignatures(transactionWithSignatures)
+            return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
             throw when (e) {
                 is TransactionVerificationException,
@@ -48,9 +56,9 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
         }
     }
 
-    private fun checkSignatures(stx: SignedTransaction) {
+    private fun checkSignatures(tx: TransactionWithSignatures) {
         try {
-            stx.verifySignaturesExcept(service.notaryIdentityKey)
+            tx.verifySignaturesExcept(service.notaryIdentityKey)
         } catch (e: SignatureException) {
             throw NotaryException(NotaryError.TransactionInvalid(e))
         }

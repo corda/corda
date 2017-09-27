@@ -1,10 +1,11 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionWithSignatures
 import java.security.SignatureException
 
 /**
@@ -15,9 +16,8 @@ import java.security.SignatureException
  */
 class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSideSession, service) {
     /**
-     * The received transaction is checked for contract-validity, which requires fully resolving it into a
-     * [TransactionForVerification], for which the caller also has to to reveal the whole transaction
-     * dependency chain.
+     * Fully resolves the received transaction and its dependencies, runs contract verification logic and checks that
+     * the transaction in question has all required signatures apart from the notary's.
      */
     @Suspendable
     override fun receiveAndVerifyTx(): TransactionParts {
@@ -25,9 +25,15 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
             val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
             val notary = stx.notary
             checkNotary(notary)
-            checkSignatures(stx)
-            val wtx = stx.tx
-            return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow, notary!!)
+            var timeWindow: TimeWindow? = null
+            val transactionWithSignatures = if (stx.isNotaryChangeTransaction()) {
+                stx.resolveNotaryChangeTransaction(serviceHub)
+            } else {
+                timeWindow = stx.tx.timeWindow
+                stx
+            }
+            checkSignatures(transactionWithSignatures)
+            return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
             throw when (e) {
                 is TransactionVerificationException,
@@ -37,10 +43,10 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
         }
     }
 
-    private fun checkSignatures(stx: SignedTransaction) {
+    private fun checkSignatures(tx: TransactionWithSignatures) {
         try {
-            stx.verifySignaturesExcept(service.notaryIdentityKey)
-        } catch(e: SignatureException) {
+            tx.verifySignaturesExcept(service.notaryIdentityKey)
+        } catch (e: SignatureException) {
             throw NotaryException(NotaryError.TransactionInvalid(e))
         }
     }
