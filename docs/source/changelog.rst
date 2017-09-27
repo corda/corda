@@ -9,6 +9,10 @@ UNRELEASED
 
 * ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
 
+* Enums now respsect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
+  either annotated with the @CordaSerializable annotation or explicitly whitelisted then a NotSerializableException is
+  thrown.
+
 Release 1.0
 -----------
 
