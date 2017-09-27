@@ -310,6 +310,11 @@ open class Node(override val configuration: FullNodeConfiguration,
     private val _startupComplete = openFuture<Unit>()
     val startupComplete: CordaFuture<Unit> get() = _startupComplete
 
+    override fun generateNodeInfo() {
+        initialiseSerialization()
+        super.generateNodeInfo()
+    }
+
     override fun start(): StartedNode<Node> {
         if (initialiseSerialization) {
             initialiseSerialization()

@@ -158,18 +158,20 @@ class Cordform extends DefaultTask {
 
     void generateNodeInfos() {
         nodes.each { Node node ->
-            def process = new ProcessBuilder("java", "-Dcorda.NodeInfoQuit=1" , "-jar", Node.NODEJAR_NAME)
+            def process = new ProcessBuilder("java", "-jar", Node.NODEJAR_NAME, "--just-generate-node-info")
                     .directory(fullNodePath(node).toFile())
                     .redirectErrorStream(true)
                     .start()
                     .waitFor()
         }
         for (source in nodes) {
-            for (destination in nodes) if (source.nodeDir != destination.nodeDir) {
-                project.copy {
-                    from fullNodePath(source).toString()
-                    include 'nodeInfo-*'
-                    into fullNodePath(destination).resolve(NODE_INFO_PATH).toString()
+            for (destination in nodes) {
+                if (source.nodeDir != destination.nodeDir) {
+                    project.copy {
+                        from fullNodePath(source).toString()
+                        include 'nodeInfo-*'
+                        into fullNodePath(destination).resolve(NODE_INFO_PATH).toString()
+                    }
                 }
             }
         }
