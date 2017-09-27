@@ -191,7 +191,7 @@ class FlowStackSnapshotSerializationTestingFlow : FlowLogic<Unit>() {
     override fun call() {
         val flowStackSnapshot = flowStackSnapshot()
         val mySession = initiateFlow(ourIdentity)
-        mySession.send("TestMessage")
+        mySession.sendAndReceive<String>("Ping")
     }
 }
 
@@ -201,6 +201,7 @@ class DummyFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val message = otherSideSession.receive<String>()
+        otherSideSession.send("$message Pong")
     }
 }
 
