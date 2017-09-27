@@ -2,14 +2,14 @@
 
 package net.corda.demobench.model
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.nodeapi.User
 import java.util.*
 
-@Suppress("UNCHECKED_CAST")
 fun toUser(map: Map<String, Any>) = User(
         map.getOrElse("username", { "none" }) as String,
         map.getOrElse("password", { "none" }) as String,
-        LinkedHashSet<String>(map.getOrElse("permissions", { emptyList<String>() }) as Collection<String>)
+        LinkedHashSet(uncheckedCast<Any, Collection<String>>(map.getOrElse("permissions", { emptyList<String>() })))
 )
 
 fun user(name: String) = User(name, "letmein", setOf("ALL"))

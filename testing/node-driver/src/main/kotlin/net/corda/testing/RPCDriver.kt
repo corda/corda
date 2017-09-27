@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
@@ -507,8 +508,7 @@ class RandomRpcUser {
         @JvmStatic
         fun main(args: Array<String>) {
             require(args.size == 4)
-            @Suppress("UNCHECKED_CAST")
-            val rpcClass = Class.forName(args[0]) as Class<RPCOps>
+            val rpcClass: Class<RPCOps> = uncheckedCast(Class.forName(args[0]))
             val hostAndPort = NetworkHostAndPort.parse(args[1])
             val username = args[2]
             val password = args[3]

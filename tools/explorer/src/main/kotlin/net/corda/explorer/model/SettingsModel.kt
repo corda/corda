@@ -7,6 +7,7 @@ import javafx.beans.property.SimpleObjectProperty
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.core.internal.uncheckedCast
 import tornadofx.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -52,14 +53,13 @@ class SettingsModel(path: Path = Paths.get("conf")) : Component(), Observable {
     // Save all changes in memory to properties file.
     fun commit() = Files.newOutputStream(path).use { config.store(it, "") }
 
-    @Suppress("UNCHECKED_CAST")
     private operator fun <T> Properties.getValue(receiver: Any, metadata: KProperty<*>): T {
         return when (metadata.returnType.javaType) {
-            String::class.java -> string(metadata.name, "") as T
-            Int::class.java -> string(metadata.name, "0").toInt() as T
-            Boolean::class.java -> boolean(metadata.name) as T
-            Currency::class.java -> Currency.getInstance(string(metadata.name, "USD")) as T
-            Path::class.java -> Paths.get(string(metadata.name, "")).toAbsolutePath() as T
+            String::class.java -> uncheckedCast(string(metadata.name, ""))
+            Int::class.java -> uncheckedCast(string(metadata.name, "0").toInt())
+            Boolean::class.java -> uncheckedCast(boolean(metadata.name))
+            Currency::class.java -> uncheckedCast(Currency.getInstance(string(metadata.name, "USD")))
+            Path::class.java -> uncheckedCast(Paths.get(string(metadata.name, "")).toAbsolutePath())
             else -> throw IllegalArgumentException("Unsupported type ${metadata.returnType}")
         }
     }

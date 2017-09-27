@@ -1,11 +1,11 @@
 package net.corda.nodeapi.internal.serialization.amqp.custom
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
 import net.corda.nodeapi.internal.serialization.amqp.MapSerializer
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import java.util.*
 
-@Suppress("UNCHECKED_CAST")
 /**
  * A serializer that writes out an [EnumSet] as a type, plus list of instances in the set.
  */
@@ -16,7 +16,7 @@ class EnumSetSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Enu
 
     private fun elementType(set: EnumSet<*>): Class<*> {
         return if (set.isEmpty()) {
-            EnumSet.complementOf(set as EnumSet<MapSerializer.EnumJustUsedForCasting>).first().javaClass
+            EnumSet.complementOf(uncheckedCast<EnumSet<*>, EnumSet<MapSerializer.EnumJustUsedForCasting>>(set)).first().javaClass
         } else {
             set.first().javaClass
         }
@@ -24,9 +24,9 @@ class EnumSetSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Enu
 
     override fun fromProxy(proxy: EnumSetProxy): EnumSet<*> {
         return if (proxy.elements.isEmpty()) {
-            EnumSet.noneOf(proxy.clazz as Class<MapSerializer.EnumJustUsedForCasting>)
+            EnumSet.noneOf(uncheckedCast<Class<*>, Class<MapSerializer.EnumJustUsedForCasting>>(proxy.clazz))
         } else {
-            EnumSet.copyOf(proxy.elements as List<MapSerializer.EnumJustUsedForCasting>)
+            EnumSet.copyOf(uncheckedCast<List<Any>, List<MapSerializer.EnumJustUsedForCasting>>(proxy.elements))
         }
     }
 

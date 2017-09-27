@@ -14,6 +14,7 @@ import javafx.collections.ObservableMap
 import javafx.collections.transformation.FilteredList
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
 import org.fxmisc.easybind.EasyBind
@@ -92,8 +93,7 @@ fun <A, B> ObservableValue<out A>.bind(function: (A) -> ObservableValue<B>): Obs
  * propagate variance constraints and type inference fails.
  */
 fun <A, B> ObservableValue<out A>.bindOut(function: (A) -> ObservableValue<out B>): ObservableValue<out B> =
-        @Suppress("UNCHECKED_CAST")
-        EasyBind.monadic(this).flatMap(function as (A) -> ObservableValue<B>)
+        EasyBind.monadic(this).flatMap(uncheckedCast(function))
 
 /**
  * enum class FilterCriterion { HEIGHT, NAME }
@@ -105,8 +105,7 @@ fun <A, B> ObservableValue<out A>.bindOut(function: (A) -> ObservableValue<out B
  */
 fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>): ObservableList<A> {
     // We cast here to enforce variance, FilteredList should be covariant
-    @Suppress("UNCHECKED_CAST")
-    return FilteredList<A>(this as ObservableList<A>).apply {
+    return FilteredList<A>(uncheckedCast(this)).apply {
         predicateProperty().bind(predicate.map { predicateFunction ->
             Predicate<A> { predicateFunction(it) }
         })
@@ -120,13 +119,11 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>)
  */
 fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
     //TODO This is a tactical work round for an issue with SAM conversion (https://youtrack.jetbrains.com/issue/ALL-1552) so that the M10 explorer works.
-    @Suppress("UNCHECKED_CAST")
-    return (this as ObservableList<A?>).filtered(object : Predicate<A?> {
+    return uncheckedCast(uncheckedCast<Any, ObservableList<A?>>(this).filtered(object : Predicate<A?> {
         override fun test(t: A?): Boolean {
             return t != null
-
         }
-    }) as ObservableList<A>
+    }))
 }
 
 /**

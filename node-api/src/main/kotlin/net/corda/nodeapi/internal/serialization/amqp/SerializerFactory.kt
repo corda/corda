@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
@@ -262,8 +263,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                     return customSerializer
                 } else {
                     // Make a subclass serializer for the subclass and return that...
-                    @Suppress("UNCHECKED_CAST")
-                    return CustomSerializer.SubClass(clazz, customSerializer as CustomSerializer<Any>)
+                    return CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
                 }
             }
         }

@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.internal.uncheckedCast
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -31,8 +32,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
                 TreeMap::class.java to { map -> TreeMap(map) },
                 EnumMap::class.java to { map ->
-                    @Suppress("UNCHECKED_CAST")
-                    EnumMap(map as Map<EnumJustUsedForCasting, Any>)
+                    EnumMap(uncheckedCast<Map<*, *>, Map<EnumJustUsedForCasting, Any>>(map))
                 }
         ))
 
@@ -44,8 +44,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
             declaredClass.checkSupportedMapType()
             if(supportedTypes.containsKey(declaredClass)) {
                 // Simple case - it is already known to be a map.
-                @Suppress("UNCHECKED_CAST")
-                return deriveParametrizedType(declaredType, declaredClass as Class<out Map<*, *>>)
+                return deriveParametrizedType(declaredType, uncheckedCast(declaredClass))
             }
             else if (actualClass != null && Map::class.java.isAssignableFrom(actualClass)) {
                 // Declared class is not map, but [actualClass] is - represent it accordingly.

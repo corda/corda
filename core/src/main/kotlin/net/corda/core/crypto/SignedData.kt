@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -23,8 +24,7 @@ open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSign
     @Throws(SignatureException::class)
     fun verified(): T {
         sig.by.verify(raw.bytes, sig)
-        @Suppress("UNCHECKED_CAST")
-        val data = raw.deserialize<Any>() as T
+        val data: T = uncheckedCast(raw.deserialize<Any>())
         verifyData(data)
         return data
     }
