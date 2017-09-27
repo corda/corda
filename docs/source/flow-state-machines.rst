@@ -297,13 +297,13 @@ time, and perhaps communicating with the same counterparty node but for differen
 way to segregate communication channels so that concurrent conversations between flows on the same set of nodes do
 not interfere with each other.
 
-To achieve this the flow framework initiates a new flow session each time a flow starts communicating with a ``Party``
-for the first time. A session is simply a pair of IDs, one for each side, to allow the node to route received messages to
-the correct flow. If the other side accepts the session request then subsequent sends and receives to that same ``Party``
-will use the same session. A session ends when either flow ends, whether as expected or pre-maturely. If a flow ends
-pre-maturely then the other side will be notified of that and they will also end, as the whole point of flows is a known
-sequence of message transfers. Flows end pre-maturely due to exceptions, and as described above, if that exception is
-``FlowException`` or a sub-type then it will propagate to the other side. Any other exception will not propagate.
+To achieve this in order to communicate with a counterparty one needs to first initiate such a session with a ``Party``
+using ``initiateFlow``, which returns a ``FlowSession`` object, identifying this communication. Subsequently the first
+actual communication will kick off a counter-flow on the other side, receiving a "reply" session object. A session ends
+when either flow ends, whether as expected or pre-maturely. If a flow ends pre-maturely then the other side will be
+notified of that and they will also end, as the whole point of flows is a known sequence of message transfers. Flows end
+pre-maturely due to exceptions, and as described above, if that exception is ``FlowException`` or a sub-type then it
+will propagate to the other side. Any other exception will not propagate.
 
 Taking a step back, we mentioned that the other side has to accept the session request for there to be a communication
 channel. A node accepts a session request if it has registered the flow type (the fully-qualified class name) that is

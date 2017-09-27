@@ -77,7 +77,7 @@ class CashSelectionH2Impl : CashSelection {
             spendLock.withLock {
                 val statement = services.jdbcSession().createStatement()
                 try {
-                    statement.execute("CALL SET(@t, 0);")
+                    statement.execute("CALL SET(@t, CAST(0 AS BIGINT));")
 
                     // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
                     // the softLockReserve update will detect whether we try to lock states locked by others
