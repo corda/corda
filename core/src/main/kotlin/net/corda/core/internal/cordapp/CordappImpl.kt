@@ -12,6 +12,7 @@ data class CordappImpl(
         override val contractClassNames: List<String>,
         override val initiatedFlows: List<Class<out FlowLogic<*>>>,
         override val rpcFlows: List<Class<out FlowLogic<*>>>,
+        override val schedulableFlows: List<Class<out FlowLogic<*>>>,
         override val services: List<Class<out SerializeAsToken>>,
         override val plugins: List<CordaPluginRegistry>,
         override val customSchemas: Set<MappedSchema>,

@@ -1,8 +1,6 @@
-package net.corda.node.cordapp
+package net.corda.node.internal.cordapp
 
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Assert
 import org.junit.Before
