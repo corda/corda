@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.CordaException
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
 import java.security.InvalidAlgorithmParameterException
@@ -105,4 +106,4 @@ interface IdentityService {
     fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
 }
 
-class UnknownAnonymousPartyException(msg: String) : Exception(msg)
+class UnknownAnonymousPartyException(msg: String) : CordaException(msg)
