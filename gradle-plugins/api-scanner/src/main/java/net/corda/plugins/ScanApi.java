@@ -149,22 +149,23 @@ public class ScanApi extends DefaultTask {
 
                 Class<?> javaClass = result.classNameToClassRef(className);
                 if (!isVisible(javaClass.getModifiers())) {
+                    // Excludes private and package-protected classes
                     return;
                 }
 
-                writeClass(writer, classInfo, javaClass);
-                writeMethods(writer, classInfo.getMethodInfo());
+                writeClass(writer, classInfo, javaClass.getModifiers());
+                writeMethods(writer, classInfo.getMethodAndConstructorInfo());
                 writeFields(writer, classInfo.getFieldInfo());
                 writer.println("##");
             });
         }
 
-        private void writeClass(PrintWriter writer, ClassInfo classInfo, Class<?> javaClass) {
+        private void writeClass(PrintWriter writer, ClassInfo classInfo, int modifiers) {
             if (classInfo.isAnnotation()) {
-                writer.append(Modifier.toString(javaClass.getModifiers() & INTERFACE_MASK));
+                writer.append(Modifier.toString(modifiers & INTERFACE_MASK));
                 writer.append(" @interface ").print(classInfo);
             } else if (classInfo.isStandardClass()) {
-                writer.append(Modifier.toString(javaClass.getModifiers() & CLASS_MASK));
+                writer.append(Modifier.toString(modifiers & CLASS_MASK));
                 writer.append(" class ").print(classInfo);
                 Set<ClassInfo> superclasses = classInfo.getDirectSuperclasses();
                 if (!superclasses.isEmpty()) {
@@ -175,7 +176,7 @@ public class ScanApi extends DefaultTask {
                     writer.append(" implements ").print(stringOf(interfaces));
                 }
             } else {
-                writer.append(Modifier.toString(javaClass.getModifiers() & INTERFACE_MASK));
+                writer.append(Modifier.toString(modifiers & INTERFACE_MASK));
                 writer.append(" interface ").print(classInfo);
                 Set<ClassInfo> superinterfaces = classInfo.getDirectSuperinterfaces();
                 if (!superinterfaces.isEmpty()) {
@@ -204,8 +205,8 @@ public class ScanApi extends DefaultTask {
         }
     }
 
-    private static boolean isValid(int accessFlags, int mask) {
-        return (accessFlags & mask) == accessFlags;
+    private static boolean isValid(int modifiers, int mask) {
+        return (modifiers & mask) == modifiers;
     }
 
     private static boolean isVisible(int accessFlags) {
