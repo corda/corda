@@ -199,9 +199,6 @@ interface MoveCommand : CommandData {
     val contract: Class<out Contract>?
 }
 
-/** Indicates that this transaction replaces the inputs contract state to another contract state */
-data class UpgradeCommand(val upgradedContractClass: ContractClassName) : CommandData
-
 // DOCSTART 6
 /** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key. */
 @CordaSerializable

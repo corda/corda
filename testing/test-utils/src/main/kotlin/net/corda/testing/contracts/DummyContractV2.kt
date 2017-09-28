@@ -1,8 +1,8 @@
 package net.corda.testing.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.UpgradeCommand
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -35,7 +35,6 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
     }
 
     override fun verify(tx: LedgerTransaction) {
-        if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.verify(tx)
         // Other verifications.
     }
     // DOCEND 1
