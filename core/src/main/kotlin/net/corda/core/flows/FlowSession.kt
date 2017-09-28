@@ -5,7 +5,18 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 
 /**
- * To port existing flows:
+ *
+ * A [FlowSession] is a handle on a communication sequence between two paired flows, possibly running on separate nodes.
+ *   It is used to send and receive messages between the flows as well as to query information about the counter-flow.
+ *
+ * There are two ways of obtaining such a session:
+ *
+ * 1.  Calling [FlowLogic.initiateFlow]. This will create a [FlowSession] object on which the first send/receive
+ *   operation will attempt to kick off a corresponding [InitiatedBy] flow on the counterparty's node.
+ * 2.  As constructor parameter to [InitiatedBy] flows. This session is the one corresponding to the initiating flow and
+ *   may be used for replies.
+ *
+ * To port flows using the old Party-based API:
  *
  * Look for [Deprecated] usages of send/receive/sendAndReceive/getFlowInfo.
  *
@@ -31,6 +42,10 @@ import net.corda.core.utilities.UntrustworthyData
  *     otherSideSession.send(something)
  */
 abstract class FlowSession {
+    /**
+     * The [Party] on the other side of this session. In the case of a session created by [FlowLogic.initiateFlow]
+     *   [counterparty] is the same Party as the one passed to that function.
+     */
     abstract val counterparty: Party
 
     /**
