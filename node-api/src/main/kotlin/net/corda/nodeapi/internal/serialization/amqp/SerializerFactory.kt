@@ -4,7 +4,6 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -31,11 +30,11 @@ data class FactorySchemaAndDescriptor(val schema: Schema, val typeDescriptor: An
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
-class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
+open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
-    val classCarpenter = ClassCarpenter(cl, whitelist)
+    open val classCarpenter = ClassCarpenter(cl, whitelist)
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
@@ -82,7 +81,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                 }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
-                whitelisted(actualType)
+                whitelist.requireWhitelisted(actualType)
                 EnumSerializer(actualType, actualClass ?: declaredClass, this)
             }
             else -> makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
@@ -243,10 +242,10 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
-                    whitelisted(clazz)
+                    whitelist.requireWhitelisted(clazz)
                     SingletonSerializer(clazz, clazz.kotlin.objectInstance!!, this)
                 } else {
-                    whitelisted(type)
+                    whitelist.requireWhitelisted(type)
                     ObjectSerializer(type, this)
                 }
             }
@@ -269,24 +268,6 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
             }
         }
         return null
-    }
-
-    private fun whitelisted(type: Type) {
-        val clazz = type.asClass()!!
-        if (isNotWhitelisted(clazz)) {
-            throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
-        }
-    }
-
-    // Ignore SimpleFieldAccess as we add it to anything we build in the carpenter.
-    internal fun isNotWhitelisted(clazz: Class<*>): Boolean = clazz == SimpleFieldAccess::class.java ||
-            (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
-
-    // Recursively check the class, interfaces and superclasses for our annotation.
-    private fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
-        return type.isAnnotationPresent(CordaSerializable::class.java) ||
-                type.interfaces.any { hasAnnotationInHierarchy(it) }
-                || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
     }
 
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<Any> {
