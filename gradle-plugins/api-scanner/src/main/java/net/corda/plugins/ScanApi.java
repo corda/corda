@@ -18,14 +18,16 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("unused")
 public class ScanApi extends DefaultTask {
     private static final int CLASS_MASK = Modifier.classModifiers();
     private static final int INTERFACE_MASK = Modifier.interfaceModifiers() & ~Modifier.ABSTRACT;
+    private static final int METHOD_MASK = Modifier.methodModifiers();
+    private static final int FIELD_MASK = Modifier.fieldModifiers();
+    private static final int VISIBILITY_MASK = Modifier.PUBLIC | Modifier.PROTECTED;
 
     private final ConfigurableFileCollection sources;
     private final ConfigurableFileCollection classpath;
@@ -141,11 +143,16 @@ public class ScanApi extends DefaultTask {
                 }
                 ClassInfo classInfo = allInfo.get(className);
                 if (classInfo.getClassLoaders() == null) {
-                     // Ignore classes that belong to one of our target ClassLoader's parents.
-                     return;
+                    // Ignore classes that belong to one of our target ClassLoader's parents.
+                    return;
                 }
 
-                writeClass(writer, classInfo, result.classNameToClassRef(className));
+                Class<?> javaClass = result.classNameToClassRef(className);
+                if (!isVisible(javaClass.getModifiers())) {
+                    return;
+                }
+
+                writeClass(writer, classInfo, javaClass);
                 writeMethods(writer, classInfo.getMethodInfo());
                 writeFields(writer, classInfo.getFieldInfo());
                 writer.println("--");
@@ -181,7 +188,7 @@ public class ScanApi extends DefaultTask {
         private void writeMethods(PrintWriter writer, List<MethodInfo> methods) {
             Collections.sort(methods);
             for (MethodInfo method : methods) {
-                if (method.isPublic() || method.isProtected()) {
+                if (isVisible(method.getAccessFlags()) && isValid(method.getAccessFlags(), METHOD_MASK)) {
                     writer.append("  ").println(method);
                 }
             }
@@ -190,15 +197,23 @@ public class ScanApi extends DefaultTask {
         private void writeFields(PrintWriter output, List<FieldInfo> fields) {
             Collections.sort(fields);
             for (FieldInfo field : fields) {
-                if (field.isPublic() || field.isProtected()) {
+                if (isVisible(field.getAccessFlags()) && isValid(field.getAccessFlags(), FIELD_MASK)) {
                     output.append("  ").println(field);
                 }
             }
         }
     }
 
+    private static boolean isValid(int accessFlags, int mask) {
+        return (accessFlags & mask) == accessFlags;
+    }
+
+    private static boolean isVisible(int accessFlags) {
+        return (accessFlags & VISIBILITY_MASK) != 0;
+    }
+
     private static String stringOf(Collection<ClassInfo> items) {
-        return items.stream().map(ClassInfo::toString).collect(Collectors.joining(", "));
+        return items.stream().map(ClassInfo::toString).collect(joining(", "));
     }
 
     private static URL toURL(File file) throws MalformedURLException {
