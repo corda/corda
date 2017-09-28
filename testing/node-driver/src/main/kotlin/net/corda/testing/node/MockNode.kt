@@ -378,11 +378,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
     }
 
-    // Convenience method for Java
+    /**
+     * Construct a default notary node.
+     */
     fun createNotaryNode() = createNotaryNode(null, DUMMY_NOTARY.name, null, null)
 
     fun createNotaryNode(networkMapAddress: SingleMessageRecipient? = null,
-                         legalName: CordaX500Name = DUMMY_NOTARY.name,
+                         legalName: CordaX500Name? = null,
                          overrideServices: Map<ServiceInfo, KeyPair>? = null,
                          serviceName: CordaX500Name? = null): StartedNode<MockNode> {
         return createNode(networkMapAddress, legalName = legalName, overrideServices = overrideServices,
