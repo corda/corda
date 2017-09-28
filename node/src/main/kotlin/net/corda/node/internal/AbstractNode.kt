@@ -183,30 +183,22 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     open fun generateNodeInfo() {
         check(started == null) { "Node has already been started" }
-
         initCertificate()
-
         log.info("Generating nodeInfo ...")
-
         initialiseDatabasePersistence {
-            val tokenizableServices = makeServices()
+            makeServices()
             saveOwnNodeInfo()
         }
     }
 
     open fun start(): StartedNode<AbstractNode> {
         check(started == null) { "Node has already been started" }
-
         initCertificate()
-
         log.info("Node starting up ...")
-
         // Do all of this in a database transaction so anything that might need a connection has one.
         val startedImpl = initialiseDatabasePersistence {
             val tokenizableServices = makeServices()
-
             saveOwnNodeInfo()
-
             smm = StateMachineManager(services,
                     checkpointStorage,
                     serverThread,
