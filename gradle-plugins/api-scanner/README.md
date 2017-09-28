@@ -30,7 +30,7 @@ scanApi {
 
 All of the `ScanApi` tasks write their output files to their own `$buildDir/api` directory, where they
 are collated into a single output file by the `GenerateApi` task. The `GenerateApi` task is declared
-in the root project's `build.gradle`:
+in the root project's `build.gradle` file:
 
 ```gradle
 task generateApi(type: net.corda.plugins.GenerateApi){
@@ -54,5 +54,10 @@ public static final class net.corda.core.contracts.Attachment$DefaultImpls exten
 ##
 ```
 
-## Installation
+#### Notes
+The `GenerateApi` task will collate the output of every `ScanApi` task found either in the same project,
+or in any of that project's subprojects. So it is _theoretically_ possible also to collate the API output
+from subtrees of modules simply by defining a new `GenerateApi` task at the root of that subtree.
+
+## Plugin Installation
 See [here](../README.rst) for full installation instructions.
