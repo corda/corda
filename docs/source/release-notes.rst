@@ -8,7 +8,10 @@ Unreleased
 
 Release 1.0
 -----------
-This release represents the first version of Corda to provide API stability for Corda Application developers.
+Corda v1.0 is finally here!
+
+This critical step in the Corda journey represents to our development community, clients and partners they can build on Corda with confidence.
+This release represents the first version of Corda to provide API stability for Corda application (CorDapp) developers.
 
 The public API for Corda core is now stable and will only evolve to include new features.
 Corda applications will continue to work against this API with each subsequent release of Corda.
@@ -20,21 +23,47 @@ As of Corda 1.0, the following modules export public API that we promise to main
 unless an incompatible change is required for security reasons:
 
  * core
+   Contains the bulk of API's to be used for building CorDapps: contracts, transactions, flows, identity, node services, 
+   cryptographic libraries, and general utility functions.
+
  * client-rpc
+   RPC client interface to Corda, for use both by user-facing client and integration with external systems.
+
  * client-jackson
+   Utilities and serialisers for working with JSON representations of basic types.
+
+Out extensive testing frameworks will continue to evolve with future Corda APIs, and we have introduced a new test node driver module
+to encapsulate all test functionality in support of building standalone node integration tests using our DSL driver. 
 
 Please read :doc:`api-index` for complete details.
 
-Of significant importance is the API re-design work completed within the Flow framework communications API, which has
-been redesigned around session based communication. All shipped Corda flows have been upgraded to use the new `FlowSession`.
+Significant changes in reaching API stability include:
+
+* **Flow framework**: 
+  The Flow framework communications API has been redesigned around session based communication with the introduction of a new 
+  ``FlowSession`` to encapsulate the counterparty information associated with a flow. 
+  All shipped Corda flows have been upgraded to use the new `FlowSession`.
+
+* ** Complete API cleanup 
+  Across the board, all our public interfaces have been thoroughly revised and updated to ensure a productive and intuitive developer experience.
+  This includes renaming certain methods and flows to match their intended semantics, and providing ever more powerful re-usable flows 
+  (such as `CollectSignaturesFlow`) to minimize the boiler-plate code developers need to write.
+
+* ** Simplified annotation driven configuration **
+  CorDapp configuration is much simply as we have removed explicit configuration items (such as declaration of custom contract schemas) 
+  from the `CordaPluginRegistry` in favour of annotations and classpath scanning. Contract definitions are no longer required to 
+  explicitly define a legal contract reference hash, but may use the optional `LegalProseReference annotation to specify a URI.
+
+* ** Java usability **:
+  All code has been updated to enable simple access to static API parameters, such that developers no longer need to 
+  call getter methods, and can reference static API variables directly.
 
 In addition to API stability, this release encompasses a number of major functional improvements, to include:
 
 * **Contract constraints**:
   Provides a means by which contract-code-containing attachments can be used with a given state.
-  Automatically attach the JAR while building a TX, then store in the attachment store.
-  When loading the attachment via the attachment classloader the constraints of the state the constraint would need to
-  be checked against the list of attachment hashes provided and the attachment rejected if the constraints are not matched.
+  When loading an attachment via the attachment classloader, constraints of a transaction state are checked against the 
+  list of attachment hashes provided and the attachment rejected if the constraints are not matched.
 
 * **Signature Metadata support**:
   Signers can add metadata to their digital signatures. While previously a user could only sign the Merkle root of a
@@ -70,15 +99,16 @@ In addition to API stability, this release encompasses a number of major functio
   identities will improve as we make the integration of this privacy feature into applications even easier for developers.
 
 * **Re-designed network map service**
-
-The following items have been removed from Corda:
-
-* Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node.
-
-* Remove the legacy web front end from the SIMM demo. This was a very early sample, and does not reflect the quality of
-  current Corda code. It may be replaced with a new front end based on a more recent version of AngularJS in a later release.
+  The foundations for a completely redesigned network map service have been implemented to enable future increased network 
+  scalability and redundancy, support for multiple notaries, and administration of network compatibility zones and business networks.
+  Full details of this redesign work can be found `here <https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/127710793/Design+doc+network+map+upgrade>`_
 
 Finally, please note that the 1.0 release has not yet been security audited.
+
+We have provided a comprehensive :doc:`upgrade-notes` to ease the transition of migrating CorDapps to V1.0
+
+Upgrading to this release is strongly recommended, and you will be safe in the knowledge that API's will no longer break and 
+your applications can only evolve as Corda itself evolves.
 
 Milestone 14
 ------------
