@@ -33,12 +33,11 @@ public interface net.corda.core.contracts.Attachment extends net.corda.core.cont
   @org.jetbrains.annotations.NotNull public abstract List getSigners()
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public abstract jar.JarInputStream openAsJAR()
---
+##
 public static final class net.corda.core.contracts.Attachment$DefaultImpls extends java.lang.Object
   public static void extractFile(net.corda.core.contracts.Attachment, String, java.io.OutputStream)
   @org.jetbrains.annotations.NotNull public static jar.JarInputStream openAsJAR(net.corda.core.contracts.Attachment)
---
-
+##
 ```
 
 ## Installation

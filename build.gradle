@@ -304,4 +304,6 @@ artifactory {
     }
 }
 
-task generateApi(type: net.corda.plugins.GenerateApi)
+task generateApi(type: net.corda.plugins.GenerateApi){
+    baseName = "api-corda"
+}
