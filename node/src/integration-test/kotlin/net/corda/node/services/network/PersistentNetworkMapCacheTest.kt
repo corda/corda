@@ -13,11 +13,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.messaging.LongPropertiesRegistry
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -31,8 +29,6 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val addressesMap: HashMap<CordaX500Name, NetworkHostAndPort> = HashMap()
     val infos: MutableSet<NodeInfo> = HashSet()
 
-    private var previousBridgeRetryMsValue: Long? = null
-
     companion object {
         val logger = loggerFor<PersistentNetworkMapCacheTest>()
     }
@@ -40,7 +36,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     @Before
     fun start() {
         // To make connectivity retry faster and ensure the node cluster arrives into a stable state sooner.
-        previousBridgeRetryMsValue = LongPropertiesRegistry.BRIDGE_RETRY_INTERVAL_MS.set(bridgeRetryMs)
+        // TODO: override retry interval
 
         val nodes = startNodesWithPort(partiesList)
         nodes.forEach { it.internals.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
@@ -51,10 +47,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         }
     }
 
-    @After
-    fun tearOff() {
-        LongPropertiesRegistry.BRIDGE_RETRY_INTERVAL_MS.set(previousBridgeRetryMsValue)
-    }
+
 
     @Test
     fun `get nodes by owning key and by name, no network map service`() {

@@ -57,6 +57,7 @@ import java.math.BigInteger
 import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.Principal
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService
@@ -390,9 +391,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             isUseDuplicateDetection = true // Enable the bridge's automatic deduplication logic
             // We keep trying until the network map deems the node unreachable and tells us it's been removed at which
             // point we destroy the bridge
-            retryInterval = LongPropertiesRegistry.BRIDGE_RETRY_INTERVAL_MS.getOrDefault()
-            retryIntervalMultiplier = DoublePropertiesRegistry.BRIDGE_RETRY_INTERVAL_MULTIPLIER.getOrDefault()  // Exponential backoff
-            maxRetryInterval = LongPropertiesRegistry.BRIDGE_MAX_RETRY_INTERVAL_MS.getOrDefault()
+            retryInterval = config.activeMQServer.bridge.retryIntervalMs
+            retryIntervalMultiplier = config.activeMQServer.bridge.retryIntervalMultiplier
+            maxRetryInterval = Duration.ofMinutes(config.activeMQServer.bridge.maxRetryIntervalMin).toMillis()
             // As a peer of the target node we must connect to it using the peer user. Actual authentication is done using
             // our TLS certificate.
             user = PEER_USER
