@@ -54,7 +54,7 @@ class InstallFactory : Controller() {
     }
 
     private fun Config.parseExtraServices(path: String): MutableList<String> {
-        val services = serviceController.services.toSortedSet() + ServiceInfo(ServiceType.networkMap).toString()
+        val services = serviceController.services.values.toSortedSet() + ServiceInfo(ServiceType.networkMap).toString()
         return this.getStringList(path)
                 .filter { !it.isNullOrEmpty() }
                 .map { svc ->

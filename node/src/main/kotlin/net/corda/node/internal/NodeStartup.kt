@@ -260,8 +260,8 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     private fun printPluginsAndServices(node: Node) {
-        node.configuration.extraAdvertisedServiceIds.let {
-            if (it.isNotEmpty()) Node.printBasicNodeInfo("Providing network services", it.joinToString())
+        node.configuration.extraAdvertisedServiceIds.filter { it.startsWith("corda.notary.") || it.startsWith("corda.network_map") }.let {
+            if (it.isNotEmpty()) Node.printBasicNodeInfo("Providing additional services", it.joinToString())
         }
         Node.printBasicNodeInfo("Loaded CorDapps", node.cordappProvider.cordapps.map { it.name }.joinToString())
         val plugins = node.pluginRegistries
