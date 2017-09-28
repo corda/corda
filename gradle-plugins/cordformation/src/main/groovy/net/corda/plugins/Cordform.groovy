@@ -3,6 +3,7 @@ package net.corda.plugins
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
+import net.corda.cordform.CordformNode
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.bouncycastle.asn1.x500.X500Name
 import org.gradle.api.DefaultTask
@@ -18,9 +19,6 @@ import java.nio.file.Paths
  * See documentation for examples.
  */
 class Cordform extends DefaultTask {
-    // Keep this in sync with the value in NodeInfoSerializer.kt
-    final NODE_INFO_PATH = "additional-node-infos"
-
     /**
      * Optionally the name of a CordformDefinition subclass to which all configuration will be delegated.
      */
@@ -170,7 +168,7 @@ class Cordform extends DefaultTask {
                     project.copy {
                         from fullNodePath(source).toString()
                         include 'nodeInfo-*'
-                        into fullNodePath(destination).resolve(NODE_INFO_PATH).toString()
+                        into fullNodePath(destination).resolve(CordformNode.NODE_INFO_PATH).toString()
                     }
                 }
             }

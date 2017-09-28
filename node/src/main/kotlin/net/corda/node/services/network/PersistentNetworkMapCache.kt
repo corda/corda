@@ -169,7 +169,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         synchronized(_changed) {
             registeredNodes[node.legalIdentities.first().owningKey]?.let {
                 if (it.serial > node.serial) {
-                    logger.info("Discarding nodeInfo for ${node.legalIdentities.first().name} with an older timestamp")
+                    logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
                     return
                 }
             }

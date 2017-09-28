@@ -182,7 +182,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open fun generateNodeInfo() {
-        require(started == null) { "Node has already been started" }
+        check(started == null) { "Node has already been started" }
 
         initCertificate()
 
@@ -195,7 +195,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open fun start(): StartedNode<AbstractNode> {
-        require(started == null) { "Node has already been started" }
+        check(started == null) { "Node has already been started" }
 
         initCertificate()
 

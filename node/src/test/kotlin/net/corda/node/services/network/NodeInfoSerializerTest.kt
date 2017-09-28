@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import net.corda.cordform.CordformNode
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
@@ -14,7 +15,8 @@ import org.junit.rules.TemporaryFolder
 import java.nio.charset.Charset
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.contentOf
 
 class NodeInfoSerializerTest : NodeBasedTest() {
 
@@ -43,19 +45,19 @@ class NodeInfoSerializerTest : NodeBasedTest() {
         assertEquals(1, folder.root.list().size)
         val fileName = folder.root.list()[0]
         assertTrue(fileName.matches(nodeInfoFileRegex))
-        val fileContent = (folder.root.path / fileName).toFile().readBytes().toString(Charset.defaultCharset())
+        val file = (folder.root.path / fileName).toFile()
         // Just check that something is written, another tests verifies that the written value can be read back.
-        assertTrue { !fileContent.isEmpty() }
+        assertThat(contentOf(file)).isNotEmpty()
     }
 
     @Test
-    fun `load an empty Folder`() {
+    fun `load an empty Directory`() {
         assertEquals(0, nodeInfoSerializer.loadFromDirectory(folder.root.toPath()).size)
     }
 
     @Test
-    fun `load a non empty Folder`() {
-        val nodeInfoFolder = folder.newFolder(NodeInfoSerializer.NODE_INFO_FOLDER)
+    fun `load a non empty Directory`() {
+        val nodeInfoFolder = folder.newFolder(CordformNode.NODE_INFO_FOLDER)
         nodeInfoSerializer.saveToFile(nodeInfoFolder.toPath(), nodeInfo, keyManagementService)
         val nodeInfos = nodeInfoSerializer.loadFromDirectory(folder.root.toPath())
 

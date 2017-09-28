@@ -1,12 +1,12 @@
 package net.corda.node.services.network
 
+import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.div
 import net.corda.core.internal.isDirectory
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
@@ -20,12 +20,6 @@ import java.nio.file.Path
 class NodeInfoSerializer {
 
     companion object {
-        /**
-         * Path relative to the running node where the serialized NodeInfos are stored.
-         * Keep this in sync with the value in Cordform.groovy.
-         */
-        const val NODE_INFO_FOLDER = "additional-node-infos"
-
         val logger = loggerFor<NodeInfoSerializer>()
     }
 
@@ -35,20 +29,20 @@ class NodeInfoSerializer {
      * The name of the written file will be "nodeInfo-" followed by the hash of the content. The hash in the filename
      * is used so that one can freely copy these files without fearing to overwrite another one.
      *
-     * @param path the path where to write the file, if non-existaent it will be created.
+     * @param path the path where to write the file, if non-existent it will be created.
      * @param nodeInfo the NodeInfo to serialize.
      * @param keyManager a KeyManagementService used to sign the NodeInfo data.
      */
     fun saveToFile(path: Path, nodeInfo: NodeInfo, keyManager: KeyManagementService) {
         try {
             path.toFile().mkdirs()
-            val serializedBytes: SerializedBytes<NodeInfo> = nodeInfo.serialize()
+            val serializedBytes = nodeInfo.serialize()
             val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
-            val signedData: SignedData<NodeInfo> = SignedData(serializedBytes, regSig)
-            val file: File = (path / ("nodeInfo-" + SecureHash.sha256(serializedBytes.bytes).toString())).toFile()
+            val signedData = SignedData(serializedBytes, regSig)
+            val file = (path / ("nodeInfo-" + SecureHash.sha256(serializedBytes.bytes).toString())).toFile()
             file.writeBytes(signedData.serialize().bytes)
         } catch (e : Exception) {
-            logger.warn("Couldn't write node info to file: ${e.toString()}")
+            logger.warn("Couldn't write node info to file: $e")
         }
     }
 
@@ -61,7 +55,7 @@ class NodeInfoSerializer {
      */
     fun loadFromDirectory(nodePath: Path): List<NodeInfo> {
         val result = mutableListOf<NodeInfo>()
-        val nodeInfoDirectory = nodePath / NodeInfoSerializer.NODE_INFO_FOLDER
+        val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_FOLDER
         if (!nodeInfoDirectory.isDirectory()) {
             logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
             return result
@@ -74,7 +68,6 @@ class NodeInfoSerializer {
                     result.add(nodeInfo)
                 } catch (e: Exception) {
                     logger.error("Exception parsing NodeInfo from file. $file: " + e)
-                    e.printStackTrace()
                 }
             }
         logger.info("Succesfully read ${result.size} NodeInfo files.")
@@ -82,7 +75,7 @@ class NodeInfoSerializer {
     }
 
     private fun loadFromFile(file: File): NodeInfo {
-        val signedData: SignedData<NodeInfo> = ByteSequence.of(file.readBytes()).deserialize()
+        val signedData = ByteSequence.of(file.readBytes()).deserialize<SignedData<NodeInfo>>()
         return signedData.verified()
     }
 }
