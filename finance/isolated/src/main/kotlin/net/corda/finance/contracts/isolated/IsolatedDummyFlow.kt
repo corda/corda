@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
  * loaded or blocked.
  */
 class IsolatedDummyFlow {
+    @StartableByRPC
     @InitiatingFlow
     class Initiator(val toWhom: Party) : FlowLogic<Unit>() {
         @Suspendable
