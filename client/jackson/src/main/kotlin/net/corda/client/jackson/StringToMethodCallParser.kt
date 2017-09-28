@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimap
 import net.corda.client.jackson.StringToMethodCallParser.ParsedMethodCall
+import net.corda.core.CordaException
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
@@ -146,7 +147,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         }
     }
 
-    open class UnparseableCallException(command: String, cause: Throwable? = null) : Exception("Could not parse as a command: $command", cause) {
+    open class UnparseableCallException(command: String, cause: Throwable? = null) : CordaException("Could not parse as a command: $command", cause) {
         class UnknownMethod(val methodName: String) : UnparseableCallException("Unknown command name: $methodName")
         class MissingParameter(methodName: String, val paramName: String, command: String) : UnparseableCallException("Parameter $paramName missing from attempt to invoke $methodName in command: $command")
         class TooManyParameters(methodName: String, command: String) : UnparseableCallException("Too many parameters provided for $methodName: $command")
