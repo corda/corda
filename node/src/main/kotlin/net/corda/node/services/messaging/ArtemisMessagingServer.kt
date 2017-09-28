@@ -390,10 +390,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             isUseDuplicateDetection = true // Enable the bridge's automatic deduplication logic
             // We keep trying until the network map deems the node unreachable and tells us it's been removed at which
             // point we destroy the bridge
-            // TODO Give some thought to the retry settings
             retryInterval = LongPropertiesRegistry.BRIDGE_RETRY_INTERVAL_MS.getOrDefault()
             retryIntervalMultiplier = 1.5  // Exponential backoff
-            maxRetryInterval = 3.minutes.toMillis()
+            maxRetryInterval = LongPropertiesRegistry.BRIDGE_MAX_RETRY_INTERVAL_MS.getOrDefault()
             // As a peer of the target node we must connect to it using the peer user. Actual authentication is done using
             // our TLS certificate.
             user = PEER_USER

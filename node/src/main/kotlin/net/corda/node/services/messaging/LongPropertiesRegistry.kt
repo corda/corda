@@ -1,9 +1,11 @@
 package net.corda.node.services.messaging
 
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 
 enum class LongPropertiesRegistry(private val defaultValue: Long) {
     BRIDGE_RETRY_INTERVAL_MS(5.seconds.toMillis()),
+    BRIDGE_MAX_RETRY_INTERVAL_MS(3.minutes.toMillis()),
     ;
 
     fun getOrDefault(): Long {
