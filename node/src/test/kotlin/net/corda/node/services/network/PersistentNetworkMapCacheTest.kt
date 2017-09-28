@@ -11,19 +11,25 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.messaging.LongPropertiesRegistry
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
+private const val bridgeRetryMs: Long = 100
+
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val partiesList = listOf(DUMMY_NOTARY, ALICE, BOB)
     val addressesMap: HashMap<CordaX500Name, NetworkHostAndPort> = HashMap()
     val infos: MutableSet<NodeInfo> = HashSet()
+
+    private var previousBridgeRetryMsValue: Long? = null
 
     companion object {
         val logger = loggerFor<PersistentNetworkMapCacheTest>()
@@ -31,6 +37,9 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
     @Before
     fun start() {
+        // To make connectivity retry faster and ensure the node cluster arrives into a stable state sooner.
+        previousBridgeRetryMsValue = LongPropertiesRegistry.BRIDGE_RETRY_INTERVAL_MS.set(bridgeRetryMs)
+
         val nodes = startNodesWithPort(partiesList)
         nodes.forEach { it.internals.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
         nodes.forEach {
@@ -38,6 +47,11 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
             addressesMap[it.info.chooseIdentity().name] = it.info.addresses[0]
             it.dispose() // We want them to communicate with NetworkMapService to save data to cache.
         }
+    }
+
+    @After
+    fun tearOff() {
+        LongPropertiesRegistry.BRIDGE_RETRY_INTERVAL_MS.set(previousBridgeRetryMsValue)
     }
 
     @Test
@@ -131,6 +145,11 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
             assertTrue(nms.info.chooseIdentity() in it.services.networkMapCache.allNodes.map { it.chooseIdentity() })
         }
         charlie.internals.nodeReadyFuture.get() // Finish registration.
+
+        val allTheStartedNodesPopulation = otherNodes.plus(charlie).plus(nms)
+        // Ensure that all the nodes were successfully discovered their peers and the cluster is stable to perform further testing.
+        Thread.sleep(bridgeRetryMs * allTheStartedNodesPopulation.size * 2)
+
         logger.info("Checking connectivity")
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
         logger.info("Loading caches")
