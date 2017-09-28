@@ -42,7 +42,7 @@ public class CordaFutureInJavaTest {
             OpenFuture<Number> g = openFuture();
             f.then(done -> {
                 try {
-                    return g.set(done.get());
+                    g.set(done.get());
                 } catch (InterruptedException | ExecutionException e) {
                     throw new RuntimeException(e);
                 }

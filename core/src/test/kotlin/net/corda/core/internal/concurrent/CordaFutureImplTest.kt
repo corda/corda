@@ -9,6 +9,7 @@ import org.slf4j.Logger
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.Consumer
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -33,8 +34,8 @@ class CordaFutureTest {
         val x = Exception()
         val log = mock<Logger>()
         val flag = AtomicBoolean()
-        f.thenImpl(log) { throw x }
-        f.thenImpl(log) { flag.set(true) } // Must not be affected by failure of previous listener.
+        f.thenImpl(log, Consumer { throw x })
+        f.thenImpl(log, Consumer { flag.set(true) }) // Must not be affected by failure of previous listener.
         f.set(100)
         verify(log).error(eq(CordaFutureImpl.listenerFailedMessage), same(x))
         verifyNoMoreInteractions(log)

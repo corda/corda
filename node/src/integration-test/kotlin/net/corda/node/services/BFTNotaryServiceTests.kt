@@ -33,6 +33,7 @@ import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Files
+import java.util.function.Supplier
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -116,7 +117,7 @@ class BFTNotaryServiceTests {
             val flows = spendTxs.map { NotaryFlow.Client(it) }
             val stateMachines = flows.map { services.startFlow(it) }
             mockNet.runNetwork()
-            val results = stateMachines.map { Try.on { it.resultFuture.getOrThrow() } }
+            val results = stateMachines.map { Try.on(Supplier { it.resultFuture.getOrThrow() }) }
             val successfulIndex = results.mapIndexedNotNull { index, result ->
                 if (result is Try.Success) {
                     val signers = result.value.map { it.by }

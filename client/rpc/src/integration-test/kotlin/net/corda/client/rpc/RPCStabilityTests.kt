@@ -22,6 +22,7 @@ import rx.subjects.UnicastSubject
 import java.time.Duration
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Supplier
 
 class RPCStabilityTests {
 
@@ -73,12 +74,14 @@ class RPCStabilityTests {
         val executor = Executors.newScheduledThreadPool(1)
         fun startAndStop() {
             rpcDriver {
-                Try.on { startRpcClient<RPCOps>(NetworkHostAndPort("localhost", 9999)).get() }
+                Try.on(Supplier { startRpcClient<RPCOps>(NetworkHostAndPort("localhost", 9999)).get() })
                 val server = startRpcServer<RPCOps>(ops = DummyOps)
-                Try.on { startRpcClient<RPCOps>(
-                        server.get().broker.hostAndPort!!,
-                        configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)
-                ).get() }
+                Try.on(Supplier {
+                    startRpcClient<RPCOps>(
+                            server.get().broker.hostAndPort!!,
+                            configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)
+                    ).get()
+                })
             }
         }
         repeat(5) {

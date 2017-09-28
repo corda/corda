@@ -1,12 +1,12 @@
 package net.corda.core.utilities
 
-import net.corda.core.internal.concurrent.get
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty
 
 //
@@ -117,7 +117,7 @@ fun <T> Collection<T>.toNonEmptySet(): NonEmptySet<T> = NonEmptySet.copyOf(this)
 
 /** Same as [Future.get] except that the [ExecutionException] is unwrapped. */
 fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
-    get(timeout)
+    if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)
 } catch (e: ExecutionException) {
     throw e.cause!!
 }

@@ -14,6 +14,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import java.util.function.Function
 
 // Minimal state model of a manual approval process
 @CordaSerializable
@@ -67,7 +68,7 @@ data class TradeApprovalContract(val blank: Unit? = null) : Contract {
                 }
             }
             is Commands.Completed -> {
-                val stateGroups = tx.groupStates(TradeApprovalContract.State::class.java) { it.linearId }
+                val stateGroups = tx.groupStates(TradeApprovalContract.State::class.java, Function{ it.linearId })
                 require(stateGroups.size == 1) { "Must be only a single proposal in transaction" }
                 for ((inputs, outputs) in stateGroups) {
                     val before = inputs.single()

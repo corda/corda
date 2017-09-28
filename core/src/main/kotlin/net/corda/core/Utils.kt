@@ -5,6 +5,7 @@ package net.corda.core
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.concurrent.then
 import rx.Observable
 import rx.Observer
 

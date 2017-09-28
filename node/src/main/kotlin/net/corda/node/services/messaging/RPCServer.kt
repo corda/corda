@@ -24,8 +24,11 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.RPCUserService
-import net.corda.nodeapi.*
+import net.corda.nodeapi.ArtemisConsumer
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.ArtemisProducer
+import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.User
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -44,6 +47,7 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.time.Duration
 import java.util.concurrent.*
+import java.util.function.Supplier
 
 data class RPCServerConfiguration(
         /** The number of threads to use for handling RPC requests */
@@ -280,7 +284,7 @@ class RPCServer(
     }
 
     private fun invokeRpc(rpcContext: RpcContext, methodName: String, arguments: List<Any?>): Try<Any> {
-        return Try.on {
+        return Try.on(Supplier {
             try {
                 CURRENT_RPC_CONTEXT.set(rpcContext)
                 log.debug { "Calling $methodName" }
@@ -292,7 +296,7 @@ class RPCServer(
             } finally {
                 CURRENT_RPC_CONTEXT.remove()
             }
-        }
+        })
     }
 
     private fun sendReply(requestId: RPCApi.RpcRequestId, clientAddress: SimpleString, result: Try<Any>) {
