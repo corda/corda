@@ -109,7 +109,6 @@ object DefaultKryoCustomizer {
             register(BCRSAPublicKey::class.java, PublicKeySerializer)
             register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
             register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
-            register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
             register(NotaryChangeWireTransaction::class.java, NotaryChangeWireTransactionSerializer)
             register(PartyAndCertificate::class.java, PartyAndCertificateSerializer)
 
