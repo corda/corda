@@ -3,9 +3,6 @@ package net.corda.confidential
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
@@ -66,11 +63,10 @@ class SwapIdentitiesFlowTests {
         val notBob = notaryNode.database.transaction {
             notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
         }
-        val notBobBytes = SerializedBytes<PartyAndCertificate>(notBob.serialize().bytes)
-        val sigData = SwapIdentitiesFlow.buildDataToSign(notBobBytes)
+        val sigData = SwapIdentitiesFlow.buildDataToSign(notBob)
         val signature = notaryNode.services.keyManagementService.sign(sigData, notBob.owningKey)
         assertFailsWith<SwapIdentitiesException>("Certificate subject must match counterparty's well known identity.") {
-            SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBobBytes, signature.withoutKey())
+            SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBob, signature.withoutKey())
         }
 
         mockNet.stopNodes()
@@ -93,11 +89,10 @@ class SwapIdentitiesFlowTests {
         notaryNode.database.transaction {
             notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
         }.let { anonymousNotary ->
-            val anonymousNotaryBytes = SerializedBytes<PartyAndCertificate>(anonymousNotary.serialize().bytes)
-            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotaryBytes)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotary)
             val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotaryBytes, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotary, signature.withoutKey())
             }
         }
         // Check that the right signing key, but wrong identity is rejected
@@ -107,12 +102,10 @@ class SwapIdentitiesFlowTests {
         bobNode.database.transaction {
             bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.chooseIdentityAndCert(), false)
         }.let { anonymousBob ->
-            val anonymousAliceBytes = SerializedBytes<PartyAndCertificate>(anonymousAlice.serialize().bytes)
-            val anonymousBobBytes = SerializedBytes<PartyAndCertificate>(anonymousBob.serialize().bytes)
-            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAliceBytes)
+            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAlice)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBobBytes, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBob, signature.withoutKey())
             }
         }
 

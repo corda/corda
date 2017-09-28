@@ -2,8 +2,6 @@ package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.secureRandomBytes
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
@@ -11,17 +9,20 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
-import org.bouncycastle.util.Arrays
+import org.bouncycastle.asn1.DERSet
+import org.bouncycastle.asn1.pkcs.CertificationRequestInfo
 import java.io.ByteArrayOutputStream
+import java.nio.charset.Charset
 import java.security.SignatureException
+import java.security.cert.CertPath
 import java.util.*
 
 /**
@@ -38,20 +39,38 @@ class SwapIdentitiesFlow(private val otherParty: Party,
 
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
+        val ASSERTION_VERSION: ByteArray = ByteArray(1) { 1 }
+        val ASSERTION_PREFIX: ByteArray = "Assertion of identity ownership ".toByteArray(Charset.forName("US-ASCII"))
+        val ASSERTION_POSTFIX: ByteArray = "Identity assertion ends".toByteArray(Charset.forName("US-ASCII"))
 
         fun tracker() = ProgressTracker(AWAITING_KEY)
-        fun buildDataToSign(identity: SerializedBytes<PartyAndCertificate>): ByteArray {
-            val buffer = ByteArrayOutputStream(1024)
-            buffer.write(identity.bytes)
-            return buffer.toByteArray()
+        /**
+         * Generate the data blob the confidential identity's key holder signs to indicate they want to represent the
+         * subject named in the X.509 certificate.
+         */
+        fun buildDataToSign(confidentialIdentity: PartyAndCertificate): ByteArray {
+            // We build a blob with fixed header/footer to make it harder to trick a system into signing one of these
+            // inappropriately. The blob contains the core of a certificate signing request, however we avoid using
+            // actual certificate signing requests as these could theoretically be resubmitted to a signing service.
+            val cert = confidentialIdentity.certificate.toX509CertHolder()
+            val certReqInfo = CertificationRequestInfo(cert.subject, cert.subjectPublicKeyInfo, DERSet())
+            val data = ByteArrayOutputStream(1024).use { out ->
+                // We put a fixed version byte on for future expansion
+                out.write(ASSERTION_VERSION)
+                out.write(ASSERTION_PREFIX)
+                out.write(certReqInfo.encoded)
+                out.write(ASSERTION_POSTFIX)
+                out.toByteArray()
+            }
+            return data
         }
 
         @Throws(SwapIdentitiesException::class)
         fun validateAndRegisterIdentity(identityService: IdentityService,
                                         otherSide: Party,
-                                        anonymousOtherSideBytes: SerializedBytes<PartyAndCertificate>,
+                                        anonymousOtherSideBytes: PartyAndCertificate,
                                         sigBytes: DigitalSignature): PartyAndCertificate {
-            val anonymousOtherSide: PartyAndCertificate = anonymousOtherSideBytes.deserialize()
+            val anonymousOtherSide: PartyAndCertificate = anonymousOtherSideBytes
             if (anonymousOtherSide.name != otherSide.name) {
                 throw SwapIdentitiesException("Certificate subject must match counterparty's well known identity.")
             }
@@ -68,10 +87,6 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         }
     }
 
-    object ArrayComparator : Comparator<ByteArray> {
-        override fun compare(o1: ByteArray?, o2: ByteArray?): Int = Arrays.compareUnsigned(o1, o2)
-    }
-
     @Suspendable
     override fun call(): LinkedHashMap<Party, AnonymousParty> {
         progressTracker.currentStep = AWAITING_KEY
@@ -84,12 +99,13 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             identities.put(otherParty, legalIdentityAnonymous.party.anonymise())
         } else {
             val otherSession = initiateFlow(otherParty)
-            val data = buildDataToSign(serializedIdentity)
+            val data = buildDataToSign(legalIdentityAnonymous)
             val ourSig: DigitalSignature.WithKey = serviceHub.keyManagementService.sign(data, legalIdentityAnonymous.owningKey)
             val ourIdentWithSig = IdentityWithSignature(serializedIdentity, ourSig.withoutKey())
             val anonymousOtherSide = otherSession.sendAndReceive<IdentityWithSignature>(ourIdentWithSig)
                     .unwrap { (confidentialIdentityBytes, theirSigBytes) ->
-                        validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentityBytes, theirSigBytes)
+                        val confidentialIdentity: PartyAndCertificate = confidentialIdentityBytes.bytes.deserialize()
+                        validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentity, theirSigBytes)
                     }
             identities.put(ourIdentity, legalIdentityAnonymous.party.anonymise())
             identities.put(otherParty, anonymousOtherSide.party.anonymise())
@@ -100,6 +116,9 @@ class SwapIdentitiesFlow(private val otherParty: Party,
     @CordaSerializable
     data class IdentityWithSignature(val identity: SerializedBytes<PartyAndCertificate>, val signature: DigitalSignature)
 }
+
+data class CertificateOwnershipAssertion(val certReqInfo: CertificationRequestInfo,
+                                         val certPath: CertPath)
 
 open class SwapIdentitiesException @JvmOverloads constructor(message: String, cause: Throwable? = null)
     : FlowException(message, cause)
