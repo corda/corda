@@ -26,7 +26,7 @@ certificate path to a trusted root certificate) is published:
   ill-suited to transactions where confidentiality of participants is required. This certificate is published in the
   network map service for anyone to access.
 * Confidential identities are only published to those who are involved in transactions with the identity. The public
-  key may be exposed to third parties (for example to the notary service), but distribution of the name and X.500
+  key may be exposed to third parties (for example to the notary service), but distribution of the name and X.509
   certificate is limited.
 
 Although there are several elements to the Corda transaction privacy model, including ensuring that transactions are
@@ -56,7 +56,8 @@ Certificates
 ------------
 
 Nodes must be able to verify the identity of the owner of a public key, which is achieved using X.509 certificates.
-When first run a node generates a key pair and submits a certificate signing request to the network Doorman service.
+When first run a node generates a key pair and submits a certificate signing request to the network Doorman service
+(see  :doc:`permissioning`).
 The Doorman service applies appropriate identity checks then issues a certificate to the node, which is used as the
 node certificate authority (CA). From this initial CA certificate the node automatically creates and signs two further
 certificates, a TLS certificate and a signing certificate for the node's well known identity. Finally the node
