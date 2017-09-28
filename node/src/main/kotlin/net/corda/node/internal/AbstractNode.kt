@@ -19,14 +19,11 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.RPCOps
-import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.*
 import net.corda.core.messaging.*
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.schemas.MappedSchema
@@ -257,18 +254,32 @@ abstract class AbstractNode(config: NodeConfiguration,
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
     private fun installCordaServices() {
-        cordappProvider.cordapps.flatMap { it.services }.forEach {
-            try {
-                installCordaService(it)
-            } catch (e: NoSuchMethodException) {
-                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
-                        ServiceHub::class.java.name)
-            } catch (e: ServiceInstantiationException) {
-                log.error("Corda service ${it.name} failed to instantiate", e.cause)
-            } catch (e: Exception) {
-                log.error("Unable to install Corda service ${it.name}", e)
-            }
+        cordappProvider.cordapps
+                .flatMap { it.services }
+                .filter { isServiceEnabled(it) }
+                .forEach {
+                    try {
+                        installCordaService(it)
+                    } catch (e: NoSuchMethodException) {
+                        log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
+                                ServiceHub::class.java.name)
+                    } catch (e: ServiceInstantiationException) {
+                        log.error("Corda service ${it.name} failed to instantiate", e.cause)
+                    } catch (e: Exception) {
+                        log.error("Unable to install Corda service ${it.name}", e)
+                    }
+                }
+    }
+
+    /**
+     * If the [serviceClass] is a notary service, it will only be enable if the "custom" flag is set in
+     * the notary configuration.
+     */
+    private fun isServiceEnabled(serviceClass: Class<*>): Boolean {
+        if (NotaryService::class.java.isAssignableFrom(serviceClass)) {
+            return configuration.notary?.custom == true
         }
+        return true
     }
 
     /**
@@ -321,14 +332,15 @@ abstract class AbstractNode(config: NodeConfiguration,
     fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
         val service = try {
+            val serviceContext = AppServiceHubImpl<T>(services)
             if (NotaryService::class.java.isAssignableFrom(serviceClass)) {
                 check(myNotaryIdentity != null) { "Trying to install a notary service but no notary identity specified" }
-                val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
-                constructor.newInstance(services, myNotaryIdentity!!.owningKey)
+                val constructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
+                serviceContext.serviceInstance = constructor.newInstance(services, myNotaryIdentity!!.owningKey)
+                serviceContext.serviceInstance
             } else {
                 try {
                     val extendedServiceConstructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java).apply { isAccessible = true }
-                    val serviceContext = AppServiceHubImpl<T>(services)
                     serviceContext.serviceInstance = extendedServiceConstructor.newInstance(serviceContext)
                     serviceContext.serviceInstance
                 } catch (ex: NoSuchMethodException) {
@@ -688,7 +700,9 @@ abstract class AbstractNode(config: NodeConfiguration,
             // Node's main identity
             Pair("identity", myLegalName)
         } else {
-            val notaryId = notaryConfig.run { NotaryService.constructId(validating, raft != null, bftSMaRt != null) }
+            val notaryId = notaryConfig.run {
+                NotaryService.constructId(validating, raft != null, bftSMaRt != null, custom)
+            }
             if (notaryConfig.bftSMaRt == null && notaryConfig.raft == null) {
                 // Node's notary identity
                 Pair(notaryId, myLegalName.copy(commonName = notaryId))

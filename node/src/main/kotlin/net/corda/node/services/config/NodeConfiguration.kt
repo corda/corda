@@ -36,7 +36,11 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val additionalNodeInfoPollingFrequencyMsec: Long
 }
 
-data class NotaryConfig(val validating: Boolean, val raft: RaftConfig? = null, val bftSMaRt: BFTSMaRtConfiguration? = null) {
+data class NotaryConfig(val validating: Boolean,
+                        val raft: RaftConfig? = null,
+                        val bftSMaRt: BFTSMaRtConfiguration? = null,
+                        val custom: Boolean = false
+) {
     init {
         require(raft == null || bftSMaRt == null) { "raft and bftSMaRt configs cannot be specified together" }
     }

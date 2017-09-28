@@ -15,12 +15,13 @@ import java.security.PublicKey
 abstract class NotaryService : SingletonSerializeAsToken() {
     companion object {
         const val ID_PREFIX = "corda.notary."
-        fun constructId(validating: Boolean, raft: Boolean = false, bft: Boolean = false): String {
+        fun constructId(validating: Boolean, raft: Boolean = false, bft: Boolean = false, custom: Boolean = false): String {
             require(!raft || !bft)
             return StringBuffer(ID_PREFIX).apply {
                 append(if (validating) "validating" else "simple")
                 if (raft) append(".raft")
                 if (bft) append(".bft")
+                if (custom) append(".custom")
             }.toString()
         }
     }

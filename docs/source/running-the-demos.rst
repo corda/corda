@@ -35,7 +35,7 @@ To run from the command line in Unix:
 2. Run ``./samples/trader-demo/build/nodes/runnodes`` to open up four new terminals with the four nodes
 3. Run ``./gradlew samples:trader-demo:runBank`` to instruct the bank node to issue cash and commercial paper to the buyer and seller nodes respectively.
 4. Run ``./gradlew samples:trader-demo:runSeller`` to trigger the transaction. If you entered ``flow watch``
-      
+
 you can see flows running on both sides of transaction. Additionally you should see final trade information displayed
 to your terminal.
 
@@ -45,7 +45,7 @@ To run from the command line in Windows:
 2. Run ``samples\trader-demo\build\nodes\runnodes`` to open up four new terminals with the four nodes
 3. Run ``gradlew samples:trader-demo:runBank`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node
 4. Run ``gradlew samples:trader-demo:runSeller`` to trigger the transaction. If you entered ``flow watch``
-      
+
 you can see flows running on both sides of transaction. Additionally you should see final trade information displayed
 to your terminal.
 
@@ -112,8 +112,11 @@ Notary demo
 This demo shows a party getting transactions notarised by either a single-node or a distributed notary service.
 All versions of the demo start two counterparty nodes.
 One of the counterparties will generate transactions that transfer a self-issued asset to the other party and submit them for notarisation.
-The `Raft <https://raft.github.io/>`_ version of the demo will start three distributed notary nodes.
-The `BFT SMaRt <https://bft-smart.github.io/library/>`_ version of the demo will start four distributed notary nodes.
+
+* The `Raft <https://raft.github.io/>`_ version of the demo will start three distributed notary nodes.
+* The `BFT SMaRt <https://bft-smart.github.io/library/>`_ version of the demo will start four distributed notary nodes.
+* The Single version of the demo will start a single-node validating notary service.
+* The Custom version of the demo will load and start a custom single-node notary service that is defined the demo CorDapp.
 
 The output will display a list of notarised transaction IDs and corresponding signer public keys. In the Raft distributed notary,
 every node in the cluster can service client requests, and one signature is sufficient to satisfy the notary composite key requirement.
@@ -122,9 +125,9 @@ You will notice that successive transactions get signed by different members of 
 
 To run the Raft version of the demo from the command line in Unix:
 
-1. Run ``./gradlew samples:notary-demo:deployNodes``, which will create all three types of notaries' node directories
-   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and
-   Single notaries).
+1. Run ``./gradlew samples:notary-demo:deployNodes``, which will create node directories for all versions of the demo,
+   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT``, ``nodesSingle``, and ``nodesCustom`` for
+   BFT, Single and Custom notaries respectively).
 2. Run ``./samples/notary-demo/build/nodes/nodesRaft/runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``./gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
@@ -133,8 +136,8 @@ To run the Raft version of the demo from the command line in Unix:
 To run from the command line in Windows:
 
 1. Run ``gradlew samples:notary-demo:deployNodes``, which will create all three types of notaries' node directories
-   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and
-   Single notaries).
+   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT``, ``nodesSingle``, and ``nodesCustom`` for
+   BFT, Single and Custom notaries respectively).
 2. Run ``samples\notary-demo\build\nodes\nodesRaft\runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
@@ -142,6 +145,7 @@ To run from the command line in Windows:
 
 To run the BFT SMaRt notary demo, use ``nodesBFT`` instead of ``nodesRaft`` in the path (you will see messages from notary nodes
 trying to communicate each other sometime with connection errors, that's normal). For a single notary node, use ``nodesSingle``.
+For the custom notary service use ``nodesCustom`.
 
 Distributed notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
 You can ascertain that the commit log is synchronised across the cluster by accessing and comparing each of the nodes' backing stores

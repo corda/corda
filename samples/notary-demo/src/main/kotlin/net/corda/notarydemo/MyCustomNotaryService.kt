@@ -1,4 +1,4 @@
-package net.corda.docs
+package net.corda.notarydemo
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TimeWindow
@@ -8,11 +8,17 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionWithSignatures
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import java.security.PublicKey
 import java.security.SignatureException
 
+/**
+ * A custom notary service should provide a constructor that accepts two parameters of types [AppServiceHub] and [PublicKey].
+ *
+ * Note that at present only a single-node notary service can be customised.
+ */
 // START 1
 @CordaService
 class MyCustomValidatingNotaryService(override val services: AppServiceHub, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
@@ -38,11 +44,15 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
             val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
             val notary = stx.notary
             checkNotary(notary)
-            val timeWindow: TimeWindow? = if (stx.isNotaryChangeTransaction())
-                null
-            else
-                stx.tx.timeWindow
-            val transactionWithSignatures = stx.resolveTransactionWithSignatures(serviceHub)
+            var timeWindow: TimeWindow? = null
+            val transactionWithSignatures = if (stx.isNotaryChangeTransaction()) {
+                stx.resolveNotaryChangeTransaction(serviceHub)
+            } else {
+                val wtx = stx.tx
+                customVerify(wtx.toLedgerTransaction(serviceHub))
+                timeWindow = wtx.timeWindow
+                stx
+            }
             checkSignatures(transactionWithSignatures)
             return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
@@ -52,6 +62,10 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
                 else -> e
             }
         }
+    }
+
+    private fun customVerify(transaction: LedgerTransaction) {
+        // Add custom verification logic
     }
 
     private fun checkSignatures(tx: TransactionWithSignatures) {

@@ -108,11 +108,13 @@ path to the node's base directory.
                     members must be active and be able to communicate with the cluster leader for joining. If empty, a new
                     cluster will be bootstrapped.
 
-        :bftSMaRt: If part of a distributed BFT SMaRt cluster specify this config object, with the following settings:
+        :bftSMaRt: If part of a distributed BFT-SMaRt cluster specify this config object, with the following settings:
 
-                :replicaId:
+                :replicaId: The zero-based index of the current replica. All replicas must specify a unique replica id.
 
-                :clusterAddresses:
+                :clusterAddresses: List of all BFT-SMaRt cluster member addresses.
+
+        :custom: If `true`, will load and install a notary service from a CorDapp. See :doc:`tutorial-custom-notary`.
 
 :networkMapService: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise this is
     a config object with the details of the network map service:

@@ -53,6 +53,11 @@ task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
     definitionClass = 'net.corda.notarydemo.SingleNotaryCordform'
 }
 
+task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
+    directory "./build/nodes/nodesCustom"
+    definitionClass = 'net.corda.notarydemo.CustomNotaryCordform'
+}
+
 task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
     directory "./build/nodes/nodesRaft"
     definitionClass = 'net.corda.notarydemo.RaftNotaryCordform'
