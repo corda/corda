@@ -1,37 +1,46 @@
 Contract Constraints
 ====================
 
-A basic understanding of contract key concepts, which can be found :doc:`here </key-concepts-contracts>`
+A basic understanding of contract key concepts, which can be found :doc:`here </key-concepts-contracts>`,
 is required reading for this page.
 
 Transaction states specify a constraint over the contract that will be used to verify it.  For a transaction to be
-valid, the verify() function associated with each states must run successfully. However, for this to be secure, it is
+valid, the verify() function associated with each state must run successfully. However, for this to be secure, it is
 not sufficient to specify the verify() function by name as there may exist multiple different implementations with the
 same method signature and enclosing class. Contract constraints solve this problem by allowing a contract developer to
-constrain which verify() functions out of the universe of implementations which satisfy the constraint can be executed.
+constrain which verify() functions out of the universe of implementations which match the signature
+(ie the universe is everything that matches the signature and contract constraints restricts this universe to a subset.)
 
 A typical constraint is the hash of the CorDapp JAR that contains the contract and states but will in future releases
-include constraints that require specific signers of the JAR, or both the signer and the hash. Custom constraints are
-specified when constructing a transaction, if unspecified an automatic constraint is used.
+include constraints that require specific signers of the JAR, or both the signer and the hash. Constraints can be
+specified when constructing a transaction; if unspecified, an automatic constraint is used.
 
-Constraints are specified for each ``Transactionstate``. If unspecified the ``TransactionState`` has a default
-``AutomaticHashConstraint``. This default will be automatically resolved to a specific ``HashAttachmentConstraint`` that
-contains the hash of the attachment which contrains the contract of that ``TransactionState``. This automatic resolution
-occurs when a ``TransactionBuilder`` is converted to a ``WireTransaction``. This reduces boilerplate of finding a
-specific hash constraints when building a transaction.
+``TransactionState``s have a ``constraint`` field that represents that state's attachment constraint. When a party
+constructs a ``TransactionState`` without specifying the constraint parameter a default value
+(``AutomaticHashConstraint``) is used. This default will be automatically resolved to a specific
+``HashAttachmentConstraint`` that contains the hash of the attachment which contrains the contract of that
+``TransactionState``. This automatic resolution occurs when a ``TransactionBuilder`` is converted to a
+``WireTransaction``. This reduces boilerplate of finding a specific hash constraints when building a transaction.
 
 It is possible to specify the constraint explicitly with any other class that implements the ``AttachmentConstraint``
 interface. To specify a hash manually the ``HashAttachmentConstraint`` can be used and to not provide any constraint
 the ``AlwaysAcceptAttachmentConstraint`` can be used - though this is intended for testing only. An example below
 shows how to construct a ``TransactionState`` with an explicitly specified hash constraint from within a flow;
 
-.. sourcecode:: kotlin
+.. sourcecode:: java
 
-     // Constructing a transaction state with a custom hash constraint.
-     val notaryParty = ... // a notary party
-     val contractState = DummyState()
-     val myAttachmentsHash = serviceHub.cordappProvider.getContractAttachmentIDDummyContract.PROGRAM_ID)
-     val transactionState = TransactionState(contractState, DummyContract.PROGRAM_ID, notaryParty, AttachmentHashConstraint(myAttachmentsHash))
+     // Constructing a transaction with a custom hash constraint on a state
+     TransactionBuilder tx = new TransactionBuilder()
+
+     Party notaryParty = ... // a notary party
+     DummyState contractState = new DummyState()
+     SecureHash myAttachmentsHash = serviceHub.cordappProvider.getContractAttachmentID(DummyContract.PROGRAM_ID)
+     TransactionState transactionState = new TransactionState(contractState, DummyContract.Companion.getPROGRAMID(), notaryParty, new AttachmentHashConstraint(myAttachmentsHash))
+
+     tx.addOutputState(transactionState)
+     WireTransaction wtx = tx.toWireTransaction(serviceHub) // This is where an automatic constraint would be resolved
+     LedgerTransaction ltx = wtx.toLedgerTransaction(serviceHub)
+     ltx.verify() // Verifies both the attachment constraints and contracts
 
 
 This mechanism exists both for integrity and security reasons. It is important not to verify against the wrong contract,
@@ -71,18 +80,16 @@ attachment JAR. This allows for trusting of attachments from trusted entities.
 Limitations
 -----------
 
-When a constraint is checked the ``isSatisfiedBy`` method is provided only the relevant attachment to the transaction.
-The constraint can be provided any other kind of data, but the main aim is to verify that attachments match the ones we
-expect. This feature is not intended to be used to scan the contents of attachments or to perform logic about states
-or other aspects of the transaction.
+``AttachmentConstraint``s are verified by running the ``AttachmentConstraint.isSatisfiedBy`` method. When this is called
+it is provided only the relevant attachment by the transaction that is verifying it.
 
 Testing
 -------
 
 Since all tests involving transactions now require attachments it is also required to load the correct attachments
-for tests. Unit test environments in JVM ecosystems tend to use class directories over JARs, and so CorDapp JARs aer
-typically aren't built for testing. Requiring this would add significant complexity to the build systems of Corda and
-CorDapps, so the test suite has a set of convenient functions to generate CorDapps from package names or
+for tests. Unit test environments in JVM ecosystems tend to use class directories rather than JARs, and so CorDapp JARs
+typically aren't built for testing. Requiring this would add significant complexity to the build systems of Corda
+and CorDapps, so the test suite has a set of convenient functions to generate CorDapps from package names or
 to specify JAR URLs in the case that the CorDapp(s) involved in testing already exist.
 
 MockNetwork/MockNode
@@ -97,18 +104,18 @@ within those packages will be zipped into a JAR and added to the attachment stor
 .. sourcecode:: kotlin
 
     class SomeTestClass {
-         lateinit var network: MockNetwork
+         MockNetwork network = null
 
          @Before
-         fun setup() {
+         void setup() {
              // The ordering of the two below lines is important - if the MockNetwork is created before the nodes and network
              // are created the CorDapps will not be loaded into the MockNodes correctly.
-             setCordappPackages(listOf("com.domain.cordapp"))
-             network = MockNetwork()
+             setCordappPackages(Arrays.asList("com.domain.cordapp"))
+             network = new MockNetwork()
          }
 
          @After
-         fun teardown() {
+         void teardown() {
              // This must be called at the end otherwise the global state set by setCordappPackages may leak into future
              // tests in the same test runner environment.
              unsetCordappPackages()
@@ -123,18 +130,18 @@ MockServices
 If your test uses a ``MockServices`` directly you can instantiate it using a constructor that takes a list of packages
 to use as CorDapps using the ``cordappPackages`` parameter.
 
-.. sourcecode:: kotlin
+.. sourcecode:: java
 
-    val mockServices = MockServices(listOf("com.domain.cordapp"))
+    MockServices mockServices = new MockServices(Arrays.asList("com.domain.cordapp"))
 
 Driver
 ******
 
 The driver takes a parameter called ``extraCordappPackagesToScan`` which is a list of packages to use as CorDapps.
 
-.. sourcecode:: kotlin
+.. sourcecode:: java
 
-   driver(extraCordappPackagesToScan = listOf("com.domain.cordapp")) { ... }
+   driver(new DriverParameters().setExtraCordappPackagesToScan(Arrays.asList("com.domain.cordapp"))) ...
 
 Full Nodes
 **********

@@ -26,7 +26,7 @@ Internal, do not use. These APIs and implementations which are currently being r
 
 # Package net.corda.core.cordapp
 
-This package contains the interface to CorDapps from within a node. A CorDapp can access it's own context by using
+This package contains the interface to CorDapps from within a node. A CorDapp can access its own context by using
 the CordappProvider.getAppContext() class. These classes are not intended to be constructed manually and no interface
 to do this will be provided. 
 
