@@ -25,6 +25,10 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     val addressesMap: HashMap<CordaX500Name, NetworkHostAndPort> = HashMap()
     val infos: MutableSet<NodeInfo> = HashSet()
 
+    companion object {
+        val logger = loggerFor<PersistentNetworkMapCacheTest>()
+    }
+
     @Before
     fun start() {
         val nodes = startNodesWithPort(partiesList)
@@ -127,10 +131,13 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
             assertTrue(nms.info.chooseIdentity() in it.services.networkMapCache.allNodes.map { it.chooseIdentity() })
         }
         charlie.internals.nodeReadyFuture.get() // Finish registration.
+        logger.info("Checking connectivity")
         checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
+        logger.info("Loading caches")
         val cacheA = otherNodes[0].services.networkMapCache.allNodes
         val cacheB = otherNodes[1].services.networkMapCache.allNodes
         val cacheC = charlie.services.networkMapCache.allNodes
+        logger.info("Performing verification")
         assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
         assertThat(cacheB).contains(charlie.info)
         assertEquals(cacheA.toSet(), cacheB.toSet())
@@ -158,9 +165,11 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     private fun checkConnectivity(nodes: List<StartedNode<*>>) {
         nodes.forEach { node1 ->
             nodes.forEach { node2 ->
-                node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
-                val resultFuture = node1.services.startFlow(SendFlow(node2.info.chooseIdentity())).resultFuture
-                assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
+                if(!(node1 === node2)) { // Do not check connectivity to itself
+                    node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
+                    val resultFuture = node1.services.startFlow(SendFlow(node2.info.chooseIdentity())).resultFuture
+                    assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")
+                }
             }
         }
     }
@@ -169,8 +178,8 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     private class SendFlow(val otherParty: Party) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String {
-            println("SEND FLOW to $otherParty")
-            println("Party key ${otherParty.owningKey.toBase58String()}")
+            logger.info("SEND FLOW to $otherParty")
+            logger.info("Party key ${otherParty.owningKey.toBase58String()}")
             val session = initiateFlow(otherParty)
             return session.sendAndReceive<String>("Hi!").unwrap { it }
         }
@@ -180,8 +189,8 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     private class SendBackFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            println("SEND BACK FLOW to ${otherSideSession.counterparty}")
-            println("Party key ${otherSideSession.counterparty.owningKey.toBase58String()}")
+            logger.info("SEND BACK FLOW to ${otherSideSession.counterparty}")
+            logger.info("Party key ${otherSideSession.counterparty.owningKey.toBase58String()}")
             otherSideSession.send("Hello!")
         }
     }
