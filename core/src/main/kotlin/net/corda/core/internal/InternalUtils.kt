@@ -285,11 +285,9 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 // Provide access to internal method for AttachmentClassLoaderTests
-@Throws(MissingContractAttachments::class)
 fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
 // Provide access to internal method for AttachmentClassLoaderTests
-@Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
 fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
