@@ -151,13 +151,6 @@ Release 1.0
 * A new `PrivacySalt` transaction component is introduced, which is now an attribute in ``TraversableTransaction`` and
   inherently in ``WireTransaction``.
 
-* A new ``nonces: List<SecureHash>`` feature has been added to ``FilteredLeaves``.
-
-* Due to the ``nonces`` and ``PrivacySalt`` introduction, new functions have been added to ``MerkleTransaction``:
-  ``fun <T : Any> serializedHash(x: T, privacySalt: PrivacySalt?, index: Int): SecureHash``
-  ``fun <T : Any> serializedHash(x: T, nonce: SecureHash): SecureHash``
-  ``fun computeNonce(privacySalt: PrivacySalt, index: Int)``.
-
 * A new ``SignatureMetadata`` data class is introduced with two attributes, ``platformVersion: Int`` and
   ``schemeNumberID: Int`` (the signature scheme used).
 
