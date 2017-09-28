@@ -5,6 +5,7 @@ import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
 import net.corda.node.internal.StartedNode;
 import net.corda.testing.node.MockNetwork;
+import net.corda.testing.TestConstants;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,17 +20,18 @@ import static org.junit.Assert.fail;
 public class FlowsInJavaTest {
 
     private final MockNetwork mockNet = new MockNetwork();
-    private StartedNode<MockNetwork.MockNode> node1;
-    private StartedNode<MockNetwork.MockNode> node2;
+    private StartedNode<MockNetwork.MockNode> notaryNode;
+    private StartedNode<MockNetwork.MockNode> aliceNode;
+    private StartedNode<MockNetwork.MockNode> bobNode;
 
     @Before
     public void setUp() throws Exception {
-        MockNetwork.BasketOfNodes someNodes = mockNet.createSomeNodes(2);
-        node1 = someNodes.getPartyNodes().get(0);
-        node2 = someNodes.getPartyNodes().get(1);
+        notaryNode = mockNet.createNotaryNode();
+        aliceNode = mockNet.createPartyNode(notaryNode.getNetwork().getMyAddress(), TestConstants.getALICE().getName());
+        bobNode = mockNet.createPartyNode(notaryNode.getNetwork().getMyAddress(), TestConstants.getBOB().getName());
         mockNet.runNetwork();
         // Ensure registration was successful
-        node1.getInternals().getNodeReadyFuture().get();
+        aliceNode.getInternals().getNodeReadyFuture().get();
     }
 
     @After
@@ -39,8 +41,8 @@ public class FlowsInJavaTest {
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
-        node2.getInternals().registerInitiatedFlow(SendHelloAndThenReceive.class);
-        Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(chooseIdentity(node2.getInfo()))).getResultFuture();
+        bobNode.getInternals().registerInitiatedFlow(SendHelloAndThenReceive.class);
+        Future<String> result = aliceNode.getServices().startFlow(new SendInUnwrapFlow(chooseIdentity(bobNode.getInfo()))).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
@@ -55,8 +57,8 @@ public class FlowsInJavaTest {
     }
 
     private void primitiveReceiveTypeTest(Class<?> receiveType) throws InterruptedException {
-        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(chooseIdentity(node2.getInfo()), receiveType);
-        Future<?> result = node1.getServices().startFlow(flow).getResultFuture();
+        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(chooseIdentity(bobNode.getInfo()), receiveType);
+        Future<?> result = aliceNode.getServices().startFlow(flow).getResultFuture();
         mockNet.runNetwork();
         try {
             result.get();
