@@ -31,6 +31,11 @@ Milestone 14
     counterparty identity, it is in the ``counterparty`` property of the flow session.
   See ``FlowSession`` for step by step instructions on porting existing flows to use the new mechanism.
 
+* VaultQueryService 
+  Unresolved reference to `vaultQueryService`. 
+  Replace all references to <services>.vaultQueryService with <services>.vaultService.
+  Previously, there were two APIs and now there is a single one with the same API set: VaultService.
+
 * Missing imports for utility functions.
   Many common types and helper methods have been consolidated into `net.corda.core.utilities` package.
   For example:
