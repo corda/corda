@@ -1,15 +1,19 @@
 # API Scanner
 
-Generates a text summary of a Jar's public API that we can check for API-breaking changes.
+Generates a text summary of Corda's public API that we can check for API-breaking changes.
+
+```bash
+$ gradlew generateApi
+```
 
 ## Usage
-Include this line in your `build.gradle` file:
+Include this line in the `build.gradle` file of every Corda module that exports public API:
 
 ```gradle
 apply plugin: 'net.corda.plugins.api-scanner'
 ```
 
-This will create a Gradle task called `scanApi` which will analyse the module's Jar artifacts. More precisely,
+This will create a Gradle task called `scanApi` which will analyse that module's Jar artifacts. More precisely,
 it will analyse all of the Jar artifacts that have not been assigned a Maven classifier, on the basis
 that these should be the module's main artifacts.
 
@@ -24,7 +28,17 @@ scanApi {
 }
 ```
 
-The plugin writes its output files to the `$buildDir/api` directory.
+All of the `ScanApi` tasks write their output files to their own `$buildDir/api` directory, where they
+are collated into a single output file by the `GenerateApi` task. The `GenerateApi` task is declared
+in the root project's `build.gradle`:
+
+```gradle
+task generateApi(type: net.corda.plugins.GenerateApi){
+    baseName = "api-corda"
+}
+```
+
+The final API file is written to `$buildDir/api/$baseName-$project.version.txt`
 
 ### Sample Output
 ```
