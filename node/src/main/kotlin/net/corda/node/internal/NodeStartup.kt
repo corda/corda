@@ -94,7 +94,7 @@ open class NodeStartup(val args: Array<String>) {
         val advertisedServices = conf.calculateServices()
         val node = createNode(conf, versionInfo, advertisedServices)
         if (cmdlineOptions.justGenerateNodeInfo) {
-            // Perform the the minimum required start-up logic to be able to write a nodeInfo to disk
+            // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
             node.generateNodeInfo()
             return
         }
