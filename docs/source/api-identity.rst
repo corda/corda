@@ -38,7 +38,7 @@ scenario the certificate path proves its issuance by the Doorman service.
 Confidential Identities
 -----------------------
 
-Confidential identities are key pairs where the corresponding X.509 certificate is not made public, so that parties who
+Confidential identities are key pairs where the corresponding X.509 certificate (and path) are not made public, so that parties who
 are not involved in the transaction cannot identify its participants. They are owned by a well known identity, which
 must sign the X.509 certificate. Before constructing a new transaction the involved parties must generate and send new
 confidential identities to each other, a process which is managed using ``SwapIdentitiesFlow`` (discussed below). The
