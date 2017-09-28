@@ -157,23 +157,30 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     }
 
     override fun addNode(node: NodeInfo) {
+        logger.info("Adding node with info: $node")
         synchronized(_changed) {
             val previousNode = registeredNodes.put(node.legalIdentities.first().owningKey, node) // TODO hack... we left the first one as special one
             if (previousNode == null) {
+                logger.info("No previous node found")
                 serviceHub.database.transaction {
                     updateInfoDB(node)
                     changePublisher.onNext(MapChange.Added(node))
                 }
             } else if (previousNode != node) {
+                logger.info("Previous node was found as: $previousNode")
                 serviceHub.database.transaction {
                     updateInfoDB(node)
                     changePublisher.onNext(MapChange.Modified(node, previousNode))
                 }
+            } else {
+                logger.info("Previous node was identical to incoming one - doing nothing")
             }
         }
+        logger.info("Done adding node with info: $node")
     }
 
     override fun removeNode(node: NodeInfo) {
+        logger.info("Removing node with info: $node")
         synchronized(_changed) {
             registeredNodes.remove(node.legalIdentities.first().owningKey)
             serviceHub.database.transaction {
@@ -181,6 +188,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                 changePublisher.onNext(MapChange.Removed(node))
             }
         }
+        logger.info("Done removing node with info: $node")
     }
 
     /**
