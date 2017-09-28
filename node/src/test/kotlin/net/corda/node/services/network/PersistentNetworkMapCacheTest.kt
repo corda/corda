@@ -1,6 +1,8 @@
 package net.corda.node.services.network
 
 import co.paralleluniverse.fibers.Suspendable
+import io.kotlintest.eventually
+import io.kotlintest.milliseconds
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -147,20 +149,24 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         charlie.internals.nodeReadyFuture.get() // Finish registration.
 
         val allTheStartedNodesPopulation = otherNodes.plus(charlie).plus(nms)
-        // Ensure that all the nodes were successfully discovered their peers and the cluster is stable to perform further testing.
-        Thread.sleep(bridgeRetryMs * allTheStartedNodesPopulation.size * 2)
 
-        logger.info("Checking connectivity")
-        checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
-        logger.info("Loading caches")
-        val cacheA = otherNodes[0].services.networkMapCache.allNodes
-        val cacheB = otherNodes[1].services.networkMapCache.allNodes
-        val cacheC = charlie.services.networkMapCache.allNodes
-        logger.info("Performing verification")
-        assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
-        assertThat(cacheB).contains(charlie.info)
-        assertEquals(cacheA.toSet(), cacheB.toSet())
-        assertEquals(cacheA.toSet(), cacheC.toSet())
+        // This is prediction of the longest time it will take to get the cluster into a stable state such that further
+        // testing can be performed upon it
+        val maxInstabilityInterval = bridgeRetryMs * allTheStartedNodesPopulation.size * 2
+
+        eventually(maxInstabilityInterval.milliseconds) {
+            logger.info("Checking connectivity")
+            checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
+            logger.info("Loading caches")
+            val cacheA = otherNodes[0].services.networkMapCache.allNodes
+            val cacheB = otherNodes[1].services.networkMapCache.allNodes
+            val cacheC = charlie.services.networkMapCache.allNodes
+            logger.info("Performing verification")
+            assertEquals(4, cacheC.size) // Charlie fetched data from NetworkMap
+            assertThat(cacheB).contains(charlie.info)
+            assertEquals(cacheA.toSet(), cacheB.toSet())
+            assertEquals(cacheA.toSet(), cacheC.toSet())
+        }
     }
 
     // HELPERS
