@@ -6,8 +6,8 @@ import net.corda.core.utilities.UntrustworthyData
 
 /**
  *
- * A [FlowSession] is a handle on a communication sequence between two flows. It is used to send and receive messages
- *   between flows.
+ * A [FlowSession] is a handle on a communication sequence between two paired flows, possibly running on separate nodes.
+ *   It is used to send and receive messages between the flows as well as to query information about the counter-flow.
  *
  * There are two ways of obtaining such a session:
  *

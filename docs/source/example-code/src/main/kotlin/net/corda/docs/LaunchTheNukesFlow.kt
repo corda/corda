@@ -89,7 +89,7 @@ class PresidentNukeFlowCorrect(val launcherSession: FlowSession) : FlowLogic<Uni
     }
 }
 
-@InitiatedBy(PresidentNukeFlow::class)
+@InitiatedBy(PresidentNukeFlowCorrect::class)
 class SecretaryFlowCorrect(val presidentSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {

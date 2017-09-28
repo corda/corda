@@ -377,10 +377,11 @@ as it likes, and each party can invoke a different response flow:
         :end-before: DOCEND 6
         :dedent: 12
 
-.. warning:: If you initiate several counter flows from the same ``@InitiatingFlow`` flow then on the receiving side you
-   must be prepared to be initiated by any of the corresponding ``initiateFlow()`` calls! A good way of handling this
-   ambiguity is to send as a first message a "role" message to the initiated flow, indicating which part of the
-   initiating flow the rest of the counter-flow should conform to.
+.. warning:: If you initiate several flows from the same ``@InitiatingFlow`` flow then on the receiving side you must be
+   prepared to be initiated by any of the corresponding ``initiateFlow()`` calls! A good way of handling this ambiguity
+   is to send as a first message a "role" message to the initiated flow, indicating which part of the initiating flow
+   the rest of the counter-flow should conform to. For example send an enum, and on the other side start with a switch
+   statement.
 
 SendAndReceive
 ~~~~~~~~~~~~~~
@@ -445,9 +446,9 @@ Consider the following contrived example using the old ``Party`` based API:
         :start-after: DOCSTART LaunchTheNukesFlow
         :end-before: DOCEND LaunchTheNukesFlow
 
-The intention of the flows is very clear: LaunchTheNukesFlow asks the president whether the nukes should be launched.
-The president in return tells the secretary that they need coffee. Afterwards the president replies that they don't want
-to launch the nukes.
+The intention of the flows is very clear: LaunchTheNukesFlow asks the president whether the nukes should be launched. It
+is expecting a boolean reply. The president in first tells the secretary that they need coffee, which is also
+communicated with a boolean. Afterwards the president replies to the launcher that they don't want to launch the nukes.
 
 However the above can go horribly wrong when the ``launcher`` happens to be the same party ``getSecretary`` returns. In
 this case the boolean meant for the secretary will be received by the launcher!
@@ -471,7 +472,7 @@ Note how the president is now explicit about which session it wants to send to. 
 Porting from the old Party-based API
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In the old API the first ``send`` or ``receive`` to a ``Party`` was the one kicking off the counterflow. This is now
+In the old API the first ``send`` or ``receive`` to a ``Party`` was the one kicking off the counter-flow. This is now
 explicit in the ``initiateFlow`` function call. To port existing code:
 
 .. container:: codeset
@@ -492,24 +493,28 @@ explicit in the ``initiateFlow`` function call. To port existing code:
 Subflows
 --------
 
-Subflows are pieces of reusable flows that may be run by calling ``FlowLogic.subFlow``.
+Subflows are pieces of reusable flows that may be run by calling ``FlowLogic.subFlow``. There are two broad categories
+of subflows, inlined and initiating ones. The main difference lies in the counter-flow's starting method, initiating
+ones initiate counter-flows automatically, while inlined ones expect some parent counter-flow to run the inlined
+counter-part.
 
 Inlined subflows
 ^^^^^^^^^^^^^^^^
 
-Inlined subflows inherit their calling flow's type when initiating a new session with a counterparty. For example say
+Inlined subflows inherit their calling flow's type when initiating a new session with a counterparty. For example, say
 we have flow A calling an inlined subflow B, which in turn initiates a session with a party. The FlowLogic type used to
-determine which counterflow should be kicked off will be A, not B. Note that this means that the other side of this
-session must therefore be called explicitly in the kicked off flow as well.
+determine which counter-flow should be kicked off will be A, not B. Note that this means that the other side of this
+inlined flow must therefore be implemented explicitly in the kicked off flow as well. This may be done by calling a
+matching inlined counter-flow, or by implementing the other side explicitly in the kicked off parent flow.
 
 An example of such a flow is ``CollectSignaturesFlow``. It has a counter-flow ``SignTransactionFlow`` that isn't
-annotated with ``InitiatedBy``. This is because both of these flows are inlined, the kick-off relationship will be
+annotated with ``InitiatedBy``. This is because both of these flows are inlined; the kick-off relationship will be
 defined by the parent flows calling ``CollectSignaturesFlow`` and ``SignTransactionFlow``.
 
 In the code inlined subflows appear as regular ``FlowLogic`` instances, `without` either of the ``@InitiatingFlow`` or
 ``@InitiatedBy`` annotation.
 
-.. note:: Inlined flows aren't versioned, they inherit their parent flow's version.
+.. note:: Inlined flows aren't versioned; they inherit their parent flow's version.
 
 Initiating subflows
 ^^^^^^^^^^^^^^^^^^^
@@ -525,7 +530,7 @@ Core initiating subflows
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Corda-provided initiating subflows are a little different to standard ones as they are versioned together with the
-platform, and their initiated counterflows are registered explicitly, so there is no need for the ``InitiatedBy``
+platform, and their initiated counter-flows are registered explicitly, so there is no need for the ``InitiatedBy``
 annotation.
 
 An example is the ``FinalityFlow``/``FinalityHandler`` flow pair.
@@ -536,8 +541,10 @@ Built-in subflows
 Corda provides a number of built-in flows that should be used for handling common tasks. The most important are:
 
 * ``CollectSignaturesFlow`` (inlined), which should be used to collect a transaction's required signatures
-* ``FinalityFlow`` (initiating), which should be used to notarise and record a transaction
-* ``SendTransactionFlow`` (inlined), which should be used to send a signed transaction if it needed to be resolved on the other side.
+* ``FinalityFlow`` (initiating), which should be used to notarise and record a transaction as well as to broadcast it to
+  all relevant parties
+* ``SendTransactionFlow`` (inlined), which should be used to send a signed transaction if it needed to be resolved on
+  the other side.
 * ``ReceiveTransactionFlow`` (inlined), which should be used receive a signed transaction
 * ``ContractUpgradeFlow`` (initiating), which should be used to change a state's contract
 * ``NotaryChangeFlow`` (initiating), which should be used to change a state's notary
@@ -685,7 +692,7 @@ By making this pair of flows inlined we provide control to the user over whether
 forcing them to nest it in their own parent flows.
 
 In general if you're writing a subflow the decision of whether you should make it initiating should depend on whether
-the counterflow needs broader context to achieve its goal.
+the counter-flow needs broader context to achieve its goal.
 
 FlowException
 -------------
