@@ -60,8 +60,8 @@ open class CordaException internal constructor(override var originalExceptionCla
 }
 
 open class CordaRuntimeException(override var originalExceptionClassName: String?,
-                                 private var _message: String? = null,
-                                 private var _cause: Throwable? = null) : RuntimeException(null, null, true, true), CordaThrowable {
+                                 private var _message: String?,
+                                 private var _cause: Throwable?) : RuntimeException(null, null, true, true), CordaThrowable {
     constructor(message: String?, cause: Throwable?) : this(null, message, cause)
 
     constructor(message: String?) : this(null, message, null)

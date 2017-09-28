@@ -67,7 +67,7 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
             logger.warn("Unexpected exception de-serializing throwable: ${proxy.exceptionClass}. Converting to CordaRuntimeException.", e)
         }
         // If the criteria are not met or we experience an exception constructing the exception, we fall back to our own unchecked exception.
-        return CordaRuntimeException(proxy.exceptionClass).apply {
+        return CordaRuntimeException(proxy.exceptionClass, null, null).apply {
             this.setMessage(proxy.message)
             this.setCause(proxy.cause)
             this.stackTrace = proxy.stackTrace
