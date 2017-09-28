@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Clock
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
 
@@ -83,12 +84,16 @@ open class Node(override val configuration: FullNodeConfiguration,
         private fun createClock(configuration: FullNodeConfiguration): Clock {
             return if (configuration.useTestClock) TestClock() else NodeClock()
         }
+
+        private val sameVmNodeCounter = AtomicInteger()
     }
 
     override val log: Logger get() = logger
     override val platformVersion: Int get() = versionInfo.platformVersion
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
+
+    private val sameVmNodeNumber = sameVmNodeCounter.incrementAndGet() // Under normal (non-test execution) it will always be "1"
 
     // DISCUSSION
     //
@@ -127,7 +132,7 @@ open class Node(override val configuration: FullNodeConfiguration,
     //
     // The primary work done by the server thread is execution of flow logics, and related
     // serialisation/deserialisation work.
-    override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
+    override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread-$sameVmNodeNumber", 1)
 
     private var messageBroker: ArtemisMessagingServer? = null
 

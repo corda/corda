@@ -391,7 +391,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     @JvmOverloads
     fun createSomeNodes(numPartyNodes: Int = 2, nodeFactory: Factory<*> = defaultFactory, notaryKeyPair: KeyPair? = DUMMY_NOTARY_KEY): BasketOfNodes {
         require(nodes.isEmpty())
-        val notaryServiceInfo = ServiceInfo(SimpleNotaryService.type)
+        val notaryServiceInfo = ServiceInfo(ValidatingNotaryService.type)
         val notaryOverride = if (notaryKeyPair != null)
             mapOf(Pair(notaryServiceInfo, notaryKeyPair))
         else
