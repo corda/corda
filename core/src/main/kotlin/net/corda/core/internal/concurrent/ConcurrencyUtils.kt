@@ -1,13 +1,18 @@
 @file:JvmName("ConcurrencyUtils")
-package net.corda.core.concurrent
+package net.corda.core.internal.concurrent
 
-import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.utilities.getOrThrow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.Consumer
+
+inline fun <V, W> CordaFuture<V>.then(crossinline callback: (CordaFuture<V>) -> W) {
+    then(Consumer { callback(it) })
+}
 
 /** Invoke [getOrThrow] and pass the value/throwable to success/failure respectively. */
 fun <V, W> Future<V>.match(success: (V) -> W, failure: (Throwable) -> W): W {
@@ -28,9 +33,9 @@ fun <V, W> firstOf(vararg futures: CordaFuture<out V>, handler: (CordaFuture<out
 
 private val defaultLog = LoggerFactory.getLogger("net.corda.core.concurrent")
 @VisibleForTesting
-internal const val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
+const val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 
-internal fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler: (CordaFuture<out V>) -> W): CordaFuture<W> {
+fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler: (CordaFuture<out V>) -> W): CordaFuture<W> {
     val resultFuture = openFuture<W>()
     val winnerChosen = AtomicBoolean()
     futures.forEach {

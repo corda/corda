@@ -25,6 +25,7 @@ object Requirements {
     }
 }
 
+/** Kotlin DSL for writing contract verification code. */
 inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 
 //// Authenticated commands ///////////////////////////////////////////////////////////////////////////////////////////

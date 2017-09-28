@@ -198,9 +198,9 @@ class FilteredTransaction private constructor(
      * @param checkingFun function that performs type checking on the structure fields and provides verification logic accordingly.
      * @returns false if no elements were matched on a structure or checkingFun returned false.
      */
-    fun checkWithFun(checkingFun: (Any) -> Boolean): Boolean {
-        val checkList = availableComponentGroups.flatten().map { checkingFun(it) }
-        return (!checkList.isEmpty()) && checkList.all { it }
+    fun check(checkingFun: Predicate<Any>): Boolean {
+        val checkList = availableComponentGroups.flatten().map { checkingFun.test(it) }
+        return checkList.isNotEmpty() && checkList.all { it }
     }
 
     /**

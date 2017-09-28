@@ -23,6 +23,7 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.utilities.loggerFor
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.core.internal.concurrent.then
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT

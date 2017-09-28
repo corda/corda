@@ -28,4 +28,5 @@ class UntrustworthyData<out T>(@PublishedApi internal val fromUntrustedWorld: T)
     }
 }
 
+/** Kotlin helper method which does the same thing as [UntrustworthyData.unwrap] but enabling use of Kotlin's lamdba syntax. */
 inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(fromUntrustedWorld)

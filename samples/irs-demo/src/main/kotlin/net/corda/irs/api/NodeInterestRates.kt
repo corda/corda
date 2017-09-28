@@ -2,7 +2,6 @@ package net.corda.irs.api
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.internal.ThreadBox
@@ -24,6 +23,7 @@ import org.apache.commons.io.IOUtils
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
+import java.util.function.Predicate
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashSet
 import kotlin.collections.component1
@@ -145,7 +145,7 @@ object NodeInterestRates {
                 }
             }
 
-            require(ftx.checkWithFun(::check))
+            require(ftx.check(Predicate { check(it) }))
 
             // It all checks out, so we can return a signature.
             //

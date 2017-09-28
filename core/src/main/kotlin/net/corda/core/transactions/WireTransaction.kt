@@ -6,9 +6,10 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.*
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.serialize
+import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -82,7 +83,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        return toLedgerTransaction(
+        return internalToLedgerTransaction(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it)},
                 resolveStateRef = { services.loadState(it) },
@@ -97,8 +98,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
      */
-    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(
+    internal fun internalToLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,

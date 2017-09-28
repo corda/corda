@@ -11,7 +11,7 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.concurrent.firstOf
+import net.corda.core.internal.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
@@ -56,6 +56,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Supplier
 import kotlin.concurrent.thread
 
 
@@ -511,7 +512,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 registeredShutdowns
             }
         }
-        val shutdowns = shutdownActionFutures.map { Try.on { it.getOrThrow(1.seconds) } }
+        val shutdowns = shutdownActionFutures.map { Try.on(Supplier { it.getOrThrow(1.seconds) }) }
         shutdowns.reversed().forEach {
             when (it) {
                 is Try.Success ->

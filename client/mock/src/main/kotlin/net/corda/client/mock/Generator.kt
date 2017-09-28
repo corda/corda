@@ -1,8 +1,11 @@
 package net.corda.client.mock
 
 import net.corda.client.mock.Generator.Companion.choice
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.Try
 import java.util.*
+import java.util.function.BiFunction
+import java.util.function.Function
 
 /**
  * This file defines a basic [Generator] library for composing random generators of objects.
@@ -33,28 +36,38 @@ import java.util.*
  */
 class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
     // Functor
-    fun <B> map(function: (A) -> B): Generator<B> =
-            Generator { generate(it).map(function) }
+    fun <B> map(function: (A) -> B): Generator<B> = Generator { generate(it).map(Function<A, B> { function(it) }) }
 
     // Applicative
-    fun <B> product(other: Generator<(A) -> B>) =
-            Generator { generate(it).combine(other.generate(it)) { a, f -> f(a) } }
+    fun <B> product(other: Generator<(A) -> B>): Generator<B> {
+        return Generator {
+            generate(it).combine(other.generate(it), BiFunction<A, (A) -> B, B> { a, f -> f(a) })
+        }
+    }
 
-    fun <B, R> combine(other1: Generator<B>, function: (A, B) -> R) =
-            product<R>(other1.product(pure({ b -> { a -> function(a, b) } })))
+    fun <B, R> combine(other1: Generator<B>, function: (A, B) -> R): Generator<R> {
+        return product(other1.product(pure({ b -> { a -> function(a, b) } })))
+    }
 
-    fun <B, C, R> combine(other1: Generator<B>, other2: Generator<C>, function: (A, B, C) -> R) =
-            product<R>(other1.product(other2.product(pure({ c -> { b -> { a -> function(a, b, c) } } }))))
+    fun <B, C, R> combine(other1: Generator<B>, other2: Generator<C>, function: (A, B, C) -> R): Generator<R> {
+        return product(other1.product(other2.product(pure({ c -> { b -> { a -> function(a, b, c) } } }))))
+    }
 
-    fun <B, C, D, R> combine(other1: Generator<B>, other2: Generator<C>, other3: Generator<D>, function: (A, B, C, D) -> R) =
-            product<R>(other1.product(other2.product(other3.product(pure({ d -> { c -> { b -> { a -> function(a, b, c, d) } } } })))))
+    fun <B, C, D, R> combine(other1: Generator<B>, other2: Generator<C>, other3: Generator<D>, function: (A, B, C, D) -> R): Generator<R> {
+        return product(other1.product(other2.product(other3.product(pure({ d -> { c -> { b -> { a -> function(a, b, c, d) } } } })))))
+    }
 
-    fun <B, C, D, E, R> combine(other1: Generator<B>, other2: Generator<C>, other3: Generator<D>, other4: Generator<E>, function: (A, B, C, D, E) -> R) =
-            product<R>(other1.product(other2.product(other3.product(other4.product(pure({ e -> { d -> { c -> { b -> { a -> function(a, b, c, d, e) } } } } }))))))
+    fun <B, C, D, E, R> combine(other1: Generator<B>,
+                                other2: Generator<C>,
+                                other3: Generator<D>,
+                                other4: Generator<E>,
+                                function: (A, B, C, D, E) -> R): Generator<R> {
+        return product(other1.product(other2.product(other3.product(other4.product(pure({ e -> { d -> { c -> { b -> { a -> function(a, b, c, d, e) } } } } }))))))
+    }
 
     // Monad
     fun <B> flatMap(function: (A) -> Generator<B>): Generator<B> {
-        return Generator { random -> generate(random).flatMap { function(it).generate(random) } }
+        return Generator { random -> generate(random).flatMap(Function<A, Try<B>> { function(it).generate(random) }) }
     }
 
     fun generateOrFail(random: SplittableRandom, numberOfTries: Int = 1): A {
@@ -74,16 +87,21 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
     }
 
     companion object {
-        fun <A> pure(value: A) = Generator { Try.Success(value) }
-        fun <A> impure(valueClosure: () -> A) = Generator { Try.Success(valueClosure()) }
-        fun <A> fail(error: Exception) = Generator<A> { Try.Failure(error) }
+        fun <A> pure(value: A): Generator<A> = Generator { Try.Success(value) }
+        fun <A> impure(valueClosure: () -> A): Generator<A> = Generator { Try.Success(valueClosure()) }
+        fun <A> fail(error: Exception): Generator<A> = Generator { Try.Failure<A>(error) }
 
         /**
          * Pick a generator from the specified list and run it.
          */
-        fun <A> choice(generators: List<Generator<A>>) = intRange(0, generators.size - 1).flatMap { generators[it] }
+        fun <A> choice(generators: List<Generator<A>>): Generator<A> {
+            return intRange(0, generators.size - 1).flatMap { generators[it] }
+        }
 
-        fun <A> success(generate: (SplittableRandom) -> A) = Generator { Try.Success(generate(it)) }
+        fun <A> success(generate: (SplittableRandom) -> A): Generator<A> {
+            return Generator { Try.Success(generate(it)) }
+        }
+
         /**
          * Pick a generator from the specified list, with a probability assigned to each generator, then run the
          * chosen generator.
@@ -113,57 +131,64 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
             }
         }
 
-        fun <A> frequency(vararg generators: Pair<Double, Generator<A>>) = frequency(generators.toList())
+        fun <A> frequency(vararg generators: Pair<Double, Generator<A>>): Generator<A> {
+            return frequency(generators.toList())
+        }
 
-        fun <A> sequence(generators: List<Generator<A>>) = Generator {
+        fun <A> sequence(generators: List<Generator<A>>) = Generator<List<A>> {
             val result = mutableListOf<A>()
             for (generator in generators) {
                 val element = generator.generate(it)
-                @Suppress("UNCHECKED_CAST")
                 when (element) {
                     is Try.Success -> result.add(element.value)
-                    is Try.Failure -> return@Generator element as Try<List<A>>
+                    is Try.Failure -> return@Generator uncheckedCast(element)
                 }
             }
             Try.Success(result)
         }
 
-        fun int() = Generator.success(SplittableRandom::nextInt)
-        fun long() = Generator.success(SplittableRandom::nextLong)
+        fun int(): Generator<Int> = Generator.success(SplittableRandom::nextInt)
+        fun long(): Generator<Long> = Generator.success(SplittableRandom::nextLong)
         fun bytes(size: Int): Generator<ByteArray> = Generator.success { random ->
             ByteArray(size) { random.nextInt().toByte() }
         }
 
-        fun intRange(range: IntRange) = intRange(range.first, range.last)
+        fun intRange(range: IntRange): Generator<Int> = intRange(range.first, range.last)
         fun intRange(from: Int, to: Int): Generator<Int> = Generator.success {
             (from + Math.abs(it.nextInt()) % (to - from + 1))
         }
 
-        fun longRange(range: LongRange) = longRange(range.first, range.last)
+        fun longRange(range: LongRange): Generator<Long> = longRange(range.first, range.last)
         fun longRange(from: Long, to: Long): Generator<Long> = Generator.success {
             (from + Math.abs(it.nextLong()) % (to - from + 1))
         }
 
-        fun double() = Generator.success { it.nextDouble() }
-        fun doubleRange(from: Double, to: Double): Generator<Double> = Generator.success {
-            from + it.nextDouble() * (to - from)
-        }
-
-        fun char() = Generator {
-            val codePoint = Math.abs(it.nextInt()) % (17 * (1 shl 16))
-            if (Character.isValidCodePoint(codePoint)) {
-                return@Generator Try.Success(codePoint.toChar())
-            } else {
-                Try.Failure<Any>(IllegalStateException("Could not generate valid codepoint"))
+        fun double(): Generator<Double> = Generator.success { it.nextDouble() }
+        fun doubleRange(from: Double, to: Double): Generator<Double> {
+            return Generator.success {
+                from + it.nextDouble() * (to - from)
             }
         }
 
-        fun string(meanSize: Double = 16.0) = replicatePoisson(meanSize, char()).map {
-            val builder = StringBuilder()
-            it.forEach {
-                builder.append(it)
+        fun char(): Generator<Any> {
+            return Generator {
+                val codePoint = Math.abs(it.nextInt()) % (17 * (1 shl 16))
+                if (Character.isValidCodePoint(codePoint)) {
+                    return@Generator Try.Success(codePoint.toChar())
+                } else {
+                    Try.Failure<Any>(IllegalStateException("Could not generate valid codepoint"))
+                }
             }
-            builder.toString()
+        }
+
+        fun string(meanSize: Double = 16.0): Generator<String> {
+            return replicatePoisson(meanSize, char()).map {
+                val builder = StringBuilder()
+                it.forEach {
+                    builder.append(it)
+                }
+                builder.toString()
+            }
         }
 
         fun <A> replicate(number: Int, generator: Generator<A>): Generator<List<A>> {
@@ -175,54 +200,60 @@ class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
         }
 
 
-        fun <A> replicatePoisson(meanSize: Double, generator: Generator<A>, atLeastOne: Boolean = false) = Generator {
-            val chance = (meanSize - 1) / meanSize
-            val result = mutableListOf<A>()
-            var finish = false
-            while (!finish) {
-                val res = Generator.doubleRange(0.0, 1.0).generate(it).flatMap { value ->
-                    if (value < chance) {
-                        generator.generate(it).map { result.add(it) }
-                    } else {
-                        finish = true
-                        if (result.isEmpty() && atLeastOne) {
-                            generator.generate(it).map { result.add(it) }
-                        } else Try.Success(Unit)
+        fun <A> replicatePoisson(meanSize: Double, generator: Generator<A>, atLeastOne: Boolean = false): Generator<List<A>> {
+            return Generator<List<A>> {
+                val chance = (meanSize - 1) / meanSize
+                val result = mutableListOf<A>()
+                var finish = false
+                while (!finish) {
+                    val res = Generator.doubleRange(0.0, 1.0).generate(it).flatMap(Function<Double, Try<Unit>> { value ->
+                        if (value < chance) {
+                            generator.generate(it).map(Function { result.add(it) })
+                        } else {
+                            finish = true
+                            if (result.isEmpty() && atLeastOne) {
+                                generator.generate(it).map(Function { result.add(it) })
+                            } else Try.Success(Unit)
+                        }
+                    })
+                    if (res is Try.Failure) {
+                        return@Generator uncheckedCast(res)
                     }
                 }
-                if (res is Try.Failure) {
-                    @Suppress("UNCHECKED_CAST")
-                    return@Generator res as Try<List<A>>
-                }
+                Try.Success(result)
             }
-            Try.Success(result)
         }
 
-        fun <A> pickOne(list: List<A>) = Generator.intRange(0, list.size - 1).map { list[it] }
-        fun <A> pickN(number: Int, list: List<A>) = Generator<List<A>> {
-            val mask = BitSet(list.size)
-            val size = Math.min(list.size, number)
-            for (i in 0 until size) {
-                // mask[i] = 1 desugars into mask.set(i, 1), which sets a range instead of a bit
-                mask[i] = true
-            }
-            for (i in 0 until list.size) {
-                val bit = mask[i]
-                val swapIndex = i + it.nextInt(size - i)
-                mask[i] = mask[swapIndex]
-                mask[swapIndex] = bit
-            }
-            val resultList = ArrayList<A>()
-            list.forEachIndexed { index, a ->
-                if (mask[index]) {
-                    resultList.add(a)
+        fun <A> pickOne(list: List<A>): Generator<A> {
+            return Generator.intRange(0, list.size - 1).map { list[it] }
+        }
+        fun <A> pickN(number: Int, list: List<A>): Generator<List<A>> {
+            return Generator<List<A>> {
+                val mask = BitSet(list.size)
+                val size = Math.min(list.size, number)
+                for (i in 0 until size) {
+                    // mask[i] = 1 desugars into mask.set(i, 1), which sets a range instead of a bit
+                    mask[i] = true
                 }
+                for (i in 0 until list.size) {
+                    val bit = mask[i]
+                    val swapIndex = i + it.nextInt(size - i)
+                    mask[i] = mask[swapIndex]
+                    mask[swapIndex] = bit
+                }
+                val resultList = ArrayList<A>()
+                list.forEachIndexed { index, a ->
+                    if (mask[index]) {
+                        resultList.add(a)
+                    }
+                }
+                Try.Success(resultList)
             }
-            Try.Success(resultList)
         }
 
-        fun <A> sampleBernoulli(maxRatio: Double = 1.0, vararg collection: A) =
-                sampleBernoulli(listOf(collection), maxRatio)
+        fun <A> sampleBernoulli(maxRatio: Double = 1.0, vararg collection: A): Generator<List<Array<out A>>> {
+            return sampleBernoulli(listOf(collection), maxRatio)
+        }
 
         fun <A> sampleBernoulli(collection: Collection<A>, meanRatio: Double = 1.0): Generator<List<A>> {
             return replicate(collection.size, Generator.doubleRange(0.0, 1.0)).map { chances ->
