@@ -52,7 +52,7 @@ class CordappLoaderTest {
         val actualCordapp = actual.single { it != CordappLoader.coreCordapp }
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf(isolatedContractId))
         assertThat(actualCordapp.initiatedFlows.single().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
-        assertThat(actualCordapp.rpcFlows).isEmpty()
+        assertThat(actualCordapp.rpcFlows.single().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator")
         assertThat(actualCordapp.schedulableFlows).isEmpty()
         assertThat(actualCordapp.services).isEmpty()
         assertThat(actualCordapp.plugins).hasSize(1)
