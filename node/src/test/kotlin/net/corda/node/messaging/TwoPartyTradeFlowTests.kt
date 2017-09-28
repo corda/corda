@@ -93,15 +93,13 @@ class TwoPartyTradeFlowTests {
         mockNet = MockNetwork(false, true)
 
         ledger(initialiseSerialization = false) {
-            val basketOfNodes = mockNet.createSomeNodes(3)
-            val notaryNode = basketOfNodes.notaryNode
-            val aliceNode = basketOfNodes.partyNodes[0]
-            val bobNode = basketOfNodes.partyNodes[1]
-            val bankNode = basketOfNodes.partyNodes[2]
+            val notaryNode = mockNet.createNotaryNode()
+            val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
+            val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+            val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
+            val notary = notaryNode.services.getDefaultNotary()
             val cashIssuer = bankNode.info.chooseIdentity().ref(1)
             val cpIssuer = bankNode.info.chooseIdentity().ref(1, 2, 3)
-            val notary = aliceNode.services.getDefaultNotary()
-
 
             aliceNode.internals.disableDBCloseOnStop()
             bobNode.internals.disableDBCloseOnStop()
@@ -144,7 +142,7 @@ class TwoPartyTradeFlowTests {
         mockNet = MockNetwork(false, true)
 
         ledger(initialiseSerialization = false) {
-            val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+            val notaryNode = mockNet.createNotaryNode()
             val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
             val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
             val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
@@ -198,7 +196,7 @@ class TwoPartyTradeFlowTests {
     fun `shutdown and restore`() {
         mockNet = MockNetwork(false)
         ledger(initialiseSerialization = false) {
-            val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+            val notaryNode = mockNet.createNotaryNode()
             val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
             var bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
             val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
@@ -332,7 +330,7 @@ class TwoPartyTradeFlowTests {
     fun `check dependencies of sale asset are resolved`() {
         mockNet = MockNetwork(false)
 
-        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = makeNodeWithTracking(notaryNode.network.myAddress, ALICE.name)
         val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
         val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
@@ -439,7 +437,7 @@ class TwoPartyTradeFlowTests {
     fun `track works`() {
         mockNet = MockNetwork(false)
 
-        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = makeNodeWithTracking(notaryNode.network.myAddress, ALICE.name)
         val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
         val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
@@ -596,7 +594,7 @@ class TwoPartyTradeFlowTests {
             aliceError: Boolean,
             expectedMessageSubstring: String
     ) {
-        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
         val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
         val bankNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)

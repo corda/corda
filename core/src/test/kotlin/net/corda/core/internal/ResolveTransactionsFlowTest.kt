@@ -12,7 +12,6 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -27,25 +26,26 @@ import kotlin.test.assertNull
 
 class ResolveTransactionsFlowTest {
     lateinit var mockNet: MockNetwork
-    lateinit var a: StartedNode<MockNetwork.MockNode>
-    lateinit var b: StartedNode<MockNetwork.MockNode>
+    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
+    lateinit var megaCorpNode: StartedNode<MockNetwork.MockNode>
+    lateinit var miniCorpNode: StartedNode<MockNetwork.MockNode>
+    lateinit var megaCorp: Party
+    lateinit var miniCorp: Party
     lateinit var notary: Party
-    lateinit var megaCorpServices: MockServices
-    lateinit var notaryServices: MockServices
 
     @Before
     fun setup() {
         setCordappPackages("net.corda.testing.contracts")
-        megaCorpServices = MockServices(MEGA_CORP_KEY)
-        notaryServices = MockServices(DUMMY_NOTARY_KEY)
         mockNet = MockNetwork()
-        val nodes = mockNet.createSomeNodes()
-        a = nodes.partyNodes[0]
-        b = nodes.partyNodes[1]
-        a.internals.registerInitiatedFlow(TestResponseFlow::class.java)
-        b.internals.registerInitiatedFlow(TestResponseFlow::class.java)
+        notaryNode = mockNet.createNotaryNode()
+        megaCorpNode = mockNet.createPartyNode(notaryNode.network.myAddress, MEGA_CORP.name)
+        miniCorpNode = mockNet.createPartyNode(notaryNode.network.myAddress, MINI_CORP.name)
+        megaCorpNode.internals.registerInitiatedFlow(TestResponseFlow::class.java)
+        miniCorpNode.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         mockNet.runNetwork()
-        notary = a.services.getDefaultNotary()
+        notary = notaryNode.services.getDefaultNotary()
+        megaCorp = megaCorpNode.info.chooseIdentity()
+        miniCorp = miniCorpNode.info.chooseIdentity()
     }
 
     @After
@@ -58,14 +58,14 @@ class ResolveTransactionsFlowTest {
     @Test
     fun `resolve from two hashes`() {
         val (stx1, stx2) = makeTransactions()
-        val p = TestFlow(setOf(stx2.id), a.info.chooseIdentity())
-        val future = b.services.startFlow(p).resultFuture
+        val p = TestFlow(setOf(stx2.id), megaCorp)
+        val future = miniCorpNode.services.startFlow(p).resultFuture
         mockNet.runNetwork()
         val results = future.getOrThrow()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
-        b.database.transaction {
-            assertEquals(stx1, b.services.validatedTransactions.getTransaction(stx1.id))
-            assertEquals(stx2, b.services.validatedTransactions.getTransaction(stx2.id))
+        miniCorpNode.database.transaction {
+            assertEquals(stx1, miniCorpNode.services.validatedTransactions.getTransaction(stx1.id))
+            assertEquals(stx2, miniCorpNode.services.validatedTransactions.getTransaction(stx2.id))
         }
     }
     // DOCEND 1
@@ -73,8 +73,8 @@ class ResolveTransactionsFlowTest {
     @Test
     fun `dependency with an error`() {
         val stx = makeTransactions(signFirstTX = false).second
-        val p = TestFlow(setOf(stx.id), a.info.chooseIdentity())
-        val future = b.services.startFlow(p).resultFuture
+        val p = TestFlow(setOf(stx.id), megaCorp)
+        val future = miniCorpNode.services.startFlow(p).resultFuture
         mockNet.runNetwork()
         assertFailsWith(SignedTransaction.SignaturesMissingException::class) { future.getOrThrow() }
     }
@@ -82,14 +82,14 @@ class ResolveTransactionsFlowTest {
     @Test
     fun `resolve from a signed transaction`() {
         val (stx1, stx2) = makeTransactions()
-        val p = TestFlow(stx2, a.info.chooseIdentity())
-        val future = b.services.startFlow(p).resultFuture
+        val p = TestFlow(stx2, megaCorp)
+        val future = miniCorpNode.services.startFlow(p).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
-        b.database.transaction {
-            assertEquals(stx1, b.services.validatedTransactions.getTransaction(stx1.id))
+        miniCorpNode.database.transaction {
+            assertEquals(stx1, miniCorpNode.services.validatedTransactions.getTransaction(stx1.id))
             // But stx2 wasn't inserted, just stx1.
-            assertNull(b.services.validatedTransactions.getTransaction(stx2.id))
+            assertNull(miniCorpNode.services.validatedTransactions.getTransaction(stx2.id))
         }
     }
 
@@ -100,15 +100,15 @@ class ResolveTransactionsFlowTest {
         val count = 50
         var cursor = stx2
         repeat(count) {
-            val builder = DummyContract.move(cursor.tx.outRef(0), MINI_CORP)
-            val stx = megaCorpServices.signInitialTransaction(builder)
-            a.database.transaction {
-                a.services.recordTransactions(stx)
+            val builder = DummyContract.move(cursor.tx.outRef(0), miniCorp)
+            val stx = megaCorpNode.services.signInitialTransaction(builder)
+            megaCorpNode.database.transaction {
+                megaCorpNode.services.recordTransactions(stx)
             }
             cursor = stx
         }
-        val p = TestFlow(setOf(cursor.id), a.info.chooseIdentity(), 40)
-        val future = b.services.startFlow(p).resultFuture
+        val p = TestFlow(setOf(cursor.id), megaCorp, 40)
+        val future = miniCorpNode.services.startFlow(p).resultFuture
         mockNet.runNetwork()
         assertFailsWith<ResolveTransactionsFlow.ExcessivelyLargeTransactionGraph> { future.getOrThrow() }
     }
@@ -117,22 +117,22 @@ class ResolveTransactionsFlowTest {
     fun `triangle of transactions resolves fine`() {
         val stx1 = makeTransactions().first
 
-        val stx2 = DummyContract.move(stx1.tx.outRef(0), MINI_CORP).run {
-            val ptx = megaCorpServices.signInitialTransaction(this)
-            notaryServices.addSignature(ptx)
+        val stx2 = DummyContract.move(stx1.tx.outRef(0), miniCorp).let { builder ->
+            val ptx = megaCorpNode.services.signInitialTransaction(builder)
+            notaryNode.services.addSignature(ptx, notary.owningKey)
         }
 
-        val stx3 = DummyContract.move(listOf(stx1.tx.outRef(0), stx2.tx.outRef(0)), MINI_CORP).run {
-            val ptx = megaCorpServices.signInitialTransaction(this)
-            notaryServices.addSignature(ptx)
+        val stx3 = DummyContract.move(listOf(stx1.tx.outRef(0), stx2.tx.outRef(0)), miniCorp).let { builder ->
+            val ptx = megaCorpNode.services.signInitialTransaction(builder)
+            notaryNode.services.addSignature(ptx, notary.owningKey)
         }
 
-        a.database.transaction {
-            a.services.recordTransactions(stx2, stx3)
+        megaCorpNode.database.transaction {
+            megaCorpNode.services.recordTransactions(stx2, stx3)
         }
 
-        val p = TestFlow(setOf(stx3.id), a.info.chooseIdentity())
-        val future = b.services.startFlow(p).resultFuture
+        val p = TestFlow(setOf(stx3.id), megaCorp)
+        val future = miniCorpNode.services.startFlow(p).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
     }
@@ -149,43 +149,43 @@ class ResolveTransactionsFlowTest {
             return bs.toByteArray().sequence().open()
         }
         // TODO: this operation should not require an explicit transaction
-        val id = a.database.transaction {
-            a.services.attachments.importAttachment(makeJar())
+        val id = megaCorpNode.database.transaction {
+            megaCorpNode.services.attachments.importAttachment(makeJar())
         }
         val stx2 = makeTransactions(withAttachment = id).second
-        val p = TestFlow(stx2, a.info.chooseIdentity())
-        val future = b.services.startFlow(p).resultFuture
+        val p = TestFlow(stx2, megaCorp)
+        val future = miniCorpNode.services.startFlow(p).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
 
         // TODO: this operation should not require an explicit transaction
-        b.database.transaction {
-            assertNotNull(b.services.attachments.openAttachment(id))
+        miniCorpNode.database.transaction {
+            assertNotNull(miniCorpNode.services.attachments.openAttachment(id))
         }
     }
 
     // DOCSTART 2
     private fun makeTransactions(signFirstTX: Boolean = true, withAttachment: SecureHash? = null): Pair<SignedTransaction, SignedTransaction> {
         // Make a chain of custody of dummy states and insert into node A.
-        val dummy1: SignedTransaction = DummyContract.generateInitial(0, notary, MEGA_CORP.ref(1)).let {
+        val dummy1: SignedTransaction = DummyContract.generateInitial(0, notary, megaCorp.ref(1)).let {
             if (withAttachment != null)
                 it.addAttachment(withAttachment)
             when (signFirstTX) {
                 true -> {
-                    val ptx = megaCorpServices.signInitialTransaction(it)
-                    notaryServices.addSignature(ptx)
+                    val ptx = megaCorpNode.services.signInitialTransaction(it)
+                    notaryNode.services.addSignature(ptx, notary.owningKey)
                 }
                 false -> {
-                    notaryServices.signInitialTransaction(it)
+                    notaryNode.services.signInitialTransaction(it, notary.owningKey)
                 }
             }
         }
-        val dummy2: SignedTransaction = DummyContract.move(dummy1.tx.outRef(0), MINI_CORP).let {
-            val ptx = megaCorpServices.signInitialTransaction(it)
-            notaryServices.addSignature(ptx)
+        val dummy2: SignedTransaction = DummyContract.move(dummy1.tx.outRef(0), miniCorp).let {
+            val ptx = megaCorpNode.services.signInitialTransaction(it)
+            notaryNode.services.addSignature(ptx, notary.owningKey)
         }
-        a.database.transaction {
-            a.services.recordTransactions(dummy1, dummy2)
+        megaCorpNode.database.transaction {
+            megaCorpNode.services.recordTransactions(dummy1, dummy2)
         }
         return Pair(dummy1, dummy2)
     }
