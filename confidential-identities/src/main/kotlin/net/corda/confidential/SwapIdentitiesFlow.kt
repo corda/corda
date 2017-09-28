@@ -39,18 +39,10 @@ class SwapIdentitiesFlow(private val otherParty: Party,
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
 
-        val NONCE_SIZE_BYTES = 16
-
         fun tracker() = ProgressTracker(AWAITING_KEY)
-        fun buildDataToSign(identity: SerializedBytes<PartyAndCertificate>,
-                            nonces: SortedSet<ByteArray>): ByteArray {
-            val nonceBuffer = ByteArrayOutputStream(1024)
-            nonces.forEach(nonceBuffer::write)
-            val hashedNonce = nonceBuffer.toByteArray().sha256()
-
+        fun buildDataToSign(identity: SerializedBytes<PartyAndCertificate>): ByteArray {
             val buffer = ByteArrayOutputStream(1024)
             buffer.write(identity.bytes)
-            buffer.write(hashedNonce.bytes)
             return buffer.toByteArray()
         }
 
@@ -58,7 +50,6 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         fun validateAndRegisterIdentity(identityService: IdentityService,
                                         otherSide: Party,
                                         anonymousOtherSideBytes: SerializedBytes<PartyAndCertificate>,
-                                        nonces: SortedSet<ByteArray>,
                                         sigBytes: DigitalSignature): PartyAndCertificate {
             val anonymousOtherSide: PartyAndCertificate = anonymousOtherSideBytes.deserialize()
             if (anonymousOtherSide.name != otherSide.name) {
@@ -66,7 +57,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             }
             val signature = DigitalSignature.WithKey(anonymousOtherSide.owningKey, sigBytes.bytes)
             try {
-                signature.verify(buildDataToSign(anonymousOtherSideBytes, nonces))
+                signature.verify(buildDataToSign(anonymousOtherSideBytes))
             } catch(ex: SignatureException) {
                 throw SwapIdentitiesException("Signature does not match the given identity and nonce.", ex)
             }
@@ -93,18 +84,12 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             identities.put(otherParty, legalIdentityAnonymous.party.anonymise())
         } else {
             val otherSession = initiateFlow(otherParty)
-            val ourNonce = secureRandomBytes(NONCE_SIZE_BYTES)
-            val theirNonce = otherSession.sendAndReceive<ByteArray>(ourNonce).unwrap(NonceVerifier)
-            val nonces = TreeSet(ArrayComparator).apply {
-                add(ourNonce)
-                add(theirNonce)
-            }
-            val data = buildDataToSign(serializedIdentity, nonces)
+            val data = buildDataToSign(serializedIdentity)
             val ourSig: DigitalSignature.WithKey = serviceHub.keyManagementService.sign(data, legalIdentityAnonymous.owningKey)
             val ourIdentWithSig = IdentityWithSignature(serializedIdentity, ourSig.withoutKey())
             val anonymousOtherSide = otherSession.sendAndReceive<IdentityWithSignature>(ourIdentWithSig)
                     .unwrap { (confidentialIdentityBytes, theirSigBytes) ->
-                        validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentityBytes, nonces, theirSigBytes)
+                        validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentityBytes, theirSigBytes)
                     }
             identities.put(ourIdentity, legalIdentityAnonymous.party.anonymise())
             identities.put(otherParty, anonymousOtherSide.party.anonymise())
@@ -114,17 +99,6 @@ class SwapIdentitiesFlow(private val otherParty: Party,
 
     @CordaSerializable
     data class IdentityWithSignature(val identity: SerializedBytes<PartyAndCertificate>, val signature: DigitalSignature)
-
-    object NonceVerifier : UntrustworthyData.Validator<ByteArray, ByteArray> {
-        override fun validate(data: ByteArray): ByteArray {
-            if (data.size != NONCE_SIZE_BYTES)
-                throw SwapIdentitiesException("Nonce must be $NONCE_SIZE_BYTES bytes.")
-            val zeroByte = 0.toByte()
-            if (data.all { it == zeroByte })
-                throw SwapIdentitiesException("Nonce must not be all zeroes.")
-            return data
-        }
-    }
 }
 
 open class SwapIdentitiesException @JvmOverloads constructor(message: String, cause: Throwable? = null)
