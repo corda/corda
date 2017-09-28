@@ -1,12 +1,11 @@
-package net.corda.core.node
-
-import net.corda.core.serialization.SerializationCustomization
+package net.corda.core.serialization
 
 /**
- * Implement this interface on a class advertised in a META-INF/services/net.corda.core.node.CordaPluginRegistry file
- * to extend a Corda node with additional application services.
+ * Provide a subclass of this via the [java.util.ServiceLoader] mechanism to be able to whitelist types for
+ * serialisation that you cannot otherwise annotate. The name of the class must appear in a text file on the
+ * classpath under the path META-INF/services/net.corda.core.serialization.SerializationWhitelist
  */
-abstract class CordaPluginRegistry {
+abstract class SerializationWhitelist {
     /**
      * Optionally whitelist types for use in object serialization, as we lock down the types that can be serialized.
      *
@@ -15,5 +14,5 @@ abstract class CordaPluginRegistry {
      **
      * @return true if you register types, otherwise you will be filtered out of the list of plugins considered in future.
      */
-    open fun customizeSerialization(custom: SerializationCustomization): Boolean = false
+    abstract val whitelist: List<Class<*>>
 }
