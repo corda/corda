@@ -5,10 +5,7 @@ import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.flows.ContractUpgradeFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.CordaPluginRegistry
@@ -40,10 +37,17 @@ import kotlin.streams.toList
  * @property cordappJarPaths The classpath of cordapp JARs
  */
 class CordappLoader private constructor(private val cordappJarPaths: List<URL>) {
-    val cordapps: List<Cordapp> by lazy { loadCordapps() }
+    val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
 
-    @VisibleForTesting
-    internal val appClassLoader: ClassLoader = javaClass.classLoader
+    internal val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
+
+    init {
+        if (cordappJarPaths.isEmpty()) {
+            logger.info("No CorDapp paths provided")
+        } else {
+            logger.info("Loading CorDapps from ${cordappJarPaths.joinToString()}")
+        }
+    }
 
     companion object {
         private val logger = loggerFor<CordappLoader>()
@@ -54,19 +58,31 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
          * @param baseDir The directory that this node is running in. Will use this to resolve the plugins directory
          *                  for classpath scanning.
          */
-        fun createDefault(baseDir: Path): CordappLoader {
-            val pluginsDir = getPluginsPath(baseDir)
-            return CordappLoader(if (!pluginsDir.exists()) emptyList<URL>() else pluginsDir.list {
-                it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
-            })
-        }
-
-        fun getPluginsPath(baseDir: Path): Path = baseDir / "plugins"
+        fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getPluginsPath(baseDir)))
 
         /**
-         * Create a dev mode CordappLoader for test environments
+         * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
+         * and plugins directory. This is intended mostly for use by the driver.
+         *
+         * @param baseDir See [createDefault.baseDir]
+         * @param testPackages See [createWithTestPackages.testPackages]
          */
-        fun createWithTestPackages(testPackages: List<String> = CordappLoader.testPackages) = CordappLoader(testPackages.flatMap(this::createScanPackage))
+        @VisibleForTesting
+        @JvmOverloads
+        fun createDefaultWithTestPackages(baseDir: Path, testPackages: List<String> = CordappLoader.testPackages)
+                = CordappLoader(getCordappsInDirectory(getPluginsPath(baseDir)) + testPackages.flatMap(this::createScanPackage))
+
+        /**
+         * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath.
+         * This is intended for use in unit and integration tests.
+         *
+         * @param testPackages List of package names that contain CorDapp classes that can be automatically turned into
+         * CorDapps.
+         */
+        @VisibleForTesting
+        @JvmOverloads
+        fun createWithTestPackages(testPackages: List<String> = CordappLoader.testPackages)
+                = CordappLoader(testPackages.flatMap(this::createScanPackage))
 
         /**
          * Creates a dev mode CordappLoader intended only to be used in test environments
@@ -75,6 +91,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
          */
         @VisibleForTesting
         fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars)
+
+        private fun getPluginsPath(baseDir: Path): Path = baseDir / "plugins"
 
         private fun createScanPackage(scanPackage: String): List<URL> {
             val resource = scanPackage.replace('.', '/')
@@ -90,7 +108,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
                     .toList()
         }
 
-        /** Takes a package of classes and creates a JAR from them - only use in tests */
+        /** Takes a package of classes and creates a JAR from them - only use in tests. */
         private fun createDevCordappJar(scanPackage: String, path: URL, jarPackageName: String): URI {
             if(!generatedCordapps.contains(path)) {
                 val cordappDir = File("build/tmp/generated-test-cordapps")
@@ -118,12 +136,41 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             return generatedCordapps[path]!!
         }
 
+        private fun getCordappsInDirectory(pluginsDir: Path): List<URL> {
+            return if (!pluginsDir.exists()) {
+                emptyList<URL>()
+            } else {
+                pluginsDir.list {
+                    it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
+                }
+            }
+        }
+
         /**
-         * A list of test packages that will be scanned as CorDapps and compiled into CorDapp JARs for use in tests only
+         * A list of test packages that will be scanned as CorDapps and compiled into CorDapp JARs for use in tests only.
          */
         @VisibleForTesting
         var testPackages: List<String> = emptyList()
         private val generatedCordapps = mutableMapOf<URL, URI>()
+
+        /** A list of the core RPC flows present in Corda */
+        private val coreRPCFlows = listOf(
+                ContractUpgradeFlow.Initiate::class.java,
+                ContractUpgradeFlow.Authorise::class.java,
+                ContractUpgradeFlow.Deauthorise::class.java)
+
+        /** A Cordapp representing the core package which is not scanned automatically. */
+        @VisibleForTesting
+        internal val coreCordapp = CordappImpl(
+                listOf(),
+                listOf(),
+                coreRPCFlows,
+                listOf(),
+                listOf(),
+                listOf(),
+                setOf(),
+                ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
+        )
     }
 
     private fun loadCordapps(): List<Cordapp> {
@@ -132,6 +179,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             CordappImpl(findContractClassNames(scanResult),
                     findInitiatedFlows(scanResult),
                     findRPCFlows(scanResult),
+                    findSchedulableFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
                     findCustomSchemas(scanResult),
@@ -163,13 +211,11 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             return Modifier.isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || Modifier.isStatic(modifiers))
         }
 
-        val found = scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() }
-        val coreFlows = listOf(
-                ContractUpgradeFlow.Initiate::class.java,
-                ContractUpgradeFlow.Authorise::class.java,
-                ContractUpgradeFlow.Deauthorise::class.java
-        )
-        return found + coreFlows
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() }
+    }
+
+    private fun findSchedulableFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
     }
 
     private fun findContractClassNames(scanResult: ScanResult): List<String> {
