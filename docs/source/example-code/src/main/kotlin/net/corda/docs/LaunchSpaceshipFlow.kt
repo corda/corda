@@ -8,18 +8,18 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.utilities.unwrap
 
-// DOCSTART LaunchTheNukesFlow
+// DOCSTART LaunchSpaceshipFlow
 @InitiatingFlow
-class LaunchTheNukesFlow : FlowLogic<Unit>() {
+class LaunchSpaceshipFlow : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val shouldLaunchNukes = receive<Boolean>(getPresident()).unwrap { it }
-        if (shouldLaunchNukes) {
-            launchTheNukes()
+        val shouldLaunchSpaceship = receive<Boolean>(getPresident()).unwrap { it }
+        if (shouldLaunchSpaceship) {
+            launchSpaceship()
         }
     }
 
-    fun launchTheNukes() {
+    fun launchSpaceship() {
     }
 
     fun getPresident(): Party {
@@ -27,15 +27,15 @@ class LaunchTheNukesFlow : FlowLogic<Unit>() {
     }
 }
 
-@InitiatedBy(LaunchTheNukesFlow::class)
+@InitiatedBy(LaunchSpaceshipFlow::class)
 @InitiatingFlow
-class PresidentNukeFlow(val launcher: Party) : FlowLogic<Unit>() {
+class PresidentSpaceshipFlow(val launcher: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val needCoffee = true
         send(getSecretary(), needCoffee)
-        val shouldLaunchNukes = false
-        send(launcher, shouldLaunchNukes)
+        val shouldLaunchSpaceship = false
+        send(launcher, shouldLaunchSpaceship)
     }
 
     fun getSecretary(): Party {
@@ -43,28 +43,28 @@ class PresidentNukeFlow(val launcher: Party) : FlowLogic<Unit>() {
     }
 }
 
-@InitiatedBy(PresidentNukeFlow::class)
+@InitiatedBy(PresidentSpaceshipFlow::class)
 class SecretaryFlow(val president: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         // ignore
     }
 }
-// DOCEND LaunchTheNukesFlow
+// DOCEND LaunchSpaceshipFlow
 
-// DOCSTART LaunchTheNukesFlowCorrect
+// DOCSTART LaunchSpaceshipFlowCorrect
 @InitiatingFlow
-class LaunchTheNukesFlowCorrect : FlowLogic<Unit>() {
+class LaunchSpaceshipFlowCorrect : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val presidentSession = initiateFlow(getPresident())
-        val shouldLaunchNukes = presidentSession.receive<Boolean>().unwrap { it }
-        if (shouldLaunchNukes) {
-            launchTheNukes()
+        val shouldLaunchSpaceship = presidentSession.receive<Boolean>().unwrap { it }
+        if (shouldLaunchSpaceship) {
+            launchSpaceship()
         }
     }
 
-    fun launchTheNukes() {
+    fun launchSpaceship() {
     }
 
     fun getPresident(): Party {
@@ -72,16 +72,16 @@ class LaunchTheNukesFlowCorrect : FlowLogic<Unit>() {
     }
 }
 
-@InitiatedBy(LaunchTheNukesFlowCorrect::class)
+@InitiatedBy(LaunchSpaceshipFlowCorrect::class)
 @InitiatingFlow
-class PresidentNukeFlowCorrect(val launcherSession: FlowSession) : FlowLogic<Unit>() {
+class PresidentSpaceshipFlowCorrect(val launcherSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val needCoffee = true
         val secretarySession = initiateFlow(getSecretary())
         secretarySession.send(needCoffee)
-        val shouldLaunchNukes = false
-        launcherSession.send(shouldLaunchNukes)
+        val shouldLaunchSpaceship = false
+        launcherSession.send(shouldLaunchSpaceship)
     }
 
     fun getSecretary(): Party {
@@ -89,11 +89,11 @@ class PresidentNukeFlowCorrect(val launcherSession: FlowSession) : FlowLogic<Uni
     }
 }
 
-@InitiatedBy(PresidentNukeFlowCorrect::class)
+@InitiatedBy(PresidentSpaceshipFlowCorrect::class)
 class SecretaryFlowCorrect(val presidentSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         // ignore
     }
 }
-// DOCEND LaunchTheNukesFlowCorrect
+// DOCEND LaunchSpaceshipFlowCorrect

@@ -441,33 +441,33 @@ Consider the following contrived example using the old ``Party`` based API:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/LaunchTheNukesFlow.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/LaunchSpaceshipFlow.kt
         :language: kotlin
-        :start-after: DOCSTART LaunchTheNukesFlow
-        :end-before: DOCEND LaunchTheNukesFlow
+        :start-after: DOCSTART LaunchSpaceshipFlow
+        :end-before: DOCEND LaunchSpaceshipFlow
 
-The intention of the flows is very clear: LaunchTheNukesFlow asks the president whether the nukes should be launched. It
-is expecting a boolean reply. The president in first tells the secretary that they need coffee, which is also
-communicated with a boolean. Afterwards the president replies to the launcher that they don't want to launch the nukes.
+The intention of the flows is very clear: LaunchSpaceshipFlow asks the president whether a spaceship should be launched.
+It is expecting a boolean reply. The president in return first tells the secretary that they need coffee, which is also
+communicated with a boolean. Afterwards the president replies to the launcher that they don't want to launch.
 
 However the above can go horribly wrong when the ``launcher`` happens to be the same party ``getSecretary`` returns. In
 this case the boolean meant for the secretary will be received by the launcher!
 
-This means that ``Party`` is not a good identifier for the communication sequence, and indeed the ``Party`` based API
-may introduce ways for an attacker to fish for information and even trigger unintended control flow like in the above
-case.
+This indicates that ``Party`` is not a good identifier for the communication sequence, and indeed the ``Party`` based
+API may introduce ways for an attacker to fish for information and even trigger unintended control flow like in the
+above case.
 
 Hence we introduced ``FlowSession``, which identifies the communication sequence. With ``FlowSession`` s the above set
 of flows would look like this:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/LaunchTheNukesFlow.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/LaunchSpaceshipFlow.kt
         :language: kotlin
-        :start-after: DOCSTART LaunchTheNukesFlowCorrect
-        :end-before: DOCEND LaunchTheNukesFlowCorrect
+        :start-after: DOCSTART LaunchSpaceshipFlowCorrect
+        :end-before: DOCEND LaunchSpaceshipFlowCorrect
 
-Note how the president is now explicit about which session it wants to send to. The people of Earth live another day.
+Note how the president is now explicit about which session it wants to send to.
 
 Porting from the old Party-based API
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
