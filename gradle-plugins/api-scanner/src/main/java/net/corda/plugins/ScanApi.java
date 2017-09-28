@@ -189,7 +189,9 @@ public class ScanApi extends DefaultTask {
         private void writeMethods(PrintWriter writer, List<MethodInfo> methods) {
             Collections.sort(methods);
             for (MethodInfo method : methods) {
-                if (isVisible(method.getAccessFlags()) && isValid(method.getAccessFlags(), METHOD_MASK)) {
+                if (isVisible(method.getAccessFlags())
+                        && isValid(method.getAccessFlags(), METHOD_MASK)
+                        && !isKotlinInternal(method)) {
                     writer.append("  ").println(method);
                 }
             }
@@ -203,6 +205,10 @@ public class ScanApi extends DefaultTask {
                 }
             }
         }
+    }
+
+    private static boolean isKotlinInternal(MethodInfo method) {
+        return method.getMethodName().indexOf('$') >= 0;
     }
 
     private static boolean isValid(int modifiers, int mask) {
