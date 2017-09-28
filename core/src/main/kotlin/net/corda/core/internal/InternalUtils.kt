@@ -1,7 +1,15 @@
 package net.corda.core.internal
 
+import net.corda.core.contracts.AttachmentResolutionException
+import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.transactions.MissingContractAttachments
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.WireTransaction
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.slf4j.Logger
@@ -275,3 +283,11 @@ annotation class VisibleForTesting
 fun <T, U : T> uncheckedCast(obj: T) = obj as U
 
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
+
+// Provide access to internal method for AttachmentClassLoaderTests
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+    return toWireTransactionWithContext(services, serializationContext)
+}
+
+// Provide access to internal method for AttachmentClassLoaderTests
+fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
