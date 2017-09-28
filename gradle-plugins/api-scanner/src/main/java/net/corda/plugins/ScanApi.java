@@ -155,7 +155,7 @@ public class ScanApi extends DefaultTask {
                 writeClass(writer, classInfo, javaClass);
                 writeMethods(writer, classInfo.getMethodInfo());
                 writeFields(writer, classInfo.getFieldInfo());
-                writer.println("--");
+                writer.println("##");
             });
         }
 
