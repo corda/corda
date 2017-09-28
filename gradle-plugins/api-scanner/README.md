@@ -6,6 +6,14 @@ Generates a text summary of Corda's public API that we can check for API-breakin
 $ gradlew generateApi
 ```
 
+See [here](../../docs/source/api-index.rst) for Corda's public API strategy. We will need to
+apply this plugin to other modules in future Corda releases as the modules' APIs stabilise.
+
+Basically, this plugin will document a module's `public` and `protected` classes/methods/fields,
+excluding those from our `*.internal.*` packgages, any synthetic methods, bridge methods, or methods
+identified as having Kotlin's  `internal` scope. (Kotlin doesn't seem to have implemented `internal`
+scope for classes or fields yet as these are currently `public` inside the `.class` file.)
+
 ## Usage
 Include this line in the `build.gradle` file of every Corda module that exports public API:
 
