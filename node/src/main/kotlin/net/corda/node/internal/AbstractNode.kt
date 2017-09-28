@@ -145,6 +145,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
     lateinit var cordappProvider: CordappProviderImpl
+    protected val cordappLoader by lazy { makeCordappLoader() }
 
     protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service
@@ -376,7 +377,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        cordappProvider = CordappProviderImpl(makeCordappLoader())
+        cordappProvider = CordappProviderImpl(cordappLoader)
         val transactionStorage = makeTransactionStorage()
         _services = ServiceHubInternalImpl(transactionStorage, StateLoaderImpl(transactionStorage))
         attachments = NodeAttachmentService(services.monitoringService.metrics)
@@ -398,10 +399,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val scanPackages = System.getProperty("net.corda.node.cordapp.scan.packages")
         return if (CordappLoader.testPackages.isNotEmpty()) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createWithTestPackages(CordappLoader.testPackages)
+            CordappLoader.createDefaultWithTestPackages(configuration.baseDirectory, CordappLoader.testPackages)
         } else if (scanPackages != null) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createWithTestPackages(scanPackages.split(","))
+            CordappLoader.createDefaultWithTestPackages(configuration.baseDirectory, scanPackages.split(","))
         } else {
             CordappLoader.createDefault(configuration.baseDirectory)
         }
