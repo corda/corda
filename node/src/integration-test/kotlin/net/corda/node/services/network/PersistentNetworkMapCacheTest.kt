@@ -22,12 +22,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
-private const val bridgeRetryMs: Long = 100
+private const val BRIDGE_RETRY_MS: Long = 100
 
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
-    val partiesList = listOf(DUMMY_NOTARY, ALICE, BOB)
-    val addressesMap: HashMap<CordaX500Name, NetworkHostAndPort> = HashMap()
-    val infos: MutableSet<NodeInfo> = HashSet()
+    private val partiesList = listOf(DUMMY_NOTARY, ALICE, BOB)
+    private val addressesMap: HashMap<CordaX500Name, NetworkHostAndPort> = HashMap()
+    private val infos: MutableSet<NodeInfo> = HashSet()
 
     companion object {
         val logger = loggerFor<PersistentNetworkMapCacheTest>()
@@ -35,9 +35,6 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
     @Before
     fun start() {
-        // To make connectivity retry faster and ensure the node cluster arrives into a stable state sooner.
-        // TODO: override retry interval
-
         val nodes = startNodesWithPort(partiesList)
         nodes.forEach { it.internals.nodeReadyFuture.get() } // Need to wait for network map registration, as these tests are ran without waiting.
         nodes.forEach {
@@ -47,8 +44,6 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         }
     }
 
-
-
     @Test
     fun `get nodes by owning key and by name, no network map service`() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
@@ -57,7 +52,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
             val res = netCache.getNodeByLegalIdentity(alice.info.chooseIdentity())
             assertEquals(alice.info, res)
             val res2 = netCache.getNodeByLegalName(DUMMY_NOTARY.name)
-            assertEquals(infos.filter { DUMMY_NOTARY.name in it.legalIdentitiesAndCerts.map { it.name } }.singleOrNull(), res2)
+            assertEquals(infos.singleOrNull { DUMMY_NOTARY.name in it.legalIdentitiesAndCerts.map { it.name } }, res2)
         }
     }
 
@@ -122,7 +117,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     fun `new node joins network without network map started`() {
 
         fun customNodesStart(parties: List<Party>): List<StartedNode<Node>> =
-                startNodesWithPort(parties, noNetworkMap = false, customRetryIntervalMs = bridgeRetryMs)
+                startNodesWithPort(parties, noNetworkMap = false, customRetryIntervalMs = BRIDGE_RETRY_MS)
 
         val parties = partiesList.subList(1, partiesList.size)
         // Start 2 nodes pointing at network map, but don't start network map service.
@@ -149,7 +144,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
         // This is prediction of the longest time it will take to get the cluster into a stable state such that further
         // testing can be performed upon it
-        val maxInstabilityInterval = bridgeRetryMs * allTheStartedNodesPopulation.size * 2
+        val maxInstabilityInterval = BRIDGE_RETRY_MS * allTheStartedNodesPopulation.size * 2
 
         eventually(maxInstabilityInterval.milliseconds) {
             logger.info("Checking connectivity")
