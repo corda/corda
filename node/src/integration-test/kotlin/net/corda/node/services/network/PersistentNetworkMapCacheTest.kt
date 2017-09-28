@@ -120,19 +120,23 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
     @Test
     fun `new node joins network without network map started`() {
+
+        fun customNodesStart(parties: List<Party>): List<StartedNode<Node>> =
+                startNodesWithPort(parties, noNetworkMap = false, customRetryIntervalMs = bridgeRetryMs)
+
         val parties = partiesList.subList(1, partiesList.size)
         // Start 2 nodes pointing at network map, but don't start network map service.
-        val otherNodes = startNodesWithPort(parties, noNetworkMap = false)
+        val otherNodes = customNodesStart(parties)
         otherNodes.forEach { node ->
             assertTrue(infos.any { it.legalIdentitiesAndCerts.toSet() == node.info.legalIdentitiesAndCerts.toSet() })
         }
         // Start node that is not in databases of other nodes. Point to NMS. Which has't started yet.
-        val charlie = startNodesWithPort(listOf(CHARLIE), noNetworkMap = false)[0]
+        val charlie = customNodesStart(listOf(CHARLIE)).single()
         otherNodes.forEach {
             assertThat(it.services.networkMapCache.allNodes).doesNotContain(charlie.info)
         }
         // Start Network Map and see that charlie node appears in caches.
-        val nms = startNodesWithPort(listOf(DUMMY_NOTARY), noNetworkMap = false)[0]
+        val nms = customNodesStart(listOf(DUMMY_NOTARY)).single()
         nms.internals.startupComplete.get()
         assertTrue(nms.inNodeNetworkMapService != NullNetworkMapService)
         assertTrue(infos.any { it.legalIdentities.toSet() == nms.info.legalIdentities.toSet() })
@@ -164,9 +168,10 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
     // HELPERS
     // Helper function to restart nodes with the same host and port.
-    private fun startNodesWithPort(nodesToStart: List<Party>, noNetworkMap: Boolean = false): List<StartedNode<Node>> {
+    private fun startNodesWithPort(nodesToStart: List<Party>, noNetworkMap: Boolean = false, customRetryIntervalMs: Long? = null): List<StartedNode<Node>> {
         return nodesToStart.map { party ->
-            val configOverrides = addressesMap[party.name]?.let { mapOf("p2pAddress" to it.toString()) } ?: emptyMap()
+            val configOverrides = (addressesMap[party.name]?.let { mapOf("p2pAddress" to it.toString()) } ?: emptyMap()) +
+                    (customRetryIntervalMs?.let { mapOf("activeMQServer.bridge.retryIntervalMs" to it.toString()) } ?: emptyMap())
             if (party == DUMMY_NOTARY) {
                 startNetworkMapNode(party.name, configOverrides = configOverrides)
             }
