@@ -24,6 +24,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     private val jvm by inject<JVMConfig>()
     private val pluginController by inject<PluginController>()
+    private val serviceController by inject<ServiceController>()
 
     private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
     private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
@@ -63,7 +64,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 nodeData.rpcPort.value,
                 nodeData.webPort.value,
                 nodeData.h2Port.value,
-                nodeData.extraServices.toMutableList()
+                nodeData.extraServices.map { serviceController.services[it]!! }.toMutableList()
         )
 
         if (nodes.putIfAbsent(config.key, config) != null) {
