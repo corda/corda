@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
+import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
@@ -52,9 +53,9 @@ sealed class EnforceVerifyOrFail {
     internal object Token : EnforceVerifyOrFail()
 }
 
-class DuplicateOutputLabel(label: String) : Exception("Output label '$label' already used")
-class DoubleSpentInputs(ids: List<SecureHash>) : Exception("Transactions spend the same input. Conflicting transactions ids: '$ids'")
-class AttachmentResolutionException(attachmentId: SecureHash) : Exception("Attachment with id $attachmentId not found")
+class DuplicateOutputLabel(label: String) : FlowException("Output label '$label' already used")
+class DoubleSpentInputs(ids: List<SecureHash>) : FlowException("Transactions spend the same input. Conflicting transactions ids: '$ids'")
+class AttachmentResolutionException(attachmentId: SecureHash) : FlowException("Attachment with id $attachmentId not found")
 
 /**
  * This interpreter builds a transaction, and [TransactionDSL.verifies] that the resolved transaction is correct. Note

@@ -23,6 +23,7 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.utilities.loggerFor
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.core.CordaException
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
@@ -258,7 +259,7 @@ object InteractiveShell {
         }
     }
 
-    class NoApplicableConstructor(val errors: List<String>) : Exception() {
+    class NoApplicableConstructor(val errors: List<String>) : CordaException(this.toString()) {
         override fun toString() = (listOf("No applicable constructor for flow. Problems were:") + errors).joinToString(System.lineSeparator())
     }
 

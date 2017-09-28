@@ -9,6 +9,7 @@ import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.KryoException
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.MoreExecutors
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
@@ -641,6 +642,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 }
 
-class SessionRejectException(val rejectMessage: String, val logMessage: String) : Exception() {
+class SessionRejectException(val rejectMessage: String, val logMessage: String) : CordaException(rejectMessage) {
     constructor(message: String) : this(message, message)
 }
