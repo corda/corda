@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -263,11 +264,11 @@ data class FilteredComponentGroup(override val groupIndex: Int, override val com
  * @param reason information about the exception.
  */
 @CordaSerializable
-class ComponentVisibilityException(val id: SecureHash, val reason: String) : Exception("Component visibility error for transaction with id:$id. Reason: $reason")
+class ComponentVisibilityException(val id: SecureHash, val reason: String) : CordaException("Component visibility error for transaction with id:$id. Reason: $reason")
 
 /** Thrown when [FilteredTransaction.verify] fails.
  * @param id transaction's id.
  * @param reason information about the exception.
  */
 @CordaSerializable
-class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : Exception("Transaction with id:$id cannot be verified. Reason: $reason")
+class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : CordaException("Transaction with id:$id cannot be verified. Reason: $reason")
