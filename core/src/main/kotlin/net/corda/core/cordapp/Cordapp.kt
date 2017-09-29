@@ -1,8 +1,8 @@
 package net.corda.core.cordapp
 
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import java.net.URL
 
@@ -13,20 +13,24 @@ import java.net.URL
  *
  * This will only need to be constructed manually for certain kinds of tests.
  *
+ * @property name Cordapp name - derived from the base name of the Cordapp JAR (therefore may not be unique)
  * @property contractClassNames List of contracts
  * @property initiatedFlows List of initiatable flow classes
  * @property rpcFlows List of RPC initiable flows classes
+ * @property schedulableFlows List of flows startable by the scheduler
  * @property servies List of RPC services
- * @property plugins List of Corda plugin registries
+ * @property serializationWhitelists List of Corda plugin registries
  * @property customSchemas List of custom schemas
  * @property jarPath The path to the JAR for this CorDapp
  */
 interface Cordapp {
+    val name: String
     val contractClassNames: List<String>
     val initiatedFlows: List<Class<out FlowLogic<*>>>
     val rpcFlows: List<Class<out FlowLogic<*>>>
+    val schedulableFlows: List<Class<out FlowLogic<*>>>
     val services: List<Class<out SerializeAsToken>>
-    val plugins: List<CordaPluginRegistry>
+    val serializationWhitelists: List<SerializationWhitelist>
     val customSchemas: Set<MappedSchema>
     val jarPath: URL
     val cordappClasses: List<String>

@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.serialization.CordaSerializable
@@ -63,7 +64,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     }
 
     @CordaSerializable
-    class ExcessivelyLargeTransactionGraph : Exception()
+    class ExcessivelyLargeTransactionGraph : FlowException()
 
     /** Transaction for fetch attachments for */
     private var signedTransaction: SignedTransaction? = null

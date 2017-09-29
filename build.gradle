@@ -4,7 +4,8 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "1.0.0-RC2"
+    ext.corda_release_version = "1.0.0-RC4"
+
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     // TODO This is going to be difficult until we have a clear separation throughout the code of what is public and what is internal
     ext.corda_platform_version = 1
@@ -40,7 +41,7 @@ buildscript {
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
-    ext.h2_version = '1.4.194'
+    ext.h2_version = '1.4.194' // Update docs if renamed or removed.
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.14'
     ext.eddsa_version = '0.2.0'
@@ -59,7 +60,7 @@ buildscript {
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
-        classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
         classpath "org.ajoberstar:grgit:1.1.0"

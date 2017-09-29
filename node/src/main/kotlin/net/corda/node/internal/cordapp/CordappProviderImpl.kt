@@ -66,7 +66,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader) : Singl
      * @return A cordapp context for the given CorDapp
      */
     fun getAppContext(cordapp: Cordapp): CordappContext {
-        return CordappContext(cordapp, getCordappAttachmentId(cordapp), URLClassLoader(arrayOf(cordapp.jarPath), cordappLoader.appClassLoader))
+        return CordappContext(cordapp, getCordappAttachmentId(cordapp), cordappLoader.appClassLoader)
     }
 
     /**

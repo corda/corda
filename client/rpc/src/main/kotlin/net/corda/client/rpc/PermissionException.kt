@@ -1,5 +1,6 @@
 package net.corda.client.rpc
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -7,4 +8,4 @@ import net.corda.core.serialization.CordaSerializable
  * calling a method).
  */
 @CordaSerializable
-class PermissionException(msg: String) : RuntimeException(msg)
+class PermissionException(msg: String) : CordaRuntimeException(msg)

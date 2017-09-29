@@ -7,12 +7,12 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -263,12 +263,7 @@ open class NodeStartup(val args: Array<String>) {
         node.configuration.extraAdvertisedServiceIds.let {
             if (it.isNotEmpty()) Node.printBasicNodeInfo("Providing network services", it.joinToString())
         }
-        val plugins = node.pluginRegistries
-                .map { it.javaClass.name }
-                .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.") }
-                .map { it.substringBefore('$') }
-        if (plugins.isNotEmpty())
-            Node.printBasicNodeInfo("Loaded plugins", plugins.joinToString())
+        Node.printBasicNodeInfo("Loaded CorDapps", node.cordappProvider.cordapps.map { it.name }.joinToString())
     }
 
     open fun drawBanner(versionInfo: VersionInfo) {

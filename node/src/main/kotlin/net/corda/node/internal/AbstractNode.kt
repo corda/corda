@@ -6,6 +6,7 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.*
@@ -21,12 +22,12 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -34,8 +35,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
@@ -62,14 +63,12 @@ import net.corda.node.services.statemachine.appName
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
-import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.ServiceType
-import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -82,11 +81,9 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.collections.ArrayList
 import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -149,6 +146,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
     lateinit var cordappProvider: CordappProviderImpl
+    protected val cordappLoader by lazy { makeCordappLoader() }
 
     protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service
@@ -161,8 +159,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         CordaX500Name.build(cert.subjectX500Principal).copy(commonName = null)
     }
 
-    open val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        cordappProvider.cordapps.flatMap { it.plugins } + DefaultWhitelist()
+    open val serializationWhitelists: List<SerializationWhitelist> by lazy {
+        cordappProvider.cordapps.flatMap { it.serializationWhitelists }
     }
 
     /** Set to non-null once [start] has been successfully called. */
@@ -232,7 +230,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
+    private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
     private fun installCordaServices() {
         cordappProvider.cordapps.flatMap { it.services }.forEach {
@@ -382,7 +380,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        cordappProvider = CordappProviderImpl(makeCordappLoader())
+        cordappProvider = CordappProviderImpl(cordappLoader)
         _services = ServiceHubInternalImpl()
         attachments = NodeAttachmentService(services.monitoringService.metrics)
         cordappProvider.start(attachments)
@@ -390,7 +388,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
 
-        val tokenizableServices = mutableListOf(attachments, network, services.vaultService, services.vaultQueryService,
+        val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
@@ -403,10 +401,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val scanPackages = System.getProperty("net.corda.node.cordapp.scan.packages")
         return if (CordappLoader.testPackages.isNotEmpty()) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createWithTestPackages(CordappLoader.testPackages)
+            CordappLoader.createDefaultWithTestPackages(configuration.baseDirectory, CordappLoader.testPackages)
         } else if (scanPackages != null) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createWithTestPackages(scanPackages.split(","))
+            CordappLoader.createDefaultWithTestPackages(configuration.baseDirectory, scanPackages.split(","))
         } else {
             CordappLoader.createDefault(configuration.baseDirectory)
         }
@@ -468,7 +466,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     // Specific class so that MockNode can catch it.
-    class DatabaseConfigurationException(msg: String) : Exception(msg)
+    class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
     protected open fun <T> initialiseDatabasePersistence(insideTransaction: () -> T): T {
         val props = configuration.dataSourceProperties
@@ -693,11 +691,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(this) }
+        override val vaultService by lazy { NodeVaultService(this, database.hibernateConfig) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
-        override val vaultQueryService by lazy {
-            HibernateVaultQueryImpl(database.hibernateConfig, vaultService)
-        }
+
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.

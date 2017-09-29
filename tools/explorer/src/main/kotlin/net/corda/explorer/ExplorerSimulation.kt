@@ -68,7 +68,7 @@ class ExplorerSimulation(val options: OptionSet) {
 
     private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(portAllocation = portAllocation) {
+        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance")) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val notary = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
                     customOverrides = mapOf("nearestCity" to "Zurich"))

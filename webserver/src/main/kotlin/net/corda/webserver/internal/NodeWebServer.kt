@@ -2,7 +2,7 @@ package net.corda.webserver.internal
 
 import com.google.common.html.HtmlEscapers.htmlEscaper
 import net.corda.client.jackson.JacksonSupport
-import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.internalCordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisMessagingComponent
@@ -206,7 +206,7 @@ class NodeWebServer(val config: WebServerConfig) {
 
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
         log.info("Connecting to node at ${config.p2pAddress} as node user")
-        val client = CordaRPCClient(config.p2pAddress, config)
+        val client = internalCordaRPCClient(config.p2pAddress, config)
         val connection = client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
         return connection.proxy
     }

@@ -122,6 +122,10 @@ object FlowCookbook {
                     throw IllegalArgumentException("Couldn't find counterparty with key: $dummyPubKey in identity service")
             // DOCEND 2
 
+            // DOCSTART initiateFlow
+            val counterpartySession = initiateFlow(counterparty)
+            // DOCEND initiateFlow
+
             /**-----------------------------
              * SENDING AND RECEIVING DATA *
             -----------------------------**/
@@ -138,7 +142,6 @@ object FlowCookbook {
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
             // DOCSTART 4
-            val counterpartySession = initiateFlow(counterparty)
             counterpartySession.send(Any())
             // DOCEND 4
 
@@ -207,7 +210,7 @@ object FlowCookbook {
             // For example, we would extract any unconsumed ``DummyState``s
             // from our vault as follows:
             val criteria: VaultQueryCriteria = VaultQueryCriteria() // default is UNCONSUMED
-            val results: Page<DummyState> = serviceHub.vaultQueryService.queryBy<DummyState>(criteria)
+            val results: Page<DummyState> = serviceHub.vaultService.queryBy<DummyState>(criteria)
             val dummyStates: List<StateAndRef<DummyState>> = results.states
 
             // For a full list of the available ways of extracting states from
@@ -497,7 +500,7 @@ object FlowCookbook {
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, emptySet(), SIGS_GATHERING.childProgressTracker()))
+            val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, setOf(counterpartySession, regulatorSession), SIGS_GATHERING.childProgressTracker()))
             // DOCEND 15
 
             /**-----------------------
@@ -541,6 +544,13 @@ object FlowCookbook {
             val additionalParties: Set<Party> = setOf(regulator)
             val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()))
             // DOCEND 10
+
+            // DOCSTART FlowSession porting
+            send(regulator, Any()) // Old API
+            // becomes
+            val session = initiateFlow(regulator)
+            session.send(Any())
+            // DOCEND FlowSession porting
         }
     }
 

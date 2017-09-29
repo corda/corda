@@ -2,6 +2,11 @@ package net.corda.core.internal
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.WireTransaction
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.slf4j.Logger
@@ -235,11 +240,12 @@ fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) e
 fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
-/** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
+/** @suppress Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
+ * @suppress
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
@@ -274,3 +280,17 @@ annotation class VisibleForTesting
 fun <T, U : T> uncheckedCast(obj: T) = obj as U
 
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
+
+/**
+ * Provide access to internal method for AttachmentClassLoaderTests
+ * @suppress
+ */
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+    return toWireTransactionWithContext(services, serializationContext)
+}
+
+/**
+ * Provide access to internal method for AttachmentClassLoaderTests
+ * @suppress
+ */
+fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)

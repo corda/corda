@@ -6,11 +6,11 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
-import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.AttachmentsClassLoader
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets
@@ -160,7 +160,7 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
 }
 
 /**
- * A whitelist that can be customised via the [net.corda.core.node.CordaPluginRegistry], since implements [MutableClassWhitelist].
+ * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since implements [MutableClassWhitelist].
  */
 class TransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
     val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())

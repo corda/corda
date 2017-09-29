@@ -114,7 +114,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
         // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
         val contractAttachments = findAttachmentContracts(resolvedInputs, resolveContractAttachment, resolveAttachment)
-        val attachments = contractAttachments + (attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }).distinct()
+        // Order of attachments is important since contracts may refer to indexes so only append automatic attachments
+        val attachments = (attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) } + contractAttachments).distinct()
         return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt)
     }
 
