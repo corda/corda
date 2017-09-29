@@ -21,7 +21,8 @@ interface TokenizableAssetInfo {
  * Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
  * representable units. The nominal quantity represented by each individual token is equal to the [displayTokenSize].
  * The scale property of the [displayTokenSize] should correctly reflect the displayed decimal places and is used
- * when rounding conversions from indicative/displayed amounts in [BigDecimal] to Amount occur via the Amount.fromDecimal method.
+ * when rounding conversions from indicative/displayed amounts in [BigDecimal] to Amount occur via the
+ * [Amount.fromDecimal] method.
  *
  * Amounts of different tokens *do not mix* and attempting to add or subtract two amounts of different currencies
  * will throw [IllegalArgumentException]. Amounts may not be negative. Amounts are represented internally using a signed
@@ -29,10 +30,11 @@ interface TokenizableAssetInfo {
  * multiplication are overflow checked and will throw [ArithmeticException] if the operation would have caused integer
  * overflow.
  *
- * @property quantity the number of tokens as a Long value.
- * @property displayTokenSize the nominal display unit size of a single token, potentially with trailing decimal display places if the scale parameter is non-zero.
- * @property token an instance of type T, usually a singleton.
- * @param T the type of the token, for example [Currency]. T should implement TokenizableAssetInfo if automatic conversion to/from a display format is required.
+ * @property quantity the number of tokens as a long value.
+ * @property displayTokenSize the nominal display unit size of a single token, potentially with trailing decimal display
+ * places if the scale parameter is non-zero.
+ * @property token the type of token this is an amount of. This is usually a singleton.
+ * @param T the type of the token, for example [Currency]. T should implement [TokenizableAssetInfo] if automatic conversion to/from a display format is required.
  */
 @CordaSerializable
 data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal, val token: T) : Comparable<Amount<T>> {
@@ -40,11 +42,10 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
     companion object {
         /**
          * Build an Amount from a decimal representation. For example, with an input of "12.34 GBP",
-         * returns an amount with a quantity of "1234" tokens. The displayTokenSize as determined via
-         * getDisplayTokenSize is used to determine the conversion scaling.
-         * e.g. Bonds might be in nominal amounts of 100, currencies in 0.01 penny units.
+         * returns an amount with a quantity of "1234" tokens. The function [getDisplayTokenSize] is used to determine the
+         * conversion scaling, for example bonds might be in nominal amounts of 100, currencies in 0.01 penny units.
          *
-         * @see Amount<Currency>.toDecimal
+         * @see Amount.toDecimal
          * @throws ArithmeticException if the intermediate calculations cannot be converted to an unsigned 63-bit token amount.
          */
         @JvmStatic
@@ -195,6 +196,7 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      * Mixing non-identical token types will throw [IllegalArgumentException].
      *
      * @throws ArithmeticException if there is overflow of Amount tokens during the summation
+     * @throws IllegalArgumentException if mixing non-identical token types.
      */
     operator fun plus(other: Amount<T>): Amount<T> {
         checkToken(other)
@@ -202,11 +204,11 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
     }
 
     /**
-     * A checked addition operator is supported to simplify netting of Amounts.
-     * If this leads to the Amount going negative this will throw [IllegalArgumentException].
-     * Mixing non-identical token types will throw [IllegalArgumentException].
+     * A checked subtraction operator is supported to simplify netting of Amounts.
      *
-     * @throws ArithmeticException if there is Numeric underflow
+     * @throws ArithmeticException if there is numeric underflow.
+     * @throws IllegalArgumentException if this leads to the amount going negative, or would mix non-identical token
+     * types.
      */
     operator fun minus(other: Amount<T>): Amount<T> {
         checkToken(other)
@@ -222,6 +224,8 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      * The multiplication operator is supported to allow easy calculation for multiples of a primitive Amount.
      * Note this is not a conserving operation, so it may not always be correct modelling of proper token behaviour.
      * N.B. Division is not supported as fractional tokens are not representable by an Amount.
+     *
+     * @throws ArithmeticException if there is overflow of Amount tokens during the multiplication.
      */
     operator fun times(other: Long): Amount<T> = Amount(Math.multiplyExact(quantity, other), displayTokenSize, token)
 
@@ -229,13 +233,15 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      * The multiplication operator is supported to allow easy calculation for multiples of a primitive Amount.
      * Note this is not a conserving operation, so it may not always be correct modelling of proper token behaviour.
      * N.B. Division is not supported as fractional tokens are not representable by an Amount.
+     *
+     * @throws ArithmeticException if there is overflow of Amount tokens during the multiplication.
      */
     operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), displayTokenSize, token)
 
     /**
      * This method provides a token conserving divide mechanism.
      * @param partitions the number of amounts to divide the current quantity into.
-     * @result Returns [partitions] separate Amount objects which sum to the same quantity as this Amount
+     * @return 'partitions' separate Amount objects which sum to the same quantity as this Amount
      * and differ by no more than a single token in size.
      */
     fun splitEvenly(partitions: Int): List<Amount<T>> {
@@ -249,8 +255,10 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
 
     /**
      * Convert a currency [Amount] to a decimal representation. For example, with an amount with a quantity
-     * of "1234" GBP, returns "12.34". The precise representation is controlled by the displayTokenSize,
-     * which determines the size of a single token and controls the trailing decimal places via it's scale property.
+     * of "1234" GBP, returns "12.34". The precise representation is controlled by the display token size (
+     * from [getDisplayTokenSize]), which determines the size of a single token and controls the trailing decimal
+     * places via its scale property. *Note* that currencies such as the Bahraini Dinar use 3 decimal places,
+     * and it must not be presumed that this converts amounts to 2 decimal places.
      *
      * @see Amount.fromDecimal
      */

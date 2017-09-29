@@ -199,7 +199,8 @@ class Obligation<P : Any> : Contract {
         /**
          * A command stating that the obligor is settling some or all of the amount owed by transferring a suitable
          * state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.
-         * @see [MoveCommand].
+         *
+         * @see MoveCommand
          */
         data class Settle<P : Any>(val amount: Amount<Issued<Terms<P>>>) : CommandData
 

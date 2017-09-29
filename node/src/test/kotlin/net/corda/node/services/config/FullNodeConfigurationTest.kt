@@ -34,7 +34,8 @@ class FullNodeConfigurationTest {
                 notaryNodeAddress = null,
                 notaryClusterAddresses = emptyList(),
                 certificateChainCheckPolicies = emptyList(),
-                devMode = true)
+                devMode = true,
+                activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)))
 
         fun configWithRPCUsername(username: String) {
             testConfiguration.copy(rpcUsers = listOf(User(username, "pass", emptySet())))
