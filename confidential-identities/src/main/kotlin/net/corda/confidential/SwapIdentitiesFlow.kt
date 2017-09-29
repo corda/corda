@@ -39,14 +39,15 @@ class SwapIdentitiesFlow(private val otherParty: Party,
 
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
-        val ASSERTION_VERSION: ByteArray = ByteArray(1) { 1 }
         val ASSERTION_PREFIX: ByteArray = "Assertion of identity ownership ".toByteArray(Charset.forName("US-ASCII"))
         val ASSERTION_POSTFIX: ByteArray = "Identity assertion ends".toByteArray(Charset.forName("US-ASCII"))
 
         fun tracker() = ProgressTracker(AWAITING_KEY)
         /**
-         * Generate the data blob the confidential identity's key holder signs to indicate they want to represent the
-         * subject named in the X.509 certificate.
+         * Generate the determinstic data blob the confidential identity's key holder signs to indicate they want to
+         * represent the subject named in the X.509 certificate. Note that this is never actually sent between nodes,
+         * but only the signature is sent. The blob is built independently and the received signature verified against
+         * the expected blob.
          */
         fun buildDataToSign(confidentialIdentity: PartyAndCertificate): ByteArray {
             // We build a blob with fixed header/footer to make it harder to trick a system into signing one of these
@@ -55,8 +56,6 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             val cert = confidentialIdentity.certificate.toX509CertHolder()
             val certReqInfo = CertificationRequestInfo(cert.subject, cert.subjectPublicKeyInfo, DERSet())
             val data = ByteArrayOutputStream(1024).use { out ->
-                // We put a fixed version byte on for future expansion
-                out.write(ASSERTION_VERSION)
                 out.write(ASSERTION_PREFIX)
                 out.write(certReqInfo.encoded)
                 out.write(ASSERTION_POSTFIX)
@@ -78,7 +77,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             try {
                 signature.verify(buildDataToSign(anonymousOtherSideBytes))
             } catch(ex: SignatureException) {
-                throw SwapIdentitiesException("Signature does not match the given identity and nonce.", ex)
+                throw SwapIdentitiesException("Signature does not match the expected identity ownership assertion.", ex)
             }
             // Validate then store their identity so that we can prove the key in the transaction is owned by the
             // counterparty.
