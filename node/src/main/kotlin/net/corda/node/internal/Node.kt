@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -384,6 +385,6 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 }
 
-class ConfigurationException(message: String) : Exception(message)
+class ConfigurationException(message: String) : CordaException(message)
 
 data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: CordaX500Name)

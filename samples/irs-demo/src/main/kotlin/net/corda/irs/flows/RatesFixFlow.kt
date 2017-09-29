@@ -3,6 +3,7 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
@@ -44,8 +45,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         fun tracker(fixName: String) = ProgressTracker(QUERYING(fixName), WORKING, SIGNING)
     }
 
-    @CordaSerializable
-    class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : Exception("Fix out of range by $byAmount")
+    class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : FlowException("Fix out of range by $byAmount")
 
     @CordaSerializable
     data class QueryRequest(val queries: List<FixOf>)
