@@ -17,6 +17,7 @@ import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -113,6 +114,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         assertFails { startNode(CHARLIE.name, noNetworkMap = true).getOrThrow(2.seconds) }
     }
 
+    @Ignore("Unstable test that needs more work")
     @Test
     fun `new node joins network without network map started`() {
 

@@ -56,7 +56,7 @@ class NodeLookupImpl(private val identityService: IdentityService, private val n
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
         val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
         return wellKnownParty?.let {
-            networkMapCache.getNodesByLegalIdentityKey(it.owningKey).singleOrNull()
+            networkMapCache.getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
         }
     }
 }

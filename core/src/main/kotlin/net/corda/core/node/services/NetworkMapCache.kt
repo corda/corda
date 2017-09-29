@@ -16,6 +16,8 @@ interface NodeLookup {
      * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable; if the party
      * is anonymised and the well known party cannot be resolved, it is impossible ot identify the node and therefore this
      * returns null.
+     * Notice that when there are more than one node for a given party (in case of distributed services) first service node
+     * found will be returned. See also: [NetworkMapCache.getNodesByLegalIdentityKey].
      *
      * @param party party to retrieve node information for.
      * @return the node for the identity, or null if the node could not be found. This does not necessarily mean there is
@@ -59,7 +61,11 @@ interface NetworkMapCache {
      */
     fun track(): DataFeed<List<NodeInfo>, MapChange>
 
-    /** Look up the node info for a legal name. */
+    /**
+     * Look up the node info for a legal name.
+     * Notice that when there are more than one node for a given name (in case of distributed services) first service node
+     * found will be returned.
+     */
     fun getNodeByLegalName(name: CordaX500Name): NodeInfo?
 
     /** Look up the node info for a host and port. */
