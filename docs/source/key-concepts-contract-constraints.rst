@@ -8,7 +8,7 @@ Transaction states specify a constraint over the contract that will be used to v
 valid, the verify() function associated with each state must run successfully. However, for this to be secure, it is
 not sufficient to specify the verify() function by name as there may exist multiple different implementations with the
 same method signature and enclosing class. Contract constraints solve this problem by allowing a contract developer to
-constrain which verify() functions out of the universe of implementations which match the signature
+constrain which verify() functions out of the universe of implementations can be used.
 (ie the universe is everything that matches the signature and contract constraints restricts this universe to a subset.)
 
 A typical constraint is the hash of the CorDapp JAR that contains the contract and states but will in future releases
@@ -18,9 +18,9 @@ specified when constructing a transaction; if unspecified, an automatic constrai
 ``TransactionState``s have a ``constraint`` field that represents that state's attachment constraint. When a party
 constructs a ``TransactionState`` without specifying the constraint parameter a default value
 (``AutomaticHashConstraint``) is used. This default will be automatically resolved to a specific
-``HashAttachmentConstraint`` that contains the hash of the attachment which contrains the contract of that
+``HashAttachmentConstraint`` that contains the hash of the attachment which contains the contract of that
 ``TransactionState``. This automatic resolution occurs when a ``TransactionBuilder`` is converted to a
-``WireTransaction``. This reduces boilerplate of finding a specific hash constraints when building a transaction.
+``WireTransaction``. This reduces the boilerplate involved in finding a specific hash constraint when building a transaction.
 
 It is possible to specify the constraint explicitly with any other class that implements the ``AttachmentConstraint``
 interface. To specify a hash manually the ``HashAttachmentConstraint`` can be used and to not provide any constraint
