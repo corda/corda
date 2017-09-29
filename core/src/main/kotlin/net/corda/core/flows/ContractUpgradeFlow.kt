@@ -22,11 +22,13 @@ object ContractUpgradeFlow {
      *
      * This flow will NOT initiate the upgrade process. To start the upgrade process, see [Initiate].
      */
+    // DOCSTART 1
     @StartableByRPC
     class Authorise(
             val stateAndRef: StateAndRef<*>,
             private val upgradedContractClass: Class<out UpgradedContract<*, *>>
     ) : FlowLogic<Void?>() {
+    // DOCEND 1
         @Suspendable
         override fun call(): Void? {
             val upgrade = upgradedContractClass.newInstance()
@@ -43,10 +45,12 @@ object ContractUpgradeFlow {
      * Deauthorise a contract state upgrade.
      * This will remove the upgrade authorisation from persistent store (and prevent any further upgrade)
      */
+    // DOCSTART 2
     @StartableByRPC
     class Deauthorise(val stateRef: StateRef) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
+    //DOCEND 2
             serviceHub.contractUpgradeService.removeAuthorisedContractUpgrade(stateRef)
             return null
         }

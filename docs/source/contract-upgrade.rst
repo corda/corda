@@ -48,30 +48,17 @@ Authorising upgrade
 Each of the participants in the upgrading contract will have to instruct their node that they are willing to upgrade the state object before the upgrade.
 The ``ContractUpgradeFlow`` is used to manage the authorisation records. The administrator can use RPC to trigger either an ``Authorise`` or  ``Deauthorise`` flow.
 
-.. container:: codeset
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/flows/ContractUpgradeFlow.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
+    :dedent: 4
 
-   .. sourcecode:: kotlin
-
-    /**
-     * Authorise a contract state upgrade.
-     * This will store the upgrade authorisation in persistent store, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
-     * Invoking this flow indicates the node is willing to upgrade the [StateAndRef] using the [UpgradedContract] class.
-     * This method will NOT initiate the upgrade process. To start the upgrade process, see [Initiator].
-     */
-    @StartableByRPC
-    class Authorise(
-            val stateAndRef: StateAndRef<*>,
-            private val upgradedContractClass: Class<out UpgradedContract<*, *>>
-        ) : FlowLogic<Void?>()
-
-    /**
-     * Deauthorise a contract state upgrade.
-     * This will remove the upgrade authorisation from persistent store (and prevent any further upgrade)
-     */
-    @StartableByRPC
-    class Deauthorise(
-            val stateRef: StateRef
-    ) : FlowLogic< Void?>()
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/flows/ContractUpgradeFlow.kt
+    :language: kotlin
+    :start-after: DOCSTART 2
+    :end-before: DOCEND 2
+    :dedent: 4
 
 Proposing an upgrade
 --------------------

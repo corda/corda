@@ -109,44 +109,10 @@ each side.
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
-
-      object TwoPartyTradeFlow {
-          class UnacceptablePriceException(val givenPrice: Amount<Currency>) : FlowException("Unacceptable price: $givenPrice")
-          class AssetMismatchException(val expectedTypeName: String, val typeName: String) : FlowException() {
-              override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
-          }
-
-          // This object is serialised to the network and is the first flow message the seller sends to the buyer.
-          @CordaSerializable
-          data class SellerTradeInfo(
-                  val assetForSale: StateAndRef<OwnableState>,
-                  val price: Amount<Currency>,
-                  val sellerOwnerKey: PublicKey
-          )
-
-          open class Seller(val otherParty: Party,
-                            val notaryNode: NodeInfo,
-                            val assetToSell: StateAndRef<OwnableState>,
-                            val price: Amount<Currency>,
-                            val myKey: PublicKey,
-                            override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
-              @Suspendable
-              override fun call(): SignedTransaction {
-                  TODO()
-              }
-          }
-
-          open class Buyer(val otherParty: Party,
-                           val notary: Party,
-                           val acceptablePrice: Amount<Currency>,
-                           val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
-              @Suspendable
-              override fun call(): SignedTransaction {
-                  TODO()
-              }
-          }
-      }
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/flowstatemachines/TutorialFlowStateMachines.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
 
 This code defines several classes nested inside the main ``TwoPartyTradeFlow`` singleton. Some of the classes are
 simply flow messages or exceptions. The other two represent the buyer and seller side of the flow.
@@ -236,10 +202,10 @@ Let's implement the ``Seller.call`` method. This will be run when the flow is in
 .. container:: codeset
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
-            :language: kotlin
-            :start-after: DOCSTART 4
-            :end-before: DOCEND 4
-            :dedent: 4
+        :language: kotlin
+        :start-after: DOCSTART 4
+        :end-before: DOCEND 4
+        :dedent: 8
 
 We start by sending information about the asset we wish to sell to the buyer. We fill out the initial flow message with
 the trade info, and then call ``send``. which takes two arguments:
@@ -273,7 +239,7 @@ OK, let's do the same for the buyer side:
          :language: kotlin
          :start-after: DOCSTART 1
          :end-before: DOCEND 1
-         :dedent: 4
+         :dedent: 8
 
 This code is longer but no more complicated. Here are some things to pay attention to:
 
@@ -474,31 +440,16 @@ A flow might declare some steps with code inside the flow class like this:
 .. container:: codeset
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
-            :language: kotlin
-            :start-after: DOCSTART 2
-            :end-before: DOCEND 2
-            :dedent: 4
+        :language: kotlin
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
+        :dedent: 8
 
-    .. sourcecode:: java
-
-       private final ProgressTracker progressTracker = new ProgressTracker(
-               RECEIVING,
-               VERIFYING,
-               SIGNING,
-               COLLECTING_SIGNATURES,
-               RECORDING
-       );
-
-       private static final ProgressTracker.Step RECEIVING = new ProgressTracker.Step(
-               "Waiting for seller trading info");
-       private static final ProgressTracker.Step VERIFYING = new ProgressTracker.Step(
-               "Verifying seller assets");
-       private static final ProgressTracker.Step SIGNING = new ProgressTracker.Step(
-               "Generating and signing transaction proposal");
-       private static final ProgressTracker.Step COLLECTING_SIGNATURES = new ProgressTracker.Step(
-               "Collecting signatures from other parties");
-       private static final ProgressTracker.Step RECORDING = new ProgressTracker.Step(
-               "Recording completed transaction");
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/TutorialFlowStateMachines.java
+        :language: java
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+        :dedent: 4
 
 Each step exposes a label. By default labels are fixed, but by subclassing ``RelabelableStep`` you can make a step
 that can update its label on the fly. That's useful for steps that want to expose non-structured progress information
@@ -515,18 +466,16 @@ steps by overriding the ``Step`` class like this:
 .. container:: codeset
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
-            :language: kotlin
-            :start-after: DOCSTART 3
-            :end-before: DOCEND 3
-            :dedent: 4
+        :language: kotlin
+        :start-after: DOCSTART 3
+        :end-before: DOCEND 3
+        :dedent: 12
 
-    .. sourcecode:: java
-
-       private static final ProgressTracker.Step VERIFYING_AND_SIGNING = new ProgressTracker.Step("Verifying and signing transaction proposal") {
-           @Nullable @Override public ProgressTracker childProgressTracker() {
-               return SignTransactionFlow.Companion.tracker();
-           }
-       };
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/TutorialFlowStateMachines.java
+        :language: java
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
+        :dedent: 4
 
 Every tracker has not only the steps given to it at construction time, but also the singleton
 ``ProgressTracker.UNSTARTED`` step and the ``ProgressTracker.DONE`` step. Once a tracker has become ``DONE`` its

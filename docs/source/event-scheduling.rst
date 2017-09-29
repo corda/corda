@@ -68,21 +68,13 @@ An example
 Let's take an example of the interest rate swap fixings for our scheduled events.  The first task is to implement the
 ``nextScheduledActivity`` method on the ``State``.
 
-
 .. container:: codeset
 
-   .. sourcecode:: kotlin
-
-        override fun nextScheduledActivity(thisStateRef: StateRef,
-                                           flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
-            val nextFixingOf = nextFixingOf() ?: return null
-
-            val (instant, duration) = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name,
-                                                                                source = floatingLeg.indexSource,
-                                                                                date = nextFixingOf.forDay)
-            return ScheduledActivity(flowLogicRefFactory.create(TwoPartyDealFlow.FixingRoleDecider::class.java,
-                                                                    thisStateRef, duration), instant)
-        }
+    .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/contract/IRS.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+        :dedent: 8
 
 The first thing this does is establish if there are any remaining fixings.  If there are none, then it returns ``null``
 to indicate that there is no activity to schedule.  Otherwise it calculates the ``Instant`` at which the interest rate

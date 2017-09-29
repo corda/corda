@@ -15,41 +15,21 @@ A good example to examine for learning how to unit test flows is the ``ResolveTr
 flow takes care of downloading and verifying transaction graphs, with all the needed dependencies. We start
 with this basic skeleton:
 
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      class ResolveTransactionsFlowTest {
-          lateinit var mockNet: MockNetwork
-          lateinit var a: MockNetwork.MockNode
-          lateinit var b: MockNetwork.MockNode
-          lateinit var notary: Party
-
-          @Before
-          fun setup() {
-              mockNet = MockNetwork()
-              val nodes = mockNet.createSomeNodes()
-              a = nodes.partyNodes[0]
-              b = nodes.partyNodes[1]
-              mockNet.runNetwork()
-              notary = a.services.getDefaultNotary()
-          }
-
-          @After
-          fun tearDown() {
-              mockNet.stopNodes()
-          }
-      }
+.. literalinclude:: ../../core/src/test/kotlin/net/corda/core/internal/ResolveTransactionsFlowTest.kt
+    :language: kotlin
+    :start-after: DOCSTART 3
+    :end-before: DOCEND 3
 
 We create a mock network in our ``@Before`` setup method and create a couple of nodes. We also record the identity
 of the notary in our test network, which will come in handy later. We also tidy up when we're done.
 
 Next, we write a test case:
 
-.. literalinclude:: ../../core/src/test/kotlin/net/corda/core/flows/ResolveTransactionsFlowTest.kt
+.. literalinclude:: ../../core/src/test/kotlin/net/corda/core/internal/ResolveTransactionsFlowTest.kt
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
+    :dedent: 4
 
 We'll take a look at the ``makeTransactions`` function in a moment. For now, it's enough to know that it returns two
 ``SignedTransaction`` objects, the second of which spends the first. Both transactions are known by node A
@@ -64,10 +44,11 @@ on the node's persistent state.
 
 Here's what ``makeTransactions`` looks like:
 
-.. literalinclude:: ../../core/src/test/kotlin/net/corda/core/flows/ResolveTransactionsFlowTest.kt
+.. literalinclude:: ../../core/src/test/kotlin/net/corda/core/internal/ResolveTransactionsFlowTest.kt
     :language: kotlin
     :start-after: DOCSTART 2
     :end-before: DOCEND 2
+    :dedent: 4
 
 We're using the ``DummyContract``, a simple test smart contract which stores a single number in its states, along
 with ownership and issuer information. You can issue such states, exit them and re-assign ownership (move them).
