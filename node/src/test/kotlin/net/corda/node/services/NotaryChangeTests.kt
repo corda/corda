@@ -12,6 +12,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
@@ -211,10 +212,10 @@ fun issueMultiPartyState(nodeA: StartedNode<*>, nodeB: StartedNode<*>, notaryNod
     return stx.tx.outRef(0)
 }
 
-fun issueInvalidState(node: StartedNode<*>, notary: Party): StateAndRef<DummyContract.SingleOwnerState> {
-    val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.chooseIdentity().ref(0))
+fun issueInvalidState(services: ServiceHubInternal, identity: Party, notary: Party): StateAndRef<DummyContract.SingleOwnerState> {
+    val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
     tx.setTimeWindow(Instant.now(), 30.seconds)
-    val stx = node.services.signInitialTransaction(tx)
-    node.services.recordTransactions(stx)
+    val stx = services.signInitialTransaction(tx)
+    services.recordTransactions(stx)
     return stx.tx.outRef(0)
 }
