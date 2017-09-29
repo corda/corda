@@ -51,17 +51,20 @@ val DUMMY_BANK_C: Party get() = Party(CordaX500Name(organisation = "Bank C", loc
 val ALICE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(70)) }
 /** Dummy individual identity for tests and simulations */
 val ALICE_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(ALICE)
-val ALICE: Party get() = Party(CordaX500Name(organisation = "Alice Corp", locality = "Madrid", country = "ES"), ALICE_KEY.public)
+val ALICE_NAME = CordaX500Name(organisation = "Alice Corp", locality = "Madrid", country = "ES")
+val ALICE: Party get() = Party(ALICE_NAME, ALICE_KEY.public)
 
 val BOB_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(80)) }
 /** Dummy individual identity for tests and simulations */
 val BOB_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(BOB)
-val BOB: Party get() = Party(CordaX500Name(organisation = "Bob Plc", locality = "Rome", country = "IT"), BOB_KEY.public)
+val BOB_NAME = CordaX500Name(organisation = "Bob Plc", locality = "Rome", country = "IT")
+val BOB: Party get() = Party(BOB_NAME, BOB_KEY.public)
 
 val CHARLIE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(90)) }
 /** Dummy individual identity for tests and simulations */
 val CHARLIE_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CHARLIE)
-val CHARLIE: Party get() = Party(CordaX500Name(organisation = "Charlie Ltd", locality = "Athens", country = "GR"), CHARLIE_KEY.public)
+val CHARLIE_NAME = CordaX500Name(organisation = "Charlie Ltd", locality = "Athens", country = "GR")
+val CHARLIE: Party get() = Party(CHARLIE_NAME, CHARLIE_KEY.public)
 
 val DUMMY_REGULATOR_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(100)) }
 /** Dummy regulator for tests and simulations */
