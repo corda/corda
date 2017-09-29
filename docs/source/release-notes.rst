@@ -8,14 +8,14 @@ Unreleased
 
 Release 1.0
 -----------
-Corda v1.0 is finally here!
+Corda 1.0 is finally here!
 
 This critical step in the Corda journey enables the developer community, clients, and partners to build on Corda with confidence.
 This release represents the first version of Corda to provide API stability for Corda application (CorDapp) developers.
 Corda applications will continue to work against this API with each subsequent release of Corda. The public API for Corda core 
 will only evolve to include new features.
 
-As of Corda 1.0, the following modules export public APIs for which we guarantee to maintain backwards compatibility for,
+As of Corda 1.0, the following modules export public APIs for which we guarantee to maintain backwards compatibility,
 unless an incompatible change is required for security reasons:
 
  * core
@@ -28,7 +28,7 @@ unless an incompatible change is required for security reasons:
  * client-jackson
    Utilities and serialisers for working with JSON representations of basic types.
 
-Our extensive testing frameworks will continue to evolve alongside future Corda APIs. As part of our commitment to ease of use and modularity,
+Our extensive testing frameworks will continue to evolve alongside future Corda APIs. As part of our commitment to ease of use and modularity
 we have introduced a new test node driver module to encapsulate all test functionality in support of building standalone node integration 
 tests using our DSL driver. 
 
@@ -38,7 +38,7 @@ Please read :doc:`api-index` for complete details.
          `ABI (Application Binary Interface) <https://en.wikipedia.org/wiki/Application_binary_interface>`_ stability as well.
          We plan to do this soon after this release of Corda.
 
-Significant changes implemented in our reaching API stability include:
+Significant changes implemented in reaching Corda API stability include:
 
 * **Flow framework**:
   The Flow framework communications API has been redesigned around session based communication with the introduction of a new 
@@ -47,12 +47,14 @@ Significant changes implemented in our reaching API stability include:
 
 * **Complete API cleanup**:
   Across the board, all our public interfaces have been thoroughly revised and updated to ensure a productive and intuitive developer experience.
-  Methods and flow naming conventions have been aligned with their semantic use to ease the understanding of CorDapps. In addition, we providing ever more powerful re-usable flows (such as `CollectSignaturesFlow`) to minimize the boiler-plate code developers need to write.
+  Methods and flow naming conventions have been aligned with their semantic use to ease the understanding of CorDapps.
+  In addition, we provide ever more powerful re-usable flows (such as `CollectSignaturesFlow`) to minimize the boiler-plate code developers need to write.
 
 * **Simplified annotation driven scanning **:
-  CorDapp configuration has been made simpler through the removal of explicit configuration items (previously defined in the `CordaPluginRegistry`) 
-  in favour of annotations and classpath scanning. Contract definitions are no longer required to explicitly define a
-  legal contract reference hash. In their place an optional `LegalProseReference` annotation to specify a URI.
+  CorDapp configuration has been made simpler through the removal of explicit configuration items in favour of annotations
+  and classpath scanning. As an example, we have now completely removed the `CordaPluginRegistry` configuration.
+  Contract definitions are no longer required to explicitly define a legal contract reference hash. In their place an
+  optional `LegalProseReference` annotation to specify a URI is used.
 
 * **Java usability**:
   All code has been updated to enable simple access to static API parameters. Developers no longer need to 
@@ -61,7 +63,7 @@ Significant changes implemented in our reaching API stability include:
 In addition to API stability this release encompasses a number of major functional improvements, including:
 
 * **Contract constraints**:
-  Provides a means with which to enforce which implementation of a State's verify method is used during transaction verification.
+  Provides a means with which to enforce a specific implementation of a State's verify method during transaction verification.
   When loading an attachment via the attachment classloader, constraints of a transaction state are checked against the 
   list of attachment hashes provided, and the attachment is rejected if the constraints are not matched.
 
@@ -73,7 +75,7 @@ In addition to API stability this release encompasses a number of major function
   .. image:: resources/signatureMetadata.png
 
 * **Backwards compatibility and improvements to core transaction data structures**:
-  A new Merkle tree model has been introdcued that utilises sub-Merkle trees per component type. Components of the
+  A new Merkle tree model has been introduced that utilises sub-Merkle trees per component type. Components of the
   same type, such as inputs or commands, are grouped together and form their own Merkle tree. Then, the roots of
   each group are used as leaves in the top-level Merkle tree. This model enables backwards compatibility, in the
   sense that if new component types are added in the future, old clients will still be able to compute the Merkle root
@@ -95,21 +97,20 @@ In addition to API stability this release encompasses a number of major function
 
 * **Full support for confidential identities**:
   This includes rework and improvements to the identity service to handle both `well known` and `confidential` identities.
-  This work ships in an experimental module in v1 called `confidential-identities`. API stabilisation of confidential
+  This work ships in an experimental module in Corda 1.0, called `confidential-identities`. API stabilisation of confidential
   identities will improve as we make the integration of this privacy feature into applications even easier for developers.
 
 * **Re-designed network map service**:
   The foundations for a completely redesigned network map service have been implemented to enable future increased network 
   scalability and redundancy, support for multiple notaries, and administration of network compatibility zones and business networks.
-  Full details of this redesign work can be found `here <https://r3-cev.atlassian.net/wiki/spaces/AWG/pages/127710793/Design+doc+network+map+upgrade>`_
 
 Finally, please note that the 1.0 release has not yet been security audited.
 
-We have provided a comprehensive :doc:`upgrade-notes` to ease the transition of migrating CorDapps to V1.0
+We have provided a comprehensive :doc:`upgrade-notes` to ease the transition of migrating CorDapps to Corda 1.0
 
 Upgrading to this release is strongly recommended, and you will be safe in the knowledge that APIs will no longer break.
 
-Next destination: production readiness!
+Next destination: large-scale production readiness!
 
 Milestone 14
 ------------
