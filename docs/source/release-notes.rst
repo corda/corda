@@ -15,7 +15,7 @@ This release represents the first version of Corda to provide API stability for 
 Corda applications will continue to work against this API with each subsequent release of Corda. The public API for Corda core 
 will only evolve to include new features.
 
-As of Corda 1.0, the following modules export public APIs for which we promise to maintain backwards compatibility for,
+As of Corda 1.0, the following modules export public APIs for which we guarantee to maintain backwards compatibility for,
 unless an incompatible change is required for security reasons:
 
  * core
