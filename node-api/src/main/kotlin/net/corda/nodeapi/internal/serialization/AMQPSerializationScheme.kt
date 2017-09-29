@@ -27,7 +27,7 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     internal companion object {
         private val serializationWhitelists: List<SerializationWhitelist> by lazy {
-            ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList()
+            ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
         }
 
         fun registerCustomSerializers(factory: SerializerFactory) {

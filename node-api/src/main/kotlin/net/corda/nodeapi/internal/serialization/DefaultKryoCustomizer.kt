@@ -50,7 +50,7 @@ import kotlin.collections.ArrayList
 
 object DefaultKryoCustomizer {
     private val serializationWhitelists: List<SerializationWhitelist> by lazy {
-        ServiceLoader.load(SerializationWhitelist::class.java, this.javaClass.classLoader).toList()
+        ServiceLoader.load(SerializationWhitelist::class.java, this.javaClass.classLoader).toList() + DefaultWhitelist
     }
 
     fun customize(kryo: Kryo): Kryo {

@@ -69,7 +69,6 @@ import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.ServiceType
-import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -161,7 +160,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open val serializationWhitelists: List<SerializationWhitelist> by lazy {
-        cordappProvider.cordapps.flatMap { it.serializationWhitelists } + DefaultWhitelist()
+        cordappProvider.cordapps.flatMap { it.serializationWhitelists }
     }
 
     /** Set to non-null once [start] has been successfully called. */
