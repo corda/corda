@@ -11,7 +11,7 @@ import java.util.*
 /**
  * NOTE: We do not whitelist [HashMap] or [HashSet] since they are unstable under serialization.
  */
-class DefaultWhitelist : SerializationWhitelist() {
+class DefaultWhitelist : SerializationWhitelist {
     override val whitelist =
             listOf(Array<Any>(0, {}).javaClass,
                     Notification::class.java,

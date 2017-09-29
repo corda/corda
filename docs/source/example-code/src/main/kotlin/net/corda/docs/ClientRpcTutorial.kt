@@ -142,7 +142,7 @@ data class ExampleRPCValue(val foo: String)
 @CordaSerializable
 data class ExampleRPCValue2(val bar: Int)
 
-class ExampleRPCSerializationWhitelist : SerializationWhitelist() {
+class ExampleRPCSerializationWhitelist : SerializationWhitelist {
     // Add classes like this.
     override val whitelist = listOf(ExampleRPCValue::class.java)
 }

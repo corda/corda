@@ -64,7 +64,8 @@ Release 1.0
 * CordaPluginRegistry has been renamed to SerializationWhitelist and moved to the net.corda.core.serialization
   package. The API for whitelisting types that can't be annotated was slightly simplified. This class used to contain
   many things, but as we switched to annotations and classpath scanning over time it hollowed out until this was
-  the only functionality left.
+  the only functionality left.  An associated property on ``MockNode`` was renamed from ``testPluginRegistries`` to
+  ``testSerializationWhitelists``.
 
 * Contract Upgrades: deprecated RPC authorisation / deauthorisation API calls in favour of equivalent flows in ContractUpgradeFlow.
   Implemented contract upgrade persistence using JDBC backed persistent map.

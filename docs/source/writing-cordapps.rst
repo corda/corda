@@ -44,6 +44,7 @@ The ``src`` directory of the Template CorDapp, where we define our CorDapp's sou
     │   └── resources
     │       ├── META-INF
     │       │   └── services
+    │       │       ├── net.corda.core.serialization.SerializationWhitelist
     │       │       └── net.corda.webserver.services.WebServerPluginRegistry
     │       ├── certificates
     │       │   ├── sslkeystore.jks

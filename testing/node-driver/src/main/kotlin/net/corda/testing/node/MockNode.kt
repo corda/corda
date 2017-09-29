@@ -237,11 +237,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun myAddresses() = emptyList<NetworkHostAndPort>()
 
-        // Allow unit tests to modify the plugin list before the node start,
-        // so they don't have to ServiceLoad test plugins into all unit tests.
-        val testPluginRegistries by lazy { super.serializationWhitelists.toMutableList() }
+        // Allow unit tests to modify the serialization whitelist list before the node start,
+        // so they don't have to ServiceLoad test whitelists into all unit tests.
+        val testSerializationWhitelists by lazy { super.serializationWhitelists.toMutableList() }
         override val serializationWhitelists: List<SerializationWhitelist>
-            get() = testPluginRegistries
+            get() = testSerializationWhitelists
 
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.

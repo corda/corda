@@ -5,14 +5,12 @@ package net.corda.core.serialization
  * serialisation that you cannot otherwise annotate. The name of the class must appear in a text file on the
  * classpath under the path META-INF/services/net.corda.core.serialization.SerializationWhitelist
  */
-abstract class SerializationWhitelist {
+interface SerializationWhitelist {
     /**
      * Optionally whitelist types for use in object serialization, as we lock down the types that can be serialized.
      *
      * For example, if you add a new [net.corda.core.contracts.ContractState] it needs to be whitelisted.  You can do that
      * either by adding the [net.corda.core.serialization.CordaSerializable] annotation or via this method.
-     **
-     * @return true if you register types, otherwise you will be filtered out of the list of plugins considered in future.
      */
-    abstract val whitelist: List<Class<*>>
+    val whitelist: List<Class<*>>
 }

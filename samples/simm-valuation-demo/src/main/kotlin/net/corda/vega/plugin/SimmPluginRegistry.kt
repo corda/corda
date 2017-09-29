@@ -21,7 +21,7 @@ import net.corda.webserver.services.WebServerPluginRegistry
  * It is also the object that enables a human usable web service for demo purpose
  * It is loaded via discovery see [WebServerPluginRegistry].
  */
-class SimmPluginRegistry : SerializationWhitelist() {
+class SimmPluginRegistry : SerializationWhitelist {
     override val whitelist = listOf(
             MultiCurrencyAmount::class.java,
             Ordering.natural<Comparable<Any>>().javaClass,
