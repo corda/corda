@@ -1,6 +1,5 @@
-package net.corda.core.crypto.composite
+package net.corda.core.crypto
 
-import net.corda.core.crypto.TransactionSignature
 import net.corda.core.serialization.CordaSerializable
 
 /**
