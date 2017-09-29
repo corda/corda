@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.utilities.loggerFor
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
@@ -48,11 +49,20 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     }
 
     private fun Method.returnsNullable(): Boolean {
-        val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull { it.javaGetter == this }?.returnType?.toString() ?: "?"
-        return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
+        try {
+            val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull { it.javaGetter == this }?.returnType?.toString() ?: "?"
+            return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
+        } catch(e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
+            // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
+            // TODO: Revisit this when Kotlin issue is fixed.
+            logger.error("Unexpected internal Kotlin error", e)
+            return true
+        }
     }
 
     companion object {
+        private val logger = loggerFor<PropertySerializer>()
+
         fun make(name: String, readMethod: Method?, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
             readMethod?.isAccessible = true
             if (SerializerFactory.isPrimitive(resolvedType)) {

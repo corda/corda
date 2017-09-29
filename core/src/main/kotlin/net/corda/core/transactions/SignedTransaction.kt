@@ -1,5 +1,7 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaException
+import net.corda.core.CordaThrowable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -187,7 +189,12 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 
+    companion object {
+        private fun missingSignatureMsg(missing: Set<PublicKey>, descriptions: List<String>, id: SecureHash): String =
+                "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"
+    }
+
     @CordaSerializable
     class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
-        : NamedByHash, SignatureException("Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}")
+        : NamedByHash, SignatureException(missingSignatureMsg(missing, descriptions, id)), CordaThrowable by CordaException(missingSignatureMsg(missing, descriptions, id))
 }
