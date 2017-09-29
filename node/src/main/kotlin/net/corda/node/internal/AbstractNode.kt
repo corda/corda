@@ -57,10 +57,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.statemachine.appName
-import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
+import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
@@ -191,7 +188,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     checkpointStorage,
                     serverThread,
                     database,
-                    busyNodeLatch)
+                    busyNodeLatch,
+                    cordappLoader.appClassLoader)
 
             smm.tokenizableServices.addAll(tokenizableServices)
 
@@ -214,6 +212,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             registerCordappFlows()
             _services.rpcFlows += cordappProvider.cordapps.flatMap { it.rpcFlows }
             registerCustomSchemas(cordappProvider.cordapps.flatMap { it.customSchemas }.toSet())
+            FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
 
             runOnStop += network::stop
             StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, inNodeNetworkMapService, network, database, rpcOps)
