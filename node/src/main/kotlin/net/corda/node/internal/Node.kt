@@ -15,11 +15,11 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
-import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
+import net.corda.node.services.api.SchemaService
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -287,7 +287,7 @@ open class Node(override val configuration: FullNodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun <T> initialiseDatabasePersistence(insideTransaction: () -> T): T {
+    override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T): T {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -304,7 +304,7 @@ open class Node(override val configuration: FullNodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
-        return super.initialiseDatabasePersistence(insideTransaction)
+        return super.initialiseDatabasePersistence(schemaService, insideTransaction)
     }
 
     private val _startupComplete = openFuture<Unit>()
