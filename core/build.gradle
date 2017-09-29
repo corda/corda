@@ -95,6 +95,13 @@ jar {
     baseName 'corda-core'
 }
 
+scanApi {
+    excludeClasses = [
+        // Kotlin should probably have declared this class as "synthetic".
+        "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
+    ]
+}
+
 publish {
     name jar.baseName
 }

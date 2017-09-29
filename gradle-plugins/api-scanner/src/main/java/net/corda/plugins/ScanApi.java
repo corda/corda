@@ -22,6 +22,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.stream.StreamSupport;
+
+import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("unused")
@@ -42,12 +44,14 @@ public class ScanApi extends DefaultTask {
 
     private final ConfigurableFileCollection sources;
     private final ConfigurableFileCollection classpath;
+    private final Set<String> excludeClasses;
     private final File outputDir;
     private boolean verbose;
 
     public ScanApi() {
         sources = getProject().files();
         classpath = getProject().files();
+        excludeClasses = new LinkedHashSet<>();
         outputDir = new File(getProject().getBuildDir(), "api");
     }
 
@@ -67,6 +71,16 @@ public class ScanApi extends DefaultTask {
 
     void setClasspath(FileCollection classpath) {
         this.classpath.setFrom(classpath);
+    }
+
+    @Input
+    public Collection<String> getExcludeClasses() {
+        return unmodifiableSet(excludeClasses);
+    }
+
+    void setExcludeClasses(Collection<String> excludeClasses) {
+        this.excludeClasses.clear();
+        this.excludeClasses.addAll(excludeClasses);
     }
 
     @OutputFiles
@@ -150,7 +164,7 @@ public class ScanApi extends DefaultTask {
         }
 
         void scan(PrintWriter writer, ClassLoader appLoader) {
-            ScanResult result = new FastClasspathScanner("!", "-dir:")
+            ScanResult result = new FastClasspathScanner(getScanSpecification())
                 .overrideClassLoaders(appLoader)
                 .ignoreParentClassLoaders()
                 .ignoreMethodVisibility()
@@ -160,6 +174,18 @@ public class ScanApi extends DefaultTask {
                 .verbose(verbose)
                 .scan();
             writeApis(writer, result);
+        }
+
+        private String[] getScanSpecification() {
+            String[] spec = new String[2 + excludeClasses.size()];
+            spec[0] = "!";     // Don't blacklist system classes from the output.
+            spec[1] = "-dir:"; // Ignore classes on the filesystem.
+
+            int i = 2;
+            for (String excludeClass : excludeClasses) {
+                spec[i++] = '-' + excludeClass;
+            }
+            return spec;
         }
 
         private void writeApis(PrintWriter writer, ScanResult result) {

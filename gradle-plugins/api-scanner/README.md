@@ -33,6 +33,11 @@ scanApi {
 
     // Enable / disable the task within this module.
     enabled = {true|false}
+
+    // Names of classes that should be excluded from the output.
+    excludeClasses = [
+        ...
+    ]
 }
 ```
 
@@ -56,9 +61,12 @@ public interface net.corda.core.contracts.Attachment extends net.corda.core.cont
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream open()
   @org.jetbrains.annotations.NotNull public abstract jar.JarInputStream openAsJAR()
 ##
-public static final class net.corda.core.contracts.Attachment$DefaultImpls extends java.lang.Object
-  public static void extractFile(net.corda.core.contracts.Attachment, String, java.io.OutputStream)
-  @org.jetbrains.annotations.NotNull public static jar.JarInputStream openAsJAR(net.corda.core.contracts.Attachment)
+public interface net.corda.core.contracts.AttachmentConstraint
+  public abstract boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
+##
+public final class net.corda.core.contracts.AttachmentResolutionException extends net.corda.core.flows.FlowException
+  public <init>(net.corda.core.crypto.SecureHash)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.SecureHash getHash()
 ##
 ```
 
