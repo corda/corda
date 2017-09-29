@@ -42,7 +42,7 @@ class CordappSmokeTest {
         val pluginsDir = (factory.baseDirectory(aliceConfig) / "plugins").createDirectories()
         // Find the jar file for the smoke tests of this module
         val selfCordapp = Paths.get("build", "libs").list {
-            it.filter { "-smoke-test" in it.toString() }.toList().single()
+            it.filter { "-smokeTests" in it.toString() }.toList().single()
         }
         selfCordapp.copyToDirectory(pluginsDir)
 
