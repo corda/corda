@@ -143,7 +143,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
         // This is prediction of the longest time it will take to get the cluster into a stable state such that further
         // testing can be performed upon it
-        val maxInstabilityInterval = BRIDGE_RETRY_MS * allTheStartedNodesPopulation.size * 2
+        val maxInstabilityInterval = BRIDGE_RETRY_MS * allTheStartedNodesPopulation.size * 30
         logger.info("Instability interval is set to: $maxInstabilityInterval ms")
 
         eventually<AssertionError, Unit>(Duration.ofMillis(maxInstabilityInterval)) {

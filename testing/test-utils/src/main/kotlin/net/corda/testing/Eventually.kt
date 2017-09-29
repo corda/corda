@@ -20,5 +20,5 @@ inline fun <reified E : Throwable, R>eventually(duration: Duration, f: () -> R):
         }
         times++
     }
-    throw AssertionError("Test failed after ${duration}; attempted $times times")
+    throw AssertionError("Test failed after $duration; attempted $times times")
 }
