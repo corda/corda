@@ -25,7 +25,7 @@ buildscript {
 apply plugin: 'net.corda.plugins.publish-utils'
 
 allprojects {
-    version "$gradle_plugins_version"
+    version gradle_plugins_version
     group 'net.corda.plugins'
 }
 
@@ -39,7 +39,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['cordformation', 'quasar-utils', 'cordform-common']
+    publications = ['cordformation', 'quasar-utils', 'cordform-common', 'api-scanner']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
