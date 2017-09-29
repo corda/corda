@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import net.corda.core.CordaException
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.isFulfilledBy
@@ -192,7 +193,7 @@ abstract class AbstractNetworkMapService(network: MessagingService,
     }
 
     private fun addSubscriber(subscriber: MessageRecipients) {
-        if (subscriber !is SingleMessageRecipient) throw NodeMapError.InvalidSubscriber()
+        if (subscriber !is SingleMessageRecipient) throw NodeMapException.InvalidSubscriber()
         subscribers.locked {
             if (!containsKey(subscriber)) {
                 put(subscriber, LastAcknowledgeInfo(mapVersion))
@@ -201,12 +202,12 @@ abstract class AbstractNetworkMapService(network: MessagingService,
     }
 
     private fun removeSubscriber(subscriber: MessageRecipients) {
-        if (subscriber !is SingleMessageRecipient) throw NodeMapError.InvalidSubscriber()
+        if (subscriber !is SingleMessageRecipient) throw NodeMapException.InvalidSubscriber()
         subscribers.locked { remove(subscriber) }
     }
 
     private fun processAcknowledge(request: UpdateAcknowledge) {
-        if (request.replyTo !is SingleMessageRecipient) throw NodeMapError.InvalidSubscriber()
+        if (request.replyTo !is SingleMessageRecipient) throw NodeMapException.InvalidSubscriber()
         subscribers.locked {
             val lastVersionAcked = this[request.replyTo]?.mapVersion
             if ((lastVersionAcked ?: 0) < request.mapVersion) {
@@ -363,13 +364,13 @@ class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalS
 }
 
 @CordaSerializable
-sealed class NodeMapError : Exception() {
+sealed class NodeMapException : CordaException("Network Map Protocol Error") {
 
     /** Thrown if the signature on the node info does not match the public key for the identity */
-    class InvalidSignature : NodeMapError()
+    class InvalidSignature : NodeMapException()
 
     /** Thrown if the replyTo of a subscription change message is not a single message recipient */
-    class InvalidSubscriber : NodeMapError()
+    class InvalidSubscriber : NodeMapException()
 }
 
 @CordaSerializable

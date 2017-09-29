@@ -6,6 +6,7 @@ import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
+import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
@@ -58,7 +59,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
     }
 
     @CordaSerializable
-    class HashMismatchException(val expected: SecureHash, val actual: SecureHash) : RuntimeException("File $expected hashed to $actual: corruption in attachment store?")
+    class HashMismatchException(val expected: SecureHash, val actual: SecureHash) : CordaRuntimeException("File $expected hashed to $actual: corruption in attachment store?")
 
     /**
      * Wraps a stream and hashes data as it is read: if the entire stream is consumed, then at the end the hash of
