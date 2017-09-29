@@ -24,6 +24,12 @@ RPC client interface to Corda, for use both by user-facing client and integratio
 
 Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
+# Package net.corda.core.cordapp
+
+This package contains the interface to CorDapps from within a node. A CorDapp can access its own context by using
+the CordappProvider.getAppContext() class. These classes are not intended to be constructed manually and no interface
+to do this will be provided. 
+
 # Package net.corda.core.concurrent
 
 Provides a simplified [java.util.concurrent.Future] class that allows registration of a callback to execute when the future
