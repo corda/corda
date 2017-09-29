@@ -35,7 +35,7 @@ class FinalityFlowTests {
         bobServices = bobNode.services
         alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
         bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
-        notary = notaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
+        notary = notaryNode.services.myInfo.identityFromX500Name(DUMMY_NOTARY_SERVICE_NAME)
     }
 
     @After
