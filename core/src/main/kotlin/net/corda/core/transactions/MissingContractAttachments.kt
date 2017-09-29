@@ -2,6 +2,7 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
+import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -11,4 +12,4 @@ import net.corda.core.serialization.CordaSerializable
  */
 @CordaSerializable
 class MissingContractAttachments(val states: List<TransactionState<ContractState>>)
-    : Exception("Cannot find contract attachments for ${states.map { it.contract }.distinct() }")
+    : FlowException("Cannot find contract attachments for ${states.map { it.contract }.distinct() }")

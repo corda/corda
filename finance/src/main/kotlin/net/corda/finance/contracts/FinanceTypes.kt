@@ -12,6 +12,7 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TokenizableAssetInfo
+import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
@@ -199,7 +200,7 @@ enum class Frequency(val annualCompoundCount: Int, val offset: LocalDate.(Long) 
 @CordaSerializable
 open class BusinessCalendar (val holidayDates: List<LocalDate>) {
     @CordaSerializable
-    class UnknownCalendar(name: String) : Exception("$name not found")
+    class UnknownCalendar(name: String) : FlowException("$name not found")
 
     companion object {
         val calendars = listOf("London", "NewYork")

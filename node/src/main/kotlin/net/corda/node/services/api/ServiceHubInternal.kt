@@ -1,5 +1,6 @@
 package net.corda.node.services.api
 
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -62,9 +63,9 @@ interface NetworkMapCacheInternal : NetworkMapCache {
 }
 
 @CordaSerializable
-sealed class NetworkCacheError : Exception() {
+sealed class NetworkCacheException : CordaException("Network Cache Error") {
     /** Indicates a failure to deregister, because of a rejected request from the remote node */
-    class DeregistrationFailed : NetworkCacheError()
+    class DeregistrationFailed : NetworkCacheException()
 }
 
 interface ServiceHubInternal : ServiceHub {
