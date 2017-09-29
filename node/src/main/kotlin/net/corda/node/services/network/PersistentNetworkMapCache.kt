@@ -24,7 +24,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
-import net.corda.node.services.api.NetworkCacheError
+import net.corda.node.services.api.NetworkCacheException
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.createMessage
@@ -145,7 +145,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
                             data = NetworkMapService.UpdateAcknowledge(req.mapVersion, network.myAddress).serialize().bytes)
                     network.send(ackMessage, req.replyTo)
                     processUpdatePush(req)
-                } catch (e: NodeMapError) {
+                } catch (e: NodeMapException) {
                     logger.warn("Failure during node map update due to bad update: ${e.javaClass.name}")
                 } catch (e: Exception) {
                     logger.error("Exception processing update from network map service", e)
@@ -212,7 +212,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
         val address = getPartyInfo(mapParty)?.let { network.getAddressOfParty(it) } ?:
                 throw IllegalArgumentException("Can't deregister for updates, don't know the party: $mapParty")
         val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address).map {
-            if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
+            if (it.confirmed) Unit else throw NetworkCacheException.DeregistrationFailed()
         }
         _registrationFuture.captureLater(future.map { null })
         return future
@@ -223,7 +223,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
             val reg = req.wireReg.verified()
             processRegistration(reg)
         } catch (e: SignatureException) {
-            throw NodeMapError.InvalidSignature()
+            throw NodeMapException.InvalidSignature()
         }
     }
 
