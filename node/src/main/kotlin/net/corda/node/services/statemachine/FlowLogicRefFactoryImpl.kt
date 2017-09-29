@@ -18,7 +18,7 @@ import kotlin.reflect.jvm.javaType
  * The internal concrete implementation of the FlowLogicRef marker interface.
  */
 @CordaSerializable
-data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String, val classloader: ClassLoader, val args: Map<String, Any?>) : FlowLogicRef
+data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String, val args: Map<String, Any?>) : FlowLogicRef
 
 /**
  * A class for conversion to and from [FlowLogic] and [FlowLogicRef] instances.
@@ -40,7 +40,7 @@ object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactor
         if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
             throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
         }
-        return createForRPC(flowClass, classloader, *args)
+        return createForRPC(flowClass, *args)
     }
 
     fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
@@ -79,12 +79,12 @@ object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactor
     internal fun createKotlin(type: Class<out FlowLogic<*>>, args: Map<String, Any?>): FlowLogicRef {
         // Check we can find a constructor and populate the args to it, but don't call it
         createConstructor(type, args)
-        return FlowLogicRefImpl(type.name, classloader, args)
+        return FlowLogicRefImpl(type.name, args)
     }
 
     fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*> {
         if (ref !is FlowLogicRefImpl) throw IllegalFlowLogicException(ref.javaClass, "FlowLogicRef was not created via correct FlowLogicRefFactory interface")
-        val klass = Class.forName(ref.flowLogicClassName, true, ref.classloader).asSubclass(FlowLogic::class.java)
+        val klass = Class.forName(ref.flowLogicClassName, true, classloader).asSubclass(FlowLogic::class.java)
         return createConstructor(klass, ref.args)()
     }
 
