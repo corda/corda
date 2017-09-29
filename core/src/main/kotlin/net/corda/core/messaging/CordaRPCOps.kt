@@ -271,6 +271,8 @@ interface CordaRPCOps : RPCOps {
 
     /**
      * Returns a node's info from the network map cache, where known.
+     * Notice that when there are more than one node for a given name (in case of distributed services) first service node
+     * found will be returned.
      *
      * @return the node info if available.
      */

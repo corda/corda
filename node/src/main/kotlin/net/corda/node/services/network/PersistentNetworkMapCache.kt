@@ -112,7 +112,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
         val wellKnownParty = serviceHub.identityService.wellKnownPartyFromAnonymous(party)
         return wellKnownParty?.let {
-            getNodesByLegalIdentityKey(it.owningKey).singleOrNull()
+            getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
         }
     }
 
