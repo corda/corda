@@ -10,27 +10,27 @@ Release 1.0
 -----------
 Corda v1.0 is finally here!
 
-This critical step in the Corda journey enables development community, clients and partners to build on Corda with confidence.
+This critical step in the Corda journey enables the developer community, clients, and partners to build on Corda with confidence.
 This release represents the first version of Corda to provide API stability for Corda application (CorDapp) developers.
+Corda applications will continue to work against this API with each subsequent release of Corda. The public API for Corda core 
+will only evolve to include new features.
 
-The public API for Corda core is now stable and will only evolve to include new features.
-Corda applications will continue to work against this API with each subsequent release of Corda.
-
-As of Corda 1.0, the following modules export public API that we promise to maintain backwards compatibility for,
+As of Corda 1.0, the following modules export public APIs for which we promise to maintain backwards compatibility for,
 unless an incompatible change is required for security reasons:
 
  * core
-   Contains the bulk of APIs to be used for building CorDapps: contracts, transactions, flows, identity, node services, 
+   Contains the bulk of the APIs to be used for building CorDapps: contracts, transactions, flows, identity, node services, 
    cryptographic libraries, and general utility functions.
 
  * client-rpc
-   RPC client interface to Corda, for use both by user-facing client and integration with external systems.
+   An RPC client interface to Corda, for use by both user facing client and integration with external systems.
 
  * client-jackson
    Utilities and serialisers for working with JSON representations of basic types.
 
-Our extensive testing frameworks will continue to evolve with future Corda APIs, and we have introduced a new test node driver module
-to encapsulate all test functionality in support of building standalone node integration tests using our DSL driver. 
+Our extensive testing frameworks will continue to evolve alongside future Corda APIs. As part of our commitment to ease of use and modularity,
+we have introduced a new test node driver module to encapsulate all test functionality in support of building standalone node integration 
+tests using our DSL driver. 
 
 Please read :doc:`api-index` for complete details.
 
@@ -38,7 +38,7 @@ Please read :doc:`api-index` for complete details.
          `ABI (Application Binary Interface) <https://en.wikipedia.org/wiki/Application_binary_interface>`_ stability as well.
          We plan to do this soon after this release of Corda.
 
-Significant changes in reaching API stability include:
+Significant changes implemented in our reaching API stability include:
 
 * **Flow framework**:
   The Flow framework communications API has been redesigned around session based communication with the introduction of a new 
@@ -47,40 +47,39 @@ Significant changes in reaching API stability include:
 
 * **Complete API cleanup**:
   Across the board, all our public interfaces have been thoroughly revised and updated to ensure a productive and intuitive developer experience.
-  This includes renaming certain methods and flows to match their intended semantics, and providing ever more powerful re-usable flows 
-  (such as `CollectSignaturesFlow`) to minimize the boiler-plate code developers need to write.
+  Methods and flow naming conventions have been aligned with their semantic use to ease the understanding of CorDapps. In addition, we providing ever more powerful re-usable flows (such as `CollectSignaturesFlow`) to minimize the boiler-plate code developers need to write.
 
-* **Simplified annotation driven configuration**:
-  CorDapp configuration is more simple because we have removed explicit configuration items (such as declaration of custom contract schemas) 
+* **Simplified annotation driven scanning **:
+  CorDapp configuration has been made simpler through the removal of explicit configuration items (previously defined in the `CordaPluginRegistry`) 
   in favour of annotations and classpath scanning. Contract definitions are no longer required to explicitly define a
-  legal contract reference hash, but may use the optional `LegalProseReference` annotation to specify a URI.
+  legal contract reference hash. In their place an optional `LegalProseReference` annotation to specify a URI.
 
 * **Java usability**:
-  All code has been updated to enable simple access to static API parameters, such that developers no longer need to 
+  All code has been updated to enable simple access to static API parameters. Developers no longer need to 
   call getter methods, and can reference static API variables directly.
 
-In addition to API stability, this release encompasses a number of major functional improvements, including:
+In addition to API stability this release encompasses a number of major functional improvements, including:
 
 * **Contract constraints**:
-  Provides a means to enforce which implementation of a State's verify method is used during transaction verification.
+  Provides a means with which to enforce which implementation of a State's verify method is used during transaction verification.
   When loading an attachment via the attachment classloader, constraints of a transaction state are checked against the 
   list of attachment hashes provided, and the attachment is rejected if the constraints are not matched.
 
 * **Signature Metadata support**:
-  Signers can add metadata to their digital signatures. While previously a user could only sign the Merkle root of a
-  transaction, it is now possible that extra information can be attached to a signature, at the moment platformVersion
+  Signers now have the ability to add metadata to their digital signatures. Whereas previously a user could only sign the Merkle root of a
+  transaction, it is now possible for extra information to be attached to a signature, such as a platform version
   and the signature-scheme used.
 
   .. image:: resources/signatureMetadata.png
 
 * **Backwards compatibility and improvements to core transaction data structures**:
-  A new Merkle tree model that utilises sub-Merkle trees per component type is introduced. Components of the
-  same type, such as inputs or commands, are grouped together and they form their own Merkle tree. Then, the roots of
+  A new Merkle tree model has been introdcued that utilises sub-Merkle trees per component type. Components of the
+  same type, such as inputs or commands, are grouped together and form their own Merkle tree. Then, the roots of
   each group are used as leaves in the top-level Merkle tree. This model enables backwards compatibility, in the
   sense that if new component types are added in the future, old clients will still be able to compute the Merkle root
   and relay transactions even if they cannot read (deserialise) the new component types. Due to the above,
-  `FilterTransaction` is now simpler and structurally closer to `WireTransaction` allowing a more user friendly API
-  for both filtered and unfiltered transactions.
+  `FilterTransaction` has been made simpler with a structure closer to `WireTransaction`. This has the effect of making the API
+  more user friendly and intuitive for both filtered and unfiltered transactions.
 
 * **Enhanced component privacy**:
   Corda 1.0 is equipped with a scalable patent-pending component visibility design based on the above sophisticated
