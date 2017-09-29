@@ -15,26 +15,32 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.services.*
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NotaryService
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.utils.WorldMapLocation
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.transactions.*
+import net.corda.node.services.transactions.BFTNonValidatingNotaryService
+import net.corda.node.services.transactions.BFTSMaRt
+import net.corda.node.services.transactions.InMemoryTransactionVerifierService
+import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CertificateAndKeyPair
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -231,11 +237,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun myAddresses() = emptyList<NetworkHostAndPort>()
 
-        // Allow unit tests to modify the plugin list before the node start,
-        // so they don't have to ServiceLoad test plugins into all unit tests.
-        val testPluginRegistries by lazy { super.pluginRegistries.toMutableList() }
-        override val pluginRegistries: List<CordaPluginRegistry>
-            get() = testPluginRegistries
+        // Allow unit tests to modify the serialization whitelist list before the node start,
+        // so they don't have to ServiceLoad test whitelists into all unit tests.
+        val testSerializationWhitelists by lazy { super.serializationWhitelists.toMutableList() }
+        override val serializationWhitelists: List<SerializationWhitelist>
+            get() = testSerializationWhitelists
 
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.

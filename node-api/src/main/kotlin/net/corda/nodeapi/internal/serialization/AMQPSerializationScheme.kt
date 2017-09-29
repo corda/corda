@@ -2,7 +2,6 @@
 
 package net.corda.nodeapi.internal.serialization
 
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
@@ -13,12 +12,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == AmqpHeaderV1_0
-
-class AMQPSerializationCustomization(val factory: SerializerFactory) : SerializationCustomization {
-    override fun addToWhitelist(vararg types: Class<*>) {
-        factory.addToWhitelist(*types)
-    }
-}
 
 fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     require(types.toSet().size == types.size) {
@@ -33,12 +26,12 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
 
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     internal companion object {
-        private val pluginRegistries: List<CordaPluginRegistry> by lazy {
-            ServiceLoader.load(CordaPluginRegistry::class.java, this::class.java.classLoader).toList()
+        private val serializationWhitelists: List<SerializationWhitelist> by lazy {
+            ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
         }
 
         fun registerCustomSerializers(factory: SerializerFactory) {
-            factory.apply {
+            with(factory) {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.X500NameSerializer)
@@ -67,8 +60,8 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.BitSetSerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.EnumSetSerializer(this))
             }
-            val customizer = AMQPSerializationCustomization(factory)
-            pluginRegistries.forEach { it.customizeSerialization(customizer) }
+            for (whitelistProvider in serializationWhitelists)
+                factory.addToWhitelist(*whitelistProvider.whitelist.toTypedArray())
         }
     }
 
