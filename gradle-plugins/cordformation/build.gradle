@@ -51,7 +51,7 @@ task createNodeRunner(type: Jar, dependsOn: [classes]) {
     manifest {
         attributes('Main-Class': 'net.corda.plugins.NodeRunnerKt')
     }
-    baseName = project.name + '-fatjar'
+    classifier = 'fatjar'
     from { configurations.noderunner.collect { it.isDirectory() ? it : zipTree(it) } }
     from sourceSets.runnodes.output
 }

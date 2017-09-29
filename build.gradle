@@ -60,6 +60,7 @@ buildscript {
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
+        classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
@@ -301,4 +302,8 @@ artifactory {
             publications('corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities')
         }
     }
+}
+
+task generateApi(type: net.corda.plugins.GenerateApi){
+    baseName = "api-corda"
 }
