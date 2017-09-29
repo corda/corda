@@ -37,7 +37,16 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val bftSMaRt: BFTSMaRtConfiguration
     val notaryNodeAddress: NetworkHostAndPort?
     val notaryClusterAddresses: List<NetworkHostAndPort>
+    val activeMQServer: ActiveMqServerConfiguration
 }
+
+data class BridgeConfiguration(
+        val retryIntervalMs: Long,
+        val maxRetryIntervalMin: Long,
+        val retryIntervalMultiplier: Double
+)
+
+data class ActiveMqServerConfiguration(val bridge: BridgeConfiguration)
 
 data class FullNodeConfiguration(
         /** This is not retrieved from the config file but rather from a command line argument. */
@@ -68,7 +77,8 @@ data class FullNodeConfiguration(
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
         val useTestClock: Boolean = false,
-        val detectPublicIp: Boolean = true
+        val detectPublicIp: Boolean = true,
+        override val activeMQServer: ActiveMqServerConfiguration
 ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
@@ -104,7 +114,7 @@ enum class CertChainPolicyType {
     MustContainOneOf
 }
 
-data class CertChainPolicyConfig(val role: String, val policy: CertChainPolicyType, val trustedAliases: Set<String>) {
+data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
     val certificateChainCheckPolicy: CertificateChainCheckPolicy get() {
         return when (policy) {
             CertChainPolicyType.Any -> CertificateChainCheckPolicy.Any

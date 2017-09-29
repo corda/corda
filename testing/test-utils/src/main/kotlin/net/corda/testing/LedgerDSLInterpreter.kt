@@ -127,7 +127,7 @@ class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<
         LedgerDSLInterpreter<TransactionDSLInterpreter> by interpreter {
 
     /**
-     * @see LedgerDSLInterpreter._transaction
+     * Creates and adds a transaction to the ledger.
      */
     @JvmOverloads
     fun transaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
@@ -135,7 +135,7 @@ class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<
             _transaction(label, transactionBuilder, dsl)
 
     /**
-     * @see LedgerDSLInterpreter._unverifiedTransaction
+     * Creates and adds a transaction to the ledger that will not be verified by [verifies].
      */
     @JvmOverloads
     fun unverifiedTransaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
@@ -143,7 +143,7 @@ class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<
             _unverifiedTransaction(label, transactionBuilder, dsl)
 
     /**
-     * @see OutputStateLookup.retrieveOutputStateAndRef
+     * Retrieves an output previously defined by [TransactionDSLInterpreter._output] with a label passed in.
      */
     inline fun <reified S : ContractState> String.outputStateAndRef(): StateAndRef<S> =
             retrieveOutputStateAndRef(S::class.java, this)
@@ -156,7 +156,7 @@ class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<
             outputStateAndRef<S>().state.data
 
     /**
-     * @see OutputStateLookup.retrieveOutputStateAndRef
+     * Retrieves an output previously defined by [TransactionDSLInterpreter._output] with a label passed in.
      */
     fun <S : ContractState> retrieveOutput(clazz: Class<S>, label: String) =
             retrieveOutputStateAndRef(clazz, label).state.data
