@@ -12,7 +12,7 @@ public class CordformNode implements NodeDefinition {
     /**
      * Path relative to the running node where the serialized NodeInfos are stored.
      */
-    public static final String NODE_INFO_FOLDER = "additional-node-infos";
+    public static final String NODE_INFO_DIRECTORY = "additional-node-infos";
 
     protected static final String DEFAULT_HOST = "localhost";
 

@@ -35,7 +35,7 @@ class ArgsParser {
     private val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
     private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
-            "Perform the node start-up task necessary to generate the nodeInfo, save it to disk, then quit")
+            "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
     private val helpArg = optionParser.accepts("help").forHelp()
 
     fun parse(vararg args: String): CmdLineOptions {

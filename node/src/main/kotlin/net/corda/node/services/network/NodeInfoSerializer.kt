@@ -57,7 +57,7 @@ class NodeInfoSerializer {
      */
     fun loadFromDirectory(nodePath: Path): List<NodeInfo> {
         val result = mutableListOf<NodeInfo>()
-        val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_FOLDER
+        val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
         if (!nodeInfoDirectory.isDirectory()) {
             logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
             return result
@@ -70,7 +70,7 @@ class NodeInfoSerializer {
                     val nodeInfo = loadFromFile(file)
                     result.add(nodeInfo)
                 } catch (e: Exception) {
-                    logger.error("Exception parsing NodeInfo from file. $file: " + e)
+                    logger.error("Exception parsing NodeInfo from file. $file" , e)
                 }
             }
         }

@@ -167,7 +167,7 @@ class Cordform extends DefaultTask {
                     project.copy {
                         from fullNodePath(source).toString()
                         include 'nodeInfo-*'
-                        into fullNodePath(destination).resolve(Node.NODE_INFO_FOLDER).toString()
+                        into fullNodePath(destination).resolve(Node.NODE_INFO_DIRECTORY).toString()
                     }
                 }
             }
