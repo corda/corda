@@ -21,8 +21,6 @@ dependencies {
     // Cordapp dependencies
     // GraphStream: For visualisation
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
-    compile "org.graphstream:gs-core:1.3"
-    compile "org.graphstream:gs-ui:1.3"
 }
 
 idea {
