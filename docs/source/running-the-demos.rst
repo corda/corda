@@ -261,7 +261,7 @@ What happens in the demo (notionally)
 *************************************
 
 Preliminaries
-    - Ensure that there are a number of live trades with another party financial products that are covered under the
+    - Ensure that there are a number of live trades with another party based on financial products that are covered under the
       ISDA SIMM agreement (if none, then use the demo to enter some simple trades as described below).
 
 Initial Margin Agreement Process
@@ -300,22 +300,23 @@ From the command line run
 The response should be something like
 
 .. sourcecode:: none
-  {
-      "self" : {
-          "id" : "8Kqd4oWdx4KQGHGQW3FwXHQpjiv7cHaSsaAWMwRrK25bBJj792Z4rag7EtA",
-          "text" : "C=GB,L=London,O=Bank A"
-      },
-      "counterparties" : [
-          {
-              "id" : "8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM",
-              "text" : "C=JP,L=Tokyo,O=Bank C"
-          },
-          {
-              "id" : "8Kqd4oWdx4KQGHGTBm34eCM2nrpcWKeM1ZG3DUYat3JTFUQTwB3Lv2WbPM8",
-              "text" : "C=US,L=New York,O=Bank B"
-          }
-      ]
-  }
+
+    {
+        "self" : {
+            "id" : "8Kqd4oWdx4KQGHGQW3FwXHQpjiv7cHaSsaAWMwRrK25bBJj792Z4rag7EtA",
+            "text" : "C=GB,L=London,O=Bank A"
+        },
+        "counterparties" : [
+            {
+                "id" : "8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM",
+                "text" : "C=JP,L=Tokyo,O=Bank C"
+            },
+            {
+                "id" : "8Kqd4oWdx4KQGHGTBm34eCM2nrpcWKeM1ZG3DUYat3JTFUQTwB3Lv2WbPM8",
+                "text" : "C=US,L=New York,O=Bank B"
+            }
+        ]
+    }
 
 Now, if we ask the same question of Bank C we will see that it's id matches the id for Bank C as a counter
 party to Bank A and Bank A will appear as a counter party
@@ -324,13 +325,11 @@ party to Bank A and Bank A will appear as a counter party
 
   curl -i -H "Content-Type: application/json" -X GET http://localhost:10011/api/simmvaluationdemo/whoami
 
-..sourcecode:: none
-
-
-
 **Creating a trade with Bank C**
 
-notice the id field in the output of the ``whoami`` command, we are going to use the id assocatied
+In what follows, we assume we are Bank A (which is listening on port 10005)
+
+Notice the id field in the output of the ``whoami`` command. We are going to use the id assocatied
 with Bank C, one of our counter parties, to create a trade. The general command for this is:
 
 .. sourcecode:: bash
@@ -350,14 +349,17 @@ where the representation of the trade is
       "endDate"     : [ 2020, 1, 2 ],
       "buySell"     : "BUY",
       "notional"    : "1000",
-      "fixedRate" : "0.1"
+      "fixedRate"   : "0.1"
   }
 
-The final command to execute is thus
+Continuing our example, the specific command we would run is
 
 .. sourcecode:: bash
 
-  curl -i -H "Content-Type: application/json" -X PUT -d '{"id":"trade1","description" : "desc","tradeDate" : [ 2016, 6, 6 ],  "convention" : "EUR_FIXED_1Y_EURIBOR_3M",  "startDate" : [ 2016, 6, 6 ],  "endDate" : [ 2020, 1, 2 ],  "buySell" : "BUY",  "notional" : "1000",  "fixedRate" : "0.1"}' http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/trades
+    curl -i -H "Content-Type: application/json" \
+        -X PUT \
+        -d '{"id":"trade1","description" : "desc","tradeDate" : [ 2016, 6, 6 ],  "convention" : "EUR_FIXED_1Y_EURIBOR_3M",  "startDate" : [ 2016, 6, 6 ],  "endDate" : [ 2020, 1, 2 ],  "buySell" : "BUY",  "notional" : "1000",  "fixedRate" : "0.1"}' \
+        http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/trades
 
 With an expected response of
 
@@ -372,11 +374,15 @@ With an expected response of
 
 **Verifying trade completion**
 
-The complete list of trades with our couterparty can be seen with
+With the trade completed and stored by both parties, the complete list of trades with our couterparty can be seen with the following command
 
 .. sourcecode:: bash
 
   curl -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades
+
+The command for our example, using Bank A, would thus be
+
+.. sourcecode:: bash
 
   curl -X GET http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/trades
 
@@ -386,23 +392,44 @@ whilst a specific trade can be seen with
 
  curl  -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades/<<<trade id>>>
 
+If we look at the trade we created above, we assigned it the id "trade1", the complete command in this case would be
+
+.. sourcecode:: bash
+
  curl  -X GET http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/trades/trade1
 
 **Generating a valuation**
 
 .. sourcecode:: bash
 
-   curl -i -H "Content-Type: application/json" -X POST -d  <<<JSON representation>>> http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations/calculate
+    curl -i -H "Content-Type: application/json" \
+        -X POST \
+        -d <<<JSON representation>>>
+        http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations/calculate
 
-   curl -i -H "Content-Type: application/json" -X POST -d '{"valuationDate":[2016,6,6]}' http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzLumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/portfolio/valuations/calculate
+Again, the specific command to continue our example would be
+
+.. sourcecode:: bash
+
+    curl -i -H "Content-Type: application/json" \
+        -X POST \
+        -d '{"valuationDate":[2016,6,6]}' \
+        http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzLumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/portfolio/valuations/calculate
 
 **Viewing a valuation**
+
+In the same way we can ask for specific instances of trades with a counter party, we can request details of valuations
 
 .. sourcecode:: bash
 
   curl -i -H "Content-Type: application/json" -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations
 
-  curl -i -H "Content-Type: application/json" -X GET http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65YwQM/portfolio/valuations
+The specific command for out Bank A example is
+
+.. sourcecode:: bash
+
+  curl -i -H "Content-Type: application/json" \
+    -X GET http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65YwQM/portfolio/valuations
 
 
 
