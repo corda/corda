@@ -27,7 +27,6 @@ buildscript {
     ext.jersey_version = '2.25'
     ext.jolokia_version = '2.0.0-M3'
     ext.assertj_version = '3.6.1'
-    ext.kotlintest_version = '2.0.5'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.7'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")

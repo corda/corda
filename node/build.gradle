@@ -127,7 +127,6 @@ dependencies {
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
-    testCompile "io.kotlintest:kotlintest:${kotlintest_version}"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':finance')
