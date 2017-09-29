@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.internal.VisibleForTesting
 import com.google.common.primitives.Primitives
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.flows.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -17,7 +18,7 @@ import kotlin.reflect.jvm.javaType
  * The internal concrete implementation of the FlowLogicRef marker interface.
  */
 @CordaSerializable
-data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String, val appContext: AppContext, val args: Map<String, Any?>) : FlowLogicRef
+data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String, val args: Map<String, Any?>) : FlowLogicRef
 
 /**
  * A class for conversion to and from [FlowLogic] and [FlowLogicRef] instances.
@@ -32,6 +33,9 @@ data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String,
  * in response to a potential malicious use or buggy update to an app etc.
  */
 object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactory {
+    // TODO: Replace with a per app classloader/cordapp provider/cordapp loader - this will do for now
+    var classloader = javaClass.classLoader
+
     override fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
             throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
@@ -73,17 +77,14 @@ object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactor
      */
     @VisibleForTesting
     internal fun createKotlin(type: Class<out FlowLogic<*>>, args: Map<String, Any?>): FlowLogicRef {
-        // TODO: we need to capture something about the class loader or "application context" into the ref,
-        //       perhaps as some sort of ThreadLocal style object.  For now, just create an empty one.
-        val appContext = AppContext(emptyList())
         // Check we can find a constructor and populate the args to it, but don't call it
         createConstructor(type, args)
-        return FlowLogicRefImpl(type.name, appContext, args)
+        return FlowLogicRefImpl(type.name, args)
     }
 
     fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*> {
         if (ref !is FlowLogicRefImpl) throw IllegalFlowLogicException(ref.javaClass, "FlowLogicRef was not created via correct FlowLogicRefFactory interface")
-        val klass = Class.forName(ref.flowLogicClassName, true, ref.appContext.classLoader).asSubclass(FlowLogic::class.java)
+        val klass = Class.forName(ref.flowLogicClassName, true, classloader).asSubclass(FlowLogic::class.java)
         return createConstructor(klass, ref.args)()
     }
 
