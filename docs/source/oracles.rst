@@ -101,24 +101,28 @@ class that binds it to the network layer.
 
 Here is an extract from the ``NodeInterestRates.Oracle`` class and supporting types:
 
+.. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/FinanceTypes.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
+
+.. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/FinanceTypes.kt
+    :language: kotlin
+    :start-after: DOCSTART 2
+    :end-before: DOCEND 2
+
 .. sourcecode:: kotlin
 
-   /** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc) */
-   data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
-
-   /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
-   data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
-
    class Oracle {
-       fun query(queries: List<FixOf>, deadline: Instant): List<Fix>
+       fun query(queries: List<FixOf>): List<Fix>
 
-       fun sign(ftx: FilteredTransaction, txId: SecureHash): TransactionSignature
+       fun sign(ftx: FilteredTransaction): TransactionSignature
    }
 
 Because the fix contains a timestamp (the ``forDay`` field), that identifies the version of the data being requested,
-there can be an arbitrary delay between a fix being requested via ``query`` and the signature being requested via ``sign``
-as the Oracle can know which, potentially historical, value it is being asked to sign for.  This is an important
-technique for continuously varying data.
+there can be an arbitrary delay between a fix being requested via ``query`` and the signature being requested via
+``sign`` as the Oracle can know which, potentially historical, value it is being asked to sign for.  This is an
+important technique for continuously varying data.
 
 The ``query`` method takes a deadline, which is a point in time the requester is willing to wait until for the necessary
 data to be available.  Not every oracle will need this.  This can be useful where data is expected to be available on a
@@ -161,19 +165,17 @@ method (``FixOf`` above), and a ``CommandData`` implementation (``Fix`` above) t
 that parameter class and an instance of whatever the result of the ``query`` is (``BigDecimal`` above).
 
 The ``NodeInterestRates.Oracle`` allows querying for multiple ``Fix``-es but that is not necessary and is
-provided for the convenience of callers who might need multiple and can do it all in one query request.  Likewise
-the *deadline* functionality is optional and can be avoided initially.
+provided for the convenience of callers who might need multiple and can do it all in one query request.
 
 Let's see what parameters we pass to the constructor of this oracle.
 
 .. sourcecode:: kotlin
 
-   class Oracle(val identity: Party, private val signingKey: PublicKey, val clock: Clock) = TODO()
+   class Oracle(private val services: ServiceHub)
 
 Here we see the oracle needs to have its own identity, so it can check which transaction commands it is expected to
-sign for, and also needs the PublicKey portion of its signing key. Later this PublicKey will be passed to the KeyManagementService
-to identify the internal PrivateKey used for transaction signing.
-The clock is used for the deadline functionality which we will not discuss further here.
+sign for, and also needs the PublicKey portion of its signing key. Later this PublicKey will be passed to the
+`KeyManagementService` to identify the internal PrivateKey used for transaction signing.
 
 Assuming you have a data source and can query it, it should be very easy to implement your ``query`` method and the
 parameter and ``CommandData`` classes.
@@ -184,6 +186,7 @@ Let's see how the ``sign`` method for ``NodeInterestRates.Oracle`` is written:
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
+   :dedent: 8
 
 Here we can see that there are several steps:
 
@@ -209,6 +212,7 @@ done:
    :language: kotlin
    :start-after: DOCSTART 3
    :end-before: DOCEND 3
+   :dedent: 4
 
 The Corda node scans for any class with this annotation and initialises them. The only requirement is that the class provide
 a constructor with a single parameter of type ``ServiceHub``.
@@ -217,6 +221,7 @@ a constructor with a single parameter of type ``ServiceHub``.
    :language: kotlin
    :start-after: DOCSTART 2
    :end-before: DOCEND 2
+   :dedent: 4
 
 These two flows leverage the oracle to provide the querying and signing operations. They get reference to the oracle,
 which will have already been initialised by the node, using ``ServiceHub.cordappProvider``. Both flows are annotated with
@@ -234,6 +239,7 @@ those for ``NodeInterestRates.Oracle``.
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
+   :dedent: 4
 
 You'll note that the ``FixSignFlow`` requires a ``FilterTransaction`` instance which includes only ``Fix`` commands.
 You can find a further explanation of this in :doc:`merkle-trees`. Below you will see how to build such transaction with
@@ -252,6 +258,7 @@ called ``RatesFixFlow``.  Here's the ``call`` method of that flow.
    :language: kotlin
    :start-after: DOCSTART 2
    :end-before: DOCEND 2
+   :dedent: 4
 
 As you can see, this:
 
@@ -269,6 +276,7 @@ Here's an example of it in action from ``FixingFlow.Fixer``.
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
+   :dedent: 4
 
 .. note::
     When overriding be careful when making the sub-class an anonymous or inner class (object declarations in Kotlin),

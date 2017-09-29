@@ -167,6 +167,7 @@ the ``VaultService`` as follows:
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
+    :dedent: 8
 
 Generating Commands
 -------------------
@@ -221,6 +222,7 @@ the total cash. For example from the demo code:
     :language: kotlin
     :start-after: DOCSTART 2
     :end-before: DOCEND 2
+    :dedent: 4
 
 Building the WireTransaction
 ----------------------------
@@ -237,11 +239,13 @@ transaction. Examples of this process are:
     :language: kotlin
     :start-after: DOCSTART 2
     :end-before: DOCEND 2
+    :dedent: 8
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/FxTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 3
     :end-before: DOCEND 3
+    :dedent: 4
 
 Completing the SignedTransaction
 --------------------------------
@@ -276,6 +280,7 @@ expected for this specific flow. An example of this from the demo code is:
     :language: kotlin
     :start-after: DOCSTART 3
     :end-before: DOCEND 3
+    :dedent: 8
 
 After verification the remote flow will return its signature to the
 originator. The originator should apply that signature to the starting
@@ -296,6 +301,7 @@ an example is:
     :language: kotlin
     :start-after: DOCSTART 4
     :end-before: DOCEND 4
+    :dedent: 8
 
 Partially Visible Transactions
 ------------------------------

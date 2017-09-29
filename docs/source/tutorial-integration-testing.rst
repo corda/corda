@@ -21,6 +21,7 @@ service and safe shutting down of nodes in the background.
     :language: kotlin
     :start-after: START 1
     :end-before: END 1
+    :dedent: 8
 
 The above code creates a ``User`` permissioned to start the
 ``CashFlow`` protocol. It then starts up Alice and Bob with this user,
@@ -43,6 +44,7 @@ have race conditions with network map registration.
     :language: kotlin
     :start-after: START 2
     :end-before: END 2
+    :dedent: 12
 
 Next we connect to Alice and Bob respectively from the test process
 using the test user we created. Then we establish RPC links that allow
@@ -52,6 +54,7 @@ us to start flows and query state.
     :language: kotlin
     :start-after: START 3
     :end-before: END 3
+    :dedent: 12
 
 We will be interested in changes to Alice's and Bob's vault, so we
 query a stream of vault updates from each.
@@ -62,6 +65,7 @@ Now that we're all set up we can finally get some Cash action going!
     :language: kotlin
     :start-after: START 4
     :end-before: END 4
+    :dedent: 12
 
 The first loop creates 10 threads, each starting a ``CashFlow`` flow
 on the Alice node. We specify that we want to issue ``i`` dollars to
@@ -90,6 +94,7 @@ Next we want Bob to send this Cash back to Alice.
     :language: kotlin
     :start-after: START 5
     :end-before: END 5
+    :dedent: 12
 
 This time we'll do it sequentially. We make Bob pay 1,2,..10 dollars
 to Alice in order. We make sure that a the ``CashFlow`` has finished
