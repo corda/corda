@@ -54,6 +54,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
             return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
         } catch(e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
             // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
+            // TODO: Revisit this when Kotlin issue is fixed.
             logger.error("Unexpected internal Kotlin error", e)
             return true
         }
