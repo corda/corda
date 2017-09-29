@@ -5,6 +5,8 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.toLedgerTransaction
+import net.corda.core.internal.toWireTransaction
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
