@@ -31,6 +31,7 @@ val DUMMY_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20))
 /** Dummy notary identity for tests and simulations */
 val DUMMY_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_NOTARY)
 val DUMMY_NOTARY: Party get() = Party(CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"), DUMMY_NOTARY_KEY.public)
+val DUMMY_NOTARY_SERVICE_NAME: CordaX500Name = DUMMY_NOTARY.name.copy(commonName = "corda.notary.validating")
 
 val DUMMY_MAP_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(30)) }
 /** Dummy network map service identity for tests and simulations */

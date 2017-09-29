@@ -19,7 +19,6 @@ import kotlin.test.assertEquals
 
 class WorkflowTransactionBuildTutorialTest {
     lateinit var mockNet: MockNetwork
-    lateinit var notaryServices: ServiceHubInternal
     lateinit var aliceServices: ServiceHubInternal
     lateinit var bobServices: ServiceHubInternal
     lateinit var alice: Party
@@ -40,9 +39,8 @@ class WorkflowTransactionBuildTutorialTest {
         aliceNode.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)
         aliceServices = aliceNode.services
         bobServices = bobNode.services
-        notaryServices = notaryNode.services
-        alice = notaryServices.identityService.wellKnownPartyFromX500Name(ALICE_NAME)!!
-        bob = notaryServices.identityService.wellKnownPartyFromX500Name(BOB_NAME)!!
+        alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
+        bob = notaryNode.services.networkMapCache.getPeerByLegalName(BOB_NAME)!!
     }
 
     @After
