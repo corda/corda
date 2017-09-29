@@ -139,6 +139,6 @@ The shell will be enhanced over time. The currently known limitations include:
 * The ``jul`` command advertises access to logs, but it doesn't work with the logging framework we're using.
 
 .. _Yaml: http://www.yaml.org/spec/1.2/spec.html
-.. _the defined parsers: api/kotlin/corda/net.corda.jackson/-jackson-support/index.html
+.. _the defined parsers: api/kotlin/corda/net.corda.client.jackson/-jackson-support/index.html
 .. _Groovy: http://groovy-lang.org/
 .. _CRaSH: http://www.crashub.org/
