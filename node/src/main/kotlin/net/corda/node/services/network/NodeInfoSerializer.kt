@@ -3,6 +3,7 @@ package net.corda.node.services.network
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.isDirectory
 import net.corda.core.node.NodeInfo
@@ -12,6 +13,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -35,7 +37,7 @@ class NodeInfoSerializer {
      */
     fun saveToFile(path: Path, nodeInfo: NodeInfo, keyManager: KeyManagementService) {
         try {
-            path.toFile().mkdirs()
+            path.createDirectories()
             val serializedBytes = nodeInfo.serialize()
             val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
             val signedData = SignedData(serializedBytes, regSig)
@@ -60,7 +62,8 @@ class NodeInfoSerializer {
             logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
             return result
         }
-        for (file in nodeInfoDirectory.toFile().walk().maxDepth(1))
+        for (path in Files.list(nodeInfoDirectory)) {
+            val file = path.toFile()
             if (file.isFile) {
                 try {
                     logger.info("Reading NodeInfo from file: $file")
@@ -70,6 +73,7 @@ class NodeInfoSerializer {
                     logger.error("Exception parsing NodeInfo from file. $file: " + e)
                 }
             }
+        }
         logger.info("Succesfully read ${result.size} NodeInfo files.")
         return result
     }
