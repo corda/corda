@@ -12,7 +12,7 @@ import java.time.Instant
 /**
  * This interface defines the bare bone functionality that a Transaction DSL interpreter should implement.
  * @param <R> The return type of [verifies]/[failsWith] and the like. It is generic so that we have control over whether
- * we want to enforce users to call these methods (@see [EnforceVerifyOrFail]) or not.
+ * we want to enforce users to call these methods (see [EnforceVerifyOrFail]) or not.
  */
 interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     /**
@@ -33,7 +33,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param encumbrance The position of the encumbrance state.
      * @param attachmentConstraint The attachment constraint
      * @param contractState The state itself.
-     * @params contractClassName The class name of the contract that verifies this state.
+     * @param contractClassName The class name of the contract that verifies this state.
      */
     fun _output(contractClassName: ContractClassName,
                 label: String?,
@@ -96,7 +96,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     fun input(contractClassName: ContractClassName, stateClosure: () -> ContractState) = input(contractClassName, stateClosure())
 
     /**
-     * @see TransactionDSLInterpreter._output
+     * Adds an output to the transaction.
      */
     @JvmOverloads
     fun output(contractClassName: ContractClassName,
@@ -108,24 +108,27 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
             _output(contractClassName, label, notary, encumbrance, attachmentConstraint, contractStateClosure())
 
     /**
-     * @see TransactionDSLInterpreter._output
+     * Adds a labelled output to the transaction.
      */
     @JvmOverloads
     fun output(contractClassName: ContractClassName, label: String, contractState: ContractState, attachmentConstraint: AttachmentConstraint = AutomaticHashConstraint) =
             _output(contractClassName, label, DUMMY_NOTARY, null, attachmentConstraint, contractState)
 
+    /**
+     * Adds an output to the transaction.
+     */
     @JvmOverloads
     fun output(contractClassName: ContractClassName, contractState: ContractState, attachmentConstraint: AttachmentConstraint = AutomaticHashConstraint) =
             _output(contractClassName,null, DUMMY_NOTARY, null, attachmentConstraint, contractState)
 
     /**
-     * @see TransactionDSLInterpreter._command
+     * Adds a command to the transaction.
      */
     fun command(vararg signers: PublicKey, commandDataClosure: () -> CommandData) =
             _command(listOf(*signers), commandDataClosure())
 
     /**
-     * @see TransactionDSLInterpreter._command
+     * Adds a command to the transaction.
      */
     fun command(signer: PublicKey, commandData: CommandData) = _command(listOf(signer), commandData)
 

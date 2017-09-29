@@ -104,7 +104,7 @@ class FilteredTransaction private constructor(
          * Construction of partial transaction from [WireTransaction] based on filtering.
          * Note that list of nonces to be sent is updated on the fly, based on the index of the filtered tx component.
          * @param filtering filtering over the whole WireTransaction.
-         * @returns a list of [FilteredComponentGroup] used in PartialMerkleTree calculation and verification.
+         * @return a list of [FilteredComponentGroup] used in PartialMerkleTree calculation and verification.
          */
         private fun filterWithFun(wtx: WireTransaction, filtering: Predicate<Any>): List<FilteredComponentGroup> {
             val filteredSerialisedComponents: MutableMap<Int, MutableList<OpaqueBytes>> = hashMapOf()
@@ -196,7 +196,7 @@ class FilteredTransaction private constructor(
      * over a transaction with the attachment that wasn't verified. Of course it depends on how you implement it, but else -> false
      * should solve a problem with possible later extensions to WireTransaction.
      * @param checkingFun function that performs type checking on the structure fields and provides verification logic accordingly.
-     * @returns false if no elements were matched on a structure or checkingFun returned false.
+     * @return false if no elements were matched on a structure or checkingFun returned false.
      */
     fun checkWithFun(checkingFun: (Any) -> Boolean): Boolean {
         val checkList = availableComponentGroups.flatten().map { checkingFun(it) }
