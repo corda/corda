@@ -6,6 +6,7 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.*
@@ -146,6 +147,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
     lateinit var cordappProvider: CordappProviderImpl
+    protected val cordappLoader by lazy { makeCordappLoader() }
 
     protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service
@@ -229,7 +231,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
+    private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
     private fun installCordaServices() {
         cordappProvider.cordapps.flatMap { it.services }.forEach {
@@ -379,7 +381,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        cordappProvider = CordappProviderImpl(makeCordappLoader())
+        cordappProvider = CordappProviderImpl(cordappLoader)
         _services = ServiceHubInternalImpl()
         attachments = NodeAttachmentService(services.monitoringService.metrics)
         cordappProvider.start(attachments)
@@ -400,10 +402,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val scanPackages = System.getProperty("net.corda.node.cordapp.scan.packages")
         return if (CordappLoader.testPackages.isNotEmpty()) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createWithTestPackages(CordappLoader.testPackages)
+            CordappLoader.createDefaultWithTestPackages(configuration.baseDirectory, CordappLoader.testPackages)
         } else if (scanPackages != null) {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createWithTestPackages(scanPackages.split(","))
+            CordappLoader.createDefaultWithTestPackages(configuration.baseDirectory, scanPackages.split(","))
         } else {
             CordappLoader.createDefault(configuration.baseDirectory)
         }
@@ -465,7 +467,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     // Specific class so that MockNode can catch it.
-    class DatabaseConfigurationException(msg: String) : Exception(msg)
+    class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
     protected open fun <T> initialiseDatabasePersistence(insideTransaction: () -> T): T {
         val props = configuration.dataSourceProperties

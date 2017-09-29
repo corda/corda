@@ -61,6 +61,14 @@ one node as running the network map service, by putting their name in the ``netw
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
+If your CorDapp is written in Java, you should also add the following Gradle snippet so that you can pass named arguments to your flows via the Corda shell:
+
+.. sourcecode:: groovy
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-parameters"
+    }
+
 Any CorDapps defined in the project's source folders are also automatically registered with all the nodes defined in
 ``deployNodes``, even if the CorDapps are not listed in each node's ``cordapps`` entry.
 

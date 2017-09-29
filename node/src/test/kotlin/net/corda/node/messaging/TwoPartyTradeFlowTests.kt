@@ -33,12 +33,12 @@ import net.corda.finance.contracts.asset.*
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -48,6 +48,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import rx.Observable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -66,7 +68,15 @@ import kotlin.test.assertTrue
  *
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
-class TwoPartyTradeFlowTests {
+@RunWith(Parameterized::class)
+class TwoPartyTradeFlowTests(val anonymous: Boolean) {
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters
+        fun data(): Collection<Boolean> {
+            return listOf(true, false)
+        }
+    }
     private lateinit var mockNet: MockNetwork
 
     @Before
@@ -541,8 +551,7 @@ class TwoPartyTradeFlowTests {
     private fun runBuyerAndSeller(notary: Party,
                                   sellerNode: StartedNode<MockNetwork.MockNode>,
                                   buyerNode: StartedNode<MockNetwork.MockNode>,
-                                  assetToSell: StateAndRef<OwnableState>,
-                                  anonymous: Boolean = true): RunResult {
+                                  assetToSell: StateAndRef<OwnableState>): RunResult {
         val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.internals.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
         val seller = SellerInitiator(buyerNode.info.chooseIdentity(), notary, assetToSell, 1000.DOLLARS, anonymous)
