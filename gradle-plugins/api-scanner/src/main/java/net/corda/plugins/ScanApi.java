@@ -13,6 +13,9 @@ import org.gradle.api.tasks.OutputFiles;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.*;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,6 +31,14 @@ public class ScanApi extends DefaultTask {
     private static final int METHOD_MASK = Modifier.methodModifiers();
     private static final int FIELD_MASK = Modifier.fieldModifiers();
     private static final int VISIBILITY_MASK = Modifier.PUBLIC | Modifier.PROTECTED;
+
+    /**
+     * This information has been lifted from:
+     * @link <a href="https://github.com/JetBrains/kotlin/blob/master/core/runtime.jvm/src/kotlin/Metadata.kt">Metadata.kt</a>
+     */
+    private static final String KOTLIN_METADATA = "kotlin.Metadata";
+    private static final String KOTLIN_CLASSTYPE_METHOD = "k";
+    private static final int KOTLIN_SYNTHETIC = 3;
 
     private final ConfigurableFileCollection sources;
     private final ConfigurableFileCollection classpath;
@@ -96,9 +107,25 @@ public class ScanApi extends DefaultTask {
 
     class Scanner implements Closeable {
         private final URLClassLoader classpathLoader;
+        private final Class<? extends Annotation> metadataClass;
+        private final Method classTypeMethod;
 
+        @SuppressWarnings("unchecked")
         Scanner(URLClassLoader classpathLoader) {
             this.classpathLoader = classpathLoader;
+
+            Class<? extends Annotation> kClass;
+            Method kMethod;
+            try {
+                kClass = (Class<Annotation>) Class.forName(KOTLIN_METADATA, true, classpathLoader);
+                kMethod = kClass.getDeclaredMethod(KOTLIN_CLASSTYPE_METHOD);
+            } catch (ClassNotFoundException | NoSuchMethodException e) {
+                kClass = null;
+                kMethod = null;
+            }
+
+            metadataClass = kClass;
+            classTypeMethod = kMethod;
         }
 
         Scanner(FileCollection classpath) throws MalformedURLException {
@@ -139,6 +166,7 @@ public class ScanApi extends DefaultTask {
             Map<String, ClassInfo> allInfo = result.getClassNameToClassInfo();
             result.getNamesOfAllClasses().forEach(className -> {
                 if (className.contains(".internal.")) {
+                    // These classes belong to internal Corda packages.
                     return;
                 }
                 ClassInfo classInfo = allInfo.get(className);
@@ -150,6 +178,12 @@ public class ScanApi extends DefaultTask {
                 Class<?> javaClass = result.classNameToClassRef(className);
                 if (!isVisible(javaClass.getModifiers())) {
                     // Excludes private and package-protected classes
+                    return;
+                }
+
+                int kotlinClassType = getKotlinClassType(javaClass);
+                if (kotlinClassType == KOTLIN_SYNTHETIC) {
+                    // Exclude classes synthesised by the Kotlin compiler.
                     return;
                 }
 
@@ -189,9 +223,9 @@ public class ScanApi extends DefaultTask {
         private void writeMethods(PrintWriter writer, List<MethodInfo> methods) {
             Collections.sort(methods);
             for (MethodInfo method : methods) {
-                if (isVisible(method.getAccessFlags())
-                        && isValid(method.getAccessFlags(), METHOD_MASK)
-                        && !isKotlinInternal(method)) {
+                if (isVisible(method.getAccessFlags()) // Only public and protected methods
+                        && isValid(method.getAccessFlags(), METHOD_MASK) // Excludes bridge and synthetic methods
+                        && !isKotlinInternalScope(method)) {
                     writer.append("  ").println(method);
                 }
             }
@@ -205,9 +239,23 @@ public class ScanApi extends DefaultTask {
                 }
             }
         }
+
+        private int getKotlinClassType(Class<?> javaClass) {
+            if (metadataClass != null) {
+                Annotation metadata = javaClass.getAnnotation(metadataClass);
+                if (metadata != null) {
+                    try {
+                        return (int) classTypeMethod.invoke(metadata);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        getLogger().error("Failed to read Kotlin annotation", e);
+                    }
+                }
+            }
+            return 0;
+        }
     }
 
-    private static boolean isKotlinInternal(MethodInfo method) {
+    private static boolean isKotlinInternalScope(MethodInfo method) {
         return method.getMethodName().indexOf('$') >= 0;
     }
 
