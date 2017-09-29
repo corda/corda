@@ -24,6 +24,10 @@ RPC client interface to Corda, for use both by user-facing client and integratio
 
 Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
+# Package net.corda.core
+
+Exception types and some utilities for working with observables and futures.
+
 # Package net.corda.core.cordapp
 
 This package contains the interface to CorDapps from within a node. A CorDapp can access its own context by using
@@ -59,10 +63,6 @@ processes such as handling fixing of interest rate swaps.
 # Package net.corda.core.identity
 
 Data classes which model different forms of identity (potentially with supporting evidence) for legal entities and services.
-
-# Package net.corda.core.internal
-
-Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
 # Package net.corda.core.messaging
 

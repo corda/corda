@@ -8,12 +8,13 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.classloading.requireAnnotation
+import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Modifier
@@ -222,10 +223,10 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         return (scanResult.getNamesOfClassesImplementing(Contract::class.java) + scanResult.getNamesOfClassesImplementing(UpgradedContract::class.java)).distinct()
     }
 
-    private fun findPlugins(cordappJarPath: URL): List<CordaPluginRegistry> {
-        return ServiceLoader.load(CordaPluginRegistry::class.java, URLClassLoader(arrayOf(cordappJarPath), appClassLoader)).toList().filter {
+    private fun findPlugins(cordappJarPath: URL): List<SerializationWhitelist> {
+        return ServiceLoader.load(SerializationWhitelist::class.java, URLClassLoader(arrayOf(cordappJarPath), appClassLoader)).toList().filter {
             cordappJarPath == it.javaClass.protectionDomain.codeSource.location
-        }
+        } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
     }
 
     private fun findCustomSchemas(scanResult: ScanResult): Set<MappedSchema> {

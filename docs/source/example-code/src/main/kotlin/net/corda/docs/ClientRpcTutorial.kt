@@ -4,9 +4,8 @@ import net.corda.core.contracts.Amount
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationCustomization
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -16,9 +15,9 @@ import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
@@ -142,12 +141,8 @@ data class ExampleRPCValue(val foo: String)
 @CordaSerializable
 data class ExampleRPCValue2(val bar: Int)
 
-class ExampleRPCCordaPluginRegistry : CordaPluginRegistry() {
-    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
-        // Add classes like this.
-        custom.addToWhitelist(ExampleRPCValue::class.java)
-        // You should return true, otherwise your plugin will be ignored for registering classes with Kryo.
-        return true
-    }
+class ExampleRPCSerializationWhitelist : SerializationWhitelist {
+    // Add classes like this.
+    override val whitelist = listOf(ExampleRPCValue::class.java)
 }
 // END 7
