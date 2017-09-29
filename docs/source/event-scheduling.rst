@@ -42,7 +42,7 @@ There are two main steps to implementing scheduled events:
   ``nextScheduledActivity`` to be implemented which returns an optional ``ScheduledActivity`` instance.
   ``ScheduledActivity`` captures what ``FlowLogic`` instance each node will run, to perform the activity, and when it
   will run is described by a ``java.time.Instant``.  Once your state implements this interface and is tracked by the
-  wallet, it can expect to be queried for the next activity when committed to the wallet. The ``FlowLogic`` must be
+  vault, it can expect to be queried for the next activity when committed to the vault. The ``FlowLogic`` must be
   annotated with ``@SchedulableFlow``.
 * If nothing suitable exists, implement a ``FlowLogic`` to be executed by each node as the activity itself.
   The important thing to remember is that in the current implementation, each node that is party to the transaction
@@ -58,7 +58,7 @@ handler to help with obtaining a unique and secure random session.  An example i
 The production and consumption of ``ContractStates`` is observed by the scheduler and the activities associated with
 any consumed states are unscheduled.  Any newly produced states are then queried via the ``nextScheduledActivity``
 method and if they do not return ``null`` then that activity is scheduled based on the content of the
-``ScheduledActivity`` object returned. Be aware that this *only* happens if the wallet considers the state
+``ScheduledActivity`` object returned. Be aware that this *only* happens if the vault considers the state
 "relevant", for instance, because the owner of the node also owns that state. States that your node happens to
 encounter but which aren't related to yourself will not have any activities scheduled.
 
