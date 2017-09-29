@@ -101,7 +101,7 @@ has finished. These calls will cause the ``AbstractNode`` to use the named packa
 within those packages will be zipped into a JAR and added to the attachment store and loaded as CorDapps by the
 ``CordappLoader``. An example of this usage would be:
 
-.. sourcecode:: kotlin
+.. sourcecode:: java
 
     class SomeTestClass {
          MockNetwork network = null
