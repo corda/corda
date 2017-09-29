@@ -62,6 +62,8 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+
     directory "./build/nodes"
     networkMap "O=Notary Service,L=Zurich,C=CH"
     node {
@@ -75,21 +77,27 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         advertisedServices = []
         p2pPort 10004
         webPort 10005
+        rpcPort 10006
         cordapps = ["net.corda:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
     }
     node {
         name "O=Bank B,L=New York,C=US"
         advertisedServices = []
-        p2pPort 10006
-        webPort 10007
+        p2pPort 10007
+        webPort 10008
+        rpcPort 10009
         cordapps = ["net.corda:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
     }
     node {
         name "O=Bank C,L=Tokyo,C=JP"
         advertisedServices = []
-        p2pPort 10008
-        webPort 10009
+        p2pPort 10010
+        webPort 10011
+        rpcPort 10012
         cordapps = ["net.corda:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
     }
 }
 
