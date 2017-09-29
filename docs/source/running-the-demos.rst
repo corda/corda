@@ -230,14 +230,11 @@ This app is a demonstration of how Corda can be used for the real world requirem
 agreement; featuring the integration of complex and industry proven third party libraries into Corda nodes.
 
 SIMM is an acronym for "Standard Initial Margin Model". It is effectively the calculation of a "margin" that is paid
-by one party to another when they agree a trade on certain types of transaction. This margin is
-paid such that, in the event of one of the counterparties suffering a credit event
-(a financial term and a polite way to say defaulting, not paying the debts that are due, or potentially even bankruptcy),
-then the party that is owed any sum already has some of the amount that it should have been paid. This payment to the
-receiving party is a preventative measure in order to reduce the risk of a potentially catastrophic default domino
-effect that caused the `Great Financial Crisis <https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%932008>`_,
-as it means that they can be assured that if they need to pay another party, they will have a proportion of the funds
-that they have been relying on.
+by one party to another when they agree a trade on certain types of transaction.
+
+The SIMM was introduced to standardise the calculation of how much margin counterparties charge each other on their
+bilateral transactions. Before SIMM, each counterparty computed margins according to its own model and it was made it very
+ difficult to agree exact margin with the counterparty that faces the same trade on the other side.
 
 To enact this, in September 2016, the ISDA committee - with full backing from various governing bodies -
 `issued a ruling on what is known as the ISDA SIMM ™ model <http://www2.isda.org/news/isda-simm-deployed-today-new-industry-standard-for-calculating-initial-margin-widely-adopted-by-market-participants>`_,
