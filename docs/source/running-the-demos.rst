@@ -234,7 +234,7 @@ by one party to another when they agree a trade on certain types of transaction.
 
 The SIMM was introduced to standardise the calculation of how much margin counterparties charge each other on their
 bilateral transactions. Before SIMM, each counterparty computed margins according to its own model and it was made it very
- difficult to agree exact margin with the counterparty that faces the same trade on the other side.
+ difficult to agree the exact margin with the counterparty that faces the same trade on the other side.
 
 To enact this, in September 2016, the ISDA committee - with full backing from various governing bodies -
 `issued a ruling on what is known as the ISDA SIMM ™ model <http://www2.isda.org/news/isda-simm-deployed-today-new-industry-standard-for-calculating-initial-margin-widely-adopted-by-market-participants>`_,
