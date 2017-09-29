@@ -204,8 +204,8 @@ object TwoPartyTradeFlow {
 
                 // Register the identity we're about to send payment to. This shouldn't be the same as the asset owner
                 // identity, so that anonymity is enforced.
-                val wellKnownPayToIdentity = serviceHub.identityService.verifyAndRegisterIdentity(it.payToIdentity)
-                require(wellKnownPayToIdentity?.party == sellerSession.counterparty) { "Well known identity to pay to must match counterparty identity" }
+                val wellKnownPayToIdentity = serviceHub.identityService.verifyAndRegisterIdentity(it.payToIdentity) ?: it.payToIdentity
+                require(wellKnownPayToIdentity.party == sellerSession.counterparty) { "Well known identity to pay to must match counterparty identity" }
 
                 if (it.price > acceptablePrice)
                     throw UnacceptablePriceException(it.price)
