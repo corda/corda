@@ -431,13 +431,20 @@ defined inside the contract itself
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
-:language: kotlin
+        :language: kotlin
         :start-after: DOCSTART 8
-            :end-before: DOCEND 8
+        :end-before: DOCEND 8
+        :dedent: 4
 
-    This value, which is the fully qualified class name of the contract, tells the Corda platform where to find the contract
-    code that should be used to validate a transaction containing an output state of this contract type. Typically the contract
-    code will be included in the transaction as an attachment (see :doc:`tutorial-attachments`).
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/contract/CommercialPaper.java
+        :language: java
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+        :dedent: 4
+
+This value, which is the fully qualified class name of the contract, tells the Corda platform where to find the contract
+code that should be used to validate a transaction containing an output state of this contract type. Typically the contract
+code will be included in the transaction as an attachment (see :doc:`tutorial-attachments`).
 
 The returned partial transaction has a ``Command`` object as a parameter. This is a container for any object
 that implements the ``CommandData`` interface, along with a list of keys that are expected to sign this transaction. In this case,
