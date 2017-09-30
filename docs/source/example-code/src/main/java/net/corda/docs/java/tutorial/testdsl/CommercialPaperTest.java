@@ -3,7 +3,6 @@ package net.corda.docs.java.tutorial.testdsl;
 import kotlin.Unit;
 import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.utilities.OpaqueBytes;
-import net.corda.finance.contracts.CommercialPaper;
 import net.corda.finance.contracts.ICommercialPaperState;
 import net.corda.finance.contracts.JavaCommercialPaper;
 import net.corda.finance.contracts.asset.Cash;
@@ -39,6 +38,7 @@ public class CommercialPaperTest {
         ICommercialPaperState inState = getPaper();
         ledger(l -> {
             l.transaction(tx -> {
+                tx.attachments(JCP_PROGRAM_ID);
                 tx.input(JCP_PROGRAM_ID, inState);
                 return tx.verifies();
             });
