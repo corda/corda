@@ -10,11 +10,17 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.utils.sumCashBy
+import net.corda.testing.chooseIdentityAndCert
 import java.time.Instant
 import java.util.*
-import kotlin.reflect.jvm.jvmName
 
 class CommercialPaper : Contract {
+    // DOCSTART 8
+    companion object {
+        const val CP_PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.CommercialPaper"
+    }
+    // DOCEND 8
+
     // DOCSTART 3
     override fun verify(tx: LedgerTransaction) {
         // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
@@ -84,14 +90,16 @@ class CommercialPaper : Contract {
     fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant,
                       notary: Party): TransactionBuilder {
         val state = State(issuance, issuance.party, faceValue, maturityDate)
-        return TransactionBuilder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
+        val stateAndContract = StateAndContract(state, CP_PROGRAM_ID)
+        return TransactionBuilder(notary = notary).withItems(stateAndContract, Command(Commands.Issue(), issuance.party.owningKey))
     }
     // DOCEND 5
 
     // DOCSTART 6
     fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: AbstractParty) {
         tx.addInputState(paper)
-        tx.addOutputState(paper.state.data.withNewOwner(newOwner).ownableState, CommercialPaper::class.jvmName)
+        val outputState = paper.state.data.withNewOwner(newOwner).ownableState
+        tx.addOutputState(outputState, CP_PROGRAM_ID)
         tx.addCommand(Command(Commands.Move(), paper.state.data.owner.owningKey))
     }
     // DOCEND 6
@@ -100,7 +108,13 @@ class CommercialPaper : Contract {
     @Throws(InsufficientBalanceException::class)
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub) {
         // Add the cash movement using the states in our vault.
-        Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
+        Cash.generateSpend(
+                services = services,
+                tx = tx,
+                amount = paper.state.data.faceValue.withoutIssuer(),
+                ourIdentity = services.myInfo.chooseIdentityAndCert(),
+                to = paper.state.data.owner
+        )
         tx.addInputState(paper)
         tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner.owningKey))
     }
