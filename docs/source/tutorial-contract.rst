@@ -90,10 +90,6 @@ A state is a class that stores data that is checked by the contract. A commercia
 
 We define a class that implements the ``ContractState`` interface.
 
-The ``ContractState`` interface requires us to provide a ``getContract`` method that returns an instance of the
-contract class itself. In future, this may change to support dynamic loading of contracts with versioning
-and signing constraints, but for now this is how it's written.
-
 We have four fields in our state:
 
 * ``issuance``, a reference to a specific piece of commercial paper issued by some party.
@@ -311,6 +307,10 @@ may be missing here. We check for it being null later.
    check won't happen if we write e.g. ``someDate > time``, it has to be ``time < someDate``. So it's good practice to
    always write the transaction timestamp first.
 
+Next, we take one of three paths, depending on what the type of the command object is.
+
+**If the command is a ``Move`` command:**
+
 The first line (first three lines in Java) impose a requirement that there be a single piece of commercial paper in
 this group. We do not allow multiple units of CP to be split or merged even if they are owned by the same owner. The
 ``single()`` method is a static *extension method* defined by the Kotlin standard library: given a list, it throws an
@@ -322,23 +322,23 @@ behind the scenes, the code compiles to the same bytecodes.
 Next, we check that the transaction was signed by the public key that's marked as the current owner of the commercial
 paper. Because the platform has already verified all the digital signatures before the contract begins execution,
 all we have to do is verify that the owner's public key was one of the keys that signed the transaction. The Java code
-is straightforward: we are simply using the ``Preconditions.checkState`` method from Guava. The Kotlin version looks a little odd: we have a *requireThat* construct that looks like it's
-built into the language. In fact *requireThat* is an ordinary function provided by the platform's contract API. Kotlin
-supports the creation of *domain specific languages* through the intersection of several features of the language, and
-we use it here to support the natural listing of requirements. To see what it compiles down to, look at the Java version.
-Each ``"string" using (expression)`` statement inside a ``requireThat`` turns into an assertion that the given expression is
-true, with an ``IllegalStateException`` being thrown that contains the string if not. It's just another way to write out a regular
-assertion, but with the English-language requirement being put front and center.
+is straightforward: we are simply using the ``Preconditions.checkState`` method from Guava. The Kotlin version looks a
+little odd: we have a *requireThat* construct that looks like it's built into the language. In fact *requireThat* is an
+ordinary function provided by the platform's contract API. Kotlin supports the creation of *domain specific languages*
+through the intersection of several features of the language, and we use it here to support the natural listing of
+requirements. To see what it compiles down to, look at the Java version. Each ``"string" using (expression)`` statement
+inside a ``requireThat`` turns into an assertion that the given expression is true, with an ``IllegalStateException``
+being thrown that contains the string if not. It's just another way to write out a regular assertion, but with the
+English-language requirement being put front and center.
 
-Next, we take one of two paths, depending on what the type of the command object is.
+Next, we simply verify that the output state is actually present: a move is not allowed to delete the CP from the ledger.
+The grouping logic already ensured that the details are identical and haven't been changed, save for the public key of
+the owner.
 
-If the command is a ``Move`` command, then we simply verify that the output state is actually present: a move is not
-allowed to delete the CP from the ledger. The grouping logic already ensured that the details are identical and haven't
-been changed, save for the public key of the owner.
+**If the command is a ``Redeem`` command, then the requirements are more complex:**
 
-If the command is a ``Redeem`` command, then the requirements are more complex:
-
-1. We want to see that the face value of the CP is being moved as a cash claim against some party, that is, the
+1. We still check there is a CP input state.
+2. We want to see that the face value of the CP is being moved as a cash claim against some party, that is, the
    issuer of the CP is really paying back the face value.
 2. The transaction must be happening after the maturity date.
 3. The commercial paper must *not* be propagated by this transaction: it must be deleted, by the group having no
@@ -353,8 +353,9 @@ represented in the outputs! So we can see that this contract imposes a limitatio
 transaction: you are not allowed to move currencies in the same transaction that the CP does not involve. This
 limitation could be addressed with better APIs, if it were to be a real limitation.
 
-Finally, we support an ``Issue`` command, to create new instances of commercial paper on the ledger. It likewise
-enforces various invariants upon the issuance.
+**Finally, we support an ``Issue`` command, to create new instances of commercial paper on the ledger.**
+
+It likewise enforces various invariants upon the issuance, such as, there must be one output CP state, for instance.
 
 This contract is simple and does not implement all the business logic a real commercial paper lifecycle
 management program would. For instance, there is no logic requiring a signature from the issuer for redemption:
@@ -424,12 +425,27 @@ outputs and commands to it and is designed to be passed around, potentially betw
 The function we define creates a ``CommercialPaper.State`` object that mostly just uses the arguments we were given,
 but it fills out the owner field of the state to be the same public key as the issuing party.
 
+We then combine the ``CommercialPaper.State`` object with a reference to the ``CommercialPaper`` contract, which is
+defined inside the contract itself
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+:language: kotlin
+        :start-after: DOCSTART 1
+            :end-before: DOCEND 1
+            :dedent: 4
+
+    This value, which is the fully qualified class name of the contract, tells the Corda platform where to find the contract
+    code that should be used to validate a transaction containing an output state of this contract type. Typically the contract
+    code will be included in the transaction as an attachment (see :doc:`tutorial-attachments`).
+
 The returned partial transaction has a ``Command`` object as a parameter. This is a container for any object
 that implements the ``CommandData`` interface, along with a list of keys that are expected to sign this transaction. In this case,
 issuance requires that the issuing party sign, so we put the key of the party there.
 
 The ``TransactionBuilder`` has a convenience ``withItems`` method that takes a variable argument list. You can pass in
-any ``StateAndRef`` (input), ``ContractState`` (output) or ``Command`` objects and it'll build up the transaction
+any ``StateAndRef`` (input), ``StateAndContract`` (output) or ``Command`` objects and it'll build up the transaction
 for you.
 
 There's one final thing to be aware of: we ask the caller to select a *notary* that controls this state and
