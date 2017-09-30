@@ -185,7 +185,7 @@ There are a number of improvements we could make to this CorDapp:
 * We could add an API, to make it easier to interact with the CorDapp
 
 We will explore some of these improvements in future tutorials. But you should now be ready to develop your own
-CorDapps. There's `a more fleshed-out version of the IOU CorDapp <https://github.com/corda/cordapp-tutorial>`_ with an
+CorDapps. There's `a more fleshed-out version of the IOU CorDapp <https://github.com/corda/cordapp-example>`_ with an
 API and web front-end, and a set of example CorDapps in `the main Corda repo <https://github.com/corda/corda>`_, under
 ``samples``. An explanation of how to run these samples :doc:`here <running-the-demos>`.
 
