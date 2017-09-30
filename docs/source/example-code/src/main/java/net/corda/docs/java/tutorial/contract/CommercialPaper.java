@@ -13,6 +13,10 @@ import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.finance.utils.StateSumming.sumCashBy;
 
 public class CommercialPaper implements Contract {
+    // DOCSTART 1
+    public static final String IOU_CONTRACT_ID = "com.example.contract.IOUContract";
+    // DOCEND 1
+
     // DOCSTART 3
     @Override
     public void verify(LedgerTransaction tx) {
