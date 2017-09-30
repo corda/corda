@@ -169,6 +169,7 @@ object TwoPartyTradeFlow {
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(assetForSale, tradeRequest, buyerAnonymousIdentity)
 
+            // DOCSTART 6
             // Now sign the transaction with whatever keys we need to move the cash.
             val partSignedTx = serviceHub.signInitialTransaction(ptx, cashSigningPubKeys)
 
@@ -180,6 +181,7 @@ object TwoPartyTradeFlow {
             progressTracker.currentStep = COLLECTING_SIGNATURES
             val sellerSignature = subFlow(CollectSignatureFlow(partSignedTx, sellerSession, sellerSession.counterparty.owningKey))
             val twiceSignedTx = partSignedTx + sellerSignature
+            // DOCEND 6
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
