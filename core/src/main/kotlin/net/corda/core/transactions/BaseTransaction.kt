@@ -2,8 +2,8 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.indexOfOrThrow
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.indexOfOrThrow
 import net.corda.core.internal.uncheckedCast
 import java.util.function.Predicate
 
@@ -34,8 +34,7 @@ abstract class BaseTransaction : NamedByHash {
     }
 
     private fun checkNoDuplicateInputs() {
-        val duplicates = inputs.groupBy { it }.filter { it.value.size > 1 }.keys
-        check(duplicates.isEmpty()) { "Duplicate input states detected" }
+        check(inputs.size == inputs.toSet().size) { "Duplicate input states detected" }
     }
 
     /**
