@@ -29,6 +29,7 @@ class CommercialPaperTest {
         val inState = getPaper()
         ledger {
             transaction {
+                attachments(CP_PROGRAM_ID)
                 input(CP_PROGRAM_ID) { inState }
                 this.verifies()
             }

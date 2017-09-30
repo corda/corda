@@ -432,9 +432,8 @@ defined inside the contract itself
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
 :language: kotlin
-        :start-after: DOCSTART 1
-            :end-before: DOCEND 1
-            :dedent: 4
+        :start-after: DOCSTART 8
+            :end-before: DOCEND 8
 
     This value, which is the fully qualified class name of the contract, tells the Corda platform where to find the contract
     code that should be used to validate a transaction containing an output state of this contract type. Typically the contract
