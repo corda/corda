@@ -43,7 +43,9 @@ which transformations of state are valid.
 
 # Package net.corda.core.cordapp
 
-Classes that represent metadata about an app.
+This package contains the interface to CorDapps from within a node. A CorDapp can access it's own context by using
+the CordappProvider.getAppContext() class. These classes are not intended to be constructed manually and no interface
+to do this will be provided. 
 
 # Package net.corda.core.crypto
 
