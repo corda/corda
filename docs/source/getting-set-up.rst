@@ -74,14 +74,14 @@ IntelliJ
 Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Open a command prompt
-2. Clone the CorDapp tutorial repo by running ``git clone https://github.com/corda/cordapp-tutorial``
-3. Move into the cordapp-tutorial folder by running ``cd cordapp-tutorial``
+2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
+3. Move into the cordapp-example folder by running ``cd cordapp-example``
 4. Retrieve a list of all the releases by running ``git branch -a --list``
 5. Check out the latest milestone release by running ``git checkout release-MX`` (where "X" is the latest milestone)
 
 Run from the command prompt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-1. From the cordapp-tutorial folder, deploy the nodes by running ``gradlew deployNodes``
+1. From the cordapp-example folder, deploy the nodes by running ``gradlew deployNodes``
 2. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
@@ -89,7 +89,7 @@ Run from the command prompt
 Run from IntelliJ
 ^^^^^^^^^^^^^^^^^
 1. Open IntelliJ Community Edition
-2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-tutorial folder
+2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-example folder
 
 .. warning:: If you click "Import Project" instead of "Open", the project's run configurations will be erased!
 
@@ -123,14 +123,14 @@ IntelliJ
 Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Open a terminal
-2. Clone the CorDapp tutorial repo by running ``git clone https://github.com/corda/cordapp-tutorial``
-3. Move into the cordapp-tutorial folder by running ``cd cordapp-tutorial``
+2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
+3. Move into the cordapp-example folder by running ``cd cordapp-example``
 4. Retrieve a list of all the releases by running ``git branch -a --list``
 5. Check out the latest milestone release by running ``git checkout release-MX`` (where "X" is the latest milestone)
 
 Run from the terminal
 ^^^^^^^^^^^^^^^^^^^^^
-1. From the cordapp-tutorial folder, deploy the nodes by running ``./gradlew deployNodes``
+1. From the cordapp-example folder, deploy the nodes by running ``./gradlew deployNodes``
 2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 8 additional terminal windows start up.
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
@@ -138,7 +138,7 @@ Run from the terminal
 Run from IntelliJ
 ^^^^^^^^^^^^^^^^^
 1. Open IntelliJ Community Edition
-2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-tutorial folder
+2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-example folder
 3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to /Library/Java/JavaVirtualMachines/jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".
 4. Click "View > Tool Windows > Event Log", and click "Import Gradle project", then "OK". Wait, and click "OK" again when the "Gradle Project Data To Import" window appears
 5. Wait for indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing is complete)
@@ -161,7 +161,7 @@ A CorDapp template that you can use as the basis for your own CorDapps is availa
 
 And a simple example CorDapp for you to explore basic concepts is available here:
 
-	https://github.com/corda/cordapp-tutorial.git
+	https://github.com/corda/cordapp-example.git
 
 You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
 
@@ -170,8 +170,8 @@ instead by running ``git checkout release-MX`` (where “X” is the latest mile
 
 Next steps
 ----------
-The best way to check that everything is working fine is by running the :doc:`tutorial CorDapp <tutorial-cordapp>` and
-the :doc:`samples <running-the-demos>`.
+The best way to check that everything is working fine is by taking a deeper look at the
+:doc:`example CorDapp <tutorial-cordapp>`.
 
 Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
