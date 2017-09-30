@@ -13,6 +13,8 @@ This section describes the APIs that are available for the development of CorDap
    api-transactions
    api-flows
    api-identity
+   api-service-hub
+   api-rpc
    api-core-types
 
 Before reading this page, you should be familiar with the :doc:`key concepts of Corda <key-concepts>`.
