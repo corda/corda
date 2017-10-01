@@ -112,7 +112,6 @@ class CommercialPaper : Contract {
                 services = services,
                 tx = tx,
                 amount = paper.state.data.faceValue.withoutIssuer(),
-                ourIdentity = services.myInfo.chooseIdentityAndCert(),
                 to = paper.state.data.owner
         )
         tx.addInputState(paper)
