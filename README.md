@@ -8,25 +8,25 @@ Corda is a decentralised database system in which nodes trust each other as litt
 
 ## Features
 
-* A P2P network of nodes
-* Smart contracts
-* Flow framework
-* "Notary" infrastructure to validate uniqueness of transactions
-* Written as a platform for distributed apps called CorDapps
+* Smart contracts that can be written in Java and other JVM languages
+* Flow framework to manage communication and negotiation between participants
+* Peer-to-peer network of nodes
+* "Notary" infrastructure to validate uniqueness and sequencing of transactions without global broadcast
+* Enables the development and deployment of distributed apps called CorDapps
 * Written in [Kotlin](https://kotlinlang.org), targeting the JVM
 
 ## Getting started
 
-1. Read the [Getting started](https://docs.corda.net/getting-set-up.html) documentation
-2. Run the [example CorDapp](https://docs.corda.net/tutorial-cordapp.html)
+1. Read the [Getting Started](https://docs.corda.net/getting-set-up.html) documentation
+2. Run the [Example CorDapp](https://docs.corda.net/tutorial-cordapp.html)
 3. Read about Corda's [Key Concepts](https://docs.corda.net/key-concepts.html)
 3. Follow the [Hello, World! tutorial](https://docs.corda.net/hello-world-index.html)
 
 ## Useful links
 
-* [Project website](https://corda.net)
+* [Project Website](https://corda.net)
 * [Documentation](https://docs.corda.net)
-* [Slack channel](https://slack.corda.net/)
+* [Slack Channel](https://slack.corda.net/)
 * [Stack Overflow tag](https://stackoverflow.com/questions/tagged/corda)
 * [Forum](https://discourse.corda.net)
 * [Meetups](https://www.meetup.com/pro/corda/)
