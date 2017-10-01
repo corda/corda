@@ -2,7 +2,7 @@ Welcome to Corda !
 ==================
 
 .. warningX:: This build of the docs is from the "|version|" branch, not a milestone release. It may not reflect the
-   current state of the code. `Read the docs for milestone release M12.1 <https://docs.corda.net/releases/release-M12.1/>`_.
+   current state of the code. `Read the docs for release V1.0 <https://docs.corda.net/releases/release-V1.0/>`_.
 
 `Corda <https://www.corda.net/>`_ is a blockchain-inspired open source distributed ledger platform. If you’d like a
 quick introduction to distributed ledgers and how Corda is different, then watch this short video:
