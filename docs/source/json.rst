@@ -19,8 +19,8 @@ connection to the node (see ":doc:`clientrpc`") then your JSON mapper can resolv
 
 The API is described in detail here:
 
-* `Kotlin API docs <api/kotlin/corda/net.corda.jackson/-jackson-support/index.html>`_
-* `JavaDoc <api/javadoc/net/corda/jackson/package-summary.html>`_
+* `Kotlin API docs <api/kotlin/corda/net.corda.client.jackson/-jackson-support/index.html>`_
+* `JavaDoc <api/javadoc/net/corda/client/jackson/package-summary.html>`_
 
 .. container:: codeset
 
