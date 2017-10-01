@@ -8,16 +8,16 @@ Corda is a decentralised database system in which nodes trust each other as litt
 
 ## Features
 
-* A P2P network of nodes
-* Smart contracts
-* Flow framework
-* "Notary" infrastructure to validate uniqueness of transactions
-* Written as a platform for distributed apps called CorDapps
+* Smart contracts that can be written in Java and other JVM languages
+* Flow framework to manage communication and negotiation between participants
+* Peer-to-peer network of nodes
+* "Notary" infrastructure to validate uniqueness and sequencing of transactions without global broadcast
+* Enables the development and deployment of distributed apps called CorDapps
 * Written in [Kotlin](https://kotlinlang.org), targeting the JVM
 
 ## Getting started
 
-Firstly, read the [Getting started](https://docs.corda.net/getting-set-up.html) documentation. 
+Firstly, read the [Getting Started](https://docs.corda.net/getting-set-up.html) documentation. 
 
 Next, use the following guides to set up your dev environment:
 
@@ -51,29 +51,13 @@ To look at the Corda source and run some sample applications:
 
 ## Useful links
 
-* [Project website](https://corda.net)
+* [Project Website](https://corda.net)
 * [Documentation](https://docs.corda.net)
-* [Slack channel](https://slack.corda.net/)
+* [Slack Channel](https://slack.corda.net/)
+* [Stack Overflow tag](https://stackoverflow.com/questions/tagged/corda)
 * [Forum](https://discourse.corda.net)
 * [Meetups](https://www.meetup.com/pro/corda/)
-* [Training Course](https://www.corda.net/corda-training/)
-
-
-## Development State
- 
-Corda is under active development and is maturing rapidly. We are targeting
-production-readiness in 2017. The API will continue to evolve throughout 2017;
-backwards compatibility not assured until version 1.0.
-
-Pull requests, experiments, and contributions are encouraged and welcomed.
-
-## Background
-
-The project is supported by R3, a financial industry consortium, which is why it 
-contains some code for financial use cases and why the documentation focuses on finance. The goal is to use it
-to construct a global ledger, simplifying finance and reducing the overheads of banking. But it is run as 
-an open source project and the basic technology of a peer-to-peer decentralised database may be useful 
-for many different projects.
+* [Training Courses](https://www.corda.net/corda-training/)
 
 ## Contributing
 
