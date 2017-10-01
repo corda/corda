@@ -100,10 +100,9 @@ fun main(args: Array<String>) {
             }
         }
         waitForAllNodesToFinish()
+        // END 5
     }
-
 }
-// END 5
 
 // START 6
 fun generateTransactions(proxy: CordaRPCOps) {
