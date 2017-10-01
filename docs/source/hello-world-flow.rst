@@ -60,7 +60,7 @@ with the following:
             @Suspendable
             override fun call() {
                 // We retrieve the notary identity from the network map.
-                val notary = serviceHub.networkMapCache.getAnyNotary()
+                val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
                 // We create a transaction builder
                 val txBuilder = TransactionBuilder(notary = notary)

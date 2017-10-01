@@ -36,7 +36,7 @@ If you do want to dive into Kotlin, there's an official
 `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
 
 We can see that the ``ContractState`` interface has a single field, ``participants``. ``participants`` is a list of
-entities that have to approve state changes such as changing the state's notary or upgrading the state's contract.
+the entities for which this state is relevant.
 
 Beyond this, our state is free to define any fields, methods, helpers or inner classes it requires to accurately
 represent a given class of shared facts on the ledger.
