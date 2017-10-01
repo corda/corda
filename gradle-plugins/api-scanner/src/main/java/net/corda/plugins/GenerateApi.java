@@ -48,7 +48,7 @@ public class GenerateApi extends DefaultTask {
     @TaskAction
     public void generate() {
         FileCollection apiFiles = getSources();
-        if (!apiFiles.isEmpty() && (outputDir.isDirectory() || outputDir.mkdirs())) {
+        if (!apiFiles.isEmpty()) {
             try (OutputStream output = new BufferedOutputStream(new FileOutputStream(getTarget()))) {
                 for (File apiFile : apiFiles) {
                     Files.copy(apiFile.toPath(), output);
