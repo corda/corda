@@ -9,9 +9,9 @@ Upgrading contracts
 
 While every care is taken in development of contract code, inevitably upgrades will be required to fix bugs (in either
 design or implementation). Upgrades can involve a substitution of one version of the contract code for another or
-changing to a different contract that understands how to migrate the existing state objects. State objects refer to the
-contract code (by hash) they are intended for, and even where state objects can be used with different contract
-versions, changing this value requires issuing a new state object.
+changing to a different contract that understands how to migrate the existing state objects. When state objects are
+added as outputs to transactions, they are linked to the contract code they are intended for via the
+``StateAndContract`` type. Changing a state's contract only requires substituting one ``ContractClassName`` for another.
 
 Workflow
 --------
