@@ -106,7 +106,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         val notaryName: CordaX500Name = CordaX500Name(
                 organisation = "Notary Service",
                 locality = "London",
-                country = "UK")
+                country = "GB")
         val specificNotary: Party = serviceHub.networkMapCache.getNotary(notaryName)!!
         // Alternatively, we can pick an arbitrary notary from the notary
         // list. However, it is always preferable to specify the notary
@@ -121,7 +121,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         val counterpartyName: CordaX500Name = CordaX500Name(
                 organisation = "NodeA",
                 locality = "London",
-                country = "UK")
+                country = "GB")
         val namedCounterparty: Party = serviceHub.identityService.wellKnownPartyFromX500Name(counterpartyName) ?:
                 throw IllegalArgumentException("Couldn't find counterparty for NodeA in identity service")
         val keyedCounterparty: Party = serviceHub.identityService.partyFromKey(dummyPubKey) ?:
