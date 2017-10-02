@@ -3,6 +3,7 @@ apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'application'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'us.kirchmeier.capsule'
 
 dependencies {
@@ -19,6 +20,9 @@ dependencies {
     compile project(':finance')
 
     // Cordapp dependencies
+    cordapp project(':finance')
+    cordapp project(':samples:irs-demo')
+
     // GraphStream: For visualisation
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
     compile "org.graphstream:gs-core:1.3"
