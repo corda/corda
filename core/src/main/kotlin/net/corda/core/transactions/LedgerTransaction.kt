@@ -59,6 +59,7 @@ data class LedgerTransaction(
         }
     }
 
+    @CordaSerializable
     private data class ContractResult(val contract: Contract?, val error: Throwable? = null)
 
     private val contracts: Map<ContractClassName, ContractResult> = (inputs.map { it.state.contract } + outputs.map { it.contract })
