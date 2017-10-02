@@ -45,10 +45,10 @@ import java.util.*
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
 open class MockServices(
-        cordappPackages: List<String> = emptyList(),
-        vararg val keys: KeyPair,
-        override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage(),
-        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
+        cordappPackages: List<String>,
+        override val validatedTransactions: WritableTransactionStorage,
+        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions),
+        vararg val keys: KeyPair
 ) : ServiceHub, StateLoader by stateLoader {
     companion object {
 
@@ -130,8 +130,8 @@ open class MockServices(
         }
     }
 
+    constructor(cordappPackages: List<String>, vararg keys: KeyPair) : this(cordappPackages, MockTransactionStorage(), keys = *keys)
     constructor(vararg keys: KeyPair) : this(emptyList(), *keys)
-
     constructor() : this(generateKeyPair())
 
     val key: KeyPair get() = keys.first()
