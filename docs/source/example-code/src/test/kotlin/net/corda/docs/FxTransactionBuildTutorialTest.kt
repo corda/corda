@@ -32,7 +32,7 @@ class FxTransactionBuildTutorialTest {
         val notaryService = ServiceInfo(ValidatingNotaryService.type)
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                overrideServices = mapOf(notaryService to DUMMY_NOTARY_KEY),
+                notaryIdentity = notaryService to DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(notaryService))
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)

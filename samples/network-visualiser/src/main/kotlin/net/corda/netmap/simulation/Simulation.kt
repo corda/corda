@@ -54,9 +54,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     // This puts together a mock network of SimulatedNodes.
 
     open class SimulatedNode(config: NodeConfiguration, mockNet: MockNetwork, networkMapAddress: SingleMessageRecipient?,
-                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                             advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                              entropyRoot: BigInteger)
-        : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, overrideServices, entropyRoot) {
+        : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, notaryIdentity, entropyRoot) {
         override val started: StartedNode<SimulatedNode>? get() = uncheckedCast(super.started)
         override fun findMyLocation(): WorldMapLocation? {
             return configuration.myLegalName.locality.let { CityDatabase[it] }
@@ -67,7 +67,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         var counter = 0
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                            advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): SimulatedNode {
             val letter = 'A' + counter
             val (city, country) = bankLocations[counter++ % bankLocations.size]
@@ -75,7 +75,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = CordaX500Name(organisation = "Bank $letter", locality = city, country = country))
-            return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
+            return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot)
         }
 
         fun createAll(): List<SimulatedNode> {
@@ -90,24 +90,24 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object NetworkMapNodeFactory : MockNetwork.Factory<SimulatedNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                            advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): SimulatedNode {
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = DUMMY_MAP.name)
-            return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {}
+            return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot) {}
         }
     }
 
     object NotaryNodeFactory : MockNetwork.Factory<SimulatedNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                            advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): SimulatedNode {
             require(advertisedServices.containsType(SimpleNotaryService.type))
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = DUMMY_NOTARY.name)
-            return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
+            return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot)
         }
     }
 
@@ -116,12 +116,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                            advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): SimulatedNode {
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = RATES_SERVICE_NAME)
-            return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
+            return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot) {
                 override fun start() = super.start().apply {
                     registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
                     registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
@@ -137,12 +137,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object RegulatorFactory : MockNetwork.Factory<SimulatedNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                            advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): SimulatedNode {
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = DUMMY_REGULATOR.name)
-            return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
+            return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot) {
                 // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
                 //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
                 //       But that's fine for visualisation purposes.

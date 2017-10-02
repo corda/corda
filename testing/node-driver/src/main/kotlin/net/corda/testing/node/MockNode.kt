@@ -95,21 +95,21 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     /** Allows customisation of how nodes are created. */
     interface Factory<out N : MockNode> {
         /**
-         * @param overrideServices a set of service entries to use in place of the node's default service entries,
+         * @param notaryIdentity a set of service entries to use in place of the node's default service entries,
          * for example where a node's service is part of a cluster.
          * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
          * but can be overriden to cause nodes to have stable or colliding identity/service keys.
          */
         fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                   advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                   advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                    entropyRoot: BigInteger): N
     }
 
     object DefaultFactory : Factory<MockNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
+                            advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNode {
-            return MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
+            return MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot)
         }
     }
 
@@ -137,7 +137,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     /**
-     * @param overrideServices a set of service entries to use in place of the node's default service entries,
+     * @param notaryIdentity a set of service entries to use in place of the node's default service entries,
      * for example where a node's service is part of a cluster.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overriden to cause nodes to have stable or colliding identity/service keys.
@@ -147,7 +147,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         override val networkMapAddress: SingleMessageRecipient?,
                         advertisedServices: Set<ServiceInfo>,
                         val id: Int,
-                        val overrideServices: Map<ServiceInfo, KeyPair>?,
+                        internal val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
             AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
         var counter = entropyRoot
@@ -199,7 +199,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
-            return E2ETestKeyManagementService(identityService, partyKeys + (overrideServices?.values ?: emptySet()))
+            return E2ETestKeyManagementService(identityService, partyKeys + (notaryIdentity?.let { setOf(it.second) } ?: emptySet()))
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {
@@ -212,12 +212,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun getNotaryIdentity(): PartyAndCertificate? {
             val defaultIdentity = super.getNotaryIdentity()
-            val override = overrideServices?.filter { it.key.type.isNotary() }?.entries?.singleOrNull()
-            return if (override == null || defaultIdentity == null)
+            return if (notaryIdentity == null || !notaryIdentity.first.type.isNotary() || defaultIdentity == null)
                 defaultIdentity
             else {
                 // Ensure that we always have notary in name and type of it. TODO It is temporary solution until we will have proper handling of NetworkParameters
-                myNotaryIdentity = getTestPartyAndCertificate(defaultIdentity.name, override.value.public)
+                myNotaryIdentity = getTestPartyAndCertificate(defaultIdentity.name, notaryIdentity.second.public)
                 myNotaryIdentity
             }
         }
@@ -295,48 +294,48 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun createUnstartedNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null,
-                            legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                            legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                             vararg advertisedServices: ServiceInfo,
                             configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
-        return createUnstartedNode(networkMapAddress, forcedID, defaultFactory, legalName, overrideServices, entropyRoot, *advertisedServices, configOverrides = configOverrides)
+        return createUnstartedNode(networkMapAddress, forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
     }
 
     fun <N : MockNode> createUnstartedNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null, nodeFactory: Factory<N>,
-                                           legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                                           legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                                            entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                                            vararg advertisedServices: ServiceInfo,
                                            configOverrides: (NodeConfiguration) -> Any? = {}): N {
-        return createNodeImpl(networkMapAddress, forcedID, nodeFactory, false, legalName, overrideServices, entropyRoot, advertisedServices, configOverrides)
+        return createNodeImpl(networkMapAddress, forcedID, nodeFactory, false, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides)
     }
 
     /**
      * Returns a node, optionally created by the passed factory method.
-     * @param overrideServices a set of service entries to use in place of the node's default service entries,
+     * @param notaryIdentity a set of service entries to use in place of the node's default service entries,
      * for example where a node's service is part of a cluster.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
      * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
      */
     fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null,
-                   legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                   legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                    vararg advertisedServices: ServiceInfo,
                    configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<MockNode> {
-        return createNode(networkMapAddress, forcedID, defaultFactory, legalName, overrideServices, entropyRoot, *advertisedServices, configOverrides = configOverrides)
+        return createNode(networkMapAddress, forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
     }
 
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
     fun <N : MockNode> createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null, nodeFactory: Factory<N>,
-                                  legalName: CordaX500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                                  legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                                   vararg advertisedServices: ServiceInfo,
                                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
-        return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, overrideServices, entropyRoot, advertisedServices, configOverrides).started)!!
+        return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides).started)!!
     }
 
     private fun <N : MockNode> createNodeImpl(networkMapAddress: SingleMessageRecipient?, forcedID: Int?, nodeFactory: Factory<N>,
-                                              start: Boolean, legalName: CordaX500Name?, overrideServices: Map<ServiceInfo, KeyPair>?,
+                                              start: Boolean, legalName: CordaX500Name?, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                                               entropyRoot: BigInteger,
                                               advertisedServices: Array<out ServiceInfo>,
                                               configOverrides: (NodeConfiguration) -> Any?): N {
@@ -347,7 +346,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }
-        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot).apply {
+        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, notaryIdentity, entropyRoot).apply {
             if (start) {
                 start()
                 if (threadPerNode && networkMapAddress != null) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
@@ -398,17 +397,17 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     fun createNotaryNode(networkMapAddress: SingleMessageRecipient? = null,
                          legalName: CordaX500Name? = null,
-                         overrideServices: Map<ServiceInfo, KeyPair>? = null,
+                         notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                          serviceName: CordaX500Name? = null): StartedNode<MockNode> {
-        return createNode(networkMapAddress, legalName = legalName, overrideServices = overrideServices,
+        return createNode(networkMapAddress, legalName = legalName, notaryIdentity = notaryIdentity,
                 advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type, serviceName)))
     }
 
     @JvmOverloads
     fun createPartyNode(networkMapAddress: SingleMessageRecipient,
                         legalName: CordaX500Name? = null,
-                        overrideServices: Map<ServiceInfo, KeyPair>? = null): StartedNode<MockNode> {
-        return createNode(networkMapAddress, legalName = legalName, overrideServices = overrideServices)
+                        notaryIdentity: Pair<ServiceInfo, KeyPair>? = null): StartedNode<MockNode> {
+        return createNode(networkMapAddress, legalName = legalName, notaryIdentity = notaryIdentity)
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.

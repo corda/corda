@@ -87,11 +87,11 @@ class FlowFrameworkTests {
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
         val notaryService = ServiceInfo(ValidatingNotaryService.type, CordaX500Name(commonName = ValidatingNotaryService.type.id, organisation = "Notary service 2000", locality = "London", country = "GB"))
-        val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
+        val notaryIdentityOverride = Pair(notaryService, notaryKeyPair)
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
-        notary1 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
-        notary2 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
+        notary1 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, notaryIdentity = notaryIdentityOverride, serviceName = notaryService.name)
+        notary2 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, notaryIdentity = notaryIdentityOverride, serviceName = notaryService.name)
 
         receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
         mockNet.runNetwork()

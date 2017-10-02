@@ -37,7 +37,7 @@ class WorkflowTransactionBuildTutorialTest {
         val notaryService = ServiceInfo(ValidatingNotaryService.type)
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
+                notaryIdentity = Pair(notaryService, DUMMY_NOTARY_KEY),
                 advertisedServices = *arrayOf(notaryService))
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
