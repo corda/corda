@@ -11,7 +11,6 @@ import net.corda.core.internal.write
 import net.corda.core.internal.writeLines
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -108,7 +107,7 @@ class NodeAttachmentStorageTest {
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
             val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
-            DatabaseTransactionManager.current().session.merge(corruptAttachment)
+            session.merge(corruptAttachment)
             id
         }
         database.transaction {
