@@ -23,7 +23,7 @@ unless an incompatible change is required for security reasons:
    cryptographic libraries, and general utility functions.
 
  * client-rpc
-   An RPC client interface to Corda, for use by both user facing client and integration with external systems.
+   An RPC client interface to Corda, for use by both UI facing clients and integration with external systems.
 
  * client-jackson
    Utilities and serialisers for working with JSON representations of basic types.
