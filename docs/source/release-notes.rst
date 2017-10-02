@@ -10,7 +10,8 @@ Release 1.0
 -----------
 Corda 1.0 is finally here!
 
-This critical step in the Corda journey enables the developer community, clients, and partners to build on Corda with confidence. Corda 1.0 is the first released version to provide API stability for Corda application (CorDapp) developers.
+This critical step in the Corda journey enables the developer community, clients, and partners to build on Corda with confidence.
+Corda 1.0 is the first released version to provide API stability for Corda application (CorDapp) developers.
 Corda applications will continue to work against this API with each subsequent release of Corda. The public API for Corda
 will only evolve to include new features.
 
