@@ -146,6 +146,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val maxInstabilityInterval = BRIDGE_RETRY_MS * allTheStartedNodesPopulation.size * 30
         logger.info("Instability interval is set to: $maxInstabilityInterval ms")
 
+        // TODO: Re-visit this sort of re-try for stable cluster once network map redesign is finished.
         eventually<AssertionError, Unit>(Duration.ofMillis(maxInstabilityInterval)) {
             logger.info("Checking connectivity")
             checkConnectivity(listOf(otherNodes[0], nms)) // Checks connectivity from A to NMS.
