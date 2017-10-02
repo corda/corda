@@ -49,6 +49,11 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
+            'StartFlow.net.corda.irs.flows.AutoOfferFlow$Requester',
+            'StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow$Broadcast'
+    ]]]
+
     directory "./build/nodes"
     networkMap "O=Notary Service,L=Zurich,C=CH"
     node {
@@ -59,6 +64,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         webPort 10004
         cordapps = ["net.corda:finance:$corda_release_version"]
         useTestClock true
+        rpcUsers = ext.rpcUsers
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -68,6 +74,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         webPort 10007
         cordapps = ["net.corda:finance:$corda_release_version"]
         useTestClock true
+        rpcUsers = ext.rpcUsers
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -77,6 +84,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         webPort 10010
         cordapps = ["net.corda:finance:$corda_release_version"]
         useTestClock true
+        rpcUsers = ext.rpcUsers
     }
 }
 
