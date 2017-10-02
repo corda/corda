@@ -52,15 +52,15 @@ data class LedgerTransaction(
         @JvmStatic
         fun createContractFor(className: ContractClassName): ContractResult {
             return try {
-                ContractResult(this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance())
+                ContractResult(contract = this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance())
             } catch (e: Exception) {
-                ContractResult(null, e)
+                ContractResult(error = e)
             }
         }
     }
 
     @CordaSerializable
-    private data class ContractResult(val contract: Contract?, val error: Throwable? = null)
+    private data class ContractResult(val contract: Contract? = null, val error: Throwable? = null)
 
     private val contracts: Map<ContractClassName, ContractResult> = (inputs.map { it.state.contract } + outputs.map { it.contract })
             .toSet().map { it to createContractFor(it) }.toMap()
