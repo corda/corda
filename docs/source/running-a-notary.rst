@@ -6,9 +6,10 @@ At present we have several prototype notary implementations:
 1. ``SimpleNotaryService`` (single node) -- commits the provided transaction input states without any validation.
 2. ``ValidatingNotaryService`` (single node) -- retrieves and validates the whole transaction history
    (including the given transaction) before committing.
-3. ``RaftValidatingNotaryService`` (distributed) -- functionally equivalent to ``ValidatingNotaryService``, but stores
+3. ``RaftNonValidatingNotaryService`` (distributed) -- functionally equivalent to ``SimpleNotaryService``, but stores
    the committed states in a distributed collection replicated and persisted in a Raft cluster. For the consensus layer
-   we are using the `Copycat <http://atomix.io/copycat/>`_ framework.
+   we are using the `Copycat <http://atomix.io/copycat/>`_ framework
+4. ``RaftValidatingNotaryService`` (distributed) -- as above, but performs validation on the transactions received
 
 To have a node run a notary service, you need to set appropriate configuration values before starting it
 (see :doc:`corda-configuration-file` for reference).
@@ -25,5 +26,5 @@ For ``ValidatingNotaryService``, it is:
 
   extraAdvertisedServiceIds : [ "net.corda.notary.validating" ]
 
-Setting up a ``RaftValidatingNotaryService`` is currently slightly more involved and is not recommended for prototyping
-purposes. There is work in progress to simplify it. To see it in action, however, you can try out the :ref:`notary-demo`.
+Setting up a Raft notary is currently slightly more involved and is not recommended for prototyping purposes. There is
+work in progress to simplify it. To see it in action, however, you can try out the :ref:`notary-demo`.

@@ -59,15 +59,20 @@ with the following:
             /** The flow logic is encapsulated within the call() method. */
             @Suspendable
             override fun call() {
-                val notary = serviceHub.networkMapCache.getAnyNotary()
+                // We retrieve the notary identity from the network map.
+                val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
                 // We create a transaction builder
                 val txBuilder = TransactionBuilder(notary = notary)
 
+                // We create the transaction components.
+                val outputState = IOUState(iouValue, ourIdentity, otherParty)
+                val outputContract = IOUContract::class.jvmName
+                val outputContractAndState = StateAndContract(outputState, outputContract)
+                val cmd = Command(IOUContract.Create(), ourIdentity.owningKey)
+
                 // We add the items to the builder.
-                val state = IOUState(iouValue, me, otherParty)
-                val cmd = Command(IOUContract.Create(), me.owningKey)
-                txBuilder.withItems(state, cmd)
+                txBuilder.withItems(outputContractAndState, cmd)
 
                 // Verifying the transaction.
                 txBuilder.verify(serviceHub)
@@ -88,6 +93,7 @@ with the following:
         import com.template.contract.IOUContract;
         import com.template.state.IOUState;
         import net.corda.core.contracts.Command;
+        import net.corda.core.contracts.StateAndContract;
         import net.corda.core.flows.*;
         import net.corda.core.identity.Party;
         import net.corda.core.transactions.SignedTransaction;
@@ -121,17 +127,21 @@ with the following:
             @Suspendable
             @Override
             public Void call() throws FlowException {
-                // We retrieve the required identities from the network map.
-                final Party notary = getServiceHub().getNetworkMapCache().getAnyNotary(null);
+                // We retrieve the notary identity from the network map.
+                final Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
 
                 // We create a transaction builder.
                 final TransactionBuilder txBuilder = new TransactionBuilder();
                 txBuilder.setNotary(notary);
 
+                // We create the transaction components.
+                IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
+                String outputContract = IOUContract.class.getName();
+                StateAndContract outputContractAndState = new StateAndContract(outputState, outputContract);
+                Command cmd = new Command<>(new IOUContract.Create(), getOurIdentity().getOwningKey());
+
                 // We add the items to the builder.
-                IOUState state = new IOUState(iouValue, me, otherParty);
-                Command cmd = new Command(new IOUContract.Create(), me.getOwningKey());
-                txBuilder.withItems(state, cmd);
+                txBuilder.withItems(outputContractAndState, cmd);
 
                 // Verifying the transaction.
                 txBuilder.verify(getServiceHub());
@@ -200,7 +210,7 @@ the following transaction:
 
 So we'll need the following:
 
-* The output ``IOUState``
+* The output ``IOUState`` and its associated contract
 * A ``Create`` command listing the IOU's lender as a signer
 
 The command we use pairs the ``IOUContract.Create`` command defined earlier with our public key. Including this command
@@ -208,8 +218,8 @@ in the transaction makes us one of the transaction's required signers.
 
 We add these items to the transaction using the ``TransactionBuilder.withItems`` method, which takes a ``vararg`` of:
 
-* ``ContractState`` or ``TransactionState`` objects, which are added to the builder as output states
-* ``StateRef`` objects (references to the outputs of previous transactions), which are added to the builder as input
+* ``StateAndContract`` or ``TransactionState`` objects, which are added to the builder as output states
+* ``StateAndRef`` objects (references to the outputs of previous transactions), which are added to the builder as input
   state references
 * ``Command`` objects, which are added to the builder as commands
 * ``SecureHash`` objects, which are added to the builder as attachments

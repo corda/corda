@@ -18,67 +18,54 @@ of a flow.
 The Basic Lifecycle Of Transactions
 -----------------------------------
 
-Transactions in Corda are constructed in stages and contain a number of
-elements. In particular a transaction’s core data structure is the
-``net.corda.core.transactions.WireTransaction``, which is usually
-manipulated via a
-``net.corda.core.transactions.TransactionBuilder`` and contains:
+Transactions in Corda contain a number of elements:
 
 1. A set of Input state references that will be consumed by the final
-accepted transaction.
+   accepted transaction
 
 2. A set of Output states to create/replace the consumed states and thus
-become the new latest versions of data on the ledger.
+   become the new latest versions of data on the ledger
 
 3. A set of ``Attachment`` items which can contain legal documents, contract
-code, or private encrypted sections as an extension beyond the native
-contract states.
+   code, or private encrypted sections as an extension beyond the native
+   contract states
 
-4. A set of ``Command`` items which give a context to the type of ledger
-transition that is encoded in the transaction. Also each command has an
-associated set of signer keys, which will be required to sign the
-transaction.
+4. A set of ``Command`` items which indicate the type of ledger
+   transition that is encoded in the transaction. Each command also has an
+   associated set of signer keys, which will be required to sign the
+   transaction
 
-5. A signers list, which is populated by the ``TransactionBuilder`` to
-be the union of the signers on the individual Command objects.
+5. A signers list, which is the union of the signers on the individual
+   Command objects
 
-6. A notary identity to specify the Notary node which is tracking the
-state consumption. (If the input states are registered with different
-notary nodes the flow will have to insert additional ``NotaryChange``
-transactions to migrate the states across to a consistent notary node,
-before being allowed to mutate any states.)
+6. A notary identity to specify which notary node is tracking the
+   state consumption (if the transaction's input states are registered with different
+   notary nodes the flow will have to insert additional ``NotaryChange``
+   transactions to migrate the states across to a consistent notary node
+   before being allowed to mutate any states)
 
-7. Optionally a timestamp that can used in the Notary to time bound the
-period in which the proposed transaction stays valid.
+7. Optionally a timestamp that can used by the notary to bound the
+   period during which the proposed transaction can be committed to the
+   ledger
 
-Typically, the ``WireTransaction`` should be regarded as a proposal and
-may need to be exchanged back and forth between parties before it can be
-fully populated. This is an immediate consequence of the Corda privacy
-model, which means that the input states are likely to be unknown to the
-other node.
+A transaction is built by populating a ``TransactionBuilder``. Typically,
+the ``TransactionBuilder`` will need to be exchanged back and forth between
+parties before it is fully populated. This is an immediate consequence of
+the Corda privacy model, in which the input states are likely to be unknown
+to the other node.
 
-Once the proposed data is fully populated the flow code should freeze
-the ``WireTransaction`` and form a ``SignedTransaction``. This is key to
-the ledger agreement process, as once a flow has attached a node’s
-signature it has stated that all details of the transaction are
-acceptable to it. A flow should take care not to attach signatures to
-intermediate data, which might be maliciously used to construct a
-different ``SignedTransaction``. For instance in a foreign exchange
-scenario we shouldn't send a ``SignedTransaction`` with only our sell
-side populated as that could be used to take the money without the
-expected return of the other currency. Also, it is best practice for
-flows to receive back the ``TransactionSignature`` of other parties
-rather than a full ``SignedTransaction`` objects, because otherwise we
-have to separately check that this is still the same
+Once the builder is fully populated, the flow should freeze the ``TransactionBuilder`` by signing it to create a
+``SignedTransaction``. This is key to the ledger agreement process - once a flow has attached a node’s signature to a
+transaction, it has effectively stated that it accepts all the details of the transaction.
+
+It is best practice for flows to receive back the ``TransactionSignature`` of other parties rather than a full
+``SignedTransaction`` objects, because otherwise we have to separately check that this is still the same
 ``SignedTransaction`` and not a malicious substitute.
 
-The final stage of committing the transaction to the ledger is to
-notarise the ``SignedTransaction``, distribute this to all appropriate
-parties and record the data into the ledger. These actions are best
-delegated to the ``FinalityFlow``, rather than calling the individual
-steps manually. However, do note that the final broadcast to the other
-nodes is asynchronous, so care must be used in unit testing to
-correctly await the Vault updates.
+The final stage of committing the transaction to the ledger is to notarise the ``SignedTransaction``, distribute it to
+all appropriate parties and record the data into the ledger. These actions are best delegated to the ``FinalityFlow``,
+rather than calling the individual steps manually. However, do note that the final broadcast to the other nodes is
+asynchronous, so care must be used in unit testing to correctly await the vault updates.
 
 Gathering Inputs
 ----------------
@@ -87,39 +74,36 @@ One of the first steps to forming a transaction is gathering the set of
 input references. This process will clearly vary according to the nature
 of the business process being captured by the smart contract and the
 parameterised details of the request. However, it will generally involve
-searching the Vault via the ``VaultService`` interface on the
+searching the vault via the ``VaultService`` interface on the
 ``ServiceHub`` to locate the input states.
 
 To give a few more specific details consider two simplified real world
-scenarios. First, a basic foreign exchange Cash transaction. This
+scenarios. First, a basic foreign exchange cash transaction. This
 transaction needs to locate a set of funds to exchange. A flow
 modelling this is implemented in ``FxTransactionBuildTutorial.kt``.
-Second, a simple business model in which parties manually accept, or
-reject each other's trade proposals which is implemented in
+Second, a simple business model in which parties manually accept or
+reject each other's trade proposals, which is implemented in
 ``WorkflowTransactionBuildTutorial.kt``. To run and explore these
-examples using the IntelliJ IDE one can run/step the respective unit
+examples using the IntelliJ IDE one can run/step through the respective unit
 tests in ``FxTransactionBuildTutorialTest.kt`` and
 ``WorkflowTransactionBuildTutorialTest.kt``, which drive the flows as
 part of a simulated in-memory network of nodes.
 
-.. |nbsp| unicode:: 0xA0
-    :trim:
-
 .. note:: Before creating the IntelliJ run configurations for these unit tests
     go to Run -> Edit |nbsp| Configurations -> Defaults -> JUnit, add
-    ``-javaagent:lib/quasar.jar -Dco.paralleluniverse.fibers.verifyInstrumentation``
+    ``-javaagent:lib/quasar.jar``
     to the VM options, and set Working directory to ``$PROJECT_DIR$``
     so that the ``Quasar`` instrumentation is correctly configured.
 
-For the Cash transaction let’s assume the cash resources are using the 
-standard ``CashState`` in the ``:financial`` Gradle module. The Cash 
+For the cash transaction, let’s assume we are using the
+standard ``CashState`` in the ``:financial`` Gradle module. The ``Cash``
 contract uses ``FungibleAsset`` states to model holdings of 
-interchangeable assets and allow the split/merge and summing of 
+interchangeable assets and allow the splitting, merging and summing of
 states to meet a contractual obligation. We would normally use the 
 ``Cash.generateSpend`` method to gather the required
-amount of cash into a ``TransactionBuilder``, set the outputs and move 
-command. However, to elucidate more clearly example flow code is shown 
-here that will manually carry out the inputs queries by specifying relevant
+amount of cash into a ``TransactionBuilder``, set the outputs and generate the ``Move``
+command. However, to make things clearer, the example flow code shown
+here will manually carry out the input queries by specifying relevant
 query criteria filters to the ``tryLockFungibleStatesForSpending`` method
 of the ``VaultService``.
 
@@ -128,14 +112,11 @@ of the ``VaultService``.
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
 
-As a foreign exchange transaction we expect an exchange of two
-currencies, so we will also require a set of input states from the other
-counterparty. However, the Corda privacy model means we do not know the
-other node’s states. Our flow must therefore negotiate with the other
-node for them to carry out a similar query and populate the inputs (See
-the ``ForeignExchangeFlow`` for more details of the exchange). Having
-identified a set of Input ``StateRef`` items we can then create the
-output as discussed below.
+This is a foreign exchange transaction, so we expect another set of input states of another currency from a
+counterparty. However, the Corda privacy model means we are not aware of the other node’s states. Our flow must
+therefore ask the other node to carry out a similar query and return the additional inputs to the transaction (see the
+``ForeignExchangeFlow`` for more details of the exchange). We now have all the required input ``StateRef`` items, and
+can turn to gathering the outputs.
 
 For the trade approval flow we need to implement a simple workflow
 pattern. We start by recording the unconfirmed trade details in a state
@@ -167,6 +148,7 @@ the ``VaultService`` as follows:
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
+    :dedent: 8
 
 Generating Commands
 -------------------
@@ -187,7 +169,7 @@ environment the ``Contract.verify``, transaction is the only allowed to
 use the content of the transaction to decide validity.
 
 Another essential requirement for commands is that the correct set of
-``CompositeKeys`` are added to the Command on the builder, which will be
+``PublicKey`` objects are added to the ``Command`` on the builder, which will be
 used to form the set of required signers on the final validated
 transaction. These must correctly align with the expectations of the
 ``Contract.verify`` method, which should be written to defensively check
@@ -200,7 +182,7 @@ exchange of assets.
 Generating Outputs
 ------------------
 
-Having located a set of ``StateAndRefs`` as the transaction inputs, the
+Having located a ``StateAndRefs`` set as the transaction inputs, the
 flow has to generate the output states. Typically, this is a simple call
 to the Kotlin ``copy`` method to modify the few fields that will
 transitioned in the transaction. The contract code may provide a
@@ -210,7 +192,7 @@ usually sufficient, especially as it is expected that we wish to preserve
 the ``linearId`` between state revisions, so that Vault queries can find
 the latest revision.
 
-For fungible contract states such as ``Cash`` it is common to distribute
+For fungible contract states such as ``cash`` it is common to distribute
 and split the total amount e.g. to produce a remaining balance output
 state for the original owner when breaking up a large amount input
 state. Remember that the result of a successful transaction is always to
@@ -221,36 +203,39 @@ the total cash. For example from the demo code:
     :language: kotlin
     :start-after: DOCSTART 2
     :end-before: DOCEND 2
+    :dedent: 4
 
-Building the WireTransaction
-----------------------------
+Building the SignedTransaction
+------------------------------
 
-Having gathered all the ingredients for the transaction we now need to
-use a ``TransactionBuilder`` to construct the full ``WireTransaction``.
-The initial ``TransactionBuilder`` should be created by calling the
-``TransactionBuilder`` method. At this point the
-Notary to associate with the states should be recorded. Then we keep
-adding inputs, outputs, commands and attachments to fill the
-transaction. Examples of this process are:
+Having gathered all the components for the transaction we now need to use a ``TransactionBuilder`` to construct the
+full ``SignedTransaction``. We instantiate a ``TransactionBuilder`` and provide a notary that will be associated with
+the output states. Then we keep adding inputs, outputs, commands and attachments to complete the transaction.
+
+Once the transaction is fully formed, we call ``ServiceHub.signInitialTransaction`` to sign the ``TransactionBuilder``
+and convert it into a ``SignedTransaction``.
+
+Examples of this process are:
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/WorkflowTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 2
     :end-before: DOCEND 2
+    :dedent: 8
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/FxTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 3
     :end-before: DOCEND 3
+    :dedent: 4
 
 Completing the SignedTransaction
 --------------------------------
 
-Having created an initial ``WireTransaction`` and converted this to an
-initial ``SignedTransaction`` the process of verifying and forming a
-full ``SignedTransaction`` begins and then completes with the
+Having created an initial ``TransactionBuilder`` and converted this to a ``SignedTransaction``, the process of
+verifying and forming a full ``SignedTransaction`` begins and then completes with the
 notarisation. In practice this is a relatively stereotypical process,
-because assuming the ``WireTransaction`` is correctly constructed the
+because assuming the ``SignedTransaction`` is correctly constructed the
 verification should be immediate. However, it is also important to
 recheck the business details of any data received back from an external
 node, because a malicious party could always modify the contents before
@@ -263,12 +248,11 @@ of the transaction has not been altered by the remote parties.
 
 The typical code therefore checks the received ``SignedTransaction``
 using the ``verifySignaturesExcept`` method, excluding itself, the
-notary and any other parties yet to apply their signature. The contents of the
-``WireTransaction`` inside the ``SignedTransaction`` should be fully
+notary and any other parties yet to apply their signature. The contents of the ``SignedTransaction`` should be fully
 verified further by expanding with ``toLedgerTransaction`` and calling
 ``verify``. Further context specific and business checks should then be
 made, because the ``Contract.verify`` is not allowed to access external
-context. For example the flow may need to check that the parties are the
+context. For example, the flow may need to check that the parties are the
 right ones, or that the ``Command`` present on the transaction is as
 expected for this specific flow. An example of this from the demo code is:
 
@@ -276,6 +260,7 @@ expected for this specific flow. An example of this from the demo code is:
     :language: kotlin
     :start-after: DOCSTART 3
     :end-before: DOCEND 3
+    :dedent: 8
 
 After verification the remote flow will return its signature to the
 originator. The originator should apply that signature to the starting
@@ -284,18 +269,15 @@ originator. The originator should apply that signature to the starting
 Committing the Transaction
 --------------------------
 
-Once all the party signatures are applied to the SignedTransaction the
-final step is notarisation. This involves calling ``NotaryFlow.Client``
-to confirm the transaction, consume the inputs and return its confirming
-signature. Then the flow should ensure that all nodes end with all
-signatures and that they call ``ServiceHub.recordTransactions``. The
-code for this is standardised in the ``FinalityFlow``, or more explicitly
-an example is:
+Once all the signatures are applied to the ``SignedTransaction``, the
+final steps are notarisation and ensuring that all nodes record the fully-signed transaction. The
+code for this is standardised in the ``FinalityFlow``:
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/WorkflowTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 4
     :end-before: DOCEND 4
+    :dedent: 8
 
 Partially Visible Transactions
 ------------------------------
@@ -307,10 +289,10 @@ a regulator, but does not wish to share that with the other trading
 partner. The tear-off/Merkle tree support in Corda allows flows to send
 portions of the full transaction to restrict visibility to remote
 parties. To do this one can use the
-``WireTransaction.buildFilteredTransaction`` extension method to produce
+``SignedTransaction.buildFilteredTransaction`` extension method to produce
 a ``FilteredTransaction``. The elements of the ``SignedTransaction``
 which we wish to be hide will be replaced with their secure hash. The
-overall transaction txid is still provable from the
+overall transaction id is still provable from the
 ``FilteredTransaction`` preventing change of the private data, but we do
 not expose that data to the other node directly. A full example of this
 can be found in the ``NodeInterestRates`` Oracle code from the

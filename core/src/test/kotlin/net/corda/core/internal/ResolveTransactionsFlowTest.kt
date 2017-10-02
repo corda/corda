@@ -24,6 +24,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+// DOCSTART 3
 class ResolveTransactionsFlowTest {
     lateinit var mockNet: MockNetwork
     lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
@@ -53,6 +54,8 @@ class ResolveTransactionsFlowTest {
         mockNet.stopNodes()
         unsetCordappPackages()
     }
+// DOCEND 3
+
 
     // DOCSTART 1
     @Test
