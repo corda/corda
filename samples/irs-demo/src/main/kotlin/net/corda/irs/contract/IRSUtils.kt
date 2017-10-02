@@ -22,9 +22,9 @@ open class RatioUnit(val value: BigDecimal) { // TODO: Discuss this type
 }
 
 /**
- * A class to reprecent a percentage in an unambiguous way.
+ * A class to represent a percentage in an unambiguous way.
  */
-open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecimal(percentageAsString).divide(BigDecimal("100"))) {
+open class PercentageRatioUnit(val percentageAsString: String) : RatioUnit(BigDecimal(percentageAsString).divide(BigDecimal("100"))) {
     override fun toString() = value.times(BigDecimal(100)).toString() + "%"
 }
 
@@ -39,6 +39,7 @@ val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
  * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@CordaSerializable
 open class Rate(val ratioUnit: RatioUnit? = null) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
