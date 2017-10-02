@@ -241,6 +241,12 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // It is used from the network visualiser tool.
         @Suppress("unused") val place: WorldMapLocation get() = findMyLocation()!!
 
+        private var dbCloser: (() -> Any?)? = null
+        override fun <T> initialiseDatabasePersistence(insideTransaction: () -> T) = super.initialiseDatabasePersistence {
+            dbCloser = database::close
+            insideTransaction()
+        }
+
         fun disableDBCloseOnStop() {
             runOnStop.remove(dbCloser)
         }

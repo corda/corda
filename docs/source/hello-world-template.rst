@@ -22,7 +22,7 @@ Downloading the template
 ------------------------
 Open a terminal window in the directory where you want to download the CorDapp template, and run the following commands:
 
-.. code-block:: text
+.. code-block:: bash
 
     # Clone the template from GitHub:
     git clone https://github.com/corda/cordapp-template-java.git ; cd cordapp-template-java
@@ -30,12 +30,6 @@ Open a terminal window in the directory where you want to download the CorDapp t
     *or*
 
     git clone https://github.com/corda/cordapp-template-kotlin.git ; cd cordapp-template-kotlin
-
-    # Retrieve a list of the stable Milestone branches using:
-    git branch -a --list *release-M*
-
-    # Check out the Milestone branch with the latest version number:
-    git checkout release-M[*version number*] ; git pull
 
 Template structure
 ------------------
