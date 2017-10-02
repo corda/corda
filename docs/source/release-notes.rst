@@ -12,7 +12,7 @@ Corda 1.0 is finally here!
 
 This critical step in the Corda journey enables the developer community, clients, and partners to build on Corda with confidence.
 This release represents the first version of Corda to provide API stability for Corda application (CorDapp) developers.
-Corda applications will continue to work against this API with each subsequent release of Corda. The public API for Corda core 
+Corda applications will continue to work against this API with each subsequent release of Corda. The public API for Corda
 will only evolve to include new features.
 
 As of Corda 1.0, the following modules export public APIs for which we guarantee to maintain backwards compatibility,
@@ -110,7 +110,7 @@ We have provided a comprehensive :doc:`upgrade-notes` to ease the transition of 
 
 Upgrading to this release is strongly recommended, and you will be safe in the knowledge that APIs will no longer break.
 
-Next destination: large-scale production readiness!
+Thank you to all contributors for this release!
 
 Milestone 14
 ------------
