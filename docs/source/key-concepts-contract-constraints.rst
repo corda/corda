@@ -15,7 +15,7 @@ A typical constraint is the hash of the CorDapp JAR that contains the contract a
 include constraints that require specific signers of the JAR, or both the signer and the hash. Constraints can be
 specified when constructing a transaction; if unspecified, an automatic constraint is used.
 
-``TransactionState``s have a ``constraint`` field that represents that state's attachment constraint. When a party
+A ``TransactionState`` has a ``constraint`` field that represents that state's attachment constraint. When a party
 constructs a ``TransactionState`` without specifying the constraint parameter a default value
 (``AutomaticHashConstraint``) is used. This default will be automatically resolved to a specific
 ``HashAttachmentConstraint`` that contains the hash of the attachment which contains the contract of that
@@ -80,7 +80,7 @@ attachment JAR. This allows for trusting of attachments from trusted entities.
 Limitations
 -----------
 
-``AttachmentConstraint``s are verified by running the ``AttachmentConstraint.isSatisfiedBy`` method. When this is called
+An ``AttachmentConstraint`` is verified by running the ``AttachmentConstraint.isSatisfiedBy`` method. When this is called
 it is provided only the relevant attachment by the transaction that is verifying it.
 
 Testing
