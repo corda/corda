@@ -84,7 +84,7 @@ In addition to API stability this release encompasses a number of major function
   more user friendly and intuitive for both filtered and unfiltered transactions.
 
 * **Enhanced component privacy**:
-  Corda 1.0 is equipped with a scalable patent-pending component visibility design based on the above sophisticated
+  Corda 1.0 is equipped with a scalable component visibility design based on the above sophisticated
   sub-tree model and the introduction of nonces per component. Roughly, an initial base-nonce, the "privacy-salt",
   is used to deterministically generate nonces based on the path of each component in the tree. Because each component
   is accompanied by a nonce, we protect against brute force attacks, even against low-entropy components. In addition,
