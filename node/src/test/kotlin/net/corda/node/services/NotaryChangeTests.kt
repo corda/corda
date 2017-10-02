@@ -7,6 +7,7 @@ import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
@@ -212,7 +213,7 @@ fun issueMultiPartyState(nodeA: StartedNode<*>, nodeB: StartedNode<*>, notaryNod
     return stx.tx.outRef(0)
 }
 
-fun issueInvalidState(services: ServiceHubInternal, identity: Party, notary: Party): StateAndRef<DummyContract.SingleOwnerState> {
+fun issueInvalidState(services: ServiceHub, identity: Party, notary: Party): StateAndRef<DummyContract.SingleOwnerState> {
     val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
     tx.setTimeWindow(Instant.now(), 30.seconds)
     val stx = services.signInitialTransaction(tx)
