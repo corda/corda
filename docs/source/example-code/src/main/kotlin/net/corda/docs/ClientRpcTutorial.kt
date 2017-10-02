@@ -49,7 +49,7 @@ fun main(args: Array<String>) {
             startFlowPermission<CashPaymentFlow>(),
             startFlowPermission<CashExitFlow>()))
 
-    driver(driverDirectory = baseDirectory) {
+    driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance")) {
         startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
         val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()
         // END 1
@@ -100,10 +100,9 @@ fun main(args: Array<String>) {
             }
         }
         waitForAllNodesToFinish()
+        // END 5
     }
-
 }
-// END 5
 
 // START 6
 fun generateTransactions(proxy: CordaRPCOps) {
