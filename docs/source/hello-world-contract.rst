@@ -41,7 +41,8 @@ Just as every Corda state must implement the ``ContractState`` interface, every 
 
 You can read about function declarations in Kotlin `here <https://kotlinlang.org/docs/reference/functions.html>`_.
 
-We can see that ``Contract`` expresses its constraints through a ``verify`` function that takes a transaction as input, and:
+We can see that ``Contract`` expresses its constraints through a ``verify`` function that takes a transaction as input,
+and:
 
   * Throws an ``IllegalArgumentException`` if it rejects the transaction proposal
   * Returns silently if it accepts the transaction proposal
@@ -118,7 +119,6 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
         import net.corda.core.contracts.CommandData;
         import net.corda.core.contracts.Contract;
         import net.corda.core.transactions.LedgerTransaction;
-        import net.corda.core.crypto.SecureHash;
         import net.corda.core.identity.Party;
 
         import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
@@ -257,8 +257,6 @@ We've now written an ``IOUContract`` constraining the evolution of each ``IOUSta
   ``Create`` command
 * The ``IOUState`` created by the issuance transaction must have a non-negative value, and the lender and borrower
   must be different entities
-
-Before we move on, make sure you go back and modify ``IOUState`` to point to the new ``IOUContract`` class.
 
 The final step in the creation of our CorDapp will be to write the ``IOUFlow`` that will allow a node to orchestrate
 the creation of a new ``IOUState`` on the ledger, while only sharing information on a need-to-know basis.

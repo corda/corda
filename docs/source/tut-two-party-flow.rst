@@ -29,10 +29,14 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
 
         ...
 
+        // We create the transaction components.
+        val outputState = IOUState(iouValue, ourIdentity, otherParty)
+        val outputContract = IOUContract::class.jvmName
+        val outputContractAndState = StateAndContract(outputState, outputContract)
+        val cmd = Command(IOUContract.Create(), listOf(ourIdentity.owningKey, otherParty.owningKey))
+
         // We add the items to the builder.
-        val state = IOUState(iouValue, me, otherParty)
-        val cmd = Command(IOUContract.Create(), listOf(me.owningKey, otherParty.owningKey))
-        txBuilder.withItems(state, cmd)
+        txBuilder.withItems(outputContractAndState, cmd)
 
         // Verifying the transaction.
         txBuilder.verify(serviceHub)
@@ -40,9 +44,11 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         // Signing the transaction.
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
-        // Obtaining the counterparty's signature
-        val otherSession = initiateFlow(otherParty)
-        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, setOf(otherSession), CollectSignaturesFlow.tracker()))
+        // Creating a session with the other party.
+        val otherpartySession = initiateFlow(otherParty)
+
+        // Obtaining the counterparty's signature.
+        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, listOf(otherpartySession), CollectSignaturesFlow.tracker()))
 
         // Finalising the transaction.
         subFlow(FinalityFlow(fullySignedTx))
@@ -58,11 +64,15 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
 
         ...
 
+        // We create the transaction components.
+        IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
+        String outputContract = IOUContract.class.getName();
+        StateAndContract outputContractAndState = new StateAndContract(outputState, outputContract);
+        List<PublicKey> requiredSigners = ImmutableList.of(getOurIdentity().getOwningKey(), otherParty.getOwningKey());
+        Command cmd = new Command<>(new IOUContract.Create(), requiredSigners);
+
         // We add the items to the builder.
-        IOUState state = new IOUState(iouValue, me, otherParty);
-        List<PublicKey> requiredSigners = ImmutableList.of(me.getOwningKey(), otherParty.getOwningKey());
-        Command cmd = new Command(new IOUContract.Create(), requiredSigners);
-        txBuilder.withItems(state, cmd);
+        txBuilder.withItems(outputContractAndState, cmd);
 
         // Verifying the transaction.
         txBuilder.verify(getServiceHub());
@@ -70,20 +80,34 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         // Signing the transaction.
         final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
-        // Obtaining the counterparty's signature
-        final FlowSession otherSession = initiateFlow(otherParty)
-        final SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(signedTx, Collections.singleton(otherSession), CollectSignaturesFlow.Companion.tracker()));
+        // Creating a session with the other party.
+        FlowSession otherpartySession = initiateFlow(otherParty);
+
+        // Obtaining the counterparty's signature.
+        SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(
+                signedTx, ImmutableList.of(otherpartySession), CollectSignaturesFlow.tracker()));
 
         // Finalising the transaction.
-        subFlow(new FinalityFlow(fullySignedTx));
+        subFlow(new FinalityFlow(signedTx));
 
         return null;
 
 To make the borrower a required signer, we simply add the borrower's public key to the list of signers on the command.
 
-``CollectSignaturesFlow``, meanwhile, takes a transaction signed by the flow initiator, and returns a transaction
-signed by all the transaction's other required signers. We then pass this fully-signed transaction into
-``FinalityFlow``.
+We now need to communicate with the borrower to request their signature. Whenever you want to communicate with another
+party in the context of a flow, you first need to establish a flow session with them. If the counterparty has a
+``FlowLogic`` registered to respond to the ``FlowLogic`` initiating the session, a session will be established. All
+communication between the two ``FlowLogic`` instances will then place as part of this session.
+
+Once we have a session with the borrower, we gather the borrower's signature using ``CollectSignaturesFlow``, which
+takes:
+
+* A transaction signed by the flow initiator
+* A list of flow-sessions between the flow initiator and the required signers
+
+And returns a transaction signed by all the required signers.
+
+We then pass this fully-signed transaction into ``FinalityFlow``.
 
 Creating the borrower's flow
 ----------------------------
