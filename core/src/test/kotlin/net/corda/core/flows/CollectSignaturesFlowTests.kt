@@ -50,7 +50,7 @@ class CollectSignaturesFlowTests {
         alice = notaryServices.identityService.certificateFromKey(notaryServices.networkMapCache.getPeerByLegalName(ALICE_NAME)!!.owningKey)!!
         bob = notaryServices.identityService.certificateFromKey(notaryServices.networkMapCache.getPeerByLegalName(BOB_NAME)!!.owningKey)!!
         charlie = notaryServices.identityService.certificateFromKey(notaryServices.networkMapCache.getPeerByLegalName(CHARLIE_NAME)!!.owningKey)!!
-        notary = notaryServices.networkMapCache.getPeerByLegalName(DUMMY_NOTARY_SERVICE_NAME)!!
+        notary = notaryServices.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
     }
 
     @After

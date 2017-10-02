@@ -41,7 +41,7 @@ class ValidatingNotaryServiceTests {
         notaryNode.internals.ensureRegistered()
         notaryServices = notaryNode.services
         aliceServices = aliceNode.services
-        notary = notaryServices.networkMapCache.getPeerByLegalName(DUMMY_NOTARY_SERVICE_NAME)!!
+        notary = notaryServices.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
         alice = aliceServices.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
     }
 

@@ -35,7 +35,7 @@ class FinalityFlowTests {
         bobServices = bobNode.services
         alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
         bob = notaryNode.services.networkMapCache.getPeerByLegalName(BOB_NAME)!!
-        notary = notaryNode.services.networkMapCache.getPeerByLegalName(DUMMY_NOTARY_SERVICE_NAME)!!
+        notary = notaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
     }
 
     @After
