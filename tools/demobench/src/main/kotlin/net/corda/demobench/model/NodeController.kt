@@ -34,6 +34,8 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     private var networkMapConfig: NetworkMapConfig? = null
 
+    private var nodeInfoFilesCopier: NodeInfoFilesCopier = NodeInfoFilesCopier()
+
     val activeNodes: List<NodeConfig> get() = nodes.values.filter {
         (it.state == NodeState.RUNNING) || (it.state == NodeState.STARTING)
     }
@@ -70,6 +72,8 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             log.warning("Node with key '${config.key}' already exists.")
             return null
         }
+
+        nodeInfoFilesCopier.addConfig(config)
 
         // The first node becomes our network map
         chooseNetworkMap(config)
@@ -149,6 +153,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         if (nodes.putIfAbsent(config.key, config) != null) {
             return false
         }
+        nodeInfoFilesCopier.addConfig(config)
 
         updatePort(config)
 

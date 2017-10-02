@@ -8,6 +8,7 @@ import net.corda.finance.DOLLARS
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import org.slf4j.Logger
+import java.nio.file.Path
 import kotlin.system.exitProcess
 
 /**
