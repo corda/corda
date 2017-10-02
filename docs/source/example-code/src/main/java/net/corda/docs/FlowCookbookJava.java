@@ -36,8 +36,6 @@ import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.testing.TestConstants.getALICE_KEY;
 import static net.corda.testing.contracts.DummyContractKt.DUMMY_PROGRAM_ID;
 
-// We group our two flows inside a singleton object to indicate that they work
-// together.
 @SuppressWarnings("unused")
 public class FlowCookbookJava {
     // ``InitiatorFlow`` is our first flow, and will communicate with
@@ -123,20 +121,24 @@ public class FlowCookbookJava {
 
             // A transaction generally needs a notary:
             //   - To prevent double-spends if the transaction has inputs
-            //   - To serve as a timestamping authority if the transaction has a time-window
+            //   - To serve as a timestamping authority if the transaction has a
+            //     time-window
             // We retrieve a notary from the network map.
             // DOCSTART 1
-            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(new CordaX500Name("Notary Service", "London", "UK"));
-            // Alternatively, we can pick an arbitrary notary from the notary list. However, it is always preferable to
-            // specify which notary to use explicitly, as the notary list might change when new notaries are introduced,
-            // or old ones decommissioned.
+            CordaX500Name notaryName = new CordaX500Name("Notary Service", "London", "GB");
+            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(notaryName);
+            // Alternatively, we can pick an arbitrary notary from the notary
+            // list. However, it is always preferable to specify the notary
+            // explicitly, as the notary list might change when new notaries are
+            // introduced, or old ones decommissioned.
             Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
             // DOCEND 1
 
-            // We may also need to identify a specific counterparty.
-            // Again, we do so using the network map.
+            // We may also need to identify a specific counterparty. We do so
+            // using the identity service.
             // DOCSTART 2
-            Party namedCounterparty = getServiceHub().getIdentityService().wellKnownPartyFromX500Name(new CordaX500Name("NodeA", "London", "UK"));
+            CordaX500Name counterPartyName = new CordaX500Name("NodeA", "London", "GB");
+            Party namedCounterparty = getServiceHub().getIdentityService().wellKnownPartyFromX500Name(counterPartyName);
             Party keyedCounterparty = getServiceHub().getIdentityService().partyFromKey(dummyPubKey);
             // DOCEND 2
 
@@ -144,6 +146,13 @@ public class FlowCookbookJava {
              * SENDING AND RECEIVING DATA *
             ------------------------------*/
             progressTracker.setCurrentStep(SENDING_AND_RECEIVING_DATA);
+
+            // We start by initiating a flow session with the counterparty. We
+            // will use this session to send and receive messages from the
+            // counterparty.
+            // DOCSTART initiateFlow
+            FlowSession counterpartySession = initiateFlow(counterparty);
+            // DOCEND initiateFlow
 
             // We can send arbitrary data to a counterparty.
             // If this is the first ``send``, the counterparty will either:
@@ -156,7 +165,6 @@ public class FlowCookbookJava {
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
             // DOCSTART 4
-            FlowSession counterpartySession = initiateFlow(counterparty);
             counterpartySession.send(new Object());
             // DOCEND 4
 
@@ -261,8 +269,7 @@ public class FlowCookbookJava {
 
             // We then need to pair our output state with a contract.
             // DOCSTART 47
-            String contractName = "net.corda.testing.contracts.DummyContract";
-            StateAndContract ourOutput = new StateAndContract(ourOutputState, contractName);
+            StateAndContract ourOutput = new StateAndContract(ourOutputState, DUMMY_PROGRAM_ID);
             // DOCEND 47
 
             // Commands pair a ``CommandData`` instance with a list of
@@ -620,7 +627,7 @@ public class FlowCookbookJava {
             progressTracker.setCurrentStep(RECEIVING_AND_SENDING_DATA);
 
             // We need to respond to the messages sent by the initiator:
-            // 1. They sent us an ``Any`` instance
+            // 1. They sent us an ``Object`` instance
             // 2. They waited to receive an ``Integer`` instance back
             // 3. They sent a ``String`` instance and waited to receive a
             //    ``Boolean`` instance back
