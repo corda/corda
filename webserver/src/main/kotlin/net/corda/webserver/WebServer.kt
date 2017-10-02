@@ -36,6 +36,9 @@ fun main(args: Array<String>) {
 
     System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs/web").toString())
     val log = LoggerFactory.getLogger("Main")
+    println("This Corda-specific web server is deprecated and will be removed in future.")
+    println("Please switch to a regular web framework like Spring, J2EE or Play Framework.")
+    println()
     println("Logs can be found in ${System.getProperty("log-path")}")
 
     val conf = try {
