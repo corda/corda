@@ -121,17 +121,13 @@ interface NetworkMapCache {
 
     /**
      * Look up the node information entries for a specific identity key.
-     * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
-     * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
-     * the identity of the *whole group*.
+     * Note that for distributed services each node advertises the same service identity.
      */
     fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo>
 
     /**
      * Look up the node information entries for a legal name.
-     * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
-     * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
-     * the identity of the *whole group*.
+     * Note that for distributed services each node advertises the same service identity.
      */
     fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo>
 
