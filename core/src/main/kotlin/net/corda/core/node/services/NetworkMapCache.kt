@@ -74,7 +74,9 @@ interface NetworkMapCache {
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
 
     /**
-     * Look up all well known identities (including certificate path) of a legal name.
+     * Look up all well known identities (including certificate path) of a legal name. This should be used in preference
+     * to well known identity lookup in the identity service where possible, as the network map is the authoritative
+     * source of well known identities.
      */
     fun getPeerCertificatesByLegalName(name: CordaX500Name): Set<PartyAndCertificate> {
         return getNodesByLegalName(name)
@@ -84,7 +86,9 @@ interface NetworkMapCache {
     }
 
     /**
-     * Look up a well known identity (including certificate path) of a legal name.
+     * Look up a well known identity (including certificate path) of a legal name. This should be used in preference
+     * to well known identity lookup in the identity service where possible, as the network map is the authoritative
+     * source of well known identities.
      */
     fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? {
         return getNodeByLegalName(name)
@@ -93,7 +97,9 @@ interface NetworkMapCache {
     }
 
     /**
-     * Look up all well known identities for a legal name.
+     * Look up all well known identities for a legal name. This should be used in preference
+     * to well known identity lookup in the identity service where possible, as the network map is the authoritative
+     * source of well known identities.
      */
     fun getPeersByLegalName(name: CordaX500Name): Set<Party> {
         return getNodesByLegalName(name)
@@ -104,7 +110,9 @@ interface NetworkMapCache {
     }
 
     /**
-     * Look up the well known identity of a legal name.
+     * Look up the well known identity of a legal name. This should be used in preference
+     * to well known identity lookup in the identity service where possible, as the network map is the authoritative
+     * source of well known identities.
      */
     fun getPeerByLegalName(name: CordaX500Name): Party? = getPeerCertificateByLegalName(name)?.party
 

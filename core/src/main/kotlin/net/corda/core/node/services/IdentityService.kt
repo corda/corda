@@ -59,7 +59,10 @@ interface IdentityService {
     fun partyFromKey(key: PublicKey): Party?
 
     /**
-     * Resolves a party name to the well known identity [Party] instance for this name.
+     * Resolves a party name to the well known identity [Party] instance for this name. Where possible well known identity
+     * lookup from name should be done from the network map (via [NetworkMapCache]) instead, as it is the authoritative
+     * source of well known identities.
+     *
      * @param name The [CordaX500Name] to search for.
      * @return If known the canonical [Party] with that name, else null.
      */
