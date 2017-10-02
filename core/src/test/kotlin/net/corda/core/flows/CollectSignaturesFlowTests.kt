@@ -47,9 +47,9 @@ class CollectSignaturesFlowTests {
         mockNet.runNetwork()
         val notaryServices = notaryNode.services
         aliceNode.internals.ensureRegistered()
-        alice = notaryServices.identityService.certificateFromKey(notaryServices.networkMapCache.getPeerByLegalName(ALICE_NAME)!!.owningKey)!!
-        bob = notaryServices.identityService.certificateFromKey(notaryServices.networkMapCache.getPeerByLegalName(BOB_NAME)!!.owningKey)!!
-        charlie = notaryServices.identityService.certificateFromKey(notaryServices.networkMapCache.getPeerByLegalName(CHARLIE_NAME)!!.owningKey)!!
+        alice = notaryServices.networkMapCache.getPeerCertificateByLegalName(ALICE_NAME)!!
+        bob = notaryServices.networkMapCache.getPeerCertificateByLegalName(BOB_NAME)!!
+        charlie = notaryServices.networkMapCache.getPeerCertificateByLegalName(CHARLIE_NAME)!!
         notary = notaryServices.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
     }
 
