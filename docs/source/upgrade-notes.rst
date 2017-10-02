@@ -31,7 +31,7 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 Build 
 ^^^^^
 
-* MockNetwork is no longer resolvable.
+* MockNetwork has moved.
 
   A new test driver module dependency needs to be including in your project: `corda-node-driver`. To continue using the
   mock network for testing, add the following entry to your gradle build file:
@@ -97,7 +97,7 @@ Core data structures
 * Missing Contract override.
 
   The contract interace attribute ``legalContractReference`` has been removed, and replaced by
-  the annotation ``@LegalProseReference(uri = "<URI>")``
+  the optional annotation ``@LegalProseReference(uri = "<URI>")``
 
 * Unresolved reference.
 
@@ -105,8 +105,10 @@ Core data structures
 
 * Overrides nothing: ``isRelevant`` in ``LinearState``.
 
-  Removed the concept of relevancy from ``LinearState``. A ``ContractState``'s relevance to the vault can be determined
-  by the flow context; the vault will process any transaction from a flow which is not derived from transaction resolution verification.
+  Removed the concept of relevancy from ``LinearState``. A ``ContractState``'s relevance to the vault is now resolved
+  internally; the vault will process any transaction from a flow which is not derived from transaction resolution verification.
+  The notion of relevancy is subject to further improvements to enable a developer to control what state the vault thinks
+  are relevant.
 
 * Calls to ``txBuilder.toLedgerTransaction()`` now requires a serviceHub parameter.
 
@@ -117,7 +119,7 @@ Flow framework
 
 * Flow session deprecations
 
-  ``FlowLogic`` communication has been extensively rewritten to use functions on ``FlowSession`` as the base for communication
+  ``FlowLogic`` communication has been upgraded to use functions on ``FlowSession`` as the base for communication
   between nodes.
 
   * Calls to ``send()``, ``receive()`` and ``sendAndReceive()`` on FlowLogic should be replaced with calls
@@ -154,6 +156,7 @@ Node services (ServiceHub)
 * ``ServiceHub.networkMapUpdates`` is replaced by ``ServiceHub.networkMapFeed``
 
 * ``ServiceHub.partyFromX500Name`` is replaced by ``ServiceHub.wellKnownPartyFromX500Name``
+  Note: A "well known" party is one that isn't anonymous and this change was motivated by the confidential identities work.
 
 RPC Client
 ^^^^^^^^^^
@@ -163,8 +166,13 @@ RPC Client
   * Calls to ``verifiedTransactionsFeed()`` and ``verifiedTransactions()`` have been replaced with:
     ``internalVerifiedTransactionsSnapshot()`` and ``internalVerifiedTransactionsFeed()`` respectively
 
+    This is in preparation for the planned integration of Intel SGX™, which will encrypt the transactions feed.
+    Apps that use this API will not work on encrypted ledgers: you should probably be using the vault query API instead.
+
   * Accessing the `networkMapCache` via ``services.nodeInfo().legalIdentities`` returns a list of identities.
     The first element in the list is the Party object referring to a node's single identity.
+
+    This is in preparation for allowing a node to host multiple separate identities in future.
 
 Testing
 ^^^^^^^
@@ -174,9 +182,15 @@ We will be revisiting this capability in a future release.
 
 * CorDapps must be explicitly registered in ``MockNetwork`` unit tests.
 
-  This is done by calling ``setCordappPackages`` on the first line of your `@Before` method.
-  This takes a variable number of `String` arguments which should be the package names of the CorDapps you wish to load.
+  This is done by calling ``setCordappPackages``, an extension helper function in the ``net.corda.testing`` package,
+  on the first line of your `@Before` method. This takes a variable number of `String` arguments which should be the
+  package names of the CorDapps containing the contract verification code you wish to load.
   You should unset CorDapp packages in your `@After` method by using ``unsetCordappPackages()`` after `stopNodes()`.
+
+* CorDapps must be explicitly registered in ``DriverDSL`` and ``RPCDriverDSL`` integration tests.
+
+  Similarly, you must also register package names of the CorDapps containing the contract verification code you wish to load
+  using the ``extraCordappPackagesToScan: List<String>`` constructor parameter of the driver DSL.
 
 Finance
 ^^^^^^^
@@ -202,7 +216,9 @@ Miscellaneous
 
 * There is no longer a ``NodeInfo.advertisedServices`` property.
 
-  The concept of advertised services has been removed from Corda.
+  The concept of advertised services has been removed from Corda. This is because it was vaguely defined and real world
+  apps would not typically select random, unknown counterparties from the network map based on self-declared capabilities.
+  We will introduce a replacement for this functionality, business networks, in a future release.
 
 Gotchas
 ^^^^^^^

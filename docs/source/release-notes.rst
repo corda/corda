@@ -98,7 +98,7 @@ In addition to API stability this release encompasses a number of major function
 * **Full support for confidential identities**:
   This includes rework and improvements to the identity service to handle both `well known` and `confidential` identities.
   This work ships in an experimental module in Corda 1.0, called `confidential-identities`. API stabilisation of confidential
-  identities will improve as we make the integration of this privacy feature into applications even easier for developers.
+  identities will occur as we make the integration of this privacy feature into applications even easier for developers.
 
 * **Re-designed network map service**:
   The foundations for a completely redesigned network map service have been implemented to enable future increased network 
@@ -108,7 +108,7 @@ Finally, please note that the 1.0 release has not yet been security audited.
 
 We have provided a comprehensive :doc:`upgrade-notes` to ease the transition of migrating CorDapps to Corda 1.0
 
-Upgrading to this release is strongly recommended, and you will be safe in the knowledge that APIs will no longer break.
+Upgrading to this release is strongly recommended, and you will be safe in the knowledge that core APIs will no longer break.
 
 Thank you to all contributors for this release!
 
