@@ -1,13 +1,6 @@
 Troubleshooting
 ===============
 
-Milestone releases
-------------------
-
-When you clone the corda or cordapp-template repos, they will default to the master branch. The master branch is being continuously developed upon, and its features may not align with the state of Corda as described in the docs. Additionally, the master branch of the CorDapp template may break in response to changes in the main corda repo.
-
-When developing on Corda, you should always check out the latest milestone (i.e. stable) branch instead. For example, to check out milestone 0, you'd run ``git checkout release-M0``.
-
 Java issues
 -----------
 
