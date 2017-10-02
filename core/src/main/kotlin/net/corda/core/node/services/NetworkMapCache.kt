@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
@@ -72,20 +73,59 @@ interface NetworkMapCache {
     /** Look up the node info for a host and port. */
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
 
-    fun getPeerByLegalName(name: CordaX500Name): Party? = getNodeByLegalName(name)?.let {
-        it.legalIdentitiesAndCerts.singleOrNull { it.name == name }?.party
+    /**
+     * Look up all well known identities (including certificate path) of a legal name.
+     */
+    fun getPeerCertificatesByLegalName(name: CordaX500Name): Set<PartyAndCertificate> {
+        return getNodesByLegalName(name)
+                .flatMap(NodeInfo::legalIdentitiesAndCerts)
+                .filter { it.name == name }
+                .toSet()
     }
+
+    /**
+     * Look up a well known identity (including certificate path) of a legal name.
+     */
+    fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? {
+        return getNodeByLegalName(name)
+                ?.legalIdentitiesAndCerts
+                ?.singleOrNull { it.name == name }
+    }
+
+    /**
+     * Look up all well known identities for a legal name.
+     */
+    fun getPeersByLegalName(name: CordaX500Name): Set<Party> {
+        return getNodesByLegalName(name)
+                .flatMap(NodeInfo::legalIdentitiesAndCerts)
+                .filter { it.name == name }
+                .map(PartyAndCertificate::party)
+                .toSet()
+    }
+
+    /**
+     * Look up the well known identity of a legal name.
+     */
+    fun getPeerByLegalName(name: CordaX500Name): Party? = getPeerCertificateByLegalName(name)?.party
 
     /** Return all [NodeInfo]s the node currently is aware of (including ourselves). */
     val allNodes: List<NodeInfo>
 
     /**
-     * Look up the node infos for a specific peer key.
+     * Look up the node information entries for a specific identity key.
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
      * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
      * the identity of the *whole group*.
      */
     fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo>
+
+    /**
+     * Look up the node information entries for a legal name.
+     * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
+     * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
+     * the identity of the *whole group*.
+     */
+    fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo>
 
     /** Returns information about the party, which may be a specific node or a service */
     fun getPartyInfo(party: Party): PartyInfo?
