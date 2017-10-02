@@ -13,6 +13,11 @@ UNRELEASED
   either annotated with the @CordaSerializable annotation or explicitly whitelisted then a NotSerializableException is
   thrown.
 
+* If you're using the deprecated web server, it no longer connects to the node using node-internal privileges. Your
+  node configs must specify an RPC user that has sufficient privileges to do what your app needs (usually just starting
+  flows). If using the Cordformation Gradle plugin to build local nodes please see the samples, for instance the IRS
+  sample, for how to specify required permissions.
+
 Release 1.0
 -----------
 
