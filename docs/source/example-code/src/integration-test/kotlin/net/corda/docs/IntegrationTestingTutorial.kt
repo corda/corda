@@ -24,7 +24,7 @@ class IntegrationTestingTutorial {
     fun `alice bob cash exchange example`() {
         // START 1
         driver(startNodesInProcess = true,
-               extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlowPermission<CashIssueFlow>(),
                     startFlowPermission<CashPaymentFlow>()
@@ -104,7 +104,7 @@ class IntegrationTestingTutorial {
                         }
                 )
             }
+            // END 5
         }
     }
 }
-// END 5

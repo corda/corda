@@ -43,6 +43,7 @@ interface NetworkMapCache {
         data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
 
+    // DOCSTART 1
     /**
      * A list of notary services available on the network.
      *
@@ -50,6 +51,8 @@ interface NetworkMapCache {
      */
     // TODO this list will be taken from NetworkParameters distributed by NetworkMap.
     val notaryIdentities: List<Party>
+    // DOCEND 1
+
     /** Tracks changes to the network map cache. */
     val changed: Observable<MapChange>
     /** Future to track completion of the NetworkMapService registration. */
@@ -89,8 +92,10 @@ interface NetworkMapCache {
     /** Returns information about the party, which may be a specific node or a service */
     fun getPartyInfo(party: Party): PartyInfo?
 
+    // DOCSTART 2
     /** Gets a notary identity by the given name. */
     fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }
+    // DOCEND 2
 
     /** Checks whether a given party is an advertised notary identity. */
     fun isNotary(party: Party): Boolean = party in notaryIdentities

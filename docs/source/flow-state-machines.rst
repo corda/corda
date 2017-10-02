@@ -86,13 +86,14 @@ Our flow has two parties (B and S for buyer and seller) and will proceed as foll
 
 1. S sends a ``StateAndRef`` pointing to the state they want to sell to B, along with info about the price they require
    B to pay.
-2. B sends to S a ``SignedTransaction`` that includes the state as input, B's cash as input, the state with the new
-   owner key as output, and any change cash as output. It contains a single signature from B but isn't valid because
-   it lacks a signature from S authorising movement of the asset.
+2. B sends to S a ``SignedTransaction`` that includes two inputs (the state owned by S, and cash owned by B) and three
+   outputs (the state now owned by B, the cash now owned by S, and any change cash still owned by B). The
+   ``SignedTransaction`` has a single signature from B but isn't valid because it lacks a signature from S authorising
+   movement of the asset.
 3. S signs the transaction and sends it back to B.
-4. B *finalises* the transaction by sending it to the notary who checks the transaction for validity,
-   recording the transaction in B's local vault, and then sending it on to S who also checks it and commits
-   the transaction to S's local vault.
+4. B *finalises* the transaction by sending it to the notary who checks the transaction for validity, recording the
+   transaction in B's local vault, and then sending it on to S who also checks it and commits the transaction to S's
+   local vault.
 
 You can find the implementation of this flow in the file ``finance/src/main/kotlin/net/corda/finance/TwoPartyTradeFlow.kt``.
 
@@ -109,64 +110,31 @@ each side.
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
-
-      object TwoPartyTradeFlow {
-          class UnacceptablePriceException(val givenPrice: Amount<Currency>) : FlowException("Unacceptable price: $givenPrice")
-          class AssetMismatchException(val expectedTypeName: String, val typeName: String) : FlowException() {
-              override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
-          }
-
-          // This object is serialised to the network and is the first flow message the seller sends to the buyer.
-          @CordaSerializable
-          data class SellerTradeInfo(
-                  val assetForSale: StateAndRef<OwnableState>,
-                  val price: Amount<Currency>,
-                  val sellerOwnerKey: PublicKey
-          )
-
-          open class Seller(val otherParty: Party,
-                            val notaryNode: NodeInfo,
-                            val assetToSell: StateAndRef<OwnableState>,
-                            val price: Amount<Currency>,
-                            val myKey: PublicKey,
-                            override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
-              @Suspendable
-              override fun call(): SignedTransaction {
-                  TODO()
-              }
-          }
-
-          open class Buyer(val otherParty: Party,
-                           val notary: Party,
-                           val acceptablePrice: Amount<Currency>,
-                           val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
-              @Suspendable
-              override fun call(): SignedTransaction {
-                  TODO()
-              }
-          }
-      }
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/flowstatemachines/TutorialFlowStateMachines.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
 
 This code defines several classes nested inside the main ``TwoPartyTradeFlow`` singleton. Some of the classes are
 simply flow messages or exceptions. The other two represent the buyer and seller side of the flow.
 
 Going through the data needed to become a seller, we have:
 
-- ``otherParty: Party`` - the party with which you are trading.
-- ``notaryNode: NodeInfo`` - the entry in the network map for the chosen notary. See ":doc:`key-concepts-notaries`" for more
-  information on notaries.
-- ``assetToSell: StateAndRef<OwnableState>`` - a pointer to the ledger entry that represents the thing being sold.
-- ``price: Amount<Currency>`` - the agreed on price that the asset is being sold for (without an issuer constraint).
-- ``myKey: PublicKey`` - the PublicKey part of the node's internal KeyPair that controls the asset being sold.
-The matching PrivateKey stored in the KeyManagementService will be used to sign the transaction.
+- ``otherSideSession: FlowSession`` - a flow session for communication with the buyer
+- ``assetToSell: StateAndRef<OwnableState>`` - a pointer to the ledger entry that represents the thing being sold
+- ``price: Amount<Currency>`` - the agreed on price that the asset is being sold for (without an issuer constraint)
+- ``myParty: PartyAndCertificate`` - the certificate representing the party that controls the asset being sold
 
 And for the buyer:
 
+- ``sellerSession: FlowSession`` - a flow session for communication with the seller
+- ``notary: Party`` - the entry in the network map for the chosen notary. See “Notaries” for more information on
+  notaries
 - ``acceptablePrice: Amount<Currency>`` - the price that was agreed upon out of band. If the seller specifies
-  a price less than or equal to this, then the trade will go ahead.
+  a price less than or equal to this, then the trade will go ahead
 - ``typeToBuy: Class<out OwnableState>`` - the type of state that is being purchased. This is used to check that the
-  sell side of the flow isn't trying to sell us the wrong thing, whether by accident or on purpose.
+  sell side of the flow isn't trying to sell us the wrong thing, whether by accident or on purpose
+- ``anonymous: Boolean`` - whether to generate a fresh, anonymous public key for the transaction
 
 Alright, so using this flow shouldn't be too hard: in the simplest case we can just create a Buyer or Seller
 with the details of the trade, depending on who we are. We then have to start the flow in some way. Just
@@ -191,9 +159,9 @@ and try again.
 Whitelisted classes with the Corda node
 ---------------------------------------
 
-For security reasons, we do not want Corda nodes to be able to receive instances of any class on the classpath
+For security reasons, we do not want Corda nodes to be able to just receive instances of any class on the classpath
 via messaging, since this has been exploited in other Java application containers in the past.  Instead, we require
-that every class contained in messages is whitelisted.  Some classes are whitelisted by default (see ``DefaultWhitelist``),
+every class contained in messages to be whitelisted. Some classes are whitelisted by default (see ``DefaultWhitelist``),
 but others outside of that set need to be whitelisted either by using the annotation ``@CordaSerializable`` or via the
 plugin framework.  See :doc:`serialization`.  You can see above that the ``SellerTradeInfo`` has been annotated.
 
@@ -231,26 +199,28 @@ These will return a ``FlowProgressHandle``, which is just like a ``FlowHandle`` 
 Implementing the seller
 -----------------------
 
-Let's implement the ``Seller.call`` method. This will be run when the flow is invoked.
+Let's implement the ``Seller.call`` method that will be run when the flow is invoked.
 
 .. container:: codeset
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
-            :language: kotlin
-            :start-after: DOCSTART 4
-            :end-before: DOCEND 4
-            :dedent: 4
+        :language: kotlin
+        :start-after: DOCSTART 4
+        :end-before: DOCEND 4
+        :dedent: 8
 
 We start by sending information about the asset we wish to sell to the buyer. We fill out the initial flow message with
-the trade info, and then call ``send``. which takes two arguments:
+the trade info, and then call ``otherSideSession.send``. which takes two arguments:
 
-- The party we wish to send the message to.
-- The payload being sent.
+- The party we wish to send the message to
+- The payload being sent
 
-``send`` will serialise the payload and send it to the other party automatically.
+``otherSideSession.send`` will serialise the payload and send it to the other party automatically.
 
-Next, we call a *subflow* called ``SignTransactionFlow`` (see :ref:`subflows`). ``SignTransactionFlow`` automates the
-process of:
+Next, we call a *subflow* called ``IdentitySyncFlow.Receive`` (see :ref:`subflows`). ``IdentitySyncFlow.Receive``
+ensures that our node can de-anonymise any confidential identities in the transaction it's about to be asked to sign.
+
+Next, we call another subflow called ``SignTransactionFlow``. ``SignTransactionFlow`` automates the process of:
 
 * Receiving a proposed trade transaction from the buyer, with the buyer's signature attached.
 * Checking that the proposed transaction is valid.
@@ -273,7 +243,7 @@ OK, let's do the same for the buyer side:
          :language: kotlin
          :start-after: DOCSTART 1
          :end-before: DOCEND 1
-         :dedent: 4
+         :dedent: 8
 
 This code is longer but no more complicated. Here are some things to pay attention to:
 
@@ -472,7 +442,7 @@ Exception handling
 Flows can throw exceptions to prematurely terminate their execution. The flow framework gives special treatment to
 ``FlowException`` and its subtypes. These exceptions are treated as error responses of the flow and are propagated
 to all counterparties it is communicating with. The receiving flows will throw the same exception the next time they do
-a ``receive`` or ``sendAndReceive`` and thus end the flow session. If the receiver was invoked via ``subFlow`` (details below)
+a ``receive`` or ``sendAndReceive`` and thus end the flow session. If the receiver was invoked via ``subFlow``
 then the exception can  be caught there enabling re-invocation of the sub-flow.
 
 If the exception thrown by the erroring flow is not a ``FlowException`` it will still terminate but will not propagate to
@@ -505,59 +475,40 @@ A flow might declare some steps with code inside the flow class like this:
 .. container:: codeset
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
-            :language: kotlin
-            :start-after: DOCSTART 2
-            :end-before: DOCEND 2
-            :dedent: 4
+        :language: kotlin
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
+        :dedent: 8
 
-    .. sourcecode:: java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/TutorialFlowStateMachines.java
+        :language: java
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+        :dedent: 4
 
-       private final ProgressTracker progressTracker = new ProgressTracker(
-               RECEIVING,
-               VERIFYING,
-               SIGNING,
-               COLLECTING_SIGNATURES,
-               RECORDING
-       );
+Each step exposes a label. By defining your own step types, you can export progress in a way that's both human readable
+and machine readable.
 
-       private static final ProgressTracker.Step RECEIVING = new ProgressTracker.Step(
-               "Waiting for seller trading info");
-       private static final ProgressTracker.Step VERIFYING = new ProgressTracker.Step(
-               "Verifying seller assets");
-       private static final ProgressTracker.Step SIGNING = new ProgressTracker.Step(
-               "Generating and signing transaction proposal");
-       private static final ProgressTracker.Step COLLECTING_SIGNATURES = new ProgressTracker.Step(
-               "Collecting signatures from other parties");
-       private static final ProgressTracker.Step RECORDING = new ProgressTracker.Step(
-               "Recording completed transaction");
-
-Each step exposes a label. By default labels are fixed, but by subclassing ``RelabelableStep`` you can make a step
-that can update its label on the fly. That's useful for steps that want to expose non-structured progress information
-like the current file being downloaded. By defining your own step types, you can export progress in a way that's both
-human readable and machine readable.
-
-Progress trackers are hierarchical. Each step can be the parent for another tracker. By altering the
-``ProgressTracker.childrenFor`` map, a tree of steps can be created. It's allowed to alter the hierarchy
-at runtime, on the fly, and the progress renderers will adapt to that properly. This can be helpful when you don't
-fully know ahead of time what steps will be required. If you *do* know what is required, configuring as much of the
-hierarchy ahead of time is a good idea, as that will help the users see what is coming up. You can pre-configure
-steps by overriding the ``Step`` class like this:
+Progress trackers are hierarchical. Each step can be the parent for another tracker. By setting
+``Step.childProgressTracker``, a tree of steps can be created. It's allowed to alter the hierarchy at runtime, on the
+fly, and the progress renderers will adapt to that properly. This can be helpful when you don't fully know ahead of
+time what steps will be required. If you *do* know what is required, configuring as much of the hierarchy ahead of time
+is a good idea, as that will help the users see what is coming up. You can pre-configure steps by overriding the
+``Step`` class like this:
 
 .. container:: codeset
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
-            :language: kotlin
-            :start-after: DOCSTART 3
-            :end-before: DOCEND 3
-            :dedent: 4
+        :language: kotlin
+        :start-after: DOCSTART 3
+        :end-before: DOCEND 3
+        :dedent: 12
 
-    .. sourcecode:: java
-
-       private static final ProgressTracker.Step VERIFYING_AND_SIGNING = new ProgressTracker.Step("Verifying and signing transaction proposal") {
-           @Nullable @Override public ProgressTracker childProgressTracker() {
-               return SignTransactionFlow.Companion.tracker();
-           }
-       };
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/TutorialFlowStateMachines.java
+        :language: java
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
+        :dedent: 4
 
 Every tracker has not only the steps given to it at construction time, but also the singleton
 ``ProgressTracker.UNSTARTED`` step and the ``ProgressTracker.DONE`` step. Once a tracker has become ``DONE`` its
@@ -586,22 +537,6 @@ and linked ahead of time.
 In future, the progress tracking framework will become a vital part of how exceptions, errors, and other faults are
 surfaced to human operators for investigation and resolution.
 
-Versioning
-----------
-
-Fibers involve persisting object-serialised stack frames to disk. Although we may do some R&D into in-place upgrades
-in future, for now the upgrade process for flows is simple: you duplicate the code and rename it so it has a
-new set of class names. Old versions of the flow can then drain out of the system whilst new versions are
-initiated. When enough time has passed that no old versions are still waiting for anything to happen, the previous
-copy of the code can be deleted.
-
-Whilst kind of ugly, this is a very simple approach that should suffice for now.
-
-.. warning:: Flows are not meant to live for months or years, and by implication they are not meant to implement entire deal
-   lifecycles. For instance, implementing the entire life cycle of an interest rate swap as a single flow - whilst
-   technically possible - would not be a good idea. The platform provides a job scheduler tool that can invoke
-   flows for this reason (see ":doc:`event-scheduling`")
-
 Future features
 ---------------
 
@@ -611,6 +546,6 @@ the features we have planned:
 * Exception management, with a "flow hospital" tool to manually provide solutions to unavoidable
   problems (e.g. the other side doesn't know the trade)
 * Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.
-  For example to implement human transaction authorisations.
+  For example to implement human transaction authorisations
 * A standard library of flows that can be easily sub-classed by local developers in order to integrate internal
-  reporting logic, or anything else that might be required as part of a communications lifecycle.
+  reporting logic, or anything else that might be required as part of a communications lifecycle
