@@ -8,31 +8,37 @@ import java.util.logging.Level
 
 class ServiceController(resourceName: String = "/services.conf") : Controller() {
 
-    val services: List<String> = loadConf(resources.url(resourceName))
+    val services: Map<String, String> = loadConf(resources.url(resourceName))
 
-    val notaries: List<String> = services.filter { it.startsWith("corda.notary.") }.toList()
+    val notaries: Map<String, String> = services.filter { it.value.startsWith("corda.notary.") }
+
+    val issuers: Map<String, String> = services.filter { it.value.startsWith("corda.issuer.") }
 
     /*
      * Load our list of known extra Corda services.
      */
-    private fun loadConf(url: URL?): List<String> {
+    private fun loadConf(url: URL?): Map<String, String> {
         return if (url == null) {
-            emptyList()
+            emptyMap()
         } else {
             try {
-                val set = sortedSetOf<String>()
+                val map = linkedMapOf<String, String>()
                 InputStreamReader(url.openStream()).useLines { sq ->
                     sq.forEach { line ->
-                        val service = line.trim()
-                        set.add(service)
-
-                        log.info("Supports: $service")
+                        val service = line.split(":").map { it.trim() }
+                        if (service.size != 2) {
+                            log.warning("Encountered corrupted line '$line' while reading services from config: $url")
+                        }
+                        else {
+                            map[service[1]] = service[0]
+                            log.info("Supports: $service")
+                        }
                     }
+                    map
                 }
-                set.toList()
             } catch (e: IOException) {
                 log.log(Level.SEVERE, "Failed to load $url: ${e.message}", e)
-                emptyList<String>()
+                emptyMap<String, String>()
             }
         }
     }
