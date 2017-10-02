@@ -42,6 +42,18 @@ Build
 
 .. note::  you may only need `testCompile "net.corda:corda-test-utils:$corda_release_version"` if not using the Driver DSL.
 
+Configuration
+^^^^^^^^^^^^^
+
+* ``CordaPluginRegistry`` has been removed.
+  The one remaining configuration item ``customizeSerialisation``, which defined a optional whitelist of types for use in
+  object serialization, has been replaced with the ``SerializationWhitelist`` interface which should be implemented to
+  define a list of equivalent whitelisted classes.
+  You will need to rename your services resource file to the new class name:
+  'resources/META-INF/services/net.corda.core.node.CordaPluginRegistry' becomes 'resources/META-INF/services/net.corda.core.serialization.SerializationWhitelist'
+  An associated property on ``MockNode`` was renamed from ``testPluginRegistries`` to ``testSerializationWhitelists``.
+  In general, the ``@CordaSerializable`` annotation is the preferred method for whitelisting as described in :doc:`serialization`
+
 Missing imports
 ^^^^^^^^^^^^^^^
 
