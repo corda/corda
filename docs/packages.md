@@ -28,12 +28,6 @@ Internal, do not use. These APIs and implementations which are currently being r
 
 Exception types and some utilities for working with observables and futures.
 
-# Package net.corda.core.cordapp
-
-This package contains the interface to CorDapps from within a node. A CorDapp can access its own context by using
-the CordappProvider.getAppContext() class. These classes are not intended to be constructed manually and no interface
-to do this will be provided. 
-
 # Package net.corda.core.concurrent
 
 Provides a simplified [java.util.concurrent.Future] class that allows registration of a callback to execute when the future
@@ -46,6 +40,12 @@ with [Contract], or see the examples in [net.corda.finance.contracts].
 
 Corda smart contracts are a combination of state held on the distributed ledger, and verification logic which defines
 which transformations of state are valid.
+
+# Package net.corda.core.cordapp
+
+This package contains the interface to CorDapps from within a node. A CorDapp can access it's own context by using
+the CordappProvider.getAppContext() class. These classes are not intended to be constructed manually and no interface
+to do this will be provided. 
 
 # Package net.corda.core.crypto
 
