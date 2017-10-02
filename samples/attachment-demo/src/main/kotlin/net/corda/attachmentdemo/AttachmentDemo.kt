@@ -74,6 +74,7 @@ fun main(args: Array<String>) {
 }
 
 /** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
+// DOCSTART 2
 fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
     val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(numOfClearBytes, 0)
     val executor = Executors.newScheduledThreadPool(2)
@@ -105,6 +106,7 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
     val stx = flowHandle.returnValue.getOrThrow()
     println("Sent ${stx.id}")
 }
+// DOCEND 2
 
 @StartableByRPC
 class AttachmentDemoFlow(private val otherSide: Party,
@@ -132,6 +134,7 @@ class AttachmentDemoFlow(private val otherSide: Party,
     }
 }
 
+// DOCSTART 1
 fun recipient(rpc: CordaRPCOps, webPort: Int) {
     println("Waiting to receive transaction ...")
     val stx = rpc.internalVerifiedTransactionsFeed().updates.toBlocking().first()
@@ -170,6 +173,7 @@ fun recipient(rpc: CordaRPCOps, webPort: Int) {
         println("Error: no attachments found in ${wtx.id}")
     }
 }
+// DOCEND 1
 
 private fun printHelp(parser: OptionParser) {
     println("""

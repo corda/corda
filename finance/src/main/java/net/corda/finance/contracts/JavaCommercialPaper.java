@@ -32,7 +32,7 @@ import static net.corda.core.contracts.ContractsDSL.requireThat;
  */
 @SuppressWarnings("unused")
 public class JavaCommercialPaper implements Contract {
-    static final String JCP_PROGRAM_ID = "net.corda.finance.contracts.JavaCommercialPaper";
+    public static final String JCP_PROGRAM_ID = "net.corda.finance.contracts.JavaCommercialPaper";
 
     @SuppressWarnings("unused")
     public static class State implements OwnableState, ICommercialPaperState {
