@@ -30,9 +30,9 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         val enumName = (obj as List<*>)[0] as String
         val enumOrd = obj[1] as Int
-        val fromOrd = type.asClass()!!.enumConstants[enumOrd]
+        val fromOrd = type.asClass()!!.enumConstants[enumOrd] as Enum<*>?
 
-        if (enumName != fromOrd?.toString()) {
+        if (enumName != fromOrd?.name) {
             throw NotSerializableException("Deserializing obj as enum $type with value $enumName.$enumOrd but "
                     + "ordinality has changed")
         }
