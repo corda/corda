@@ -48,6 +48,22 @@ data class LedgerTransaction(
         checkEncumbrancesValid()
     }
 
+    private companion object {
+        @JvmStatic
+        fun createContractFor(className: ContractClassName): ContractResult {
+            return try {
+                ContractResult(this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance())
+            } catch (e: Exception) {
+                ContractResult(null, e)
+            }
+        }
+    }
+
+    private data class ContractResult(val contract: Contract?, val error: Throwable? = null)
+
+    private val contracts: Map<ContractClassName, ContractResult> = (inputs.map { it.state.contract } + outputs.map { it.contract })
+            .toSet().map { it to createContractFor(it) }.toMap()
+
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
 
     /**
@@ -98,15 +114,8 @@ data class LedgerTransaction(
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      */
     private fun verifyContracts() {
-        val contracts = (inputs.map { it.state.contract } + outputs.map { it.contract }).toSet()
-        for (contractClassName in contracts) {
-            val contract = try {
-                assert(javaClass.classLoader == ClassLoader.getSystemClassLoader())
-                javaClass.classLoader.loadClass(contractClassName).asSubclass(Contract::class.java).getConstructor().newInstance()
-            } catch (e: ClassNotFoundException) {
-                throw TransactionVerificationException.ContractCreationError(id, contractClassName, e)
-            }
-
+        for (contractEntry in contracts.entries) {
+            val contract = contractEntry.value.contract ?: throw TransactionVerificationException.ContractCreationError(id, contractEntry.key, contractEntry.value.error!!)
             try {
                 contract.verify(this)
             } catch (e: Throwable) {
