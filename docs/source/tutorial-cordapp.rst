@@ -36,16 +36,6 @@ We need to download the example CorDapp from GitHub.
 
 * Change directories to the freshly cloned repo: ``cd cordapp-example``
 
-* We want to work off the latest Milestone release
-
-  * To enumerate all the Milestone releases, run: ``git tag``
-
-  * Check out the latest (highest-numbered) Milestone release using: ``git checkout [tag_name]``
-
-    Where ``tag_name`` is the name of the tag you wish to checkout
-
-  * Gradle will grab all the required dependencies for you from `Maven <https://bintray.com/r3/corda>`_
-
 .. note:: If you wish to build off the latest, unstable version of the codebase, follow the instructions in
    :doc:`building against Master <building-against-master>` instead.
 
