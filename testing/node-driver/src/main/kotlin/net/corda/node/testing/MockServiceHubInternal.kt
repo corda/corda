@@ -21,6 +21,7 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
+import net.corda.node.services.vault.VaultServiceInternal
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.DUMMY_IDENTITY_1
 import net.corda.testing.MOCK_HOST_AND_PORT
@@ -36,7 +37,7 @@ import java.time.Clock
 open class MockServiceHubInternal(
         override val database: CordaPersistence,
         override val configuration: NodeConfiguration,
-        val customVault: VaultService? = null,
+        val customVault: VaultServiceInternal? = null,
         val keyManagement: KeyManagementService? = null,
         val network: MessagingService? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
@@ -54,7 +55,7 @@ open class MockServiceHubInternal(
 ) : ServiceHubInternal, StateLoader by stateLoader {
     override val transactionVerifierService: TransactionVerifierService
         get() = customTransactionVerifierService ?: throw UnsupportedOperationException()
-    override val vaultService: VaultService
+    override val vaultService: VaultServiceInternal
         get() = customVault ?: throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService
         get() = customContractUpgradeService ?: throw UnsupportedOperationException()

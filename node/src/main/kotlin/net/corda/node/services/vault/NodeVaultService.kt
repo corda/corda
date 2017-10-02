@@ -39,6 +39,19 @@ import java.time.Instant
 import java.util.*
 import javax.persistence.Tuple
 
+interface VaultServiceInternal : VaultService {
+    /**
+     * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
+     * This is required because the batches get aggregated into single updates, and we want to be able to
+     * indicate whether an update consists entirely of regular or notary change transactions, which may require
+     * different processing logic.
+     */
+    fun notifyAll(txns: Iterable<CoreTransaction>)
+
+    /** Same as notifyAll but with a single transaction. */
+    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
+}
+
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
  * we add further functionality as the design for the vault and vault service matures.
@@ -49,7 +62,7 @@ import javax.persistence.Tuple
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val clock: Clock, private val keyManagementService: KeyManagementService, private val stateLoader: StateLoader, private val hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val clock: Clock, private val keyManagementService: KeyManagementService, private val stateLoader: StateLoader, private val hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultServiceInternal {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -108,13 +121,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }
 
-    /**
-     * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
-     * This is required because the batches get aggregated into single updates, and we want to be able to
-     * indicate whether an update consists entirely of regular or notary change transactions, which may require
-     * different processing logic.
-     */
-    fun notifyAll(txns: Iterable<CoreTransaction>) {
+    override fun notifyAll(txns: Iterable<CoreTransaction>) {
         // It'd be easier to just group by type, but then we'd lose ordering.
         val regularTxns = mutableListOf<WireTransaction>()
         val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
@@ -141,9 +148,6 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
         if (regularTxns.isNotEmpty()) notifyRegular(regularTxns.toList())
         if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList())
     }
-
-    /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
 
     private fun notifyRegular(txns: Iterable<WireTransaction>) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
