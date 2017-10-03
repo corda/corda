@@ -77,8 +77,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
-        val createSchemaService = { NodeSchemaService() }
-        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, createSchemaService, ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, NodeSchemaService(), ::makeTestIdentityService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
             services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {

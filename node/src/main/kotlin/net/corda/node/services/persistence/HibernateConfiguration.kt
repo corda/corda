@@ -24,7 +24,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(createSchemaService: () -> SchemaService, private val databaseProperties: Properties, private val createIdentityScervice: () -> IdentityService) {
+class HibernateConfiguration(val schemaService: SchemaService, private val databaseProperties: Properties, private val createIdentityService: () -> IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
@@ -33,7 +33,6 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
     private val sessionFactories = ConcurrentHashMap<Set<MappedSchema>, SessionFactory>()
 
     private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?:"")
-    var schemaService = createSchemaService()
 
     init {
         logger.info("Init HibernateConfiguration for schemas: ${schemaService.schemaOptions.keys}")
@@ -86,7 +85,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityScervice))
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityService))
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)

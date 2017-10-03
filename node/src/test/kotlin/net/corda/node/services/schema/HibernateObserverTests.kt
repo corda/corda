@@ -70,8 +70,7 @@ class HibernateObserverTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { schemaService }, createIdentityService = ::makeTestIdentityService)
-
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), schemaService, createIdentityService = ::makeTestIdentityService)
         @Suppress("UNUSED_VARIABLE")
         val observer = HibernateObserver(rawUpdatesPublisher, database.hibernateConfig)
         database.transaction {
