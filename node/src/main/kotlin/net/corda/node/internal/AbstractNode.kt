@@ -391,6 +391,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, cordappProvider, this)
         makeNetworkServices(tokenizableServices)
+        // Property corda.NodeInfoQuit is defined when we want the node to generate its identity and then
+        // write it to disk. This is used in the deployment scripts and Cordformation.
+        System.getProperty("corda.NodeInfoQuit")?.let {
+            NodeInfoSerializer().saveToFile(configuration.baseDirectory, info, services.keyManagementService)
+            log.info("Peacefully quitting after having written my NodeInfo to disk")
+            System.exit(0)
+        }
         return tokenizableServices
     }
 
