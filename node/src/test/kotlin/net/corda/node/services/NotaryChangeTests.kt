@@ -12,7 +12,6 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
@@ -42,7 +41,7 @@ class NotaryChangeTests {
         mockNet = MockNetwork()
         oldNotaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
+                advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type)))
         clientNodeA = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress)
         clientNodeB = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress)
         newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress, advertisedServices = ServiceInfo(ValidatingNotaryService.type))

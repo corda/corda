@@ -73,7 +73,7 @@ open class NodeStartup(val args: Array<String>) {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: Exception) {
-            if (e.message?.startsWith("Unknown named curve:") ?: false) {
+            if (e.message?.startsWith("Unknown named curve:") == true) {
                 logger.error("Exception during node startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             } else
@@ -150,13 +150,12 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): FullNodeConfiguration {
-        val conf = try {
-            cmdlineOptions.loadConfig()
+        try {
+            return cmdlineOptions.loadConfig()
         } catch (e: ConfigException) {
             println("Unable to load the configuration file: ${e.rootCause.message}")
             exitProcess(2)
         }
-        return conf
     }
 
     open protected fun banJavaSerialisation(conf: FullNodeConfiguration) {
@@ -167,13 +166,12 @@ open class NodeStartup(val args: Array<String>) {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
-        val versionInfo = VersionInfo(
+        return VersionInfo(
                 manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
                 manifestValue("Corda-Release-Version") ?: "Unknown",
                 manifestValue("Corda-Revision") ?: "Unknown",
                 manifestValue("Corda-Vendor") ?: "Unknown"
         )
-        return versionInfo
     }
 
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
@@ -260,10 +258,10 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     private fun printPluginsAndServices(node: Node) {
-        node.configuration.extraAdvertisedServiceIds.filter { it.startsWith("corda.notary.") || it.startsWith("corda.network_map") }.let {
+        node.configuration.extraAdvertisedServiceIds.filter { it.startsWith("corda.notary.") }.let {
             if (it.isNotEmpty()) Node.printBasicNodeInfo("Providing additional services", it.joinToString())
         }
-        Node.printBasicNodeInfo("Loaded CorDapps", node.cordappProvider.cordapps.map { it.name }.joinToString())
+        Node.printBasicNodeInfo("Loaded CorDapps", node.cordappProvider.cordapps.joinToString { it.name })
     }
 
     open fun drawBanner(versionInfo: VersionInfo) {

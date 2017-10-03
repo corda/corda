@@ -14,11 +14,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -70,7 +69,7 @@ class AttachmentSerializationTest {
     @Before
     fun setUp() {
         mockNet = MockNetwork()
-        server = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+        server = mockNet.createNode()
         client = mockNet.createNode(server.network.myAddress)
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
         mockNet.runNetwork()

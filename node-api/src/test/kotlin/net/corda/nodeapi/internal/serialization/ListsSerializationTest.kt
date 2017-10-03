@@ -4,8 +4,12 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.*
 import net.corda.node.services.statemachine.SessionData
+import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
+import net.corda.nodeapi.internal.serialization.amqp.Envelope
+import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
+import net.corda.testing.kryoSpecific
 import org.assertj.core.api.Assertions
 import org.junit.Assert.*
 import org.junit.Test
@@ -17,6 +21,13 @@ import java.util.*
 class ListsSerializationTest : TestDependencyInjectionBase() {
     private companion object {
         val javaEmptyListClass = Collections.emptyList<Any>().javaClass
+
+        fun<T : Any> verifyEnvelope(serBytes: SerializedBytes<T>, envVerBody: (Envelope) -> Unit) =
+            amqpSpecific<ListsSerializationTest>("AMQP specific envelope verification") {
+                val context = SerializationFactory.defaultFactory.defaultContext
+                val envelope = DeserializationInput(SerializerFactory(context.whitelist, context.deserializationClassLoader)).getEnvelope(serBytes)
+                envVerBody(envelope)
+            }
     }
 
     @Test
@@ -43,7 +54,7 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty list serialises as Java emptyList`() {
+    fun `check empty list serialises as Java emptyList`() = kryoSpecific<ListsSerializationTest>("Kryo specific test"){
         val nameID = 0
         val serializedForm = emptyList<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
@@ -83,14 +94,19 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
         payload.add(Child(1))
         payload.add(Child(2))
         val container = CovariantContainer(payload)
-        assertEqualAfterRoundTripSerialization(container)
-    }
 
+        fun verifyEnvelopeBody(envelope: Envelope) {
+            envelope.schema.types.single { typeNotation -> typeNotation.name == java.util.List::class.java.name + "<?>" }
+        }
+
+        assertEqualAfterRoundTripSerialization(container, {bytes -> verifyEnvelope(bytes, ::verifyEnvelopeBody)})
+    }
 }
 
-internal inline fun<reified T : Any> assertEqualAfterRoundTripSerialization(obj: T) {
+internal inline fun<reified T : Any> assertEqualAfterRoundTripSerialization(obj: T, noinline streamValidation: ((SerializedBytes<T>) -> Unit)? = null) {
 
     val serializedForm: SerializedBytes<T> = obj.serialize()
+    streamValidation?.invoke(serializedForm)
     val deserializedInstance = serializedForm.deserialize()
 
     assertEquals(obj, deserializedInstance)
