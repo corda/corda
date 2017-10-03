@@ -124,12 +124,10 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
 
     private fun DriverDSLExposedInterface.createTwoNodesAndNotary(): List<NodeHandle> {
         val adminUser = User("admin", "admin", permissions = setOf("ALL"))
-        val nodes = listOf(
+        return listOf(
                 startNode(providedName = bankAName, rpcUsers = listOf(adminUser)),
                 startNode(providedName = bankBName, rpcUsers = listOf(adminUser)),
                 startNode(providedName = notaryName, rpcUsers = listOf(adminUser), advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         ).transpose().getOrThrow()   // Wait for all nodes to start up.
-        nodes.forEach { it.rpc.waitUntilNetworkReady().getOrThrow() }
-        return nodes
     }
 }

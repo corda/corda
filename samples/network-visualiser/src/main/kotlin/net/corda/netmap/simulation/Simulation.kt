@@ -21,6 +21,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.setTo
+import net.corda.testing.setCordappPackages
 import net.corda.testing.testNodeConfiguration
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -261,6 +262,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val networkInitialisationFinished = allOf(*mockNet.nodes.map { it.nodeReadyFuture.toCompletableFuture() }.toTypedArray())
 
     fun start(): Future<Unit> {
+        setCordappPackages("net.corda.irs.contract", "net.corda.finance.contract")
         mockNet.startNodes()
         mockNet.registerIdentities()
         // Wait for all the nodes to have finished registering with the network map service.

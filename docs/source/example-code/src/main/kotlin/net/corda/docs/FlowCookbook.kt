@@ -27,6 +27,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import java.security.PublicKey
 import java.time.Instant
+import net.corda.testing.contracts.DUMMY_PROGRAM_ID
 
 // ``InitiatorFlow`` is our first flow, and will communicate with
 // ``ResponderFlow``, below.
@@ -253,11 +254,10 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         val ourOtherOutputState: DummyState = ourOutputState.copy(magicNumber = 77)
         // DOCEND 23
 
-        // We then need to pair our output state with a contract.
-        // DOCSTART 47
-        val contractName: String = "net.corda.testing.contracts.DummyContract"
-        val ourOutput: StateAndContract = StateAndContract(ourOutputState, contractName)
-        // DOCEND 47
+            // We then need to pair our output state with a contract.
+            // DOCSTART 47
+            val  ourOutput: StateAndContract = StateAndContract(ourOutputState, DUMMY_PROGRAM_ID)
+            // DOCEND 47
 
         // Commands pair a ``CommandData`` instance with a list of
         // public keys. To be valid, the transaction requires a signature

@@ -1,7 +1,7 @@
 package net.corda.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.internalCordaRPCClient
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
