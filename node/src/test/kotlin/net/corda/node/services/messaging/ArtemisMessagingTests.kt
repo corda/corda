@@ -70,7 +70,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
-        networkMapCache = PersistentNetworkMapCache(database)
+        networkMapCache = PersistentNetworkMapCache(database, config)
     }
 
     @After
