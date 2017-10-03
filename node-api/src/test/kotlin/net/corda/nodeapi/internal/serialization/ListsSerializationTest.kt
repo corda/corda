@@ -23,7 +23,7 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
         val javaEmptyListClass = Collections.emptyList<Any>().javaClass
 
         fun<T : Any> verifyEnvelope(serBytes: SerializedBytes<T>, envVerBody: (Envelope) -> Unit) =
-            amqpSpecific<ListsSerializationTest>("AMQP specific envelope verification") {
+            amqpSpecific("AMQP specific envelope verification") {
                 val context = SerializationFactory.defaultFactory.defaultContext
                 val envelope = DeserializationInput(SerializerFactory(context.whitelist, context.deserializationClassLoader)).getEnvelope(serBytes)
                 envVerBody(envelope)
@@ -54,7 +54,7 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty list serialises as Java emptyList`() = kryoSpecific<ListsSerializationTest>("Kryo specific test"){
+    fun `check empty list serialises as Java emptyList`() = kryoSpecific("Kryo specific test"){
         val nameID = 0
         val serializedForm = emptyList<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
@@ -71,7 +71,7 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
     data class WrongPayloadType(val payload: ArrayList<Int>)
 
     @Test
-    fun `check throws for forbidden declared type`() = amqpSpecific<ListsSerializationTest>("Such exceptions are not expected in Kryo mode.") {
+    fun `check throws for forbidden declared type`() = amqpSpecific("Such exceptions are not expected in Kryo mode.") {
         val payload = ArrayList<Int>()
         payload.add(1)
         payload.add(2)

@@ -1,11 +1,11 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
@@ -32,6 +32,7 @@ import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.*
+import net.corda.nodeapi.config.NodeSSLConfiguration
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -65,7 +66,7 @@ class NodeLookupImpl(private val identityService: IdentityService, private val n
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class PersistentNetworkMapCache(private val database: CordaPersistence, private val configuration: NodeSSLConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<PersistentNetworkMapCache>()
     }
@@ -104,7 +105,15 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
         }
 
     init {
+        loadFromFiles()
         database.transaction { loadFromDB() }
+    }
+
+    private fun loadFromFiles() {
+        logger.info("Loading network map from files..")
+        for (node in NodeInfoSerializer().loadFromDirectory(configuration.baseDirectory)) {
+            addNode(node)
+        }
     }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
@@ -169,6 +178,12 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
     override fun addNode(node: NodeInfo) {
         logger.info("Adding node with info: $node")
         synchronized(_changed) {
+            registeredNodes[node.legalIdentities.first().owningKey]?.let {
+                if (it.serial > node.serial) {
+                    logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
+                    return
+                }
+            }
             val previousNode = registeredNodes.put(node.legalIdentities.first().owningKey, node) // TODO hack... we left the first one as special one
             if (previousNode == null) {
                 logger.info("No previous node found")
@@ -235,8 +250,6 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
         }
 
     private fun processRegistration(reg: NodeRegistration) {
-        // TODO: Implement filtering by sequence number, so we only accept changes that are
-        // more recent than the latest change we've processed.
         when (reg.type) {
             AddOrRemove.ADD -> addNode(reg.node)
             AddOrRemove.REMOVE -> removeNode(reg.node)
@@ -273,8 +286,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
                     logger.info("Loaded node info: $nodeInfo")
                     val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.single { it.isMain }.owningKey)
                     val node = nodeInfo.toNodeInfo()
-                    registeredNodes.put(publicKey, node)
-                    changePublisher.onNext(MapChange.Added(node)) // Redeploy bridges after reading from DB on startup.
+                    addNode(node)
                     _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
                 } catch (e: Exception) {
                     logger.warn("Exception parsing network map from the database.", e)

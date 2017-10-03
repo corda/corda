@@ -169,20 +169,36 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return CordaRPCOpsImpl(services, smm, database, nodeLookup)
     }
 
-    open fun start(): StartedNode<AbstractNode> {
-        require(started == null) { "Node has already been started" }
+    private fun saveOwnNodeInfo() {
+        NodeInfoSerializer().saveToFile(configuration.baseDirectory, info, services.keyManagementService)
+    }
+
+    private fun initCertificate() {
         if (configuration.devMode) {
             log.warn("Corda node is running in dev mode.")
             configuration.configureWithDevSSLCertificate()
         }
         validateKeystore()
+    }
 
+    open fun generateNodeInfo() {
+        check(started == null) { "Node has already been started" }
+        initCertificate()
+        log.info("Generating nodeInfo ...")
+        initialiseDatabasePersistence {
+            makeServices()
+            saveOwnNodeInfo()
+        }
+    }
+
+    open fun start(): StartedNode<AbstractNode> {
+        check(started == null) { "Node has already been started" }
+        initCertificate()
         log.info("Node starting up ...")
-
         // Do all of this in a database transaction so anything that might need a connection has one.
         val startedImpl = initialiseDatabasePersistence {
             val tokenizableServices = makeServices()
-
+            saveOwnNodeInfo()
             smm = StateMachineManager(services,
                     checkpointStorage,
                     serverThread,
@@ -391,6 +407,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, cordappProvider, this)
         makeNetworkServices(tokenizableServices)
+
         return tokenizableServices
     }
 
@@ -671,7 +688,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val schemaService by lazy { NodeSchemaService() }
-        override val networkMapCache by lazy { PersistentNetworkMapCache(this@AbstractNode.database) }
+        override val networkMapCache by lazy { PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration) }
         override val vaultService by lazy { NodeVaultService(this, database.hibernateConfig) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 
