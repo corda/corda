@@ -2,13 +2,15 @@
 
 echo "Starting API Diff"
 
-apiCurrent=./api-current.txt
+APIHOME=$(dirname $0)
+
+apiCurrent=$APIHOME/api-current.txt
 if [ ! -f $apiCurrent ]; then
-   echo "Missing $apiCurrent file - cannot check API diff. Please rebase or add it to this release or ensure working dir is .ci/"
+   echo "Missing $apiCurrent file - cannot check API diff. Please rebase or add it to this release"
    exit -1
 fi
 
-diffContents=`diff -u $apiCurrent ../build/api/api-corda-*.txt`
+diffContents=`diff -u $apiCurrent $APIHOME/../build/api/api-corda-*.txt`
 echo "Diff contents: " 
 echo "$diffContents"
 removals=`echo "$diffContents" | grep "^-\s" | wc -l`
