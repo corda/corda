@@ -830,9 +830,7 @@ class DriverDSL(
                         "rpcAddress" to rpcAddress.toString(),
                         "rpcUsers" to defaultRpcUserList,
                         "p2pAddress" to dedicatedNetworkMapAddress.toString(),
-                        "useTestClock" to useTestClock,
-                        "extraAdvertisedServiceIds" to listOf(ServiceInfo(NetworkMapService.type).toString())
-                )
+                        "useTestClock" to useTestClock)
         )
         return startNodeInternal(config, webAddress, startInProcess, maximumHeapSize)
     }

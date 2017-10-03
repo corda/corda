@@ -14,10 +14,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -40,7 +38,7 @@ class NotaryServiceTests {
         mockNet = MockNetwork()
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
+                advertisedServices = *arrayOf(ServiceInfo(SimpleNotaryService.type)))
         clientNode = mockNet.createNode(notaryNode.network.myAddress)
         mockNet.runNetwork() // Clear network map registration messages
         notaryNode.internals.ensureRegistered()

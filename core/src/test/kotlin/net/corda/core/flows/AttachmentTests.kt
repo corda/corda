@@ -11,7 +11,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.DatabaseTransactionManager
@@ -45,7 +44,7 @@ class AttachmentTests {
         mockNet.stopNodes()
     }
 
-    fun fakeAttachment(): ByteArray {
+    private fun fakeAttachment(): ByteArray {
         val bs = ByteArrayOutputStream()
         val js = JarOutputStream(bs)
         js.putNextEntry(ZipEntry("file1.txt"))
@@ -127,7 +126,7 @@ class AttachmentTests {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }
-        }, advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
+        }, advertisedServices = *arrayOf(ServiceInfo(SimpleNotaryService.type)))
         val bobNode = mockNet.createNode(aliceNode.network.myAddress, legalName = BOB.name)
 
         // Ensure that registration was successful before progressing any further
