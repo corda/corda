@@ -7,7 +7,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
@@ -25,12 +24,8 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.CHARLIE
-import net.corda.testing.DUMMY_MAP
-import net.corda.testing.chooseIdentity
-import net.corda.testing.chooseIdentityAndCert
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
@@ -58,7 +53,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         mapServiceNode = mockNet.createNode(
                 nodeFactory = nodeFactory,
                 legalName = DUMMY_MAP.name,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
+                advertisedServices = *arrayOf(ServiceInfo(SimpleNotaryService.type)))
         alice = mockNet.createNode(mapServiceNode.network.myAddress, nodeFactory = nodeFactory, legalName = ALICE.name)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()

@@ -484,7 +484,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeNetworkServices(tokenizableServices: MutableList<Any>) {
         val serviceTypes = advertisedServices.map { it.type }
-        inNodeNetworkMapService = if (NetworkMapService.type in serviceTypes) makeNetworkMapService() else NullNetworkMapService
+        inNodeNetworkMapService = if (configuration.networkMapService == null) makeNetworkMapService() else NullNetworkMapService
         val notaryServiceType = serviceTypes.singleOrNull { it.isNotary() }
         if (notaryServiceType != null) {
             val service = makeCoreNotaryService(notaryServiceType)
@@ -526,9 +526,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * updates) if one has been supplied.
      */
     protected open fun registerWithNetworkMap(): CordaFuture<Unit> {
-        require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
-            "Initial network map address must indicate a node that provides a network map service"
-        }
         val address: SingleMessageRecipient = networkMapAddress ?:
                 network.getAddressOfParty(PartyInfo.SingleNode(services.myInfo.legalIdentitiesAndCerts.first().party, info.addresses)) as SingleMessageRecipient
         // Register for updates, even if we're the one running the network map.
