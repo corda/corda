@@ -42,11 +42,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-
-        val createSchemaService = { NodeSchemaService() }
-
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), createSchemaService, ::makeTestIdentityService)
-
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), NodeSchemaService(), ::makeTestIdentityService)
         database.transaction {
 
             services = object : MockServices(BOB_KEY) {
