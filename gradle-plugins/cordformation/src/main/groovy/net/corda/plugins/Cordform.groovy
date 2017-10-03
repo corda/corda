@@ -62,8 +62,8 @@ class Cordform extends DefaultTask {
      * @return A node instance.
      */
     private Node getNodeByName(String name) {
-        for(Node node : nodes) {
-            if(node.name == name) {
+        for (Node node : nodes) {
+            if (node.name == name) {
                 return node
             }
         }
@@ -110,10 +110,14 @@ class Cordform extends DefaultTask {
      */
     @TaskAction
     void build() {
-        String networkMapNodeName
+        String networkMapNodeName = initializeConfigurationAndGetNetworkMapNodeName()
+        installRunScript()
+        finalizeConfiguration(networkMapNodeName)
+    }
+
+    private initializeConfigurationAndGetNetworkMapNodeName() {
         if (null != definitionClass) {
             def cd = loadCordformDefinition()
-            networkMapNodeName = cd.networkMapNodeName.toString()
             cd.nodeConfigurers.each { nc ->
                 node { Node it ->
                     nc.accept it
@@ -125,14 +129,17 @@ class Cordform extends DefaultTask {
                     project.projectDir.toPath().resolve(getNodeByName(nodeName).nodeDir.toPath())
                 }
             }
+            return cd.networkMapNodeName.toString()
         } else {
-            networkMapNodeName = this.networkMapNodeName
             nodes.each {
                 it.rootDir directory
             }
+            return this.networkMapNodeName
         }
-        installRunScript()
-        def networkMapNode = getNodeByName(networkMapNodeName)
+    }
+
+    private finalizeConfiguration(String networkMapNodeName) {
+        Node networkMapNode = getNodeByName(networkMapNodeName)
         if (networkMapNode == null) {
             nodes.each {
                 it.build()
@@ -153,7 +160,7 @@ class Cordform extends DefaultTask {
         return project.projectDir.toPath().resolve(node.nodeDir.toPath())
     }
 
-    void generateNodeInfos() {
+    private generateNodeInfos() {
         nodes.each { Node node ->
             def process = new ProcessBuilder("java", "-jar", Node.NODEJAR_NAME, "--just-generate-node-info")
                     .directory(fullNodePath(node).toFile())
