@@ -297,7 +297,7 @@ class FlowStackSnapshotTest {
                 legalName = DUMMY_NOTARY.name,
                 notaryIdentity = notaryService to DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(notaryService))
-        val node = mockNet.createPartyNode(notaryNode.network.myAddress)
+        val node = mockNet.createPartyNode()
         node.internals.registerInitiatedFlow(DummyFlow::class.java)
         node.services.startFlow(FlowStackSnapshotSerializationTestingFlow()).resultFuture.get()
         val thrown = try {

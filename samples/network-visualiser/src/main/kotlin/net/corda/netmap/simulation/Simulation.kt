@@ -81,7 +81,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         fun createAll(): List<SimulatedNode> {
             return bankLocations.mapIndexed { i, _ ->
                 // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
-                mockNet.createUnstartedNode(networkMap.network.myAddress, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong()))
+                mockNet.createUnstartedNode(nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong()))
             }
         }
     }
@@ -152,10 +152,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     val mockNet = MockNetwork(networkSendManuallyPumped, runAsync)
     // This one must come first.
-    val networkMap = mockNet.createNode(nodeFactory = NetworkMapNodeFactory)
-    val notary = mockNet.createNode(networkMap.network.myAddress, nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type))
-    val regulators = listOf(mockNet.createUnstartedNode(networkMap.network.myAddress, nodeFactory = RegulatorFactory))
-    val ratesOracle = mockNet.createUnstartedNode(networkMap.network.myAddress, nodeFactory = RatesOracleFactory)
+    val networkMap = mockNet.startNetworkMapNode(nodeFactory = NetworkMapNodeFactory)
+    val notary = mockNet.createNode(nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type))
+    val regulators = listOf(mockNet.createUnstartedNode(nodeFactory = RegulatorFactory))
+    val ratesOracle = mockNet.createUnstartedNode(nodeFactory = RatesOracleFactory)
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary.internals, ratesOracle, networkMap.internals)
@@ -264,7 +264,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     fun start(): Future<Unit> {
         setCordappPackages("net.corda.irs.contract", "net.corda.finance.contract")
         mockNet.startNodes()
-        mockNet.registerIdentities()
         // Wait for all the nodes to have finished registering with the network map service.
         return networkInitialisationFinished.thenCompose { startMainSimulation() }
     }

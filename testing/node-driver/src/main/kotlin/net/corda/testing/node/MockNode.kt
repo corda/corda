@@ -6,6 +6,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.doneFuture
@@ -76,6 +77,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory<*> = MockNetwork.DefaultFactory,
                   private val initialiseSerialization: Boolean = true) {
+    companion object {
+        val MOCK_NET_MAP = Party(CordaX500Name(organisation = "Mock Network Map", locality = "Madrid", country = "ES"), DUMMY_KEY_1.public)
+    }
+
     var nextNodeId = 0
         private set
     private val filesystem = Jimfs.newFileSystem(unix())
@@ -86,6 +91,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     private val _nodes = mutableListOf<MockNode>()
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
+
+    private var _networkMapNode: StartedNode<MockNode>? = null
+    val networkMapNode: StartedNode<MockNode> get() = _networkMapNode ?: startNetworkMapNode()
 
     init {
         if (initialiseSerialization) initialiseTestSerialization()
@@ -293,19 +301,36 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
     }
 
-    fun createUnstartedNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null,
+    fun <N : MockNode> startNetworkMapNode(nodeFactory: Factory<N>? = null): StartedNode<N> {
+        check(_networkMapNode == null) { "Trying to start more than one network map node" }
+        return uncheckedCast(createNodeImpl(networkMapAddress = null,
+                forcedID = null,
+                nodeFactory = nodeFactory ?: defaultFactory,
+                legalName = MOCK_NET_MAP.name,
+                notaryIdentity = null,
+                advertisedServices = arrayOf(),
+                entropyRoot  = BigInteger.valueOf(random63BitValue()),
+                configOverrides = {},
+                start = true
+        ).started!!.apply {
+            _networkMapNode = this
+        })
+    }
+
+    fun createUnstartedNode(forcedID: Int? = null,
                             legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                             vararg advertisedServices: ServiceInfo,
                             configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
-        return createUnstartedNode(networkMapAddress, forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
+        return createUnstartedNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
     }
 
-    fun <N : MockNode> createUnstartedNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null, nodeFactory: Factory<N>,
+    fun <N : MockNode> createUnstartedNode(forcedID: Int? = null, nodeFactory: Factory<N>,
                                            legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                                            entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                                            vararg advertisedServices: ServiceInfo,
                                            configOverrides: (NodeConfiguration) -> Any? = {}): N {
+        val networkMapAddress = networkMapNode.network.myAddress
         return createNodeImpl(networkMapAddress, forcedID, nodeFactory, false, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides)
     }
 
@@ -317,20 +342,21 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
      * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
      */
-    fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null,
+    fun createNode(forcedID: Int? = null,
                    legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                    vararg advertisedServices: ServiceInfo,
                    configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<MockNode> {
-        return createNode(networkMapAddress, forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
+        return createNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
     }
 
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
-    fun <N : MockNode> createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int? = null, nodeFactory: Factory<N>,
+    fun <N : MockNode> createNode(forcedID: Int? = null, nodeFactory: Factory<N>,
                                   legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                                   vararg advertisedServices: ServiceInfo,
                                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
+        val networkMapAddress = networkMapNode.network.myAddress
         return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides).started)!!
     }
 
@@ -379,35 +405,21 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     /**
-     * Register network identities in identity service, normally it's done on network map cache change, but we may run without
-     * network map service.
-     */
-    fun registerIdentities(){
-        nodes.forEach { itNode ->
-            itNode.started!!.database.transaction {
-                nodes.map { it.started!!.info.legalIdentitiesAndCerts.first() }.map(itNode.started!!.services.identityService::verifyAndRegisterIdentity)
-            }
-        }
-    }
-
-    /**
      * Construct a default notary node.
      */
-    fun createNotaryNode() = createNotaryNode(null, DUMMY_NOTARY.name, null, null)
+    fun createNotaryNode() = createNotaryNode(DUMMY_NOTARY.name, null, null)
 
-    fun createNotaryNode(networkMapAddress: SingleMessageRecipient? = null,
-                         legalName: CordaX500Name? = null,
+    fun createNotaryNode(legalName: CordaX500Name? = null,
                          notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                          serviceName: CordaX500Name? = null): StartedNode<MockNode> {
-        return createNode(networkMapAddress, legalName = legalName, notaryIdentity = notaryIdentity,
+        return createNode(legalName = legalName, notaryIdentity = notaryIdentity,
                 advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type, serviceName)))
     }
 
     @JvmOverloads
-    fun createPartyNode(networkMapAddress: SingleMessageRecipient,
-                        legalName: CordaX500Name? = null,
+    fun createPartyNode(legalName: CordaX500Name? = null,
                         notaryIdentity: Pair<ServiceInfo, KeyPair>? = null): StartedNode<MockNode> {
-        return createNode(networkMapAddress, legalName = legalName, notaryIdentity = notaryIdentity)
+        return createNode(legalName = legalName, notaryIdentity = notaryIdentity)
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.

@@ -42,9 +42,9 @@ class IdentitySyncFlowTests {
     @Test
     fun `sync confidential identities`() {
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
-        val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+        mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
+        val bobNode = mockNet.createPartyNode(BOB.name)
         val alice: Party = aliceNode.services.myInfo.chooseIdentity()
         val bob: Party = bobNode.services.myInfo.chooseIdentity()
         val notary = notaryNode.services.getDefaultNotary()
