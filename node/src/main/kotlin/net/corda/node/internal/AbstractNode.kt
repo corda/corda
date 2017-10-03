@@ -186,8 +186,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         initCertificate()
         log.info("Generating nodeInfo ...")
-        initialiseDatabasePersistence {
-            makeServices()
+        val schemaService = NodeSchemaService()
+        initialiseDatabasePersistence(schemaService) {
+            makeServices(schemaService)
             saveOwnNodeInfo()
         }
     }
@@ -196,9 +197,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         initCertificate()
         log.info("Node starting up ...")
+        val schemaService = NodeSchemaService()
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val startedImpl = initialiseDatabasePersistence {
-            val tokenizableServices = makeServices()
+        val startedImpl = initialiseDatabasePersistence(schemaService) {
+            val tokenizableServices = makeServices(schemaService)
             saveOwnNodeInfo()
             smm = StateMachineManager(services,
                     checkpointStorage,
@@ -392,11 +394,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(): MutableList<Any> {
+    private fun makeServices(schemaService: SchemaService): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         cordappProvider = CordappProviderImpl(cordappLoader)
         val transactionStorage = makeTransactionStorage()
-        _services = ServiceHubInternalImpl(transactionStorage, StateLoaderImpl(transactionStorage))
+        _services = ServiceHubInternalImpl(schemaService, transactionStorage, StateLoaderImpl(transactionStorage))
         attachments = NodeAttachmentService(services.monitoringService.metrics)
         cordappProvider.start(attachments)
         legalIdentity = obtainIdentity()
@@ -484,10 +486,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
-    protected open fun <T> initialiseDatabasePersistence(insideTransaction: () -> T): T {
+    protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T): T {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            this.database = configureDatabase(props, configuration.database, { _services.schemaService }, createIdentityService = { _services.identityService })
+            this.database = configureDatabase(props, configuration.database, schemaService, { _services.identityService })
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
                 log.info("Connected to ${database.dataSource.connection.metaData.databaseProductName} database.")
@@ -692,6 +694,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
     private inner class ServiceHubInternalImpl(
+            override val schemaService: SchemaService,
             override val validatedTransactions: WritableTransactionStorage,
             private val stateLoader: StateLoader
     ) : SingletonSerializeAsToken(), ServiceHubInternal, StateLoader by stateLoader {
@@ -700,7 +703,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val auditService = DummyAuditService()
         override val monitoringService = MonitoringService(MetricRegistry())
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val schemaService by lazy { NodeSchemaService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
         override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader, this@AbstractNode.database.hibernateConfig) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
