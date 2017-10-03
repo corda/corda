@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.kryoSpecific
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -39,7 +40,7 @@ class SetsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty set serialises as Java emptySet`() {
+    fun `check empty set serialises as Java emptySet`() = kryoSpecific("Checks Kryo header properties") {
         val nameID = 0
         val serializedForm = emptySet<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
