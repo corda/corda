@@ -176,11 +176,7 @@ class CordaRPCOpsImpl(
 
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
 
-    override fun waitUntilNetworkReady(): CordaFuture<Void?> {
-        return database.transaction {
-            services.networkMapCache.nodeReady
-        }
-    }
+    override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         return database.transaction {
