@@ -22,7 +22,7 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check EmptyMap serialization`() = amqpSpecific<MapsSerializationTest>("kotlin.collections.EmptyMap is not enabled for Kryo serialization") {
+    fun `check EmptyMap serialization`() = amqpSpecific("kotlin.collections.EmptyMap is not enabled for Kryo serialization") {
         assertEqualAfterRoundTripSerialization(emptyMap<Any, Any>())
     }
 
@@ -41,7 +41,7 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
     data class WrongPayloadType(val payload: HashMap<String, String>)
 
     @Test
-    fun `check throws for forbidden declared type`() = amqpSpecific<ListsSerializationTest>("Such exceptions are not expected in Kryo mode.") {
+    fun `check throws for forbidden declared type`() = amqpSpecific("Such exceptions are not expected in Kryo mode.") {
         val payload = HashMap<String, String>(smallMap)
         val wrongPayloadType = WrongPayloadType(payload)
         Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
@@ -64,7 +64,7 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty map serialises as Java emptyMap`() = kryoSpecific<MapsSerializationTest>("Specifically checks Kryo serialization") {
+    fun `check empty map serialises as Java emptyMap`() = kryoSpecific("Specifically checks Kryo serialization") {
         val nameID = 0
         val serializedForm = emptyMap<Int, Int>().serialize()
         val output = ByteArrayOutputStream().apply {

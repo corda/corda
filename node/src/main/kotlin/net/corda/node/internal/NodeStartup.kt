@@ -92,18 +92,24 @@ open class NodeStartup(val args: Array<String>) {
 
     open protected fun startNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
         val advertisedServices = conf.calculateServices()
-        val node = createNode(conf, versionInfo, advertisedServices).start()
-        printPluginsAndServices(node.internals)
-        node.internals.nodeReadyFuture.thenMatch({
+        val node = createNode(conf, versionInfo, advertisedServices)
+        if (cmdlineOptions.justGenerateNodeInfo) {
+            // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
+            node.generateNodeInfo()
+            return
+        }
+        val startedNode = node.start()
+        printPluginsAndServices(startedNode.internals)
+        startedNode.internals.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            val name = node.info.legalIdentitiesAndCerts.first().name.organisation
+            val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
-            node.internals.startupComplete.then {
+            startedNode.internals.startupComplete.then {
                 try {
-                    InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
+                    InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, startedNode)
                 } catch(e: Throwable) {
                     logger.error("Shell failed to start", e)
                 }
@@ -112,7 +118,7 @@ open class NodeStartup(val args: Array<String>) {
         {
             th -> logger.error("Unexpected exception during registration", th)
         })
-        node.internals.run()
+        startedNode.internals.run()
     }
 
     open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: FullNodeConfiguration) {

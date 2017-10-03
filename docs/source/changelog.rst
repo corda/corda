@@ -7,6 +7,12 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* ``Cordform`` and node identity generation
+  * Cordform may not specify a value for ``NetworkMap``, when that happens, during the task execution the following happens:
+    1. Each node is started and its signed serialized NodeInfo is written to disk in the node base directory.
+    2. Every serialized ``NodeInfo`` above is copied in every other node "additional-node-info" folder under the NodeInfo folder.
+  * Nodes read all the nodes stored in ``additional-node-info`` when the ``NetworkMapService`` starts up.
+
 * ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
 
 * Enums now respsect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
