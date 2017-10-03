@@ -33,8 +33,8 @@ class BankOfCordaRPCClientTest {
             // Big Corporation RPC Client
             val bigCorpClient = nodeBigCorporation.rpcClientToNode()
             val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
-            bocProxy.waitUntilNetworkReady()
-            bigCorpProxy.waitUntilNetworkReady()
+            bocProxy.waitUntilNetworkReady().getOrThrow()
+            bigCorpProxy.waitUntilNetworkReady().getOrThrow()
 
             // Register for Bank of Corda Vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
