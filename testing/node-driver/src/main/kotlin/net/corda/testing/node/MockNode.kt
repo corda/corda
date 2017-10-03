@@ -29,6 +29,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.ServiceType
+import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
@@ -249,7 +250,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         @Suppress("unused") val place: WorldMapLocation get() = findMyLocation()!!
 
         private var dbCloser: (() -> Any?)? = null
-        override fun <T> initialiseDatabasePersistence(insideTransaction: () -> T) = super.initialiseDatabasePersistence {
+        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T) = super.initialiseDatabasePersistence(schemaService) {
             dbCloser = database::close
             insideTransaction()
         }

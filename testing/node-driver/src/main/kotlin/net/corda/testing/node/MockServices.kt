@@ -100,9 +100,8 @@ open class MockServices(cordappPackages: List<String> = emptyList(), vararg val 
                                             cordappPackages: List<String> = emptyList()): Pair<CordaPersistence, MockServices> {
             val dataSourceProps = makeTestDataSourceProperties()
             val databaseProperties = makeTestDatabaseProperties()
-            val createSchemaService = { NodeSchemaService(customSchemas) }
             val identityServiceRef: IdentityService by lazy { createIdentityService() }
-            val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, { identityServiceRef })
+            val database = configureDatabase(dataSourceProps, databaseProperties, NodeSchemaService(customSchemas), { identityServiceRef })
             val mockService = database.transaction {
                 object : MockServices(cordappPackages, *(keys.toTypedArray())) {
                     override val identityService: IdentityService = database.transaction { identityServiceRef }
@@ -158,7 +157,7 @@ open class MockServices(cordappPackages: List<String> = emptyList(), vararg val 
 
     lateinit var hibernatePersister: HibernateObserver
 
-    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration( { NodeSchemaService() }, makeTestDatabaseProperties(), { identityService })): VaultService {
+    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties(), { identityService })): VaultService {
         val vaultService = NodeVaultService(this, hibernateConfig)
         hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
