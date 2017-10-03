@@ -1,5 +1,6 @@
 package net.corda.node.internal.cordapp
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -7,21 +8,25 @@ import java.nio.file.Paths
 
 @InitiatingFlow
 class DummyFlow : FlowLogic<Unit>() {
+    @Suspendable
     override fun call() { }
 }
 
 @InitiatedBy(DummyFlow::class)
 class LoaderTestFlow(unusedSession: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
     override fun call() { }
 }
 
 @SchedulableFlow
 class DummySchedulableFlow : FlowLogic<Unit>() {
+    @Suspendable
     override fun call() { }
 }
 
 @StartableByRPC
 class DummyRPCFlow : FlowLogic<Unit>() {
+    @Suspendable
     override fun call() { }
 }
 
