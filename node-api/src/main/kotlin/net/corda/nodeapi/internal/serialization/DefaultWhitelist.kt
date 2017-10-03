@@ -1,8 +1,7 @@
 package net.corda.nodeapi.internal.serialization
 
 import com.esotericsoftware.kryo.KryoException
-import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.serialization.SerializationCustomization
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
@@ -12,10 +11,9 @@ import java.util.*
 /**
  * NOTE: We do not whitelist [HashMap] or [HashSet] since they are unstable under serialization.
  */
-class DefaultWhitelist : CordaPluginRegistry() {
-    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
-        custom.apply {
-            addToWhitelist(Array<Any>(0, {}).javaClass,
+object DefaultWhitelist : SerializationWhitelist {
+    override val whitelist =
+            listOf(Array<Any>(0, {}).javaClass,
                     Notification::class.java,
                     Notification.Kind::class.java,
                     ArrayList::class.java,
@@ -60,8 +58,6 @@ class DefaultWhitelist : CordaPluginRegistry() {
                     java.util.LinkedHashMap::class.java,
                     BitSet::class.java,
                     OnErrorNotImplementedException::class.java,
-                    StackTraceElement::class.java)
-        }
-        return true
-    }
+                    StackTraceElement::class.java
+            )
 }

@@ -65,9 +65,11 @@ Release 1.0
 * About half of the code in test-utils has been moved to a new module ``node-driver``,
   and the test scope modules are now located in a ``testing`` directory.
 
-* Removed `requireSchemas` CordaPluginRegistry configuration item.
-  Custom schemas are now automatically located using classpath scanning for deployed CorDapps.
-  Improved support for testing custom schemas in MockNode and MockServices using explicit registration.
+* CordaPluginRegistry has been renamed to SerializationWhitelist and moved to the net.corda.core.serialization
+  package. The API for whitelisting types that can't be annotated was slightly simplified. This class used to contain
+  many things, but as we switched to annotations and classpath scanning over time it hollowed out until this was
+  the only functionality left.  You also need to rename your services resource file to the new class name.
+  An associated property on ``MockNode`` was renamed from ``testPluginRegistries`` to ``testSerializationWhitelists``.
 
 * Contract Upgrades: deprecated RPC authorisation / deauthorisation API calls in favour of equivalent flows in ContractUpgradeFlow.
   Implemented contract upgrade persistence using JDBC backed persistent map.
