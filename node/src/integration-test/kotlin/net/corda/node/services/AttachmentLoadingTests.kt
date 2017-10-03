@@ -129,7 +129,7 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
                 startNode(providedName = bankBName, rpcUsers = listOf(adminUser)),
                 startNode(providedName = notaryName, rpcUsers = listOf(adminUser), advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         ).transpose().getOrThrow()   // Wait for all nodes to start up.
-        nodes.forEach { it.rpc.waitUntilNetworkReady() }
+        nodes.forEach { it.rpc.waitUntilNetworkReady().getOrThrow() }
         return nodes
     }
 }
