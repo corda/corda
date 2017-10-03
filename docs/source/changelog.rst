@@ -4,11 +4,6 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-UNRELEASED
-----------
-
-* ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
-
 .. _changelog_v1:
 
 Release 1.0
