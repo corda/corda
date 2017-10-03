@@ -23,12 +23,12 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -58,10 +58,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.statemachine.appName
-import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
+import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
@@ -70,7 +67,6 @@ import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.ServiceType
-import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -160,8 +156,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         CordaX500Name.build(cert.subjectX500Principal).copy(commonName = null)
     }
 
-    open val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        cordappProvider.cordapps.flatMap { it.plugins } + DefaultWhitelist()
+    open val serializationWhitelists: List<SerializationWhitelist> by lazy {
+        cordappProvider.cordapps.flatMap { it.serializationWhitelists }
     }
 
     /** Set to non-null once [start] has been successfully called. */
@@ -191,7 +187,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     checkpointStorage,
                     serverThread,
                     database,
-                    busyNodeLatch)
+                    busyNodeLatch,
+                    cordappLoader.appClassLoader)
 
             smm.tokenizableServices.addAll(tokenizableServices)
 
@@ -214,6 +211,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             registerCordappFlows()
             _services.rpcFlows += cordappProvider.cordapps.flatMap { it.rpcFlows }
             registerCustomSchemas(cordappProvider.cordapps.flatMap { it.customSchemas }.toSet())
+            FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
 
             runOnStop += network::stop
             StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, inNodeNetworkMapService, network, database, rpcOps)

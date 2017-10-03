@@ -44,7 +44,7 @@ The ``src`` directory of the Template CorDapp, where we define our CorDapp's sou
     │   └── resources
     │       ├── META-INF
     │       │   └── services
-    │       │       ├── net.corda.core.node.CordaPluginRegistry
+    │       │       ├── net.corda.core.serialization.SerializationWhitelist
     │       │       └── net.corda.webserver.services.WebServerPluginRegistry
     │       ├── certificates
     │       │   ├── sslkeystore.jks
@@ -59,39 +59,3 @@ The ``src`` directory of the Template CorDapp, where we define our CorDapp's sou
                 └── template
                     └── contract
                         └── TemplateTests.java
-
-Defining plugins
-----------------
-Your CorDapp may need to define two types of plugins:
-
-* ``CordaPluginRegistry`` subclasses, which define additional serializable classes
-* ``WebServerPluginRegistry`` subclasses, which define the APIs and static web content served by your CorDapp
-
-The fully-qualified class path of each ``CordaPluginRegistry`` subclass must then be added to the
-``net.corda.core.node.CordaPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. Meanwhile,
-the fully-qualified class path of each ``WebServerPluginRegistry`` subclass must be added to the
-``net.corda.webserver.services.WebServerPluginRegistry`` file, again in the CorDapp's ``resources/META-INF/services``
-folder.
-
-The ``CordaPluginRegistry`` class defines the following:
-
-* ``customizeSerialization``, which can be overridden to provide a list of the classes to be whitelisted for object
-  serialisation, over and above those tagged with the ``@CordaSerializable`` annotation. See :doc:`serialization`
-
-The ``WebServerPluginRegistry`` class defines the following:
-
-* ``webApis``, which can be overridden to return a list of JAX-RS annotated REST access classes. These classes will be
-  constructed by the bundled web server and must have a single argument constructor taking a ``CordaRPCOps`` object.
-  This will allow the API to communicate with the node process via the RPC interface. These web APIs will not be
-  available if the bundled web server is not started
-
-* ``staticServeDirs``, which can be overridden to map static web content to virtual paths and allow simple web demos to
-  be distributed within the CorDapp jars. This static content will not be available if the bundled web server is not
-  started
-
-* ``customizeJSONSerialization``, which can be overridden to register custom JSON serializers if required by the REST api.
-
-  * The static web content itself should be placed inside the ``src/main/resources`` directory
-
-To learn about how to use gradle to build your cordapp against Corda and generate an artifact please read
-:doc:`cordapp-build-systems`.

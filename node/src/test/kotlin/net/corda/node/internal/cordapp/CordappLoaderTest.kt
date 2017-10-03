@@ -55,8 +55,8 @@ class CordappLoaderTest {
         assertThat(actualCordapp.rpcFlows).isEmpty()
         assertThat(actualCordapp.schedulableFlows).isEmpty()
         assertThat(actualCordapp.services).isEmpty()
-        assertThat(actualCordapp.plugins).hasSize(1)
-        assertThat(actualCordapp.plugins.first().javaClass.name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedPlugin")
+        assertThat(actualCordapp.serializationWhitelists).hasSize(1)
+        assertThat(actualCordapp.serializationWhitelists.first().javaClass.name).isEqualTo("net.corda.nodeapi.internal.serialization.DefaultWhitelist")
         assertThat(actualCordapp.jarPath).isEqualTo(isolatedJAR)
     }
 
