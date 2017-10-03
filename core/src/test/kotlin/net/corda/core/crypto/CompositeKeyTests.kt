@@ -216,7 +216,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     }
 
     @Test()
-    fun `composite key validation with graph cycle detection`() = kryoSpecific<CompositeKeyTests>("Cycle exists in the object graph which is not currently supported in AMQP mode") {
+    fun `composite key validation with graph cycle detection`() = kryoSpecific("Cycle exists in the object graph which is not currently supported in AMQP mode") {
         val key1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build() as CompositeKey
         val key2 = CompositeKey.Builder().addKeys(alicePublicKey, key1).build() as CompositeKey
         val key3 = CompositeKey.Builder().addKeys(alicePublicKey, key2).build() as CompositeKey
