@@ -69,7 +69,7 @@ class CordaRPCClient @JvmOverloads constructor(
         hostAndPort: NetworkHostAndPort,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
 ) {
-      init {
+    init {
         // TODO: allow clients to have serialization factory etc injected and align with RPC protocol version?
         KryoClientSerializationScheme.initialiseSerialization()
     }

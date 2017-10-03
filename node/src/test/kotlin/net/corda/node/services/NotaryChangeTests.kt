@@ -41,7 +41,7 @@ class NotaryChangeTests {
         mockNet = MockNetwork()
         oldNotaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
+                advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type)))
         clientNodeA = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress)
         clientNodeB = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress)
         newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress, advertisedServices = ServiceInfo(ValidatingNotaryService.type))
@@ -208,7 +208,7 @@ fun issueMultiPartyState(nodeA: StartedNode<*>, nodeB: StartedNode<*>, notaryNod
     val participants = listOf(nodeA.info.chooseIdentity(), nodeB.info.chooseIdentity())
     val state = TransactionState(
             DummyContract.MultiOwnerState(0, participants),
-            DUMMY_PROGRAM_ID, notaryIdentity)
+            DummyContract.PROGRAM_ID, notaryIdentity)
     val tx = TransactionBuilder(notary = notaryIdentity).withItems(state, dummyCommand(participants.first().owningKey))
     val signedByA = nodeA.services.signInitialTransaction(tx)
     val signedByAB = nodeB.services.addSignature(signedByA)

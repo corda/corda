@@ -1,7 +1,5 @@
 package net.corda.node.services
 
-import net.corda.client.rpc.RPCException
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.cordapp.CordappProvider
@@ -18,7 +16,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -27,19 +24,15 @@ import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockServices
-import net.corda.testing.resetTestSerialization
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
-import java.sql.Driver
-import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests : TestDependencyInjectionBase() {
@@ -124,10 +117,12 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
 
     private fun DriverDSLExposedInterface.createTwoNodesAndNotary(): List<NodeHandle> {
         val adminUser = User("admin", "admin", permissions = setOf("ALL"))
-        return listOf(
+        val nodes = listOf(
                 startNode(providedName = bankAName, rpcUsers = listOf(adminUser)),
                 startNode(providedName = bankBName, rpcUsers = listOf(adminUser)),
                 startNode(providedName = notaryName, rpcUsers = listOf(adminUser), advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         ).transpose().getOrThrow()   // Wait for all nodes to start up.
+        nodes.forEach { it.rpc.waitUntilNetworkReady().getOrThrow() }
+        return nodes
     }
 }

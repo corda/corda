@@ -267,7 +267,7 @@ public class FlowCookbookJava {
 
             // We then need to pair our output state with a contract.
             // DOCSTART 47
-            StateAndContract ourOutput = new StateAndContract(ourOutputState, DUMMY_PROGRAM_ID);
+            StateAndContract ourOutput = new StateAndContract(ourOutputState, DummyContract.PROGRAM_ID);
             // DOCEND 47
 
             // Commands pair a ``CommandData`` instance with a list of

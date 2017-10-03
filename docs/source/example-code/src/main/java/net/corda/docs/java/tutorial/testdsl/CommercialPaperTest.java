@@ -13,7 +13,6 @@ import java.time.temporal.ChronoUnit;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.finance.contracts.JavaCommercialPaper.JCP_PROGRAM_ID;
-import static net.corda.finance.contracts.asset.CashUtilities.CASH_PROGRAM_ID;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.NodeTestUtils.ledger;
 import static net.corda.testing.NodeTestUtils.transaction;
@@ -143,9 +142,9 @@ public class CommercialPaperTest {
         PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
         ledger(l -> {
             l.unverifiedTransaction(tx -> {
-                tx.output(CASH_PROGRAM_ID, "alice's $900",
+                tx.output(Cash.PROGRAM_ID, "alice's $900",
                         new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE()));
-                tx.attachments(CASH_PROGRAM_ID);
+                tx.attachments(Cash.PROGRAM_ID);
                 return Unit.INSTANCE;
             });
 
@@ -161,7 +160,7 @@ public class CommercialPaperTest {
             l.transaction("Trade", tx -> {
                 tx.input("paper");
                 tx.input("alice's $900");
-                tx.output(CASH_PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP()));
+                tx.output(Cash.PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP()));
                 JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                 tx.output(JCP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(getALICE()));
                 tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
@@ -179,15 +178,15 @@ public class CommercialPaperTest {
         PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
         ledger(l -> {
             l.unverifiedTransaction(tx -> {
-                tx.output(CASH_PROGRAM_ID, "alice's $900",
+                tx.output(Cash.PROGRAM_ID, "alice's $900",
                         new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE()));
-                tx.attachments(CASH_PROGRAM_ID);
+                tx.attachments(Cash.PROGRAM_ID);
                 return Unit.INSTANCE;
             });
 
             // Some CP is issued onto the ledger by MegaCorp.
             l.transaction("Issuance", tx -> {
-                tx.output(CASH_PROGRAM_ID, "paper", getPaper());
+                tx.output(Cash.PROGRAM_ID, "paper", getPaper());
                 tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
                 tx.attachments(JCP_PROGRAM_ID);
                 tx.timeWindow(getTEST_TX_TIME());
@@ -197,7 +196,7 @@ public class CommercialPaperTest {
             l.transaction("Trade", tx -> {
                 tx.input("paper");
                 tx.input("alice's $900");
-                tx.output(CASH_PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP()));
+                tx.output(Cash.PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP()));
                 JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                 tx.output(JCP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(getALICE()));
                 tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());
@@ -225,15 +224,15 @@ public class CommercialPaperTest {
         PartyAndReference issuer = getMEGA_CORP().ref(defaultRef);
         ledger(l -> {
             l.unverifiedTransaction(tx -> {
-                tx.output(CASH_PROGRAM_ID, "alice's $900",
+                tx.output(Cash.PROGRAM_ID, "alice's $900",
                         new Cash.State(issuedBy(DOLLARS(900), issuer), getALICE()));
-                tx.attachments(CASH_PROGRAM_ID);
+                tx.attachments(Cash.PROGRAM_ID);
                 return Unit.INSTANCE;
             });
 
             // Some CP is issued onto the ledger by MegaCorp.
             l.transaction("Issuance", tx -> {
-                tx.output(CASH_PROGRAM_ID, "paper", getPaper());
+                tx.output(Cash.PROGRAM_ID, "paper", getPaper());
                 tx.command(getMEGA_CORP_PUBKEY(), new JavaCommercialPaper.Commands.Issue());
                 tx.attachments(JCP_PROGRAM_ID);
                 tx.timeWindow(getTEST_TX_TIME());
@@ -243,7 +242,7 @@ public class CommercialPaperTest {
             l.transaction("Trade", tx -> {
                 tx.input("paper");
                 tx.input("alice's $900");
-                tx.output(CASH_PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP()));
+                tx.output(Cash.PROGRAM_ID, "borrowed $900", new Cash.State(issuedBy(DOLLARS(900), issuer), getMEGA_CORP()));
                 JavaCommercialPaper.State inputPaper = l.retrieveOutput(JavaCommercialPaper.State.class, "paper");
                 tx.output(JCP_PROGRAM_ID, "alice's paper", inputPaper.withOwner(getALICE()));
                 tx.command(getALICE_PUBKEY(), new Cash.Commands.Move());

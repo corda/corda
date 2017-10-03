@@ -2,7 +2,7 @@ package net.corda.webserver.internal
 
 import com.google.common.html.HtmlEscapers.htmlEscaper
 import net.corda.client.jackson.JacksonSupport
-import net.corda.client.rpc.internal.internalCordaRPCClient
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import net.corda.webserver.WebServerConfig
@@ -207,7 +207,7 @@ class NodeWebServer(val config: WebServerConfig) {
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
         val rpcUser = config.rpcUsers.firstOrNull() ?: throw IllegalArgumentException("The node config has not specified any RPC users")
         log.info("Connecting to node at ${config.rpcAddress} as $rpcUser")
-        val client = internalCordaRPCClient(config.rpcAddress)
+        val client = CordaRPCClient(config.rpcAddress)
         val connection = client.start(rpcUser.username, rpcUser.password)
         return connection.proxy
     }

@@ -6,7 +6,10 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CP_PROGRAM_ID
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.ICommercialPaperState
-import net.corda.finance.contracts.asset.*
+import net.corda.finance.contracts.asset.CASH
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.`issued by`
+import net.corda.finance.contracts.asset.`owned by`
 import net.corda.testing.*
 import org.junit.Test
 
@@ -128,8 +131,8 @@ class CommercialPaperTest {
 
         ledger {
             unverifiedTransaction {
-                attachments(CASH_PROGRAM_ID)
-                output(CASH_PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
+                attachments(Cash.PROGRAM_ID)
+                output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
             }
 
             // Some CP is issued onto the ledger by MegaCorp.
@@ -145,7 +148,7 @@ class CommercialPaperTest {
             transaction("Trade") {
                 input("paper")
                 input("alice's $900")
-                output(CASH_PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
+                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
                 output(CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
@@ -161,8 +164,8 @@ class CommercialPaperTest {
         val issuer = MEGA_CORP.ref(123)
         ledger {
             unverifiedTransaction {
-                attachments(CASH_PROGRAM_ID)
-                output(CASH_PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
+                attachments(Cash.PROGRAM_ID)
+                output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
             }
 
             // Some CP is issued onto the ledger by MegaCorp.
@@ -177,7 +180,7 @@ class CommercialPaperTest {
             transaction("Trade") {
                 input("paper")
                 input("alice's $900")
-                output(CASH_PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
+                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
                 output(CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
@@ -203,8 +206,8 @@ class CommercialPaperTest {
         val issuer = MEGA_CORP.ref(123)
         ledger {
             unverifiedTransaction {
-                attachments(CASH_PROGRAM_ID)
-                output(CASH_PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
+                attachments(Cash.PROGRAM_ID)
+                output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
             }
 
             // Some CP is issued onto the ledger by MegaCorp.
@@ -219,7 +222,7 @@ class CommercialPaperTest {
             transaction("Trade") {
                 input("paper")
                 input("alice's $900")
-                output(CASH_PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
+                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
                 output(CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }

@@ -47,8 +47,7 @@ The following code snippet is taken from ``NodeInterestRates.kt`` and implements
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
-
-:dedent: 8
+    :dedent: 8
 
 .. note:: The way the ``FilteredTransaction`` is constructed ensures that after signing of the root hash it's impossible to add or remove
     components (leaves). However, it can happen that having transaction with multiple commands one party reveals only subset of them to the Oracle.

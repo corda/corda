@@ -3,6 +3,9 @@ Release notes
 
 Here are release notes for each snapshot release from M9 onwards.
 
+Unreleased
+----------
+
 Release 1.0
 -----------
 Corda 1.0 is finally here!

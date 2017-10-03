@@ -261,7 +261,7 @@ open class NodeStartup(val args: Array<String>) {
         node.configuration.extraAdvertisedServiceIds.filter { it.startsWith("corda.notary.") }.let {
             if (it.isNotEmpty()) Node.printBasicNodeInfo("Providing additional services", it.joinToString())
         }
-        Node.printBasicNodeInfo("Loaded CorDapps", node.cordappProvider.cordapps.map { it.name }.joinToString())
+        Node.printBasicNodeInfo("Loaded CorDapps", node.cordappProvider.cordapps.joinToString { it.name })
     }
 
     open fun drawBanner(versionInfo: VersionInfo) {
