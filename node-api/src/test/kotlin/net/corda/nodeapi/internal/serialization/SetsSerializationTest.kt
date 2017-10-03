@@ -40,7 +40,7 @@ class SetsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty set serialises as Java emptySet`() = kryoSpecific<ListsSerializationTest>("Checks Kryo header properties") {
+    fun `check empty set serialises as Java emptySet`() = kryoSpecific("Checks Kryo header properties") {
         val nameID = 0
         val serializedForm = emptySet<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
