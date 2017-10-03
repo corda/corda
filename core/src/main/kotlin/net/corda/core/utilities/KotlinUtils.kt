@@ -1,3 +1,5 @@
+@file:JvmName("KotlinUtils")
+
 package net.corda.core.utilities
 
 import net.corda.core.internal.concurrent.get
