@@ -132,10 +132,9 @@ class ExplorerSimulation(val options: OptionSet) {
                 issuerNodeGBP.nodeInfo.legalIdentities.first() to issuerRPCGBP,
                 issuerNodeUSD.nodeInfo.legalIdentities.first() to issuerRPCUSD))
 
-        aliceRPC.waitUntilNetworkReady()
-        bobRPC.waitUntilNetworkReady()
-        issuerRPCGBP.waitUntilNetworkReady()
-        issuerRPCUSD.waitUntilNetworkReady()
+        listOf(aliceRPC, bobRPC, issuerRPCGBP, issuerRPCUSD).map {
+            it.waitUntilNetworkReady().getOrThrow()
+        }
     }
 
     private fun startSimulation(eventGenerator: EventGenerator, maxIterations: Int) {
