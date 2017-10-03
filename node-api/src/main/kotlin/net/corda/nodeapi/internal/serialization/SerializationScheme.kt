@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutionException
 
 val attachmentsClassLoaderEnabledPropertyName = "attachments.class.loader.enabled"
 
-object NotSupportedSeralizationScheme : SerializationScheme {
+object NotSupportedSerializationScheme : SerializationScheme {
     private fun doThrow(): Nothing = throw UnsupportedOperationException("Serialization scheme not supported.")
 
     override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean = doThrow()
@@ -107,7 +107,7 @@ open class SerializationFactoryImpl : SerializationFactory() {
             registeredSchemes
                     .filter { scheme -> scheme.canDeserializeVersion(it.first, it.second) }
                     .forEach { return@computeIfAbsent it }
-            NotSupportedSeralizationScheme
+            NotSupportedSerializationScheme
         }
     }
 
