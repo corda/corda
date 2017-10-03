@@ -146,13 +146,15 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey, trustR
     return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 }
 
-inline fun <reified T : Any> kryoSpecific(reason: String, function: () -> Unit) = if(!AMQP_ENABLED) {
+@Suppress("unused")
+inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if(!AMQP_ENABLED) {
     function()
 } else {
     loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason" )
 }
 
-inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) = if(AMQP_ENABLED) {
+@Suppress("unused")
+inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit) = if(AMQP_ENABLED) {
     function()
 } else {
     loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason" )
@@ -169,14 +171,14 @@ fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.firs
 
 /**
  * Set the package to scan for cordapps - this overrides the default behaviour of scanning the cordapps directory
- * @param packageName A package name that you wish to scan for cordapps
+ * @param packageNames A package name that you wish to scan for cordapps
  */
 fun setCordappPackages(vararg packageNames: String) {
     CordappLoader.testPackages = packageNames.toList()
 }
 
 /**
- * Unsets the default overriding behaviour of [setCordappPackage]
+ * Unsets the default overriding behaviour of [setCordappPackages]
  */
 fun unsetCordappPackages() {
     CordappLoader.testPackages = emptyList()

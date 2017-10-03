@@ -5,7 +5,6 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
-import net.corda.core.internal.toLedgerTransaction
 import net.corda.core.internal.toWireTransaction
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
@@ -302,7 +301,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `test deserialize of WireTransaction where contract cannot be found`() {
-        kryoSpecific<AttachmentsClassLoaderTests>("Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not") {
+        kryoSpecific("Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not") {
             ClassLoaderForTests().use { child ->
                 val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
                 val contract = contractClass.newInstance() as DummyContractBackdoor
