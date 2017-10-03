@@ -3,12 +3,11 @@ package net.corda.node.services.config
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.NetworkMapInfo
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
-import net.corda.node.services.network.NetworkMapService
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.OldConfig
+import net.corda.nodeapi.internal.ServiceInfo
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -22,6 +21,10 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
     // TODO: Remove this so we don't accidentally use this identity in the code?
     val myLegalName: CordaX500Name
+    /**
+     * If null then configure the node to run as the netwok map service, otherwise use this to connect to the network map
+     * service.
+     */
     val networkMapService: NetworkMapInfo?
     val minimumPlatformVersion: Int
     val emailAddress: String
@@ -93,12 +96,10 @@ data class FullNodeConfiguration(
     }
 
     fun calculateServices(): Set<ServiceInfo> {
-        val advertisedServices = extraAdvertisedServiceIds
+        return extraAdvertisedServiceIds
                 .filter(String::isNotBlank)
                 .map { ServiceInfo.parse(it) }
-                .toMutableSet()
-        if (networkMapService == null) advertisedServices += ServiceInfo(NetworkMapService.type)
-        return advertisedServices
+                .toSet()
     }
 }
 

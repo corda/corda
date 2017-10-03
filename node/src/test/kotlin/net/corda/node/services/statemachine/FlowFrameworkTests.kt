@@ -31,7 +31,6 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
@@ -79,7 +78,7 @@ class FlowFrameworkTests {
     fun start() {
         setCordappPackages("net.corda.finance.contracts", "net.corda.testing.contracts")
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
-        node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+        node1 = mockNet.createNode()
         node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
 
         mockNet.runNetwork()

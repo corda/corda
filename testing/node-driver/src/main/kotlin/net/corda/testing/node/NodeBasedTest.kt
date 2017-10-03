@@ -8,17 +8,16 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.plus
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
@@ -91,7 +90,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
         check(_networkMapNode == null || _networkMapNode!!.info.legalIdentitiesAndCerts.first().name == legalName)
-        return startNodeInternal(legalName, platformVersion, advertisedServices + ServiceInfo(NetworkMapService.type), rpcUsers, configOverrides).apply {
+        return startNodeInternal(legalName, platformVersion, advertisedServices, rpcUsers, configOverrides).apply {
             _networkMapNode = this
         }
     }
