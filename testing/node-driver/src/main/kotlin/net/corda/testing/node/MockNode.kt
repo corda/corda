@@ -400,7 +400,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                          overrideServices: Map<ServiceInfo, KeyPair>? = null,
                          serviceName: CordaX500Name? = null): StartedNode<MockNode> {
         return createNode(networkMapAddress, legalName = legalName, overrideServices = overrideServices,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type, serviceName)))
+                advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type, serviceName)))
     }
 
     // Convenience method for Java

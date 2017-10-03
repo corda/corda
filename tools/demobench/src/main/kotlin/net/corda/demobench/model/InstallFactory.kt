@@ -3,8 +3,6 @@ package net.corda.demobench.model
 import com.typesafe.config.Config
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
@@ -54,7 +52,7 @@ class InstallFactory : Controller() {
     }
 
     private fun Config.parseExtraServices(path: String): MutableList<String> {
-        val services = serviceController.services.values.toSortedSet() + ServiceInfo(ServiceType.networkMap).toString()
+        val services = serviceController.services.values.toSortedSet()
         return this.getStringList(path)
                 .filter { !it.isNullOrEmpty() }
                 .map { svc ->

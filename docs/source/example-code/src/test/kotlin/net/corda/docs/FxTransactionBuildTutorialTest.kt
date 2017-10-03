@@ -9,7 +9,6 @@ import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
@@ -34,7 +33,7 @@ class FxTransactionBuildTutorialTest {
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 overrideServices = mapOf(notaryService to DUMMY_NOTARY_KEY),
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
+                advertisedServices = *arrayOf(notaryService))
         nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
