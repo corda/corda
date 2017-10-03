@@ -19,7 +19,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.api.AbstractNodeService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.MessageHandlerRegistration
@@ -72,8 +71,6 @@ interface NetworkMapService {
         const val PUSH_TOPIC = "platform.network_map.push"
         // Base topic for messages acknowledging pushed updates
         const val PUSH_ACK_TOPIC = "platform.network_map.push_ack"
-
-        val type = ServiceType.networkMap
     }
 
     data class FetchMapRequest(val subscribe: Boolean,
