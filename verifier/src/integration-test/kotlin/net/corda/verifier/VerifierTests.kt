@@ -122,7 +122,7 @@ class VerifierTests {
             val aliceNode = aliceFuture.get()
             val notaryNode = notaryFuture.get()
             val alice = notaryNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
-            val notary = notaryNode.rpc.wellKnownPartyFromX500Name(DUMMY_NOTARY_SERVICE_NAME)!!
+            val notary = notaryNode.rpc.notaryPartyFromX500Name(DUMMY_NOTARY_SERVICE_NAME)!!
             startVerifier(notaryNode)
             aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notary).returnValue.get()
             notaryNode.waitUntilNumberOfVerifiers(1)

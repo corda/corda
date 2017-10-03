@@ -9,6 +9,7 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -96,7 +97,7 @@ class ValidatingNotaryServiceTests {
         return future
     }
 
-    fun issueState(serviceHub: ServiceHubInternal, identity: Party): StateAndRef<*> {
+    fun issueState(serviceHub: ServiceHub, identity: Party): StateAndRef<*> {
         val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
         val signedByNode = serviceHub.signInitialTransaction(tx)
         val stx = notaryServices.addSignature(signedByNode, notary.owningKey)
