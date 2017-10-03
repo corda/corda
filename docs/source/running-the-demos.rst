@@ -143,19 +143,18 @@ To run from the command line in Windows:
 To run the BFT SMaRt notary demo, use ``nodesBFT`` instead of ``nodesRaft`` in the path (you will see messages from notary nodes
 trying to communicate each other sometime with connection errors, that's normal). For a single notary node, use ``nodesSingle``.
 
-Notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
+Distributed notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
 You can ascertain that the commit log is synchronised across the cluster by accessing and comparing each of the nodes' backing stores
 by using the H2 web console:
 
 - Firstly, download `H2 web console <http://www.h2database.com/html/download.html>`_ (download the "platform-independent zip"),
-  and start it using a script in the extracted folder: ``h2/bin/h2.sh`` (or ``h2\bin\h2`` for Windows)
+  and start it using a script in the extracted folder: ``sh h2/bin/h2.sh`` (or ``h2\bin\h2`` for Windows)
 
 - If you are uncertain as to which version of h2 to install or if you have connectivity issues, refer to ``build.gradle``
-  located in the ``node`` directory and locate the compile step for ``com.h2database``. Use a client of the same
-  major version - even if still in beta.
+  located in the corda directory and locate ``h2_version``. Use a client of the same major version - even if still in beta.
 
 - The H2 web console should start up in a web browser tab. To connect we first need to obtain a JDBC connection string.
-  Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a node is running,
+  Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a **notary** node is running,
   look for the following string:
 
   ``Database connection url is              : jdbc:h2:tcp://10.18.0.150:56736/node``
@@ -163,8 +162,8 @@ by using the H2 web console:
   You can use the string on the right to connect to the h2 database: just paste it into the `JDBC URL` field and click *Connect*.
   You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL
 
-- The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table. Note that the raw data is not human-readable,
-  but we're only interested in the row count for this demo
+- The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table (for Raft) or ``NODE_BFT_SMART_NOTARY_COMMITTED_STATES`` (for BFT).
+  Note that in the Raft case the raw data is not human-readable, but we're only interested in the row count for this demo
 
 .. _bank-of-corda-demo:
 

@@ -23,6 +23,11 @@ Some of the unit tests, and our serialization framework in general, rely on the 
 to Java reflection.  Make sure you have specified the ``-parameters`` option to the Java compiler.  We attempt to set this globally
 for gradle and IntelliJ, but it's possible this option is not present in your environment for some reason.
 
+"No matching constructor found: - [arg0: int, arg1: Party]: missing parameter arg0"
+***********************************************************************************
+
+Your CorDapp is written in Java and you haven't specified the ``-parameters`` compiler argument. See :doc:`deploying-a-node` for how it can be done using Gradle.
+
 IDEA issues
 -----------
 
