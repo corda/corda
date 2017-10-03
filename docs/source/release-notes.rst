@@ -18,14 +18,14 @@ will only evolve to include new features.
 As of Corda 1.0, the following modules export public APIs for which we guarantee to maintain backwards compatibility,
 unless an incompatible change is required for security reasons:
 
- * core
+ * **core**: 
    Contains the bulk of the APIs to be used for building CorDapps: contracts, transactions, flows, identity, node services, 
    cryptographic libraries, and general utility functions.
 
- * client-rpc
+ * **client-rpc**: 
    An RPC client interface to Corda, for use by both UI facing clients and integration with external systems.
 
- * client-jackson
+ * **client-jackson**: 
    Utilities and serialisers for working with JSON representations of basic types.
 
 Our extensive testing frameworks will continue to evolve alongside future Corda APIs. As part of our commitment to ease of use and modularity
@@ -50,7 +50,7 @@ Significant changes implemented in reaching Corda API stability include:
   Methods and flow naming conventions have been aligned with their semantic use to ease the understanding of CorDapps.
   In addition, we provide ever more powerful re-usable flows (such as `CollectSignaturesFlow`) to minimize the boiler-plate code developers need to write.
 
-* **Simplified annotation driven scanning **:
+* **Simplified annotation driven scanning**:
   CorDapp configuration has been made simpler through the removal of explicit configuration items in favour of annotations
   and classpath scanning. As an example, we have now completely removed the `CordaPluginRegistry` configuration.
   Contract definitions are no longer required to explicitly define a legal contract reference hash. In their place an
