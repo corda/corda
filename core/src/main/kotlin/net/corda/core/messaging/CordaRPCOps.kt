@@ -257,6 +257,14 @@ interface CordaRPCOps : RPCOps {
     fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party?
 
     /**
+     * Get a notary identity by name.
+     *
+     * @return the notary identity, or null if there is no notary by that name. Note that this will return null if there
+     * is a peer with that name but they are not a recognised notary service.
+     */
+    fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party?
+
+    /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
      * get smarter with time e.g. to correct spelling errors, so you should not hard-code indexes into the results
      * but rather show them via a user interface and let the user pick the one they wanted.
