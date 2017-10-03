@@ -24,11 +24,9 @@ RPC client interface to Corda, for use both by user-facing client and integratio
 
 Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
-# Package net.corda.core.cordapp
+# Package net.corda.core
 
-This package contains the interface to CorDapps from within a node. A CorDapp can access its own context by using
-the CordappProvider.getAppContext() class. These classes are not intended to be constructed manually and no interface
-to do this will be provided. 
+Exception types and some utilities for working with observables and futures.
 
 # Package net.corda.core.concurrent
 
@@ -42,6 +40,12 @@ with [Contract], or see the examples in [net.corda.finance.contracts].
 
 Corda smart contracts are a combination of state held on the distributed ledger, and verification logic which defines
 which transformations of state are valid.
+
+# Package net.corda.core.cordapp
+
+This package contains the interface to CorDapps from within a node. A CorDapp can access it's own context by using
+the CordappProvider.getAppContext() class. These classes are not intended to be constructed manually and no interface
+to do this will be provided. 
 
 # Package net.corda.core.crypto
 
@@ -59,10 +63,6 @@ processes such as handling fixing of interest rate swaps.
 # Package net.corda.core.identity
 
 Data classes which model different forms of identity (potentially with supporting evidence) for legal entities and services.
-
-# Package net.corda.core.internal
-
-Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
 # Package net.corda.core.messaging
 

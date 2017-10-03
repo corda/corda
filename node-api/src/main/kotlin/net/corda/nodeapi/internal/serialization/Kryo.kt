@@ -521,7 +521,7 @@ object LoggerSerializer : Serializer<Logger>() {
 object ClassSerializer : Serializer<Class<*>>() {
     override fun read(kryo: Kryo, input: Input, type: Class<Class<*>>): Class<*> {
         val className = input.readString()
-        return Class.forName(className)
+        return Class.forName(className, true, kryo.classLoader)
     }
 
     override fun write(kryo: Kryo, output: Output, clazz: Class<*>) {

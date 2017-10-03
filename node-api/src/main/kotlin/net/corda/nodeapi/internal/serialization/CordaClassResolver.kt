@@ -168,7 +168,7 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
 }
 
 /**
- * A whitelist that can be customised via the [net.corda.core.node.CordaPluginRegistry], since implements [MutableClassWhitelist].
+ * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since implements [MutableClassWhitelist].
  */
 class TransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
     val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())

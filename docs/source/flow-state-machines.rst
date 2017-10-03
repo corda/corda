@@ -277,40 +277,9 @@ will propagate to the other side. Any other exception will not propagate.
 
 Taking a step back, we mentioned that the other side has to accept the session request for there to be a communication
 channel. A node accepts a session request if it has registered the flow type (the fully-qualified class name) that is
-making the request - each session initiation includes the initiating flow type. The registration is done by a CorDapp
-which has made available the particular flow communication, using ``PluginServiceHub.registerServiceFlow``. This method
-specifies a flow factory for generating the counter-flow to any given initiating flow. If this registration doesn't exist
-then no further communication takes place and the initiating flow ends with an exception.
-
-Going back to our buyer and seller flows, we need a way to initiate communication between the two. This is typically done
-with one side started manually using the ``startFlowDynamic`` RPC and this initiates the counter-flow on the other side.
-In this case it doesn't matter which flow is the initiator and which is the initiated. If we choose the seller side as
-the initiator then the buyer side would need to register their flow, perhaps with something like:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        class TwoPartyTradeFlowPlugin : CordaPluginRegistry() {
-            override val servicePlugins = listOf(Function(TwoPartyTradeFlowService::Service))
-        }
-
-        object TwoPartyTradeFlowService {
-            class Service(services: PluginServiceHub) {
-                init {
-                    services.registerServiceFlow(TwoPartyTradeFlow.Seller::class.java) {
-                        TwoPartyTradeFlow.Buyer(
-                            it,
-                            notary = services.networkMapCache.notaryIdentities[0].party,
-                            acceptablePrice = TODO(),
-                            typeToBuy = TODO())
-                    }
-                }
-            }
-        }
-
-This is telling the buyer node to fire up an instance of ``TwoPartyTradeFlow.Buyer`` (the code in the lambda) when
-they receive a message from the initiating seller side of the flow (``TwoPartyTradeFlow.Seller::class.java``).
+making the request - each session initiation includes the initiating flow type. The *initiated* (server) flow must name the
+*initiating* (client) flow using the ``@InitiatedBy`` annotation and passing the class name that will be starting the
+flow session as the annotation parameter.
 
 .. _subflows:
 
