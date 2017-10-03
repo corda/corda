@@ -57,7 +57,7 @@ class NodeInfoSerializerTest : NodeBasedTest() {
 
     @Test
     fun `load a non empty Directory`() {
-        val nodeInfoFolder = folder.newFolder(CordformNode.NODE_INFO_FOLDER)
+        val nodeInfoFolder = folder.newFolder(CordformNode.NODE_INFO_DIRECTORY)
         nodeInfoSerializer.saveToFile(nodeInfoFolder.toPath(), nodeInfo, keyManagementService)
         val nodeInfos = nodeInfoSerializer.loadFromDirectory(folder.root.toPath())
 
