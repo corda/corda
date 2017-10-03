@@ -462,9 +462,9 @@ public interface net.corda.core.cordapp.Cordapp
   @org.jetbrains.annotations.NotNull public abstract List getInitiatedFlows()
   @org.jetbrains.annotations.NotNull public abstract java.net.URL getJarPath()
   @org.jetbrains.annotations.NotNull public abstract String getName()
-  @org.jetbrains.annotations.NotNull public abstract List getPlugins()
   @org.jetbrains.annotations.NotNull public abstract List getRpcFlows()
   @org.jetbrains.annotations.NotNull public abstract List getSchedulableFlows()
+  @org.jetbrains.annotations.NotNull public abstract List getSerializationWhitelists()
   @org.jetbrains.annotations.NotNull public abstract List getServices()
 ##
 public final class net.corda.core.cordapp.CordappContext extends java.lang.Object
@@ -563,6 +563,19 @@ public static final class net.corda.core.crypto.CompositeSignature$State extends
   @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.CompositeKey getVerifyKey()
   public int hashCode()
   public String toString()
+##
+public final class net.corda.core.crypto.CompositeSignaturesWithKeys extends java.lang.Object
+  public <init>(List)
+  @org.jetbrains.annotations.NotNull public final List component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.CompositeSignaturesWithKeys copy(List)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final List getSigs()
+  public int hashCode()
+  public String toString()
+  public static final net.corda.core.crypto.CompositeSignaturesWithKeys$Companion Companion
+##
+public static final class net.corda.core.crypto.CompositeSignaturesWithKeys$Companion extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.CompositeSignaturesWithKeys getEMPTY()
 ##
 public final class net.corda.core.crypto.CordaObjectIdentifier extends java.lang.Object
   @kotlin.jvm.JvmField @org.jetbrains.annotations.NotNull public static final org.bouncycastle.asn1.ASN1ObjectIdentifier COMPOSITE_KEY
@@ -839,19 +852,6 @@ public final class net.corda.core.crypto.TransactionSignature extends net.corda.
   public final boolean isValid(net.corda.core.crypto.SecureHash)
   public final boolean verify(net.corda.core.crypto.SecureHash)
 ##
-public final class net.corda.core.crypto.composite.CompositeSignaturesWithKeys extends java.lang.Object
-  public <init>(List)
-  @org.jetbrains.annotations.NotNull public final List component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.composite.CompositeSignaturesWithKeys copy(List)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final List getSigs()
-  public int hashCode()
-  public String toString()
-  public static final net.corda.core.crypto.composite.CompositeSignaturesWithKeys$Companion Companion
-##
-public static final class net.corda.core.crypto.composite.CompositeSignaturesWithKeys$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.crypto.composite.CompositeSignaturesWithKeys getEMPTY()
-##
 public abstract class net.corda.core.flows.AbstractStateReplacementFlow extends java.lang.Object
   public <init>()
 ##
@@ -909,16 +909,6 @@ public static final class net.corda.core.flows.AbstractStateReplacementFlow$Upgr
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.AbstractStateReplacementFlow$UpgradeTx copy(net.corda.core.transactions.SignedTransaction)
   public boolean equals(Object)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction getStx()
-  public int hashCode()
-  public String toString()
-##
-public final class net.corda.core.flows.AppContext extends java.lang.Object
-  public <init>(List)
-  @org.jetbrains.annotations.NotNull public final List component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.flows.AppContext copy(List)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final List getAttachments()
-  @org.jetbrains.annotations.NotNull public final ClassLoader getClassLoader()
   public int hashCode()
   public String toString()
 ##
@@ -1494,10 +1484,6 @@ public static final class net.corda.core.messaging.StateMachineUpdate$Removed ex
   @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.Try getResult()
   public int hashCode()
   public String toString()
-##
-public abstract class net.corda.core.node.CordaPluginRegistry extends java.lang.Object
-  public <init>()
-  public boolean customizeSerialization(net.corda.core.serialization.SerializationCustomization)
 ##
 public final class net.corda.core.node.NodeInfo extends java.lang.Object
   public <init>(List, List, int, long)
@@ -2462,8 +2448,6 @@ public static final class net.corda.core.serialization.SerializationContext$UseC
   public static net.corda.core.serialization.SerializationContext$UseCase valueOf(String)
   public static net.corda.core.serialization.SerializationContext$UseCase[] values()
 ##
-public interface net.corda.core.serialization.SerializationCustomization
-##
 public final class net.corda.core.serialization.SerializationDefaults extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getCHECKPOINT_CONTEXT()
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getP2P_CONTEXT()
@@ -2495,6 +2479,9 @@ public static final class net.corda.core.serialization.SerializationFactory$Comp
 ##
 public interface net.corda.core.serialization.SerializationToken
   @org.jetbrains.annotations.NotNull public abstract Object fromToken(net.corda.core.serialization.SerializeAsTokenContext)
+##
+public interface net.corda.core.serialization.SerializationWhitelist
+  @org.jetbrains.annotations.NotNull public abstract List getWhitelist()
 ##
 public interface net.corda.core.serialization.SerializeAsToken
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.serialization.SerializationToken toToken(net.corda.core.serialization.SerializeAsTokenContext)

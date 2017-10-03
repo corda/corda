@@ -18,7 +18,6 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
@@ -42,7 +41,7 @@ class BFTNotaryServiceTests {
     }
 
     private val mockNet = MockNetwork()
-    private val node = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+    private val node = mockNet.createNode()
 
     @After
     fun stopNodes() {

@@ -60,7 +60,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
             deserializeAndReturnEnvelope(bytes, T::class.java)
 
     @Throws(NotSerializableException::class)
-    private fun getEnvelope(bytes: ByteSequence): Envelope {
+    internal fun getEnvelope(bytes: ByteSequence): Envelope {
         // Check that the lead bytes match expected header
         val headerSize = AmqpHeaderV1_0.size
         if (bytes.take(headerSize) != AmqpHeaderV1_0) {
