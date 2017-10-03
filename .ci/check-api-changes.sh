@@ -11,7 +11,7 @@ fi
 diffContents=`diff -u $apiCurrent ../build/api/api-corda-*.txt`
 echo "Diff contents: " 
 echo "$diffContents"
-removals=`echo "$diffContents" | grep "^-" | wc -l`
+removals=`echo "$diffContents" | grep "^-\s" | wc -l`
 echo "Number of API removals/changes: "$removals
 echo "Exiting with exit code" $removals
 exit $removals
