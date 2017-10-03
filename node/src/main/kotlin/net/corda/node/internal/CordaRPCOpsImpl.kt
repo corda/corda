@@ -200,6 +200,8 @@ class CordaRPCOpsImpl(
         }
     }
 
+    override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? = services.networkMapCache.getNotary(x500Name)
+
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
             services.identityService.partiesFromName(query, exactMatch)
