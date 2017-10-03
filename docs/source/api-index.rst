@@ -52,11 +52,12 @@ developers using them until we are able to graduate them into the public API:
 We hope to graduate the node-driver, test-utils and confidential-identities modules in the next feature release
 after 1.0. The bulk of the Corda API is found in the core module. Other modules should be assumed to be fully internal.
 
-The web server module will be removed in future: you should build web frontends for CorDapps using standard frameworks
+The web server module will be removed in future: you should build web front-ends for CorDapps using standard frameworks
 like Spring Boot, J2EE, Play, etc.
 
-Code that falls into the following package namespaces are for internal use only and not public. In a future release the
-node will not load any CorDapp which uses them.
+Code that falls into the following packages namespaces are for internal use only and not for public use:
 
 * Any package in the ``net.corda`` namespace which contains ``.internal``
 * ``net.corda.node``
+
+In the future releases the node upon starting up will reject any CorDapps which uses classes from these packages.
