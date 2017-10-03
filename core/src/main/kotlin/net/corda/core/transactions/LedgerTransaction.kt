@@ -50,7 +50,7 @@ data class LedgerTransaction(
 
     private companion object {
         @JvmStatic
-        fun createContractFor(className: ContractClassName): ContractResult {
+        private fun createContractFor(className: ContractClassName): ContractResult {
             return try {
                 ContractResult(contract = this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance())
             } catch (e: Exception) {
