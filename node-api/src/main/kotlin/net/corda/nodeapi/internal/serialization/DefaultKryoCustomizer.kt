@@ -15,7 +15,7 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.NotaryChangeWireTransaction
@@ -49,8 +49,8 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 object DefaultKryoCustomizer {
-    private val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        ServiceLoader.load(CordaPluginRegistry::class.java, this.javaClass.classLoader).toList()
+    private val serializationWhitelists: List<SerializationWhitelist> by lazy {
+        ServiceLoader.load(SerializationWhitelist::class.java, this.javaClass.classLoader).toList() + DefaultWhitelist
     }
 
     fun customize(kryo: Kryo): Kryo {
@@ -122,8 +122,17 @@ object DefaultKryoCustomizer {
             register(java.lang.invoke.SerializedLambda::class.java)
             register(ClosureSerializer.Closure::class.java, CordaClosureBlacklistSerializer)
 
-            val customization = KryoSerializationCustomization(this)
-            pluginRegistries.forEach { it.customizeSerialization(customization) }
+            for (whitelistProvider in serializationWhitelists) {
+                val types = whitelistProvider.whitelist
+                require(types.toSet().size == types.size) {
+                    val duplicates = types.toMutableList()
+                    types.toSet().forEach { duplicates -= it }
+                    "Cannot add duplicate classes to the whitelist ($duplicates)."
+                }
+                for (type in types) {
+                    ((kryo.classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
+                }
+            }
         }
     }
 

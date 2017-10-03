@@ -77,7 +77,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                           val checkpointStorage: CheckpointStorage,
                           val executor: AffinityExecutor,
                           val database: CordaPersistence,
-                          private val unfinishedFibers: ReusableLatch = ReusableLatch()) {
+                          private val unfinishedFibers: ReusableLatch = ReusableLatch(),
+                          private val classloader: ClassLoader = javaClass.classLoader) {
 
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
 
@@ -377,7 +378,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             updateCheckpoint(fiber)
             session to initiatedFlowFactory
         } catch (e: SessionRejectException) {
-            logger.warn("${e.logMessage}: $sessionInit")
+            // TODO: Handle this more gracefully
+            try {
+                logger.warn("${e.logMessage}: $sessionInit")
+            } catch (e: Throwable) {
+                logger.warn("Problematic session init message during logging", e)
+            }
             sendSessionReject(e.rejectMessage)
             return
         } catch (e: Exception) {
@@ -400,7 +406,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun getInitiatedFlowFactory(sessionInit: SessionInit): InitiatedFlowFactory<*> {
         val initiatingFlowClass = try {
-            Class.forName(sessionInit.initiatingFlowClass).asSubclass(FlowLogic::class.java)
+            Class.forName(sessionInit.initiatingFlowClass, true, classloader).asSubclass(FlowLogic::class.java)
         } catch (e: ClassNotFoundException) {
             throw SessionRejectException("Don't know ${sessionInit.initiatingFlowClass}")
         } catch (e: ClassCastException) {
