@@ -74,18 +74,6 @@ interface NetworkMapCache {
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
 
     /**
-     * Look up all well known identities (including certificate path) of a legal name. This should be used in preference
-     * to well known identity lookup in the identity service where possible, as the network map is the authoritative
-     * source of well known identities.
-     */
-    fun getPeerCertificatesByLegalName(name: CordaX500Name): Set<PartyAndCertificate> {
-        return getNodesByLegalName(name)
-                .flatMap(NodeInfo::legalIdentitiesAndCerts)
-                .filter { it.name == name }
-                .toSet()
-    }
-
-    /**
      * Look up a well known identity (including certificate path) of a legal name. This should be used in preference
      * to well known identity lookup in the identity service where possible, as the network map is the authoritative
      * source of well known identities.
@@ -93,20 +81,8 @@ interface NetworkMapCache {
     fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? {
         return getNodeByLegalName(name)
                 ?.legalIdentitiesAndCerts
+                // The map is restricted to holding one key per name at a time, even if there are other valid keys
                 ?.singleOrNull { it.name == name }
-    }
-
-    /**
-     * Look up all well known identities for a legal name. This should be used in preference
-     * to well known identity lookup in the identity service where possible, as the network map is the authoritative
-     * source of well known identities.
-     */
-    fun getPeersByLegalName(name: CordaX500Name): Set<Party> {
-        return getNodesByLegalName(name)
-                .flatMap(NodeInfo::legalIdentitiesAndCerts)
-                .filter { it.name == name }
-                .map(PartyAndCertificate::party)
-                .toSet()
     }
 
     /**
