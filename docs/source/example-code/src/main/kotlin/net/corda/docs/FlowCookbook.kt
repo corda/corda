@@ -255,8 +255,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
 
         // We then need to pair our output state with a contract.
         // DOCSTART 47
-        val contractName: String = "net.corda.testing.contracts.DummyContract"
-        val ourOutput: StateAndContract = StateAndContract(ourOutputState, contractName)
+        val  ourOutput: StateAndContract = StateAndContract(ourOutputState, DummyContract.PROGRAM_ID)
         // DOCEND 47
 
         // Commands pair a ``CommandData`` instance with a list of

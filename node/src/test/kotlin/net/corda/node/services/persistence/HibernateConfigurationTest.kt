@@ -10,6 +10,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.DOLLARS
@@ -138,7 +139,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
-        val coins = queryResults.map { it.contractState.deserialize<TransactionState<Cash.State>>().data }.sumCash()
+        val coins = queryResults.map { it.contractState.deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT).data }.sumCash()
         assertThat(coins.toDecimal() >= BigDecimal("50.00"))
     }
 
@@ -659,7 +660,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
 
         queryResults.forEach {
-            val contractState = it.contractState.deserialize<TransactionState<ContractState>>()
+            val contractState = it.contractState.deserialize<TransactionState<ContractState>>(context = SerializationDefaults.STORAGE_CONTEXT)
             val cashState = contractState.data as Cash.State
             println("${it.stateRef} with owner: ${cashState.owner.owningKey.toBase58String()}") }
 
@@ -743,7 +744,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         queryResults.forEach {
-            val contractState = it.contractState.deserialize<TransactionState<ContractState>>()
+            val contractState = it.contractState.deserialize<TransactionState<ContractState>>(context = SerializationDefaults.STORAGE_CONTEXT)
             val cashState = contractState.data as Cash.State
             println("${it.stateRef} with owner ${cashState.owner.owningKey.toBase58String()} and participants ${cashState.participants.map { it.owningKey.toBase58String() }}")
         }
