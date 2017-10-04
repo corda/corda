@@ -12,9 +12,7 @@ import kotlin.test.assertTrue
 
 class PrivateKeySerializationTest : TestDependencyInjectionBase() {
 
-    private val privateKeys: List<PrivateKey> = setOf(
-            Crypto.RSA_SHA256, Crypto.ECDSA_SECP256K1_SHA256,
-            Crypto.ECDSA_SECP256R1_SHA256, Crypto.EDDSA_ED25519_SHA512, Crypto.SPHINCS256_SHA256)
+    private val privateKeys: List<PrivateKey> = Crypto.supportedSignatureSchemes().filterNot { Crypto.COMPOSITE_KEY === it }
             .map { Crypto.generateKeyPair(it).private }
 
     @Test
