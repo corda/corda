@@ -5,10 +5,10 @@ apply plugin: 'application'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'us.kirchmeier.capsule'
 
-dependencies {
-    compile project(':samples:irs-demo')
-    compile project(':node-driver')
+// Warning: The network visualiser is not a Cordapp so please do not use it as an example of how
+// to build a cordapp
 
+dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
@@ -17,8 +17,10 @@ dependencies {
     compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
+    compile project(':node-driver')
+    compile project(':finance')
+    compile project(':samples:irs-demo')
 
-    // Cordapp dependencies
     // GraphStream: For visualisation
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 }

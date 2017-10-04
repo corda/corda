@@ -55,6 +55,10 @@ abstract class FlowLogic<out T> {
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
+    /**
+     * Creates a communication session with [party]. Subsequently you may send/receive using this session object. Note
+     * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
+     */
     @Suspendable
     fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, flowUsedForSessions)
 

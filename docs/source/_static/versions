@@ -8,5 +8,6 @@
 	"https://docs.corda.net/releases/release-M12.1": "M12.1",
 	"https://docs.corda.net/releases/release-M13.0": "M13.0",
 	"https://docs.corda.net/releases/release-M14.0": "M14.0",
+	"https://docs.corda.net/releases/release-V1.0": "V1.0",
 	"https://docs.corda.net/head/": "Master"
 }

@@ -267,8 +267,7 @@ public class FlowCookbookJava {
 
             // We then need to pair our output state with a contract.
             // DOCSTART 47
-            String contractName = "net.corda.testing.contracts.DummyContract";
-            StateAndContract ourOutput = new StateAndContract(ourOutputState, contractName);
+            StateAndContract ourOutput = new StateAndContract(ourOutputState, DummyContract.PROGRAM_ID);
             // DOCEND 47
 
             // Commands pair a ``CommandData`` instance with a list of
