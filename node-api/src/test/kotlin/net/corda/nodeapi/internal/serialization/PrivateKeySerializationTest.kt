@@ -7,23 +7,34 @@ import net.corda.core.serialization.serialize
 import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.security.PrivateKey
 import kotlin.test.assertTrue
 
-class PrivateKeySerializationTest : TestDependencyInjectionBase() {
+@RunWith(Parameterized::class)
+class PrivateKeySerializationTest(private val privateKey: PrivateKey, private val testName: String) : TestDependencyInjectionBase() {
 
-    private val privateKeys: List<PrivateKey> = Crypto.supportedSignatureSchemes().filterNot { Crypto.COMPOSITE_KEY === it }
-            .map { Crypto.generateKeyPair(it).private }
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters(name = "{1}")
+        fun data(): Collection<Array<Any>> {
+            val privateKeys: List<PrivateKey> = Crypto.supportedSignatureSchemes().filterNot { Crypto.COMPOSITE_KEY === it }
+                    .map { Crypto.generateKeyPair(it).private }
+
+            return privateKeys.map { arrayOf<Any>(it, PrivateKeySerializationTest::class.java.simpleName + "-" + it.javaClass.simpleName) }
+        }
+    }
 
     @Test
     fun `passed with expected UseCases`() {
-        assertTrue { privateKeys.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes.isNotEmpty() }
-        assertTrue { privateKeys.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
+        assertTrue { privateKey.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes.isNotEmpty() }
+        assertTrue { privateKey.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
     }
 
     @Test
     fun `failed with wrong UseCase`() {
-        assertThatThrownBy { privateKeys.serialize(context = SerializationDefaults.P2P_CONTEXT) }
+        assertThatThrownBy { privateKey.serialize(context = SerializationDefaults.P2P_CONTEXT) }
                 .isInstanceOf(IllegalStateException::class.java)
                 .hasMessageContaining("UseCase '${P2P}' is not within")
 
