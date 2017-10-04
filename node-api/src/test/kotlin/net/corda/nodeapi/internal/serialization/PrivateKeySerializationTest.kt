@@ -1,30 +1,21 @@
 package net.corda.nodeapi.internal.serialization
 
+import net.corda.core.crypto.Crypto
 import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.testing.TestDependencyInjectionBase
-import net.i2p.crypto.eddsa.KeyPairGenerator
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.bouncycastle.jcajce.provider.asymmetric.ec.KeyPairGeneratorSpi
 import org.junit.Test
 import java.security.PrivateKey
-import java.security.SecureRandom
 import kotlin.test.assertTrue
 
 class PrivateKeySerializationTest : TestDependencyInjectionBase() {
 
-    private val privateKeys: List<PrivateKey>
-
-    init {
-        val generator = KeyPairGenerator()
-        generator.initialize(256, SecureRandom())
-
-        val ec = KeyPairGeneratorSpi.EC()
-        ec.initialize(256)
-
-        privateKeys = listOf(generator.generateKeyPair().private, ec.generateKeyPair().private)
-    }
+    private val privateKeys: List<PrivateKey> = setOf(
+            Crypto.RSA_SHA256, Crypto.ECDSA_SECP256K1_SHA256,
+            Crypto.ECDSA_SECP256R1_SHA256, Crypto.EDDSA_ED25519_SHA512, Crypto.SPHINCS256_SHA256)
+            .map { Crypto.generateKeyPair(it).private }
 
     @Test
     fun `passed with expected UseCases`() {
