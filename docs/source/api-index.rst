@@ -12,6 +12,7 @@ This section describes the APIs that are available for the development of CorDap
    api-vault-query
    api-transactions
    api-flows
+   api-identity
    api-service-hub
    api-rpc
    api-core-types

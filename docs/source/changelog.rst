@@ -19,6 +19,8 @@ UNRELEASED
   either annotated with the @CordaSerializable annotation or explicitly whitelisted then a NotSerializableException is
   thrown.
 
+.. _changelog_v1:
+
 Release 1.0
 -----------
 
@@ -27,36 +29,45 @@ Release 1.0
 
 * Java 8 lambdas now work property with Kryo during check-pointing.
 
+* Java 8 serializable lambdas now work property with Kryo during check-pointing.
+
 * String constants have been marked as ``const`` type in Kotlin, eliminating cases where functions of the form
   ``get<constant name>()`` were created for the Java API. These can now be referenced by their name directly.
 
 * ``FlowLogic`` communication has been extensively rewritten to use functions on ``FlowSession`` as the base for communication
   between nodes.
+
   * Calls to ``send()``, ``receive()`` and ``sendAndReceive()`` on FlowLogic should be replaced with calls
     to the function of the same name on ``FlowSession``. Note that the replacement functions do not take in a destination
     parameter, as this is defined in the session.
   * Initiated flows now take in a ``FlowSession`` instead of ``Party`` in their constructor. If you need to access the
     counterparty identity, it is in the ``counterparty`` property of the flow session.
 
+
 * Added X509EdDSAEngine to intercept and rewrite EdDSA public keys wrapped in X509Key instances. This corrects an issue
   with verifying certificate paths loaded from a Java Keystore where they contain EdDSA keys.
 
-* generateSpend() now creates a new confidential identity for the change address rather than using the identity of the
-  input state owner.
+* Confidential identities are now complete:
+
+   * The identity negotiation flow is now called ``SwapIdentitiesFlow``, renamed from ``TransactionKeyFlow``.
+   * generateSpend() now creates a new confidential identity for the change address rather than using the identity of the
+     input state owner.
+   * Please see the documentation :doc:`key-concepts-identity` and :doc:`api-identity` for more details.
 
 * Remove the legacy web front end from the SIMM demo.
 
 * ``NodeInfo`` and ``NetworkMapCache`` changes:
+
    * Removed ``NodeInfo::legalIdentity`` in preparation for handling of multiple identities. We left list of ``NodeInfo::legalIdentitiesAndCerts``,
-   the first identity still plays a special role of main node identity.
+     the first identity still plays a special role of main node identity.
    * We no longer support advertising services in network map. Removed ``NodeInfo::advertisedServices``, ``serviceIdentities``
-   and ``notaryIdentity``.
+     and ``notaryIdentity``.
    * Removed service methods from ``NetworkMapCache``: ``partyNodes``, ``networkMapNodes``, ``notaryNodes``, ``regulatorNodes``,
-   ``getNodesWithService``, ``getPeersWithService``, ``getRecommended``, ``getNodesByAdvertisedServiceIdentityKey``, ``getAnyNotary``,
-   ``notaryNode``, ``getAnyServiceOfType``. To get all known ``NodeInfo``s call ``allNodes``.
+     ``getNodesWithService``, ``getPeersWithService``, ``getRecommended``, ``getNodesByAdvertisedServiceIdentityKey``, ``getAnyNotary``,
+     ``notaryNode``, ``getAnyServiceOfType``. To get all known ``NodeInfo``'s call ``allNodes``.
    * In preparation for ``NetworkMapService`` redesign and distributing notaries through ``NetworkParameters`` we added
-   ``NetworkMapCache::notaryIdentities`` list to enable to lookup for notary parties known to the network. Related ``CordaRPCOps::notaryIdentities``
-   was introduced. Other special nodes parties like Oracles or Regulators need to be specified directly in CorDapp or flow.
+     ``NetworkMapCache::notaryIdentities`` list to enable to lookup for notary parties known to the network. Related ``CordaRPCOps::notaryIdentities``
+     was introduced. Other special nodes parties like Oracles or Regulators need to be specified directly in CorDapp or flow.
    * Moved ``ServiceType`` and ``ServiceInfo`` to ``net.corda.nodeapi`` package as services are only required on node startup.
 
 * Adding enum support to the class carpenter
@@ -71,7 +82,7 @@ Release 1.0
 * About half of the code in test-utils has been moved to a new module ``node-driver``,
   and the test scope modules are now located in a ``testing`` directory.
 
-* CordaPluginRegistry has been renamed to SerializationWhitelist and moved to the net.corda.core.serialization
+* ``CordaPluginRegistry`` has been renamed to ``SerializationWhitelist`` and moved to the ``net.corda.core.serialization``
   package. The API for whitelisting types that can't be annotated was slightly simplified. This class used to contain
   many things, but as we switched to annotations and classpath scanning over time it hollowed out until this was
   the only functionality left.  You also need to rename your services resource file to the new class name.
@@ -93,10 +104,14 @@ Release 1.0
 * Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
 
 * Following deprecated methods have been removed:
+
   * In ``DataFeed``
+
     * ``first`` and ``current``, replaced by ``snapshot``
     * ``second`` and ``future``, replaced by ``updates``
+
   * In ``CordaRPCOps``
+
     * ``stateMachinesAndUpdates``, replaced by ``stateMachinesFeed``
     * ``verifiedTransactions``, replaced by ``verifiedTransactionsFeed``
     * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
@@ -106,13 +121,12 @@ Release 1.0
   ``ResolveTransactionsFlow`` has been made internal. Instead merge the receipt of the ``SignedTransaction`` and the subsequent
   sub-flow call to ``ResolveTransactionsFlow`` with a single call to ``ReceiveTransactionFlow``. The flow running on the counterparty
   must use ``SendTransactionFlow`` at the correct place. There is also ``ReceiveStateAndRefFlow`` and ``SendStateAndRefFlow`` for
-  dealing with ``StateAndRef``s.
+  dealing with ``StateAndRef``'s.
 
 * Vault query soft locking enhancements and deprecations
+
   * removed original ``VaultService`` ``softLockedStates` query mechanism.
-  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification
-    of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified
-    by set of lock ids)
+  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified by set of lock ids)
 
 * Trader demo now issues cash and commercial paper directly from the bank node, rather than the seller node self-issuing
   commercial paper but labelling it as if issued by the bank.
@@ -122,7 +136,7 @@ Release 1.0
   If you specifically need well known identities, use the network map, which is the authoritative source of current well
   known identities.
 
-* Currency-related API in ``net.corda.core.contracts.ContractsDSL`` has moved to ```net.corda.finance.CurrencyUtils`.
+* Currency-related API in ``net.corda.core.contracts.ContractsDSL`` has moved to ```net.corda.finance.CurrencyUtils``.
 
 * Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node. Use
   `CashIssueFlow` instead.
@@ -174,15 +188,16 @@ Release 1.0
 
 * The unused ``MetaData`` and ``SignatureType`` in ``crypto`` package have been removed.
 
-* The ``class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata): DigitalSignature(bytes)``
-  class is now utilised Vs the old ``DigitalSignature.WithKey`` for Corda transaction signatures. Practically, it takes
-  the ``signatureMetadata`` as an extra input, in order to support signing both the transaction and the extra metadata.
+* The ``class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata:``
+  ``SignatureMetadata): DigitalSignature(bytes)`` class is now utilised Vs the old ``DigitalSignature.WithKey`` for
+  Corda transaction signatures. Practically, it takes the ``signatureMetadata`` as an extra input, in order to support
+  signing both the transaction and the extra metadata.
 
 * To reflect changes in the signing process, the ``Crypto`` object is now equipped with the:
   ``fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature`` and
   ``fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean`` functions.
 
-* ``SerializationCustomization.addToWhitelist()` now accepts multiple classes via varargs.
+* ``SerializationCustomization.addToWhitelist()`` now accepts multiple classes via varargs.
 
 * Two functions to easily sign a ``FilteredTransaction`` have been added to ``ServiceHub``:
   ``createSignature(filteredTransaction: FilteredTransaction, publicKey: PublicKey)`` and
@@ -212,8 +227,8 @@ Release 1.0
 * All of the ``serializedHash`` and ``computeNonce`` functions have been removed from ``MerkleTransaction``.
   The ``serializedHash(x: T)`` and ``computeNonce`` were moved to ``CryptoUtils``.
 
-* Two overloaded methods ``componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int,
-  internalIndex: Int): SecureHash`` and ``componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash`` have
+* Two overloaded methods ``componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt,``
+  ``componentGroupIndex: Int, internalIndex: Int): SecureHash`` and ``componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash`` have
   been added to ``CryptoUtils``. Similarly to ``computeNonce``, they internally use SHA256d for nonce and leaf hash
   computations.
 
@@ -224,24 +239,25 @@ Release 1.0
   ``FilteredTransaction`` now extend ``TraversableTransaction``.
 
 * Two classes, ``ComponentGroup(open val groupIndex: Int, open val components: List<OpaqueBytes>)`` and
-  ``FilteredComponentGroup(override val groupIndex: Int, override val components: List<OpaqueBytes>,
-      val nonces: List<SecureHash>, val partialMerkleTree: PartialMerkleTree): ComponentGroup(groupIndex, components)``
-  have been added, which are properties of the ``WireTransaction`` and ``FilteredTransaction``, respectively.
+  ``FilteredComponentGroup(override val groupIndex: Int, override val components:``
+  ``List<OpaqueBytes>, val nonces: List<SecureHash>, val partialMerkleTree:``
+  ``PartialMerkleTree): ComponentGroup(groupIndex, components)`` have been added, which are properties
+  of the ``WireTransaction`` and ``FilteredTransaction``, respectively.
 
 * ``checkAllComponentsVisible(componentGroupEnum: ComponentGroupEnum)`` is added to ``FilteredTransaction``, a new
   function to check if all components are visible in a specific component-group.
 
 * To allow for backwards compatibility, ``WireTransaction`` and ``FilteredTransaction`` have new fields and
   constructors: ``WireTransaction(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt())``,
-  ``FilteredTransaction private constructor(id: SecureHash,filteredComponentGroups: List<FilteredComponentGroup>,
-      groupHashes: List<SecureHash>``. ``FilteredTransaction`` is still built via
-  ``buildFilteredTransaction(wtx: WireTransaction, filtering: Predicate<Any>).
+  ``FilteredTransaction private constructor(id: SecureHash,filteredComponentGroups:``
+  ``List<FilteredComponentGroup>, groupHashes: List<SecureHash>``. ``FilteredTransaction`` is still built via
+  ``buildFilteredTransaction(wtx: WireTransaction, filtering: Predicate<Any>)``.
 
 * ``FilteredLeaves`` class have been removed and as a result we can directly call the components from
   ``FilteredTransaction``, such as ``ftx.inputs`` Vs the old ``ftx.filteredLeaves.inputs``.
 
 * A new ``ComponentGroupEnum`` is added with the following enum items: ``INPUTS_GROUP``, ``OUTPUTS_GROUP``,
- ``COMMANDS_GROUP``, ``ATTACHMENTS_GROUP``, ``NOTARY_GROUP``, ``TIMEWINDOW_GROUP``.
+  ``COMMANDS_GROUP``, ``ATTACHMENTS_GROUP``, ``NOTARY_GROUP``, ``TIMEWINDOW_GROUP``.
 
 * ``ContractUpgradeFlow.Initiator`` has been renamed to ``ContractUpgradeFlow.Initiate``
 
@@ -249,6 +265,8 @@ Release 1.0
 
 * Current implementation of SSL in ``CordaRPCClient`` has been removed until we have a better solution which doesn't rely
   on the node's keystore.
+
+.. _changelog_m14:
 
 Milestone 14
 ------------
@@ -343,6 +361,8 @@ Milestone 14
 * Added JPA ``AbstractPartyConverter`` to ensure identity schema attributes are persisted securely according to type
   (well known party, resolvable anonymous party, completely anonymous party).
 
+.. _changelog_m13:
+
 Milestone 13
 ------------
 
@@ -422,8 +442,10 @@ support for more currencies to the DemoBench and Explorer tools.
     * Upgraded BouncyCastle to v1.57.
     * Upgraded Requery to v1.3.1.
 
-Milestone 12
-------------
+.. _changelog_m12:
+
+Milestone 12 (First Public Beta)
+--------------------------------
 
 * Quite a few changes have been made to the flow API which should make things simpler when writing CorDapps:
 

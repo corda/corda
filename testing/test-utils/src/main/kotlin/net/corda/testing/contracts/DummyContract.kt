@@ -5,11 +5,13 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import kotlin.reflect.jvm.jvmName
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes, but has to be serializable
 
 data class DummyContract(val blank: Any? = null) : Contract {
+
+    val PROGRAM_ID = "net.corda.testing.contracts.DummyContract"
+
     interface State : ContractState {
         val magicNumber: Int
     }

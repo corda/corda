@@ -22,8 +22,8 @@ Classes get onto the whitelist via one of three mechanisms:
 #. Via the ``@CordaSerializable`` annotation.  In order to whitelist a class, this annotation can be present on the
    class itself, on any of the super classes or on any interface implemented by the class or super classes or any
    interface extended by an interface implemented by the class or superclasses.
-#. By returning the class as part of a plugin via the method ``customizeSerialization``.  It's important to return
-   true from this method if you override it, otherwise the plugin will be excluded. See :doc:`writing-cordapps`.
+#. By implementing the ``SerializationWhitelist`` interface and specifying a list of `whitelist` classes.
+   See :doc:`writing-cordapps`.
 #. Via the built in Corda whitelist (see the class ``DefaultWhitelist``).  Whilst this is not user editable, it does list
    common JDK classes that have been whitelisted for your convenience.
 
@@ -39,8 +39,8 @@ It's reproduced here as an example of both ways you can do this for a couple of 
    them will automatically be whitelisted.  This includes `Contract`, `ContractState` and `CommandData`.
 
 .. warning:: Java 8 Lambda expressions are not serializable except in flow checkpoints, and then not by default. The syntax to declare a serializable Lambda
-expression that will work with Corda is ``Runnable r = (Runnable & Serializable) () -> System.out.println("Hello World");``, or
-``Callable<String> c = (Callable<String> & Serializable) () -> "Hello World";``.
+   expression that will work with Corda is ``Runnable r = (Runnable & Serializable) () -> System.out.println("Hello World");``, or
+   ``Callable<String> c = (Callable<String> & Serializable) () -> "Hello World";``.
 
 .. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are
    likely.
