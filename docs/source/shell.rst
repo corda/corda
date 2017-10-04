@@ -99,6 +99,10 @@ Nested objects can be created using curly braces, as in ``{ a: 1, b: 2}``. This 
 parser is defined for the type you need, for instance, if an API requires a ``Pair<String, Int>``
 which could be represented as ``{ first: foo, second: 123 }``.
 
+.. note:: If your CorDapp is written in Java,
+   named arguments won't work unless you compiled using the ``-parameters`` argument to javac.
+   See :doc:`deploying-a-node` for how to specify it via Gradle.
+
 The same syntax is also used to specify the parameters for RPCs, accessed via the ``run`` command, like this:
 
 ``run registeredFlows``

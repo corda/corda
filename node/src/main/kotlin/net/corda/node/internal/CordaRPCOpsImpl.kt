@@ -178,11 +178,7 @@ class CordaRPCOpsImpl(
 
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
 
-    override fun waitUntilNetworkReady(): CordaFuture<Void?> {
-        return database.transaction {
-            services.networkMapCache.nodeReady
-        }
-    }
+    override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         return database.transaction {
@@ -201,6 +197,8 @@ class CordaRPCOpsImpl(
             services.identityService.wellKnownPartyFromX500Name(x500Name)
         }
     }
+
+    override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? = services.networkMapCache.getNotary(x500Name)
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {

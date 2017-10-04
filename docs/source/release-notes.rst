@@ -5,17 +5,112 @@ Here are release notes for each snapshot release from M9 onwards.
 
 Unreleased
 ----------
+
 Release 1.0
 -----------
+Corda 1.0 is finally here!
 
-* Flow communications API has been redesigned around session based communication.
+This critical step in the Corda journey enables the developer community, clients, and partners to build on Corda with confidence.
+Corda 1.0 is the first released version to provide API stability for Corda application (CorDapp) developers.
+Corda applications will continue to work against this API with each subsequent release of Corda. The public API for Corda
+will only evolve to include new features.
 
-* Merged handling of well known and confidential identities in the identity service.
+As of Corda 1.0, the following modules export public APIs for which we guarantee to maintain backwards compatibility,
+unless an incompatible change is required for security reasons:
 
-* Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node.
+ * **core**: 
+   Contains the bulk of the APIs to be used for building CorDapps: contracts, transactions, flows, identity, node services, 
+   cryptographic libraries, and general utility functions.
 
-* Remove the legacy web front end from the SIMM demo. This was a very early sample, and does not reflect the quality of
-  current Corda code. It may be replaced with a new front end based on a more recent version of AngularJS in a later release.
+ * **client-rpc**: 
+   An RPC client interface to Corda, for use by both UI facing clients and integration with external systems.
+
+ * **client-jackson**: 
+   Utilities and serialisers for working with JSON representations of basic types.
+
+Our extensive testing frameworks will continue to evolve alongside future Corda APIs. As part of our commitment to ease of use and modularity
+we have introduced a new test node driver module to encapsulate all test functionality in support of building standalone node integration 
+tests using our DSL driver. 
+
+Please read :doc:`api-index` for complete details.
+
+.. note:: it may be necessary to recompile applications against future versions of the API until we begin offering
+         `ABI (Application Binary Interface) <https://en.wikipedia.org/wiki/Application_binary_interface>`_ stability as well.
+         We plan to do this soon after this release of Corda.
+
+Significant changes implemented in reaching Corda API stability include:
+
+* **Flow framework**:
+  The Flow framework communications API has been redesigned around session based communication with the introduction of a new 
+  ``FlowSession`` to encapsulate the counterparty information associated with a flow. 
+  All shipped Corda flows have been upgraded to use the new `FlowSession`. Please read :doc:`api-flows` for complete details.
+
+* **Complete API cleanup**:
+  Across the board, all our public interfaces have been thoroughly revised and updated to ensure a productive and intuitive developer experience.
+  Methods and flow naming conventions have been aligned with their semantic use to ease the understanding of CorDapps.
+  In addition, we provide ever more powerful re-usable flows (such as `CollectSignaturesFlow`) to minimize the boiler-plate code developers need to write.
+
+* **Simplified annotation driven scanning**:
+  CorDapp configuration has been made simpler through the removal of explicit configuration items in favour of annotations
+  and classpath scanning. As an example, we have now completely removed the `CordaPluginRegistry` configuration.
+  Contract definitions are no longer required to explicitly define a legal contract reference hash. In their place an
+  optional `LegalProseReference` annotation to specify a URI is used.
+
+* **Java usability**:
+  All code has been updated to enable simple access to static API parameters. Developers no longer need to 
+  call getter methods, and can reference static API variables directly.
+
+In addition to API stability this release encompasses a number of major functional improvements, including:
+
+* **Contract constraints**:
+  Provides a means with which to enforce a specific implementation of a State's verify method during transaction verification.
+  When loading an attachment via the attachment classloader, constraints of a transaction state are checked against the 
+  list of attachment hashes provided, and the attachment is rejected if the constraints are not matched.
+
+* **Signature Metadata support**:
+  Signers now have the ability to add metadata to their digital signatures. Whereas previously a user could only sign the Merkle root of a
+  transaction, it is now possible for extra information to be attached to a signature, such as a platform version
+  and the signature-scheme used.
+
+  .. image:: resources/signatureMetadata.png
+
+* **Backwards compatibility and improvements to core transaction data structures**:
+  A new Merkle tree model has been introduced that utilises sub-Merkle trees per component type. Components of the
+  same type, such as inputs or commands, are grouped together and form their own Merkle tree. Then, the roots of
+  each group are used as leaves in the top-level Merkle tree. This model enables backwards compatibility, in the
+  sense that if new component types are added in the future, old clients will still be able to compute the Merkle root
+  and relay transactions even if they cannot read (deserialise) the new component types. Due to the above,
+  `FilterTransaction` has been made simpler with a structure closer to `WireTransaction`. This has the effect of making the API
+  more user friendly and intuitive for both filtered and unfiltered transactions.
+
+* **Enhanced component privacy**:
+  Corda 1.0 is equipped with a scalable component visibility design based on the above sophisticated
+  sub-tree model and the introduction of nonces per component. Roughly, an initial base-nonce, the "privacy-salt",
+  is used to deterministically generate nonces based on the path of each component in the tree. Because each component
+  is accompanied by a nonce, we protect against brute force attacks, even against low-entropy components. In addition,
+  a new privacy feature is provided that allows non-validating notaries to ensure they see all inputs and if there was a
+  `TimeWindow` in the original transaction. Due to the above, a malicious user cannot selectively hide one or more
+  input states from the notary that would enable her to bypass the double-spending check. The aforementioned
+  functionality could also be applied to Oracles so as to ensure all of the commands are visible to them.
+
+  .. image:: resources/subTreesPrivacy.png
+
+* **Full support for confidential identities**:
+  This includes rework and improvements to the identity service to handle both `well known` and `confidential` identities.
+  This work ships in an experimental module in Corda 1.0, called `confidential-identities`. API stabilisation of confidential
+  identities will occur as we make the integration of this privacy feature into applications even easier for developers.
+
+* **Re-designed network map service**:
+  The foundations for a completely redesigned network map service have been implemented to enable future increased network 
+  scalability and redundancy, support for multiple notaries, and administration of network compatibility zones and business networks.
+
+Finally, please note that the 1.0 release has not yet been security audited.
+
+We have provided a comprehensive :doc:`upgrade-notes` to ease the transition of migrating CorDapps to Corda 1.0
+
+Upgrading to this release is strongly recommended, and you will be safe in the knowledge that core APIs will no longer break.
+
+Thank you to all contributors for this release!
 
 Milestone 14
 ------------
