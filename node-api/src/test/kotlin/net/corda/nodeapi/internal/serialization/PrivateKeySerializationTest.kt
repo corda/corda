@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization
 
-import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.testing.TestDependencyInjectionBase
@@ -34,8 +34,9 @@ class PrivateKeySerializationTest : TestDependencyInjectionBase() {
 
     @Test
     fun `failed with wrong UseCase`() {
-        assertThatThrownBy { privateKeys.serialize(context = SerializationDefaults.RPC_CLIENT_CONTEXT) }
-                .hasMessageContaining("UseCase '${SerializationContext.UseCase.RPCClient}' is not within")
+        assertThatThrownBy { privateKeys.serialize(context = SerializationDefaults.P2P_CONTEXT) }
+                .isInstanceOf(IllegalStateException::class.java)
+                .hasMessageContaining("UseCase '${P2P}' is not within")
 
     }
 }
