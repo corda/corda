@@ -7,6 +7,7 @@ import net.corda.core.internal.UpgradeCommand
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.Try
 import java.security.PublicKey
 import java.util.*
 import java.util.function.Predicate
@@ -50,20 +51,13 @@ data class LedgerTransaction(
 
     private companion object {
         @JvmStatic
-        private fun createContractFor(className: ContractClassName): ContractResult {
-            return try {
-                ContractResult(contract = this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance())
-            } catch (e: Exception) {
-                ContractResult(error = e)
-            }
+        private fun createContractFor(className: ContractClassName): Try<Contract> {
+            return Try.on { this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance() }
         }
     }
 
-    @CordaSerializable
-    private data class ContractResult(val contract: Contract? = null, val error: Throwable? = null)
-
-    private val contracts: Map<ContractClassName, ContractResult> = (inputs.map { it.state.contract } + outputs.map { it.contract })
-            .toSet().map { it to createContractFor(it) }.toMap()
+    private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state.contract } + outputs.map { it.contract })
+                    .toSet().map { it to createContractFor(it) }.toMap()
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
 
@@ -116,11 +110,17 @@ data class LedgerTransaction(
      */
     private fun verifyContracts() {
         for (contractEntry in contracts.entries) {
-            val contract = contractEntry.value.contract ?: throw TransactionVerificationException.ContractCreationError(id, contractEntry.key, contractEntry.value.error!!)
-            try {
-                contract.verify(this)
-            } catch (e: Throwable) {
-                throw TransactionVerificationException.ContractRejection(id, contract, e)
+            val result = contractEntry.value
+            when (result) {
+                is Try.Failure -> throw TransactionVerificationException.ContractCreationError(id, contractEntry.key, result.exception)
+                is Try.Success -> {
+                    val contract = result.value
+                    try {
+                        contract.verify(this)
+                    } catch (e: Throwable) {
+                        throw TransactionVerificationException.ContractRejection(id, contract, e)
+                    }
+                }
             }
         }
     }
