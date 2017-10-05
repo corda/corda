@@ -221,14 +221,14 @@ There are several ways to retrieve a notary from the network map:
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 1
-        :end-before: DOCEND 1
-        :dedent: 12
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
-        :start-after: DOCSTART 1
-        :end-before: DOCEND 1
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
         :dedent: 12
 
 Specific counterparties
@@ -239,32 +239,14 @@ We can also use the network map to retrieve a specific counterparty:
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 2
-        :end-before: DOCEND 2
-        :dedent: 12
+        :start-after: DOCSTART 02
+        :end-before: DOCEND 02
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
-        :start-after: DOCSTART 2
-        :end-before: DOCEND 2
-        :dedent: 12
-
-Specific services
-~~~~~~~~~~~~~~~~~
-Finally, we can use the map to identify nodes providing a specific service (e.g. a regulator or an oracle):
-
-.. container:: codeset
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
-        :language: kotlin
-        :start-after: DOCSTART 3
-        :end-before: DOCEND 3
-        :dedent: 12
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
-        :language: java
-        :start-after: DOCSTART 3
-        :end-before: DOCEND 3
+        :start-after: DOCSTART 02
+        :end-before: DOCEND 02
         :dedent: 12
 
 Communication between parties
@@ -295,7 +277,7 @@ InitiateFlow
         :language: kotlin
         :start-after: DOCSTART initiateFlow
         :end-before: DOCEND initiateFlow
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -318,14 +300,14 @@ Once we have a ``FlowSession`` object we can send arbitrary data to a counterpar
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 4
-        :end-before: DOCEND 4
-        :dedent: 12
+        :start-after: DOCSTART 04
+        :end-before: DOCEND 04
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
-        :start-after: DOCSTART 4
-        :end-before: DOCEND 4
+        :start-after: DOCSTART 04
+        :end-before: DOCEND 04
         :dedent: 12
 
 The flow on the other side must eventually reach a corresponding ``receive`` call to get this message.
@@ -350,14 +332,14 @@ be what it appears to be! We must unwrap the ``UntrustworthyData`` using a lambd
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 5
-        :end-before: DOCEND 5
-        :dedent: 12
+        :start-after: DOCSTART 05
+        :end-before: DOCEND 05
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
-        :start-after: DOCSTART 5
-        :end-before: DOCEND 5
+        :start-after: DOCSTART 05
+        :end-before: DOCEND 05
         :dedent: 12
 
 We're not limited to sending to and receiving from a single counterparty. A flow can send messages to as many parties
@@ -367,14 +349,14 @@ as it likes, and each party can invoke a different response flow:
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 6
-        :end-before: DOCEND 6
-        :dedent: 12
+        :start-after: DOCSTART 06
+        :end-before: DOCEND 06
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
-        :start-after: DOCSTART 6
-        :end-before: DOCEND 6
+        :start-after: DOCSTART 06
+        :end-before: DOCEND 06
         :dedent: 12
 
 .. warning:: If you initiate several flows from the same ``@InitiatingFlow`` flow then on the receiving side you must be
@@ -392,14 +374,14 @@ type of data sent doesn't need to match the type of the data received back:
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 7
-        :end-before: DOCEND 7
-        :dedent: 12
+        :start-after: DOCSTART 07
+        :end-before: DOCEND 07
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
-        :start-after: DOCSTART 7
-        :end-before: DOCEND 7
+        :start-after: DOCSTART 07
+        :end-before: DOCEND 07
         :dedent: 12
 
 Counterparty response
@@ -417,14 +399,14 @@ Our side of the flow must mirror these calls. We could do this as follows:
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 8
-        :end-before: DOCEND 8
-        :dedent: 12
+        :start-after: DOCSTART 08
+        :end-before: DOCEND 08
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
-        :start-after: DOCSTART 8
-        :end-before: DOCEND 8
+        :start-after: DOCSTART 08
+        :end-before: DOCEND 08
         :dedent: 12
 
 Why sessions?
@@ -481,14 +463,13 @@ explicit in the ``initiateFlow`` function call. To port existing code:
         :language: kotlin
         :start-after: DOCSTART FlowSession porting
         :end-before: DOCEND FlowSession porting
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
         :start-after: DOCSTART FlowSession porting
         :end-before: DOCEND FlowSession porting
         :dedent: 12
-
 
 Subflows
 --------
@@ -560,14 +541,14 @@ the transaction's states:
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 9
-        :end-before: DOCEND 9
-        :dedent: 12
+        :start-after: DOCSTART 09
+        :end-before: DOCEND 09
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
-        :start-after: DOCSTART 9
-        :end-before: DOCEND 9
+        :start-after: DOCSTART 09
+        :end-before: DOCEND 09
         :dedent: 12
 
 We can also choose to send the transaction to additional parties who aren't one of the state's participants:
@@ -578,7 +559,7 @@ We can also choose to send the transaction to additional parties who aren't one 
         :language: kotlin
         :start-after: DOCSTART 10
         :end-before: DOCEND 10
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -601,7 +582,7 @@ transaction ourselves, we can automatically gather the signatures of the other r
         :language: kotlin
         :start-after: DOCSTART 15
         :end-before: DOCEND 15
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -618,7 +599,7 @@ transaction and provide their signature if they are satisfied:
         :language: kotlin
         :start-after: DOCSTART 16
         :end-before: DOCEND 16
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -639,7 +620,7 @@ transaction data vending requests as the receiver walks the dependency chain usi
         :language: kotlin
         :start-after: DOCSTART 12
         :end-before: DOCEND 12
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -656,7 +637,7 @@ dependencies and verify the transaction:
         :language: kotlin
         :start-after: DOCSTART 13
         :end-before: DOCEND 13
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -672,7 +653,7 @@ We can also send and receive a ``StateAndRef`` dependency chain and automaticall
         :language: kotlin
         :start-after: DOCSTART 14
         :end-before: DOCEND 14
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -731,7 +712,7 @@ To provide a progress tracker, we have to override ``FlowLogic.progressTracker``
         :language: kotlin
         :start-after: DOCSTART 17
         :end-before: DOCEND 17
-        :dedent: 8
+        :dedent: 4
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -747,7 +728,7 @@ We then update the progress tracker's current step as we progress through the fl
         :language: kotlin
         :start-after: DOCSTART 18
         :end-before: DOCEND 18
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java

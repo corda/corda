@@ -122,7 +122,7 @@ public class FlowCookbookJava {
             //   - To serve as a timestamping authority if the transaction has a
             //     time-window
             // We retrieve a notary from the network map.
-            // DOCSTART 1
+            // DOCSTART 01
             CordaX500Name notaryName = new CordaX500Name("Notary Service", "London", "GB");
             Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(notaryName);
             // Alternatively, we can pick an arbitrary notary from the notary
@@ -130,15 +130,15 @@ public class FlowCookbookJava {
             // explicitly, as the notary list might change when new notaries are
             // introduced, or old ones decommissioned.
             Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
-            // DOCEND 1
+            // DOCEND 01
 
             // We may also need to identify a specific counterparty. We do so
             // using the identity service.
-            // DOCSTART 2
+            // DOCSTART 02
             CordaX500Name counterPartyName = new CordaX500Name("NodeA", "London", "GB");
             Party namedCounterparty = getServiceHub().getIdentityService().wellKnownPartyFromX500Name(counterPartyName);
             Party keyedCounterparty = getServiceHub().getIdentityService().partyFromKey(dummyPubKey);
-            // DOCEND 2
+            // DOCEND 02
 
             /*------------------------------
              * SENDING AND RECEIVING DATA *
@@ -162,9 +162,9 @@ public class FlowCookbookJava {
             // In other words, we are assuming that the counterparty is
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
-            // DOCSTART 4
+            // DOCSTART 04
             counterpartySession.send(new Object());
-            // DOCEND 4
+            // DOCEND 04
 
             // We can wait to receive arbitrary data of a specific type from a
             // counterparty. Again, this implies a corresponding ``send`` call
@@ -185,7 +185,7 @@ public class FlowCookbookJava {
             // instance. This is a reminder that the data we receive may not
             // be what it appears to be! We must unwrap the
             // ``UntrustworthyData`` using a lambda.
-            // DOCSTART 5
+            // DOCSTART 05
             UntrustworthyData<Integer> packet1 = counterpartySession.receive(Integer.class);
             Integer integer = packet1.unwrap(data -> {
                 // Perform checking on the object received.
@@ -193,13 +193,13 @@ public class FlowCookbookJava {
                 // Return the object.
                 return data;
             });
-            // DOCEND 5
+            // DOCEND 05
 
             // We can also use a single call to send data to a counterparty
             // and wait to receive data of a specific type back. The type of
             // data sent doesn't need to match the type of the data received
             // back.
-            // DOCSTART 7
+            // DOCSTART 07
             UntrustworthyData<Boolean> packet2 = counterpartySession.sendAndReceive(Boolean.class, "You can send and receive any class!");
             Boolean bool = packet2.unwrap(data -> {
                 // Perform checking on the object received.
@@ -207,16 +207,16 @@ public class FlowCookbookJava {
                 // Return the object.
                 return data;
             });
-            // DOCEND 7
+            // DOCEND 07
 
             // We're not limited to sending to and receiving from a single
             // counterparty. A flow can send messages to as many parties as it
             // likes, and each party can invoke a different response flow.
-            // DOCSTART 6
+            // DOCSTART 06
             FlowSession regulatorSession = initiateFlow(regulator);
             regulatorSession.send(new Object());
             UntrustworthyData<Object> packet3 = regulatorSession.receive(Object.class);
-            // DOCEND 6
+            // DOCEND 06
 
             /*------------------------------------
              * EXTRACTING STATES FROM THE VAULT *
@@ -564,9 +564,9 @@ public class FlowCookbookJava {
 
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
-            // DOCSTART 9
+            // DOCSTART 09
             SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()));
-            // DOCEND 9
+            // DOCEND 09
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
@@ -629,11 +629,11 @@ public class FlowCookbookJava {
             // 3. They sent a ``String`` instance and waited to receive a
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
-            // DOCSTART 8
+            // DOCSTART 08
             Object obj = counterpartySession.receive(Object.class).unwrap(data -> data);
             String string = counterpartySession.sendAndReceive(String.class, 99).unwrap(data -> data);
             counterpartySession.send(true);
-            // DOCEND 8
+            // DOCEND 08
 
             /*-----------------------------------------
              * RESPONDING TO COLLECT_SIGNATURES_FLOW *

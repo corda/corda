@@ -102,7 +102,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         //   - To serve as a timestamping authority if the transaction has a
         //     time-window
         // We retrieve the notary from the network map.
-        // DOCSTART 1
+        // DOCSTART 01
         val notaryName: CordaX500Name = CordaX500Name(
                 organisation = "Notary Service",
                 locality = "London",
@@ -113,11 +113,11 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // explicitly, as the notary list might change when new notaries are
         // introduced, or old ones decommissioned.
         val firstNotary: Party = serviceHub.networkMapCache.notaryIdentities.first()
-        // DOCEND 1
+        // DOCEND 01
 
         // We may also need to identify a specific counterparty. We do so
         // using the identity service.
-        // DOCSTART 2
+        // DOCSTART 02
         val counterpartyName: CordaX500Name = CordaX500Name(
                 organisation = "NodeA",
                 locality = "London",
@@ -126,7 +126,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
                 throw IllegalArgumentException("Couldn't find counterparty for NodeA in identity service")
         val keyedCounterparty: Party = serviceHub.identityService.partyFromKey(dummyPubKey) ?:
                 throw IllegalArgumentException("Couldn't find counterparty with key: $dummyPubKey in identity service")
-        // DOCEND 2
+        // DOCEND 02
 
         /**-----------------------------
          * SENDING AND RECEIVING DATA *
@@ -150,9 +150,9 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // In other words, we are assuming that the counterparty is
         // registered to respond to this flow, and has a corresponding
         // ``receive`` call.
-        // DOCSTART 4
+        // DOCSTART 04
         counterpartySession.send(Any())
-        // DOCEND 4
+        // DOCEND 04
 
         // We can wait to receive arbitrary data of a specific type from a
         // counterparty. Again, this implies a corresponding ``send`` call
@@ -173,7 +173,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // instance. This is a reminder that the data we receive may not
         // be what it appears to be! We must unwrap the
         // ``UntrustworthyData`` using a lambda.
-        // DOCSTART 5
+        // DOCSTART 05
         val packet1: UntrustworthyData<Int> = counterpartySession.receive<Int>()
         val int: Int = packet1.unwrap { data ->
             // Perform checking on the object received.
@@ -181,13 +181,13 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
             // Return the object.
             data
         }
-        // DOCEND 5
+        // DOCEND 05
 
         // We can also use a single call to send data to a counterparty
         // and wait to receive data of a specific type back. The type of
         // data sent doesn't need to match the type of the data received
         // back.
-        // DOCSTART 7
+        // DOCSTART 07
         val packet2: UntrustworthyData<Boolean> = counterpartySession.sendAndReceive<Boolean>("You can send and receive any class!")
         val boolean: Boolean = packet2.unwrap { data ->
             // Perform checking on the object received.
@@ -195,16 +195,16 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
             // Return the object.
             data
         }
-        // DOCEND 7
+        // DOCEND 07
 
         // We're not limited to sending to and receiving from a single
         // counterparty. A flow can send messages to as many parties as it
         // likes, and each party can invoke a different response flow.
-        // DOCSTART 6
+        // DOCSTART 06
         val regulatorSession: FlowSession = initiateFlow(regulator)
         regulatorSession.send(Any())
         val packet3: UntrustworthyData<Any> = regulatorSession.receive<Any>()
-        // DOCEND 6
+        // DOCEND 06
 
         /**-----------------------------------
          * EXTRACTING STATES FROM THE VAULT *
@@ -543,9 +543,9 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
 
         // We notarise the transaction and get it recorded in the vault of
         // the participants of all the transaction's states.
-        // DOCSTART 9
+        // DOCSTART 09
         val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()))
-        // DOCEND 9
+        // DOCEND 09
         // We can also choose to send it to additional parties who aren't one
         // of the state's participants.
         // DOCSTART 10
@@ -603,11 +603,11 @@ class ResponderFlow(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
         // 3. They sent a ``String`` instance and waited to receive a
         //    ``Boolean`` instance back
         // Our side of the flow must mirror these calls.
-        // DOCSTART 8
+        // DOCSTART 08
         val any: Any = counterpartySession.receive<Any>().unwrap { data -> data }
         val string: String = counterpartySession.sendAndReceive<String>(99).unwrap { data -> data }
         counterpartySession.send(true)
-        // DOCEND 8
+        // DOCEND 08
 
         /**----------------------------------------
          * RESPONDING TO COLLECT_SIGNATURES_FLOW *
