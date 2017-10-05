@@ -14,8 +14,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.setCordappPackages
@@ -43,24 +41,23 @@ class VaultSoftLockManagerTest {
     }
 
     private val mockNet = MockNetwork()
-    private val node = mockNet.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type))
+    private val node = mockNet.createNotaryNode()
     @After
     fun tearDown() {
         mockNet.stopNodes()
     }
 
     private object CommandDataImpl : CommandData
-    private class FlowLogicImpl(private val expectSoftLock: Boolean, private val state: ContractState) : FlowLogic<Unit>() {
+    private class FlowLogicImpl(private val state: ContractState) : FlowLogic<List<ContractState>>() {
         @Suspendable
-        override fun call() {
+        override fun call() = run {
             subFlow(FinalityFlow(serviceHub.signInitialTransaction(TransactionBuilder(notary = ourIdentity).apply {
                 addOutputState(state, ContractImpl::class.jvmName)
                 addCommand(CommandDataImpl, ourIdentity.owningKey)
             })))
-            val states = serviceHub.vaultService.queryBy<ContractState>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(LOCKED_ONLY))).states.map {
+            serviceHub.vaultService.queryBy<ContractState>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(LOCKED_ONLY))).states.map {
                 it.state.data
             }
-            assertEquals(if (expectSoftLock) listOf(state) else emptyList(), states)
         }
     }
 
@@ -101,9 +98,9 @@ class VaultSoftLockManagerTest {
     }
 
     private fun run(expectSoftLock: Boolean, state: ContractState) {
-        val f = node.services.startFlow(FlowLogicImpl(expectSoftLock, state)).resultFuture
+        val f = node.services.startFlow(FlowLogicImpl(state)).resultFuture
         mockNet.runNetwork()
-        f.getOrThrow()
+        assertEquals(if (expectSoftLock) listOf(state) else emptyList(), f.getOrThrow())
     }
 
     @Test
