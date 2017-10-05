@@ -153,9 +153,9 @@ object AllWhitelist : ClassWhitelist {
 }
 
 // TODO: Need some concept of from which class loader
-class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
+class GlobalTransientClassWhiteList(private val delegate: ClassWhitelist) : MutableClassWhitelist {
     companion object {
-        val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+        private val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
     }
 
     override fun hasListed(type: Class<*>): Boolean {
@@ -170,8 +170,8 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
 /**
  * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since implements [MutableClassWhitelist].
  */
-class TransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
-    val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+class TransientClassWhiteList(private val delegate: ClassWhitelist) : MutableClassWhitelist {
+    private val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
 
     override fun hasListed(type: Class<*>): Boolean {
         return (type.name in whitelist) || delegate.hasListed(type)
@@ -181,7 +181,6 @@ class TransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitel
         whitelist += entry.name
     }
 }
-
 
 /**
  * This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
