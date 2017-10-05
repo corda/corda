@@ -78,12 +78,7 @@ interface NetworkMapCache {
      * to well known identity lookup in the identity service where possible, as the network map is the authoritative
      * source of well known identities.
      */
-    fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? {
-        return getNodeByLegalName(name)
-                ?.legalIdentitiesAndCerts
-                // The map is restricted to holding one key per name at a time, even if there are other valid keys
-                ?.singleOrNull { it.name == name }
-    }
+    fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate?
 
     /**
      * Look up the well known identity of a legal name. This should be used in preference
