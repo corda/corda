@@ -32,6 +32,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
 import java.sql.SQLException
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -52,23 +54,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
-
-        /**
-         * Provide a mechanism to sleep within a Strand without locking any transactional state
-         */
-        // TODO: inlined due to an intermittent Quasar error (to be fully investigated)
-        @Suppress("NOTHING_TO_INLINE")
-        @Suspendable
-        inline fun sleep(millis: Long) {
-            if (currentStateMachine() != null) {
-                val db = DatabaseTransactionManager.dataSource
-                DatabaseTransactionManager.current().commit()
-                DatabaseTransactionManager.current().close()
-                Strand.sleep(millis)
-                DatabaseTransactionManager.dataSource = db
-                DatabaseTransactionManager.newTransaction()
-            } else Strand.sleep(millis)
-        }
     }
 
     // These fields shouldn't be serialised, so they are marked @Transient.
@@ -257,6 +242,18 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         }
         throw IllegalStateException("We were resumed after waiting for $hash but it wasn't found in our local storage")
+    }
+
+    // Provide a mechanism to sleep within a Strand without locking any transactional state.
+    // TODO: this should checkpoint, since we cannot undo any database writes up to this point.
+    @Suspendable
+    override fun sleepUntil(until: Instant) {
+        val db = DatabaseTransactionManager.dataSource
+        DatabaseTransactionManager.current().commit()
+        DatabaseTransactionManager.current().close()
+        Strand.sleep(Duration.between(Instant.now(), until).toNanos(), TimeUnit.NANOSECONDS)
+        DatabaseTransactionManager.dataSource = db
+        DatabaseTransactionManager.newTransaction()
     }
 
     // TODO Dummy implementation of access to application specific permission controls and audit logging

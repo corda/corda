@@ -140,7 +140,8 @@ class CashSelectionH2Impl : CashSelection {
             log.warn("Coin selection failed on attempt $retryCount")
             // TODO: revisit the back off strategy for contended spending.
             if (retryCount != MAX_RETRIES) {
-                Strand.sleep(RETRY_SLEEP * retryCount.toLong())
+                val durationMillis = RETRY_SLEEP * retryCount
+                services.getCurrentTopLevelFlowLogic()?.sleep(durationMillis.millis) ?: Strand.sleep(durationMillis.toLong())
             }
         }
 

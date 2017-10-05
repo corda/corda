@@ -16,6 +16,8 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import org.slf4j.Logger
+import java.time.Duration
+import java.time.Instant
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -312,6 +314,17 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash): SignedTransaction = stateMachine.waitForLedgerCommit(hash, this)
+
+    /**
+     * Suspends the flow and only wakes it up after at least [duration] time has passed.
+     *
+     * Note that long sleeps and in general long running flows are highly discouraged, as there is currently no
+     * support for flow migration!
+     */
+    @Suspendable
+    open fun sleep(duration: Duration) {
+        stateMachine.sleepUntil(Instant.now() + duration)
+    }
 
     /**
      * Returns a shallow copy of the Quasar stack frames at the time of call to [flowStackSnapshot]. Use this to inspect
