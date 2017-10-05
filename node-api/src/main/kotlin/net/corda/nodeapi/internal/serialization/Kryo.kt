@@ -285,66 +285,6 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
     }
 }
 
-/** For serialising an ed25519 private key */
-@ThreadSafe
-object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
-    override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
-        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
-        output.writeBytesWithLength(obj.seed)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
-        val seed = input.readBytesWithLength()
-        return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
-    }
-}
-
-/** For serialising an ed25519 public key */
-@ThreadSafe
-object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
-    override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
-        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
-        output.writeBytesWithLength(obj.abyte)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
-        val A = input.readBytesWithLength()
-        return EdDSAPublicKey(EdDSAPublicKeySpec(A, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
-    }
-}
-
-/** For serialising an ed25519 public key */
-@ThreadSafe
-object ECPublicKeyImplSerializer : Serializer<ECPublicKeyImpl>() {
-    override fun write(kryo: Kryo, output: Output, obj: ECPublicKeyImpl) {
-        output.writeBytesWithLength(obj.encoded)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<ECPublicKeyImpl>): ECPublicKeyImpl {
-        val A = input.readBytesWithLength()
-        val der = DerValue(A)
-        return ECPublicKeyImpl.parse(der) as ECPublicKeyImpl
-    }
-}
-
-// TODO Implement standardized serialization of CompositeKeys. See JIRA issue: CORDA-249.
-@ThreadSafe
-object CompositeKeySerializer : Serializer<CompositeKey>() {
-    override fun write(kryo: Kryo, output: Output, obj: CompositeKey) {
-        output.writeInt(obj.threshold)
-        output.writeInt(obj.children.size)
-        obj.children.forEach { kryo.writeClassAndObject(output, it) }
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
-        val threshold = input.readInt()
-        val children = readListOfLength<CompositeKey.NodeAndWeight>(kryo, input, minLen = 2)
-        val builder = CompositeKey.Builder()
-        children.forEach { builder.addKey(it.node, it.weight) }
-        return builder.build(threshold) as CompositeKey
-    }
-}
-
 @ThreadSafe
 object PrivateKeySerializer : Serializer<PrivateKey>() {
     override fun write(kryo: Kryo, output: Output, obj: PrivateKey) {
