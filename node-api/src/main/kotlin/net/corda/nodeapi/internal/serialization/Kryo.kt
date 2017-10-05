@@ -10,7 +10,6 @@ import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
@@ -22,19 +21,12 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.toFuture
 import net.corda.core.toObservable
 import net.corda.core.transactions.*
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
-import sun.security.ec.ECPublicKeyImpl
-import sun.security.util.DerValue
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
@@ -289,67 +281,6 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
 sealed class UseCaseSerializer<T>(private val allowedUseCases: EnumSet<SerializationContext.UseCase>) : Serializer<T>() {
     protected fun checkUseCase() {
         checkUseCase(allowedUseCases)
-    }
-}
-
-/** For serialising an ed25519 private key */
-@ThreadSafe
-object Ed25519PrivateKeySerializer : UseCaseSerializer<EdDSAPrivateKey>(EnumSet.of(Storage, Checkpoint)) {
-    override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
-        checkUseCase()
-        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
-        output.writeBytesWithLength(obj.seed)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
-        val seed = input.readBytesWithLength()
-        return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
-    }
-}
-
-/** For serialising an ed25519 public key */
-@ThreadSafe
-object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
-    override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
-        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
-        output.writeBytesWithLength(obj.abyte)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
-        val A = input.readBytesWithLength()
-        return EdDSAPublicKey(EdDSAPublicKeySpec(A, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
-    }
-}
-
-/** For serialising an ed25519 public key */
-@ThreadSafe
-object ECPublicKeyImplSerializer : Serializer<ECPublicKeyImpl>() {
-    override fun write(kryo: Kryo, output: Output, obj: ECPublicKeyImpl) {
-        output.writeBytesWithLength(obj.encoded)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<ECPublicKeyImpl>): ECPublicKeyImpl {
-        val A = input.readBytesWithLength()
-        val der = DerValue(A)
-        return ECPublicKeyImpl.parse(der) as ECPublicKeyImpl
-    }
-}
-
-// TODO Implement standardized serialization of CompositeKeys. See JIRA issue: CORDA-249.
-@ThreadSafe
-object CompositeKeySerializer : Serializer<CompositeKey>() {
-    override fun write(kryo: Kryo, output: Output, obj: CompositeKey) {
-        output.writeInt(obj.threshold)
-        output.writeInt(obj.children.size)
-        obj.children.forEach { kryo.writeClassAndObject(output, it) }
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
-        val threshold = input.readInt()
-        val children = readListOfLength<CompositeKey.NodeAndWeight>(kryo, input, minLen = 2)
-        val builder = CompositeKey.Builder()
-        children.forEach { builder.addKey(it.node, it.weight) }
-        return builder.build(threshold) as CompositeKey
     }
 }
 
