@@ -1,0 +1,18 @@
+apply plugin: 'java'
+apply plugin: 'net.corda.plugins.publish-utils'
+
+description 'Turns a project into a cordapp project that produces cordapp fat JARs'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    gradleApi()
+    localGroovy()
+}
+
+publish {
+    name project.name
+}
