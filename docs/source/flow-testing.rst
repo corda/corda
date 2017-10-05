@@ -64,7 +64,3 @@ transaction as shown here.
 With regards to initiated flows (see :doc:`flow-state-machines` for information on initiated and initiating flows), the
 full node automatically registers them by scanning the CorDapp jars. In a unit test environment this is not possible so
 ``MockNode`` has the ``registerInitiatedFlow`` method to manually register an initiated flow.
-
-And that's it: you can explore the documentation for the
-`MockNetwork API <api/kotlin/corda/net.corda.testing.node/-mock-network/index.html>`_
-here.
