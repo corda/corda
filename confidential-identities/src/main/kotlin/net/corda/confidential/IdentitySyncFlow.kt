@@ -12,14 +12,12 @@ import net.corda.core.utilities.unwrap
 
 object IdentitySyncFlow {
     /**
-     * Flow for ensuring that one or more counterparties to a transaction have the full certificate paths of confidential
-     * identities used in the transaction. This is intended for use as a subflow of another flow, typically between
+     * Flow for ensuring that our counterparties in a transaction have the full certificate paths for *our* confidential
+     * identities used in states present in the transaction. This is intended for use as a subflow of another flow, typically between
      * transaction assembly and signing. An example of where this is useful is where a recipient of a [Cash] state wants
      * to know that it is being paid by the correct party, and the owner of the state is a confidential identity of that
      * party. This flow would send a copy of the confidential identity path to the recipient, enabling them to verify that
      * identity.
-     *
-     * @return a mapping of well known identities to the confidential identities used in the transaction.
      */
     // TODO: Can this be triggered automatically from [SendTransactionFlow]
     class Send(val otherSideSessions: Set<FlowSession>,
@@ -36,17 +34,10 @@ object IdentitySyncFlow {
         @Suspendable
         override fun call() {
             progressTracker.currentStep = SYNCING_IDENTITIES
-            val states: List<ContractState> = (tx.inputs.map { serviceHub.loadState(it) }.requireNoNulls().map { it.data } + tx.outputs.map { it.data })
-            val identities: Set<AbstractParty> = states.flatMap { it.participants }.toSet()
-            // Filter participants down to the set of those not in the network map (are not well known)
-            val confidentialIdentities = identities
-                    .filter { serviceHub.networkMapCache.getNodesByLegalIdentityKey(it.owningKey).isEmpty() }
-                    .toList()
-            val identityCertificates: Map<AbstractParty, PartyAndCertificate?> = identities
-                    .map { Pair(it, serviceHub.identityService.certificateFromKey(it.owningKey)) }.toMap()
+            val identityCertificates: Map<AbstractParty, PartyAndCertificate?> = extractOurConfidentialIdentities()
 
             otherSideSessions.forEach { otherSideSession ->
-                val requestedIdentities: List<AbstractParty> = otherSideSession.sendAndReceive<List<AbstractParty>>(confidentialIdentities).unwrap { req ->
+                val requestedIdentities: List<AbstractParty> = otherSideSession.sendAndReceive<List<AbstractParty>>(identityCertificates.keys.toList()).unwrap { req ->
                     require(req.all { it in identityCertificates.keys }) { "${otherSideSession.counterparty} requested a confidential identity not part of transaction: ${tx.id}" }
                     req
                 }
@@ -61,6 +52,20 @@ object IdentitySyncFlow {
             }
         }
 
+        private fun extractOurConfidentialIdentities(): Map<AbstractParty, PartyAndCertificate?> {
+            val states: List<ContractState> = (tx.inputs.map { serviceHub.loadState(it) }.requireNoNulls().map { it.data } + tx.outputs.map { it.data })
+            val identities: Set<AbstractParty> = states.flatMap(ContractState::participants).toSet()
+            // Filter participants down to the set of those not in the network map (are not well known)
+            val confidentialIdentities = identities
+                    .filter { serviceHub.networkMapCache.getNodesByLegalIdentityKey(it.owningKey).isEmpty() }
+                    .toList()
+            return confidentialIdentities
+                    .map { Pair(it, serviceHub.identityService.certificateFromKey(it.owningKey)) }
+                    // Filter down to confidential identities of our well known identity
+                    // TODO: Consider if this too restrictive - we perhaps should be checking the name on the signing certificate in the certificate path instead
+                    .filter { it.second?.name == ourIdentity.name }
+                    .toMap()
+        }
     }
 
     /**
