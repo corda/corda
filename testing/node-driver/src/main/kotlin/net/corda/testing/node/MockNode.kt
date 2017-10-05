@@ -404,10 +404,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                 advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type, serviceName)))
     }
 
-    // Convenience method for Java
-    fun createPartyNode(networkMapAddress: SingleMessageRecipient,
-                        legalName: CordaX500Name) = createPartyNode(networkMapAddress, legalName, null)
-
+    @JvmOverloads
     fun createPartyNode(networkMapAddress: SingleMessageRecipient,
                         legalName: CordaX500Name? = null,
                         overrideServices: Map<ServiceInfo, KeyPair>? = null): StartedNode<MockNode> {
