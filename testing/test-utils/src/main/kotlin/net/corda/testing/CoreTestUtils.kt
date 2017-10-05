@@ -69,11 +69,11 @@ val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
 val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MiniCorp", locality = "London", country = "GB"), MINI_CORP_PUBKEY)
 val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
+val BOC_NAME: CordaX500Name = CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB")
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB"), BOC_PUBKEY)
+val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(BOC_NAME, BOC_PUBKEY)
 val BOC: Party get() = BOC_IDENTITY.party
-val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
