@@ -82,7 +82,7 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
         // *and* discover each other to reliably communicate. Hence, eventual nature of the test.
         // TODO: Remove this method and usages of it once NetworkMap service been re-worked
         private fun eventuallyPassingTest(block: () -> Unit) {
-            eventually<AssertionError, Unit>(30.seconds) {
+            eventually<Throwable, Unit>(30.seconds) {
                 block()
             }
         }
