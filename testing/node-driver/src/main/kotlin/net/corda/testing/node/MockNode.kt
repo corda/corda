@@ -78,6 +78,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val defaultFactory: Factory<*> = MockNetwork.DefaultFactory,
                   private val initialiseSerialization: Boolean = true) {
     companion object {
+        // TODO In future PR we're removing the concept of network map node so the details of this mock are not important.
         val MOCK_NET_MAP = Party(CordaX500Name(organisation = "Mock Network Map", locality = "Madrid", country = "ES"), DUMMY_KEY_1.public)
     }
 
@@ -103,8 +104,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     /** Allows customisation of how nodes are created. */
     interface Factory<out N : MockNode> {
         /**
-         * @param notaryIdentity a set of service entries to use in place of the node's default service entries,
-         * for example where a node's service is part of a cluster.
+         * @param notaryIdentity is an additional override to use in place of the node's default notary service,
+         * main usage is for when the node is part of a notary cluster.
          * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
          * but can be overriden to cause nodes to have stable or colliding identity/service keys.
          */
@@ -145,8 +146,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     /**
-     * @param notaryIdentity a set of service entries to use in place of the node's default service entries,
-     * for example where a node's service is part of a cluster.
+     * @param notaryIdentity is an additional override to use in place of the node's default notary service,
+     * main usage is for when the node is part of a notary cluster.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overriden to cause nodes to have stable or colliding identity/service keys.
      */

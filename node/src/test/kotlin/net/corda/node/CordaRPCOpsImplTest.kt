@@ -67,7 +67,6 @@ class CordaRPCOpsImplTest {
         setCordappPackages("net.corda.finance.contracts.asset")
 
         mockNet = MockNetwork()
-        val networkMap = mockNet.networkMapNode
         aliceNode = mockNet.createNode()
         notaryNode = mockNet.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type))
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
@@ -77,7 +76,7 @@ class CordaRPCOpsImplTest {
         ))))
 
         mockNet.runNetwork()
-        networkMap.internals.ensureRegistered()
+        mockNet.networkMapNode.internals.ensureRegistered()
         notary = rpc.notaryIdentities().first()
     }
 

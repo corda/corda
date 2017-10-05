@@ -41,7 +41,7 @@ class BFTNotaryServiceTests {
     }
 
     private val mockNet = MockNetwork()
-    private val node = mockNet.networkMapNode
+    private val node = mockNet.createNode()
 
     @After
     fun stopNodes() {
