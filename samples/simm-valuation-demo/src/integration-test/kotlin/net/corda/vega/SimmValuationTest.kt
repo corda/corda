@@ -3,16 +3,9 @@ package net.corda.vega
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.IntegrationTestCategory
+import net.corda.testing.*
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
-import net.corda.testing.setCordappPackages
-import net.corda.testing.unsetCordappPackages
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
@@ -46,7 +39,7 @@ class SimmValuationTest : IntegrationTestCategory {
     @Test
     fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
-            startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+            startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }

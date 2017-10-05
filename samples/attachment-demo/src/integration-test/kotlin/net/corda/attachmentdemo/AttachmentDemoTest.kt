@@ -2,9 +2,7 @@ package net.corda.attachmentdemo
 
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
@@ -22,7 +20,7 @@ class AttachmentDemoTest {
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
                     startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
-                    startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))))
+                    startNotaryNode(DUMMY_NOTARY.name, validating = false))
                     .map { it.getOrThrow() }
             startWebserver(nodeB).getOrThrow()
 

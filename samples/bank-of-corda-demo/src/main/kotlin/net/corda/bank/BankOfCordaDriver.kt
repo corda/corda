@@ -9,8 +9,7 @@ import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_NOTARY
@@ -55,7 +54,7 @@ private class BankOfCordaDriver {
         val role = options.valueOf(roleArg)!!
 
         val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,
-                "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = "corda.notary.validating"))
+                "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = ValidatingNotaryService.id))
 
         try {
             when (role) {
@@ -70,8 +69,7 @@ private class BankOfCordaDriver {
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
                                 permissions = setOf(
                                         startFlowPermission<CashPaymentFlow>()))
-                        startNode(providedName = DUMMY_NOTARY.name,
-                                advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+                        startNotaryNode(DUMMY_NOTARY.name, validating = false)
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
                                 rpcUsers = listOf(bankUser))

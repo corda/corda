@@ -1,6 +1,7 @@
 package net.corda.nodeapi
 
 import net.corda.nodeapi.config.OldConfig
+import net.corda.nodeapi.config.toConfig
 
 data class User(
         @OldConfig("user")
@@ -8,9 +9,6 @@ data class User(
         val password: String,
         val permissions: Set<String>) {
     override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
-    fun toMap() = mapOf(
-            "username" to username,
-            "password" to password,
-            "permissions" to permissions
-    )
+    @Deprecated("Use toConfig().root().unwrapped() instead")
+    fun toMap(): Map<String, Any> = toConfig().root().unwrapped()
 }

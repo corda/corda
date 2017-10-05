@@ -9,10 +9,11 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.testing.*
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.setCordappPackages
+import net.corda.testing.unsetCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -33,11 +34,7 @@ class WorkflowTransactionBuildTutorialTest {
     fun setup() {
         setCordappPackages("net.corda.docs")
         mockNet = MockNetwork(threadPerNode = true)
-        val notaryService = ServiceInfo(ValidatingNotaryService.type)
-        mockNet.createNode(
-                legalName = DUMMY_NOTARY.name,
-                notaryIdentity = Pair(notaryService, DUMMY_NOTARY_KEY),
-                advertisedServices = *arrayOf(notaryService))
+        mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeA.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)

@@ -12,8 +12,6 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
@@ -39,12 +37,10 @@ class NotaryChangeTests {
     fun setUp() {
         setCordappPackages("net.corda.testing.contracts")
         mockNet = MockNetwork()
-        oldNotaryNode = mockNet.createNode(
-                legalName = DUMMY_NOTARY.name,
-                advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type)))
+        oldNotaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
         clientNodeA = mockNet.createNode()
         clientNodeB = mockNet.createNode()
-        newNotaryNode = mockNet.createNode(advertisedServices = ServiceInfo(ValidatingNotaryService.type))
+        newNotaryNode = mockNet.createNotaryNode()
         mockNet.runNetwork() // Clear network map registration messages
         oldNotaryNode.internals.ensureRegistered()
         newNotaryParty = newNotaryNode.info.legalIdentities[1]
