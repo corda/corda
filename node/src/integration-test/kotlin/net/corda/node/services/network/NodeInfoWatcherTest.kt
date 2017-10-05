@@ -104,6 +104,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
 
         advanceTime()
 
+        // We need the WatchService to report a change and that might not happen immediately.
         eventually<AssertionError, Unit>(5.seconds) {
             // The same folder can be reported more than once, so take unique values.
             val readNodes = testSubscriber.onNextEvents.distinct()
