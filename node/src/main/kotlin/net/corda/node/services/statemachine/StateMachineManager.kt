@@ -15,7 +15,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
@@ -342,8 +346,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     // commit but a counterparty flow has ended with an error (in which case our flow also has to end)
     private fun resumeOnMessage(message: ExistingSessionMessage, session: FlowSessionInternal): Boolean {
         val waitingForResponse = session.fiber.waitingForResponse
-        return (waitingForResponse as? ReceiveRequest<*>)?.session === session ||
-                waitingForResponse is WaitForLedgerCommit && message is ErrorSessionEnd
+        return waitingForResponse?.shouldResume(message, session) ?: false
     }
 
     private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
@@ -362,6 +365,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             }
             val session = FlowSessionInternal(
                     flow,
+                    flowSession,
                     random63BitValue(),
                     sender,
                     FlowSessionState.Initiated(sender, senderSessionId, FlowInfo(senderFlowVersion, sessionInit.appName)))

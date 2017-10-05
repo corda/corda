@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
 import net.corda.node.services.statemachine.FlowSessionState.Initiated
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 // TODO rename this
 class FlowSessionInternal(
         val flow: FlowLogic<*>,
+        val flowSession : FlowSession,
         val ourSessionId: Long,
         val initiatingParty: Party?,
         var state: FlowSessionState,

@@ -42,10 +42,15 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.ServiceType
-import net.corda.testing.*
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.resetTestSerialization
+import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
+import java.io.Closeable
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
@@ -75,7 +80,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
                   InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory<*> = MockNetwork.DefaultFactory,
-                  private val initialiseSerialization: Boolean = true) {
+                  private val initialiseSerialization: Boolean = true) : Closeable {
     var nextNodeId = 0
         private set
     private val filesystem = Jimfs.newFileSystem(unix())
@@ -440,5 +445,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // and network activity has ceased.
     fun waitQuiescent() {
         busyLatch.await()
+    }
+
+    override fun close() {
+        stopNodes()
+    }
+}
+
+fun network(nodesCount: Int, action: MockNetwork.(nodes: List<StartedNode<MockNetwork.MockNode>>, notary: StartedNode<MockNetwork.MockNode>) -> Unit) {
+    MockNetwork().use {
+        it.runNetwork()
+        val notary = it.createNotaryNode()
+        val nodes = (1..nodesCount).map { _ -> it.createPartyNode(notary.network.myAddress) }
+        action(it, nodes, notary)
     }
 }
