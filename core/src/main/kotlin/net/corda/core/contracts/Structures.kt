@@ -74,6 +74,12 @@ interface OwnableState : ContractState {
 }
 // DOCEND 3
 
+/** May be implemented by states e.g. [FungibleAsset] to influence soft-locking behaviour. */
+interface SoftLockableState {
+    /** Whether it is permitted for this state to be soft-locked. */
+    val softLockable: Boolean
+}
+
 /** Something which is scheduled to happen at a point in time. */
 interface Scheduled {
     val scheduledAt: Instant

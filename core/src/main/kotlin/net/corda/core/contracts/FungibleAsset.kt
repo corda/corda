@@ -40,9 +40,3 @@ interface FungibleAsset<T : Any> : OwnableState, SoftLockableState {
      */
     fun withNewOwnerAndAmount(newAmount: Amount<Issued<T>>, newOwner: AbstractParty): FungibleAsset<T>
 }
-
-/** May be implemented by states e.g. [FungibleAsset] to influence soft-locking behaviour. */
-interface SoftLockableState {
-    /** Whether it is permitted for this state to be soft-locked. */
-    val softLockable: Boolean
-}
