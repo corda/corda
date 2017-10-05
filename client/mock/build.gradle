@@ -21,6 +21,9 @@ dependencies {
 
 jar {
     baseName 'corda-mock'
+    manifest {
+        attributes 'Automatic-Module-Name': 'net.corda.client.mock'
+    }
 }
 
 publish {
