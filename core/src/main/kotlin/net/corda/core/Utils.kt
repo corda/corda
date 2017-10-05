@@ -44,3 +44,6 @@ fun <T> Observable<T>.toFuture(): CordaFuture<T> = openFuture<T>().also {
         }
     }
 }
+
+fun world(): String = "Hello World!"
+
