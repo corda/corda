@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class VerifierTests {
     private fun generateTransactions(number: Int): List<LedgerTransaction> {
         var currentLedger = GeneratedLedger.empty
-        val transactions = ArrayList<WireTransaction>()
+        val transactions = arrayListOf<WireTransaction>()
         val random = SplittableRandom()
         for (i in 0 until number) {
             val (tx, ledger) = currentLedger.transactionGenerator.generateOrFail(random)
