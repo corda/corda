@@ -1,11 +1,11 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
@@ -40,6 +40,7 @@ import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.HashMap
 
 class NodeLookupImpl(private val identityService: IdentityService, private val networkMapCache: NetworkMapCache) : NodeLookup {
     init {
@@ -66,7 +67,7 @@ class NodeLookupImpl(private val identityService: IdentityService, private val n
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence, private val configuration: NodeSSLConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeSSLConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<PersistentNetworkMapCache>()
     }
@@ -104,6 +105,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, pri
                     .sortedBy { it.name.toString() }
         }
 
+    private val nodeInfoSerializer = NodeInfoWatcher(configuration.baseDirectory)
+
     init {
         loadFromFiles()
         database.transaction { loadFromDB() }
@@ -111,9 +114,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, pri
 
     private fun loadFromFiles() {
         logger.info("Loading network map from files..")
-        for (node in NodeInfoSerializer().loadFromDirectory(configuration.baseDirectory)) {
-            addNode(node)
-        }
+        nodeInfoSerializer.nodeInfoUpdates().subscribe { node -> addNode(node) }
     }
 
     override fun getPartyInfo(party: Party): PartyInfo? {

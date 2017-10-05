@@ -11,7 +11,8 @@ UNRELEASED
   * Cordform may not specify a value for ``NetworkMap``, when that happens, during the task execution the following happens:
     1. Each node is started and its signed serialized NodeInfo is written to disk in the node base directory.
     2. Every serialized ``NodeInfo`` above is copied in every other node "additional-node-info" folder under the NodeInfo folder.
-  * Nodes read all the nodes stored in ``additional-node-info`` when the ``NetworkMapService`` starts up.
+
+* Nodes read and poll the filesystem for serialized ``NodeInfo`` in the ``additional-node-info`` directory.
 
 * ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
 

@@ -170,7 +170,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun saveOwnNodeInfo() {
-        NodeInfoSerializer().saveToFile(configuration.baseDirectory, info, services.keyManagementService)
+        NodeInfoWatcher.saveToFile(configuration.baseDirectory, info, services.keyManagementService)
     }
 
     private fun initCertificate() {
@@ -409,7 +409,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, cordappProvider, this)
         makeNetworkServices(tokenizableServices)
-
         return tokenizableServices
     }
 

@@ -133,12 +133,15 @@ interface DriverDSLExposedInterface : CordformContext {
             rpcUsers: List<User> = emptyList(),
             startInSameProcess: Boolean? = null): CordaFuture<Pair<Party, List<NodeHandle>>>
 
+    /** Call [startWebserver] with a default maximumHeapSize. */
+    fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, "200m")
+
     /**
      * Starts a web server for a node
-     *
      * @param handle The handle for the node that this webserver connects to via RPC.
+     * @param maximumHeapSize Argument for JVM -Xmx option e.g. "200m".
      */
-    fun startWebserver(handle: NodeHandle, maximumHeapSize: String = "200m"): CordaFuture<WebserverHandle>
+    fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle>
 
     /**
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
