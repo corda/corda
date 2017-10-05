@@ -134,7 +134,7 @@ interface DriverDSLExposedInterface : CordformContext {
             startInSameProcess: Boolean? = null): CordaFuture<Pair<Party, List<NodeHandle>>>
 
     /** Call [startWebserver] with a default maximumHeapSize. */
-    fun startWebserver(handle: NodeHandle) = startWebserver(handle, "200m")
+    fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, "200m")
 
     /**
      * Starts a web server for a node
