@@ -5,10 +5,12 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.utilities.seconds
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.ALICE
 import net.corda.testing.ALICE_KEY
 import net.corda.testing.DEV_TRUST_ROOT
+import net.corda.testing.eventually
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.NodeBasedTest
@@ -102,15 +104,15 @@ class NodeInfoWatcherTest : NodeBasedTest() {
 
         advanceTime()
 
-        // The same folder can be reported more than once, so take unique values.
-        val readNodes = testSubscriber.onNextEvents.distinct()
-        assertEquals(1, readNodes.size)
-        assertEquals(nodeInfo, readNodes.first())
+        eventually<AssertionError, Unit>(5.seconds) {
+            // The same folder can be reported more than once, so take unique values.
+            val readNodes = testSubscriber.onNextEvents.distinct()
+            assertEquals(1, readNodes.size)
+            assertEquals(nodeInfo, readNodes.first())
+        }
     }
 
     private fun advanceTime() {
-        // Give the filesystem time to report the change to the WatchService.
-        Thread.sleep(100)
         scheduler.advanceTimeBy(1, TimeUnit.HOURS)
     }
 
