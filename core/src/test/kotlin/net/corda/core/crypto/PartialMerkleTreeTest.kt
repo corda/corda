@@ -179,7 +179,7 @@ class PartialMerkleTreeTest : TestDependencyInjectionBase() {
     @Test
     fun `build Partial Merkle Tree - only duplicate leaves, less included failure`() {
         val leaves = "aaa"
-        val hashes = leaves.map { it.serialize().hash }
+        val hashes = leaves.map { it.serialize().bytes.hash() }
         val mt = MerkleTree.getMerkleTree(hashes)
         assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(mt, hashes.subList(0, 1)) }
     }
