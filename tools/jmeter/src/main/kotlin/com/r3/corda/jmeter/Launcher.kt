@@ -1,6 +1,5 @@
 package com.r3.corda.jmeter
 
-import com.sun.javaws.exceptions.InvalidArgumentException
 import net.corda.core.internal.div
 import org.apache.jmeter.JMeter
 import org.slf4j.LoggerFactory
@@ -68,7 +67,7 @@ class Launcher {
                 if (args[index] == "-XsshUser") {
                     ++index
                     if (index == args.size || args[index].startsWith("-")) {
-                        throw InvalidArgumentException(args)
+                        throw IllegalArgumentException(args.toList().toString())
                     }
                     userName = args[index]
                 } else if (args[index] == "-Xssh") {

@@ -14,9 +14,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static net.corda.testing.CoreTestUtils.singleIdentity;
+import static net.corda.testing.NodeTestUtils.startFlow;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
-import static net.corda.testing.NodeTestUtils.startFlow;
 
 public class FlowsInJavaTest {
     private final MockNetwork mockNet = new MockNetwork();
@@ -62,9 +62,8 @@ public class FlowsInJavaTest {
             fail("ExecutionException should have been thrown");
         } catch (ExecutionException e) {
             assertThat(e.getCause())
-                    .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("primitive")
-                    .hasMessageContaining(receiveType.getName());
+                    .hasMessageContaining(Primitives.unwrap(receiveType).getName());
         }
     }
 
@@ -99,6 +98,18 @@ public class FlowsInJavaTest {
         @Override
         public String call() throws FlowException {
             return otherSide.sendAndReceive(String.class, "Hello").unwrap(data -> data);
+        }
+    }
+
+    @InitiatedBy(PrimitiveReceiveFlow.class)
+    private static class PrimitiveSendFlow extends FlowLogic<Void> {
+        public PrimitiveSendFlow(FlowSession session) {
+        }
+
+        @Suspendable
+        @Override
+        public Void call() throws FlowException {
+            return null;
         }
     }
 

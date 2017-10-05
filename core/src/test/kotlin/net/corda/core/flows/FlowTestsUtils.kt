@@ -79,7 +79,7 @@ infix fun <T : Any> KClass<T>.from(session: FlowSession): Pair<FlowSession, Clas
 fun FlowLogic<*>.receiveAll(session: Pair<FlowSession, Class<out Any>>, vararg sessions: Pair<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
     val allSessions = arrayOf(session, *sessions)
     allSessions.enforceNoDuplicates()
-    return receiveAll(mapOf(*allSessions))
+    return receiveAllMap(mapOf(*allSessions))
 }
 
 /**

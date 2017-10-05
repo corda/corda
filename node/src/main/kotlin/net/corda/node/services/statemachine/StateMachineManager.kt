@@ -1,9 +1,11 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.context.InvocationContext
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.Try
 import rx.Observable
@@ -23,7 +25,6 @@ import rx.Observable
  * TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
  * TODO: Timeouts
  * TODO: Surfacing of exceptions via an API and/or management UI
- * TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
  * TODO: Don't store all active flows in memory, load from the database on demand.
  */
 interface StateMachineManager {
@@ -43,7 +44,11 @@ interface StateMachineManager {
      * @param flowLogic The flow's code.
      * @param context The context of the flow.
      */
-    fun <A> startFlow(flowLogic: FlowLogic<A>, context: InvocationContext): CordaFuture<FlowStateMachine<A>>
+    fun <A> startFlow(
+            flowLogic: FlowLogic<A>,
+            context: InvocationContext,
+            ourIdentity: Party? = null
+    ): CordaFuture<FlowStateMachine<A>>
 
     /**
      * Represents an addition/removal of a state machine.
@@ -73,4 +78,13 @@ interface StateMachineManager {
      * Returns all currently live flows.
      */
     val allStateMachines: List<FlowLogic<*>>
+}
+
+// These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
+// these functions again
+interface StateMachineManagerInternal {
+    fun signalFlowHasStarted(flowId: StateMachineRunId)
+    fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId)
+    fun removeSessionBindings(sessionIds: Set<SessionId>)
+    fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState)
 }

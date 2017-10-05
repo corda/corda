@@ -17,11 +17,11 @@ import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.node.NotarySpec
 import net.corda.testing.internal.performance.div
 import net.corda.testing.internal.performance.startPublishingFixedRateInjector
 import net.corda.testing.internal.performance.startReporter
 import net.corda.testing.internal.performance.startTightLoopInjector
+import net.corda.testing.node.NotarySpec
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Ignore
@@ -78,7 +78,7 @@ class NodePerformanceTests : IntegrationTest() {
                             queueBound = 50
                     ) {
                         val timing = Stopwatch.createStarted().apply {
-                            connection.proxy.startFlow(::EmptyFlow).returnValue.get()
+                            connection.proxy.startFlow(::EmptyFlow).returnValue.getOrThrow()
                         }.stop().elapsed(TimeUnit.MICROSECONDS)
                         timings.add(timing)
                     }
@@ -100,8 +100,22 @@ class NodePerformanceTests : IntegrationTest() {
             a as NodeHandle.InProcess
             val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
             a.rpcClientToNode().use("A", "A") { connection ->
-                startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 2000L / TimeUnit.SECONDS) {
+                startPublishingFixedRateInjector(metricRegistry, 1, 5.minutes, 2000L / TimeUnit.SECONDS) {
                     connection.proxy.startFlow(::EmptyFlow).returnValue.get()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `issue flow rate`() {
+        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
+            val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<CashIssueFlow>())))).get()
+            a as NodeHandle.InProcess
+            val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
+            a.rpcClientToNode().use("A", "A") { connection ->
+                startPublishingFixedRateInjector(metricRegistry, 1, 5.minutes, 2000L / TimeUnit.SECONDS) {
+                    connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), ALICE).returnValue.get()
                 }
             }
         }

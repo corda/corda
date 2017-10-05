@@ -27,6 +27,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -37,10 +38,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.node.*
@@ -56,21 +57,14 @@ import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
+import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-
-/**
- * Copied from DBCheckpointStorageTests as it is required as helper for this test
- */
-internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
-    val checkpoints = mutableListOf<Checkpoint>()
-    forEach {
-        checkpoints += it
-        true
-    }
-    return checkpoints
+internal fun CheckpointStorage.checkpoints(): List<SerializedBytes<Checkpoint>> {
+    val checkpoints = getAllCheckpoints().toList()
+    return checkpoints.map { it.second }
 }
 
 /**
@@ -740,6 +734,12 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             private val database: CordaPersistence,
             private val delegate: WritableTransactionStorage
     ) : WritableTransactionStorage, SingletonSerializeAsToken() {
+        override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
+            return database.transaction {
+                delegate.trackTransaction(id)
+            }
+        }
+
         override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()

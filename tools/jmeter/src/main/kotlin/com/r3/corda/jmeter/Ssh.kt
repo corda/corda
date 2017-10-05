@@ -2,7 +2,6 @@ package com.r3.corda.jmeter
 
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
-import com.sun.javaws.exceptions.InvalidArgumentException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.addShutdownHook
 import org.slf4j.LoggerFactory
@@ -28,7 +27,7 @@ class Ssh {
                 if (args[index] == "-XsshUser") {
                     ++index
                     if (index == args.size || args[index].startsWith("-")) {
-                        throw InvalidArgumentException(args)
+                        throw IllegalArgumentException(args.toList().toString())
                     }
                     userName = args[index]
                 } else if (args[index] == "-Xssh") {

@@ -10,13 +10,11 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.sequence
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.statemachine.StateMachineManagerImpl
+import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.FlowMessagingImpl
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.PersistentMap
@@ -33,14 +31,15 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
-
-// TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
 
 /**
  * This class implements the [MessagingService] API using Apache Artemis, the successor to their ActiveMQ product.
@@ -77,20 +76,19 @@ class P2PMessagingClient(config: NodeConfiguration,
         // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
         // confusion.
         private val topicProperty = SimpleString("platform-topic")
-        private val sessionIdProperty = SimpleString("session-id")
         private val cordaVendorProperty = SimpleString("corda-vendor")
         private val releaseVersionProperty = SimpleString("release-version")
         private val platformVersionProperty = SimpleString("platform-version")
         private val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
         private val messageMaxRetryCount: Int = 3
 
-        fun createProcessedMessage(): AppendOnlyPersistentMap<UUID, Instant, ProcessedMessage, String> {
+        fun createProcessedMessages(): AppendOnlyPersistentMap<DeduplicationId, Instant, ProcessedMessage, String> {
             return AppendOnlyPersistentMap(
-                    toPersistentEntityKey = { it.toString() },
-                    fromPersistentEntity = { Pair(UUID.fromString(it.uuid), it.insertionTime) },
-                    toPersistentEntity = { key: UUID, value: Instant ->
+                    toPersistentEntityKey = { it.toString },
+                    fromPersistentEntity = { Pair(DeduplicationId(it.id), it.insertionTime) },
+                    toPersistentEntity = { key: DeduplicationId, value: Instant ->
                         ProcessedMessage().apply {
-                            uuid = key.toString()
+                            id = key.toString
                             insertionTime = value
                         }
                     },
@@ -118,9 +116,9 @@ class P2PMessagingClient(config: NodeConfiguration,
             )
         }
 
-        private class NodeClientMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID) : Message {
+        private class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId) : Message {
             override val debugTimestamp: Instant = Instant.now()
-            override fun toString() = "$topicSession#${String(data)}"
+            override fun toString() = "$topic#${String(data.bytes)}"
         }
     }
 
@@ -136,8 +134,7 @@ class P2PMessagingClient(config: NodeConfiguration,
     private val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
 
     /** A registration to handle messages of different types */
-    data class Handler(val topicSession: TopicSession,
-                       val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+    data class HandlerRegistration(val topic: String, val callback: Any) : MessageHandlerRegistration
 
     private val cordaVendor = SimpleString(versionInfo.vendor)
     private val releaseVersion = SimpleString(versionInfo.releaseVersion)
@@ -148,16 +145,17 @@ class P2PMessagingClient(config: NodeConfiguration,
     private val messageRedeliveryDelaySeconds = config.messageRedeliveryDelaySeconds.toLong()
     private val artemis = ArtemisMessagingClient(config, serverAddress)
     private val state = ThreadBox(InnerState())
-    private val handlers = CopyOnWriteArrayList<Handler>()
 
-    private val processedMessages = createProcessedMessage()
+    private val handlers = ConcurrentHashMap<String, MessageHandler>()
+
+    private val processedMessages = createProcessedMessages()
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
     class ProcessedMessage(
             @Id
-            @Column(name = "message_id", length = 36)
-            var uuid: String = "",
+            @Column(name = "message_id", length = 64)
+            var id: String = "",
 
             @Column(name = "insertion_time")
             var insertionTime: Instant = Instant.now()
@@ -167,7 +165,7 @@ class P2PMessagingClient(config: NodeConfiguration,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_retry")
     class RetryMessage(
             @Id
-            @Column(name = "message_id", length = 36)
+            @Column(name = "message_id", length = 64)
             var key: Long = 0,
 
             @Lob
@@ -214,22 +212,7 @@ class P2PMessagingClient(config: NodeConfiguration,
 
         val message: ReceivedMessage? = artemisToCordaMessage(artemisMessage)
         if (message != null)
-            deliver(message)
-
-        // Ack the message so it won't be redelivered. We should only really do this when there were no
-        // transient failures. If we caught an exception in the handler, we could back off and retry delivery
-        // a few times before giving up and redirecting the message to a dead-letter address for admin or
-        // developer inspection. Artemis has the features to do this for us, we just need to enable them.
-        //
-        // TODO: Setup Artemis delayed redelivery and dead letter addresses.
-        //
-        // ACKing a message calls back into the session which isn't thread safe, so we have to ensure it
-        // doesn't collide with a send here. Note that stop() could have been called whilst we were
-        // processing a message but if so, it'll be parked waiting for us to count down the latch, so
-        // the session itself is still around and we can still ack messages as a result.
-        state.locked {
-            artemisMessage.acknowledge()
-        }
+            deliver(artemisMessage, message)
         return true
     }
 
@@ -255,14 +238,13 @@ class P2PMessagingClient(config: NodeConfiguration,
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
             val topic = message.required(topicProperty) { getStringProperty(it) }
-            val sessionID = message.required(sessionIdProperty) { getLongProperty(it) }
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
             val platformVersion = message.required(platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
-            val uuid = message.required(HDR_DUPLICATE_DETECTION_ID) { UUID.fromString(message.getStringProperty(it)) }
-            log.trace { "Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid" }
+            val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { DeduplicationId(message.getStringProperty(it)) }
+            log.trace { "Received message from: ${message.address} user: $user topic: $topic id: $uniqueMessageId" }
 
-            return ArtemisReceivedMessage(TopicSession(topic, sessionID), CordaX500Name.parse(user), platformVersion, uuid, message)
+            return ArtemisReceivedMessage(topic, CordaX500Name.parse(user), platformVersion, uniqueMessageId, message)
         } catch (e: Exception) {
             log.error("Unable to process message, ignoring it: $message", e)
             return null
@@ -274,21 +256,19 @@ class P2PMessagingClient(config: NodeConfiguration,
         return extractor(key)
     }
 
-    private class ArtemisReceivedMessage(override val topicSession: TopicSession,
+    private class ArtemisReceivedMessage(override val topic: String,
                                          override val peer: CordaX500Name,
                                          override val platformVersion: Int,
-                                         override val uniqueMessageId: UUID,
+                                         override val uniqueMessageId: DeduplicationId,
                                          private val message: ClientMessage) : ReceivedMessage {
-        override val data: ByteArray by lazy { ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) } }
+        override val data: ByteSequence by lazy { OpaqueBytes(ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }) }
         override val debugTimestamp: Instant get() = Instant.ofEpochMilli(message.timestamp)
-        override fun toString() = "${topicSession.topic}#${data.sequence()}"
+        override fun toString() = "$topic#$data"
     }
 
-    private fun deliver(msg: ReceivedMessage): Boolean {
+    private fun deliver(artemisMessage: ClientMessage, msg: ReceivedMessage) {
         state.checkNotLocked()
-        // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
-        // or removed whilst the filter is executing will not affect anything.
-        val deliverTo = handlers.filter { it.topicSession.isBlank() || it.topicSession == msg.topicSession }
+        val deliverTo = handlers[msg.topic]
         try {
             // This will perform a BLOCKING call onto the executor. Thus if the handlers are slow, we will
             // be slow, and Artemis can handle that case intelligently. We don't just invoke the handler
@@ -298,31 +278,34 @@ class P2PMessagingClient(config: NodeConfiguration,
             //
             // Note that handlers may re-enter this class. We aren't holding any locks and methods like
             // start/run/stop have re-entrancy assertions at the top, so it is OK.
-            nodeExecutor.fetchFrom {
-                database.transaction {
-                    if (msg.uniqueMessageId in processedMessages) {
-                        log.trace { "Discard duplicate message ${msg.uniqueMessageId} for ${msg.topicSession}" }
-                    } else {
-                        if (deliverTo.isEmpty()) {
-                            // TODO: Implement dead letter queue, and send it there.
-                            log.warn("Received message ${msg.uniqueMessageId} for ${msg.topicSession} that doesn't have any registered handlers yet")
-                        } else {
-                            callHandlers(msg, deliverTo)
-                        }
-                        // TODO We will at some point need to decide a trimming policy for the id's
+            if (deliverTo != null) {
+                val isDuplicate = database.transaction { msg.uniqueMessageId in processedMessages }
+                if (isDuplicate) {
+                    log.trace { "Discard duplicate message ${msg.uniqueMessageId} for ${msg.topic}" }
+                    return
+                }
+                val acknowledgeHandle = object : AcknowledgeHandle {
+                    override fun persistDeduplicationId() {
                         processedMessages[msg.uniqueMessageId] = Instant.now()
                     }
+
+                    // ACKing a message calls back into the session which isn't thread safe, so we have to ensure it
+                    // doesn't collide with a send here. Note that stop() could have been called whilst we were
+                    // processing a message but if so, it'll be parked waiting for us to count down the latch, so
+                    // the session itself is still around and we can still ack messages as a result.
+                    override fun acknowledge() {
+                        state.locked {
+                            artemisMessage.individualAcknowledge()
+                            artemis.started!!.session.commit()
+                        }
+                    }
                 }
+                deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), acknowledgeHandle)
+            } else {
+                log.warn("Received message ${msg.uniqueMessageId} for ${msg.topic} that doesn't have any registered handlers yet")
             }
         } catch (e: Exception) {
-            log.error("Caught exception whilst executing message handler for ${msg.topicSession}", e)
-        }
-        return true
-    }
-
-    private fun callHandlers(msg: ReceivedMessage, deliverTo: List<Handler>) {
-        for (handler in deliverTo) {
-            handler.callback(msg, handler)
+            log.error("Caught exception whilst executing message handler for ${msg.topic}", e)
         }
     }
 
@@ -370,20 +353,19 @@ class P2PMessagingClient(config: NodeConfiguration,
                     putStringProperty(cordaVendorProperty, cordaVendor)
                     putStringProperty(releaseVersionProperty, releaseVersion)
                     putIntProperty(platformVersionProperty, versionInfo.platformVersion)
-                    putStringProperty(topicProperty, SimpleString(message.topicSession.topic))
-                    putLongProperty(sessionIdProperty, message.topicSession.sessionID)
-                    writeBodyBufferBytes(message.data)
+                    putStringProperty(topicProperty, SimpleString(message.topic))
+                    writeBodyBufferBytes(message.data.bytes)
                     // Use the magic deduplication property built into Artemis as our message identity too
-                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
+                    putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString))
 
                     // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
-                    if (amqDelayMillis > 0 && message.topicSession.topic == StateMachineManagerImpl.sessionTopic.topic) {
+                    if (amqDelayMillis > 0 && message.topic == FlowMessagingImpl.sessionTopic) {
                         putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
                     }
                 }
                 log.trace {
-                    "Send to: $mqAddress topic: ${message.topicSession.topic} " +
-                            "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}"
+                    "Send to: $mqAddress topic: ${message.topic} " +
+                            "sessionID: ${message.topic} id: ${message.uniqueMessageId}"
                 }
                 artemis.producer.send(mqAddress, artemisMessage)
                 retryId?.let {
@@ -467,30 +449,26 @@ class P2PMessagingClient(config: NodeConfiguration,
         }
     }
 
-    override fun addMessageHandler(topic: String,
-                                   sessionID: Long,
-                                   callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
-        return addMessageHandler(TopicSession(topic, sessionID), callback)
-    }
-
-    override fun addMessageHandler(topicSession: TopicSession,
-                                   callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
-        require(!topicSession.isBlank()) { "Topic must not be blank, as the empty topic is a special case." }
-        val handler = Handler(topicSession, callback)
-        handlers.add(handler)
-        return handler
+    override fun addMessageHandler(topic: String, callback: MessageHandler): MessageHandlerRegistration {
+        require(!topic.isBlank()) { "Topic must not be blank, as the empty topic is a special case." }
+        handlers.compute(topic) { _, handler ->
+            if (handler != null) {
+                throw IllegalStateException("Cannot add another acking handler for $topic, there is already an acking one")
+            }
+            callback
+        }
+        return HandlerRegistration(topic, callback)
     }
 
     override fun removeMessageHandler(registration: MessageHandlerRegistration) {
-        handlers.remove(registration)
+        registration as HandlerRegistration
+        handlers.remove(registration.topic)
     }
 
-    override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
-        // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
-        return NodeClientMessage(topicSession, data, uuid)
+    override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId): Message {
+        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId)
     }
 
-    // TODO Rethink PartyInfo idea and merging PeerAddress/ServiceAddress (the only difference is that Service address doesn't hold host and port)
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
         return when (partyInfo) {
             is PartyInfo.SingleNode -> NodeAddress(partyInfo.party.owningKey, partyInfo.addresses.first())

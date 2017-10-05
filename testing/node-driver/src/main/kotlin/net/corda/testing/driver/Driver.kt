@@ -634,7 +634,7 @@ class DriverDSL(
                 throw ListenProcessDeathException(rpcAddress, processDeathFuture.getOrThrow())
             }
             val connection = connectionFuture.getOrThrow()
-            shutdownManager.registerShutdown(connection::close)
+            shutdownManager.registerShutdown(connection::forceClose)
             connection.proxy
         }
     }

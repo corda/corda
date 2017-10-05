@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -117,7 +118,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-            mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database)
+            mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database, newSecureRandom())
             scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), stateLoader, schedulerGatedExecutor, serverThread = smmExecutor)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {

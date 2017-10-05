@@ -13,9 +13,12 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
 import net.corda.node.services.messaging.*
+import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
@@ -57,7 +60,7 @@ class InMemoryMessagingNetwork(
 
     @CordaSerializable
     data class MessageTransfer(val sender: PeerHandle, val message: Message, val recipients: MessageRecipients) {
-        override fun toString() = "${message.topicSession} from '$sender' to '$recipients'"
+        override fun toString() = "${message.topic} from '$sender' to '$recipients'"
     }
 
     // All sent messages are kept here until pumpSend is called, or manuallyPumped is set to false
@@ -242,17 +245,17 @@ class InMemoryMessagingNetwork(
         _sentMessages.onNext(transfer)
     }
 
-    data class InMemoryMessage(override val topicSession: TopicSession,
-                                       override val data: ByteArray,
-                                       override val uniqueMessageId: UUID,
-                                       override val debugTimestamp: Instant = Instant.now()) : Message {
-        override fun toString() = "$topicSession#${String(data)}"
+    data class InMemoryMessage(override val topic: String,
+                               override val data: ByteSequence,
+                               override val uniqueMessageId: DeduplicationId,
+                               override val debugTimestamp: Instant = Instant.now()) : Message {
+        override fun toString() = "$topic#${String(data.bytes)}"
     }
 
-    private data class InMemoryReceivedMessage(override val topicSession: TopicSession,
-                                               override val data: ByteArray,
+    private data class InMemoryReceivedMessage(override val topic: String,
+                                               override val data: ByteSequence,
                                                override val platformVersion: Int,
-                                               override val uniqueMessageId: UUID,
+                                               override val uniqueMessageId: DeduplicationId,
                                                override val debugTimestamp: Instant,
                                                override val peer: CordaX500Name) : ReceivedMessage
 
@@ -268,8 +271,7 @@ class InMemoryMessagingNetwork(
                                   private val peerHandle: PeerHandle,
                                   private val executor: AffinityExecutor,
                                   private val database: CordaPersistence) : SingletonSerializeAsToken(), MessagingService {
-        inner class Handler(val topicSession: TopicSession,
-                            val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+        inner class Handler(val topicSession: String, val callback: MessageHandler) : MessageHandlerRegistration
 
         @Volatile
         private var running = true
@@ -280,7 +282,7 @@ class InMemoryMessagingNetwork(
         }
 
         private val state = ThreadBox(InnerState())
-        private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(HashSet<UUID>())
+        private val processedMessages: MutableSet<DeduplicationId> = Collections.synchronizedSet(HashSet<DeduplicationId>())
 
         override val myAddress: PeerHandle get() = peerHandle
 
@@ -302,13 +304,10 @@ class InMemoryMessagingNetwork(
             }
         }
 
-        override fun addMessageHandler(topic: String, sessionID: Long, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
-                = addMessageHandler(TopicSession(topic, sessionID), callback)
-
-        override fun addMessageHandler(topicSession: TopicSession, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
+        override fun addMessageHandler(topic: String, callback: MessageHandler): MessageHandlerRegistration {
             check(running)
             val (handler, transfers) = state.locked {
-                val handler = Handler(topicSession, callback).apply { handlers.add(this) }
+                val handler = Handler(topic, callback).apply { handlers.add(this) }
                 val pending = ArrayList<MessageTransfer>()
                 database.transaction {
                     pending.addAll(pendingRedelivery)
@@ -354,8 +353,8 @@ class InMemoryMessagingNetwork(
         override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
-            return InMemoryMessage(topicSession, data, uuid)
+        override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId): Message {
+            return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId)
         }
 
         /**
@@ -388,14 +387,14 @@ class InMemoryMessagingNetwork(
             while (deliverTo == null) {
                 val transfer = (if (block) q.take() else q.poll()) ?: return null
                 deliverTo = state.locked {
-                    val matchingHandlers = handlers.filter { it.topicSession.isBlank() || transfer.message.topicSession == it.topicSession }
+                    val matchingHandlers = handlers.filter { it.topicSession.isBlank() || transfer.message.topic == it.topicSession }
                     if (matchingHandlers.isEmpty()) {
                         // Got no handlers for this message yet. Keep the message around and attempt redelivery after a new
                         // handler has been registered. The purpose of this path is to make unit tests that have multi-threading
                         // reliable, as a sender may attempt to send a message to a receiver that hasn't finished setting
                         // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
                         // least sometimes.
-                        log.warn("Message to ${transfer.message.topicSession} could not be delivered")
+                        log.warn("Message to ${transfer.message.topic} could not be delivered")
                         database.transaction {
                             pendingRedelivery.add(transfer)
                         }
@@ -419,7 +418,13 @@ class InMemoryMessagingNetwork(
                     database.transaction {
                         for (handler in deliverTo) {
                             try {
-                                handler.callback(transfer.toReceivedMessage(), handler)
+                                val acknowledgeHandle = object : AcknowledgeHandle {
+                                    override fun acknowledge() {
+                                    }
+                                    override fun persistDeduplicationId() {
+                                    }
+                                }
+                                handler.callback(transfer.toReceivedMessage(), handler, acknowledgeHandle)
                             } catch (e: Exception) {
                                 log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                             }
@@ -436,8 +441,8 @@ class InMemoryMessagingNetwork(
         }
 
         private fun MessageTransfer.toReceivedMessage(): ReceivedMessage = InMemoryReceivedMessage(
-                message.topicSession,
-                message.data.copyOf(), // Kryo messes with the buffer so give each client a unique copy
+                message.topic,
+                OpaqueBytes(message.data.bytes.copyOf()), // Kryo messes with the buffer so give each client a unique copy
                 1,
                 message.uniqueMessageId,
                 message.debugTimestamp,

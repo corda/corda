@@ -12,6 +12,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -280,6 +281,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 checkpointStorage,
                 serverThread,
                 database,
+                newSecureRandom(),
                 busyNodeLatch,
                 cordappLoader.appClassLoader
         )
@@ -556,7 +558,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val database = configureDatabase(props, configuration.database, identityService, schemaService)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
-                log.info("Connected to ${database.dataSource.connection.metaData.databaseProductName} database.")
+                log.info("Connected to ${connection.metaData.databaseProductName} database.")
             }
             runOnStop += database::close
             return database.transaction {

@@ -57,6 +57,8 @@
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
+      <module name="flow-hook_main" target="1.8" />
+      <module name="flow-hook_test" target="1.8" />
       <module name="gradle-plugins-cordapp_main" target="1.8" />
       <module name="gradle-plugins-cordapp_test" target="1.8" />
       <module name="gradle-plugins-cordform-common_main" target="1.8" />
