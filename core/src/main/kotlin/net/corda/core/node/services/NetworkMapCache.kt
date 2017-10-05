@@ -92,13 +92,15 @@ interface NetworkMapCache {
 
     /**
      * Look up the node information entries for a specific identity key.
-     * Note that for distributed services each node advertises the same service identity.
+     * Note that normally there will be only one node for a key, but for clusters of nodes or distributed services there
+     * can be multiple nodes.
      */
     fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo>
 
     /**
      * Look up the node information entries for a legal name.
-     * Note that for distributed services each node advertises the same service identity.
+     * Note that normally there will be only one node for a key, but for clusters of nodes or distributed services there
+     * can be multiple nodes.
      */
     fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo>
 
@@ -106,7 +108,7 @@ interface NetworkMapCache {
     fun getPartyInfo(party: Party): PartyInfo?
 
     // DOCSTART 2
-    /** Gets a notary identity by the given name. */
+    /** Look up a well known identity of notary by legal name. */
     fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }
     // DOCEND 2
 
