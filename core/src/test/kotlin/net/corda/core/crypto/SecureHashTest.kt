@@ -68,7 +68,7 @@ class SecureHashTest {
         val sha256Object = SecureHash.parse(textSHA256)
         assertTrue(sha256Object is SecureHash.SHA256)
 
-        val sha512Object = SecureHash.parse(textSHA512)
+        val sha512Object = SecureHash.parse(textSHA512, SecureHash.SHA512_ALGORITHM)
         assertTrue(sha512Object is SecureHash.SHA512)
 
         // Try to parse a non 32 or 64 bytes value.

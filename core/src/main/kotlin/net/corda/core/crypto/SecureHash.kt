@@ -71,23 +71,11 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
 
         /**
          * Method that receives a HEX [String] which represents a hash output and returns its corresponding [SecureHash]
-         * object. Selection of the Hash algorithm is based on the input String size and if there are more than one hash
-         * functions offering the same hash output size, then the default per size is selected.
+         * object. The hash secureHashAlgorithm is defined by the input [secureHashAlgorithm]. If the algorithm is
+         * not provided, then the [DEFAULT_ALGORITHM] is used.
          */
         @JvmStatic
-        fun parse(str: String) = str.toUpperCase().parseAsHex().let {
-            when (it.size) {
-                32 -> SHA256(it)
-                64 -> SHA512(it) // TODO: define default 64-bit SecureHash function when SHA3-512 is introduced.
-                else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 or 64 bytes in hex: $str")
-            }
-        }
-
-        /**
-         * Method that receives a HEX [String] which represents a hash output and returns its corresponding [SecureHash]
-         * object. The hash secureHashAlgorithm is defined by the input [secureHashAlgorithm].
-         */
-        @JvmStatic
+        @JvmOverloads
         fun parse(str: String, secureHashAlgorithm: SecureHashAlgorithm = DEFAULT_ALGORITHM) = str.toUpperCase().parseAsHex().let {
             when(secureHashAlgorithm) {
                 SHA256_ALGORITHM -> SHA256(it)
@@ -130,7 +118,11 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          */
         @JvmStatic
         fun randomHash(secureHashAlgorithm: SecureHashAlgorithm = DEFAULT_ALGORITHM): SecureHash =
-                hash(newSecureRandom().generateSeed(secureHashAlgorithm.outputSize), secureHashAlgorithm)
+            when (secureHashAlgorithm) {
+                SHA256_ALGORITHM -> SHA256(secureRandomBytes(secureHashAlgorithm.outputSize))
+                SHA512_ALGORITHM -> SHA512(secureRandomBytes(secureHashAlgorithm.outputSize))
+                else -> throw IllegalArgumentException("Hash secureHashAlgorithm $secureHashAlgorithm is not supported")
+            }
 
         /** Computes the hash output of the input [bytes] and returns the corresponding [SHA256] object. */
         @JvmStatic fun sha256(bytes: ByteArray) = hash(bytes, SHA256_ALGORITHM) as SHA256
@@ -164,6 +156,8 @@ fun ByteArray.hash(): SecureHash = SecureHash.hash(this, SecureHash.DEFAULT_ALGO
 fun OpaqueBytes.hash(): SecureHash = this.bytes.hash()
 
 /** Compute the hash of this [ByteArray] using the [SecureHash.SHA256_ALGORITHM] and return its corresponding [SecureHash.SHA256] object. */
+@Deprecated("Use hash(SecureHash.SHA256_ALGORITHM)", level = DeprecationLevel.WARNING)
 fun ByteArray.sha256(): SecureHash.SHA256 = SecureHash.sha256(this)
 /** Compute the hash of this [OpaqueBytes] object using the [SecureHash.SHA256_ALGORITHM] and return its corresponding [SecureHash.SHA256] object. */
+@Deprecated("Use hash(SecureHash.SHA256_ALGORITHM)", level = DeprecationLevel.WARNING)
 fun OpaqueBytes.sha256(): SecureHash.SHA256 = this.bytes.sha256()
