@@ -15,9 +15,9 @@ class ReceiveMultipleFlowTests {
     fun `receive all messages in parallel using map style`() {
         network(3) { nodes, _ ->
             val doubleValue = 5.0
-            nodes[1].registerInitiatedFlow(AlgorithmDefinition::class, { session -> Answer(session, doubleValue) })
+            nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
             val stringValue = "Thriller"
-            nodes[2].registerInitiatedFlow(AlgorithmDefinition::class, { session -> Answer(session, stringValue) })
+            nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
 
             val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
             runNetwork()
@@ -32,9 +32,9 @@ class ReceiveMultipleFlowTests {
     fun `receive all messages in parallel using list style`() {
         network(3) { nodes, _ ->
             val value1 = 5.0
-            nodes[1].registerInitiatedFlow(ParallelAlgorithmList::class, { session -> Answer(session, value1) })
+            nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
             val value2 = 6.0
-            nodes[2].registerInitiatedFlow(ParallelAlgorithmList::class, { session -> Answer(session, value2) })
+            nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
 
             val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
             runNetwork()

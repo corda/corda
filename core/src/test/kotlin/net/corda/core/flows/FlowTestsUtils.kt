@@ -42,6 +42,13 @@ inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> StartedNode<*>.registerI
 }
 
 /**
+ * Allows to register a flow of type [Answer] against an initiating flow of type [INITIATING], returning a valure of type [RESPONSE].
+ */
+inline fun <INITIATING : FlowLogic<*>, reified RESPONSE : Any> StartedNode<*>.registerAnswer(initiatingFlowType: KClass<INITIATING>, value: RESPONSE) {
+    internals.internalRegisterFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> Answer(session, value) }, Answer::class.javaObjectType, true)
+}
+
+/**
  * Extracts data from a [Map[FlowSession, UntrustworthyData<Any>]] without performing checks and casting to [R].
  */
 @Suppress("UNCHECKED_CAST")

@@ -205,27 +205,9 @@ abstract class FlowLogic<out T> {
      * @returns a [List] containing the objects received, wrapped in an [UntrustworthyData], with the same order of [sessions].
      */
     @Suspendable
-    fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>> {
+    open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>> {
         enforceNoDuplicates(sessions)
         return castMapValuesToKnownType(receiveAll(associateSessionsToReceiveType(receiveType, sessions)))
-    }
-
-    /**
-     * Suspends until a message has been received for each session in the specified [sessions].
-     *
-     * Consider [receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>] when the same type is expected from all sessions.
-     *
-     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
-     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
-     * corrupted data in order to exploit your code.
-     *
-     * @returns a [Map] containing the objects received, wrapped in an [UntrustworthyData], by the [FlowSession]s who sent them.
-     */
-    @Suspendable
-    fun receiveAll(session: Pair<FlowSession, Class<out Any>>, vararg sessions: Pair<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
-        val allSessions = arrayOf(session, *sessions)
-        enforceNoDuplicates(allSessions)
-        return receiveAll(mapOf(*allSessions))
     }
 
     /**
