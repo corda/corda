@@ -24,8 +24,8 @@ import java.util.*
  * This class needs database transactions to be in-flight during method calls and init, otherwise it will throw
  * exceptions.
  */
-class PersistentNetworkMapService(network: MessagingService, ownPlatformVersion: Int, networkMapCache: NetworkMapCacheInternal, minimumPlatformVersion: Int)
-    : AbstractNetworkMapService(network, ownPlatformVersion, networkMapCache, minimumPlatformVersion) {
+class PersistentNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal, minimumPlatformVersion: Int)
+    : AbstractNetworkMapService(network, networkMapCache, minimumPlatformVersion) {
 
     // Only the node_party_path column is needed to reconstruct a PartyAndCertificate but we have the others for human readability
     @Entity

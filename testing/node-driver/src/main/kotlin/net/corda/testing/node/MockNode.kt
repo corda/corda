@@ -160,7 +160,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         val id: Int,
                         internal val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
-            AbstractNode(config, advertisedServices, TestClock(), MOCK_VERSION_INFO.platformVersion, mockNet.busyLatch) {
+            AbstractNode(config, advertisedServices, TestClock(), MOCK_VERSION_INFO, mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
@@ -217,7 +217,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-            return InMemoryNetworkMapService(network, MOCK_VERSION_INFO.platformVersion, networkMapCache, 1)
+            return InMemoryNetworkMapService(network, networkMapCache, 1)
         }
 
         override fun getNotaryIdentity(): PartyAndCertificate? {

@@ -115,8 +115,8 @@ interface NetworkMapService {
 object NullNetworkMapService : NetworkMapService
 
 @ThreadSafe
-class InMemoryNetworkMapService(network: MessagingService, ownPlatformVersion: Int, networkMapCache: NetworkMapCacheInternal, minimumPlatformVersion: Int)
-    : AbstractNetworkMapService(network, ownPlatformVersion, networkMapCache, minimumPlatformVersion) {
+class InMemoryNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal, minimumPlatformVersion: Int)
+    : AbstractNetworkMapService(network, networkMapCache, minimumPlatformVersion) {
 
     override val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
@@ -134,7 +134,6 @@ class InMemoryNetworkMapService(network: MessagingService, ownPlatformVersion: I
  */
 @ThreadSafe
 abstract class AbstractNetworkMapService(network: MessagingService,
-                                         ownPlatformVersion: Int,
                                          private val networkMapCache: NetworkMapCacheInternal,
                                          private val minimumPlatformVersion: Int) : NetworkMapService, AbstractNodeService(network) {
     companion object {
@@ -161,14 +160,6 @@ abstract class AbstractNetworkMapService(network: MessagingService,
     val maxUnacknowledgedUpdates = 10
 
     private val handlers = ArrayList<MessageHandlerRegistration>()
-
-    init {
-        require(minimumPlatformVersion >= 1) { "minimumPlatformVersion cannot be less than 1" }
-        require(minimumPlatformVersion <= ownPlatformVersion) {
-            "minimumPlatformVersion cannot be greater than the node's own version"
-        }
-    }
-
     protected fun setup() {
         // Register message handlers
         handlers += addMessageHandler(FETCH_TOPIC) { req: FetchMapRequest -> processFetchAllRequest(req) }

@@ -63,11 +63,11 @@ import kotlin.system.exitProcess
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
  */
-open class Node(override val configuration: FullNodeConfiguration,
+open class Node(configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
-                private val versionInfo: VersionInfo,
+                versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true
-) : AbstractNode(configuration, advertisedServices, createClock(configuration), versionInfo.platformVersion) {
+) : AbstractNode(configuration, advertisedServices, createClock(configuration), versionInfo) {
     companion object {
         private val logger = loggerFor<Node>()
         var renderBasicInfoToConsole = true
@@ -94,6 +94,7 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     override val log: Logger get() = logger
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
+    override val configuration = super.configuration as FullNodeConfiguration
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 
     private val sameVmNodeNumber = sameVmNodeCounter.incrementAndGet() // Under normal (non-test execution) it will always be "1"
@@ -280,7 +281,7 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 
     override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-        return PersistentNetworkMapService(network, versionInfo.platformVersion, networkMapCache, configuration.minimumPlatformVersion)
+        return PersistentNetworkMapService(network, networkMapCache, configuration.minimumPlatformVersion)
     }
 
     /**

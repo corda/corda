@@ -47,7 +47,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
      * state within it is correctly restored.
      */
     private class SwizzleNetworkMapService(private val delegateFactory: () -> PersistentNetworkMapService) : NetworkMapService {
-        constructor(network: MessagingService, networkMapCache: NetworkMapCacheInternal) : this({ PersistentNetworkMapService(network, MOCK_VERSION_INFO.platformVersion, networkMapCache, 1) })
+        constructor(network: MessagingService, networkMapCache: NetworkMapCacheInternal) : this({ PersistentNetworkMapService(network, networkMapCache, 1) })
 
         var delegate = delegateFactory()
         fun swizzle() {
