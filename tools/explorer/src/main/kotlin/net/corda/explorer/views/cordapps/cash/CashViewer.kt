@@ -147,7 +147,7 @@ class CashViewer : CordaView("Cash") {
          */
         val searchField = SearchField(cashStates,
                 "Currency" to { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
-                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.organisation?.contains(text, true) ?: false }
+                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.organisation?.contains(text, true) == true }
         )
         root.top = hbox(5.0) {
             button("New Transaction", FontAwesomeIconView(FontAwesomeIcon.PLUS)) {

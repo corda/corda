@@ -103,7 +103,7 @@ class Network : CordaView() {
                     hgap = 5.0
                     vgap = 5.0
                     for (identity in identities) {
-                        val isNotary = identity.name.commonName?.let { ServiceType.parse(it).isNotary() } ?: false
+                        val isNotary = identity.name.commonName?.let { ServiceType.parse(it).isNotary() } == true
                         row("${if (isNotary) "Notary " else ""}Public Key :") {
                             copyableLabel(SimpleObjectProperty(identity.owningKey.toBase58String()))
                         }
@@ -150,7 +150,7 @@ class Network : CordaView() {
     }
 
     override fun onDock() {
-        centralLabel = mapLabels.firstOrDefault(SimpleObjectProperty(myLabel), { centralPeer?.contains(it.text, true) ?: false })
+        centralLabel = mapLabels.firstOrDefault(SimpleObjectProperty(myLabel), { centralPeer?.contains(it.text, true) == true })
         centralLabel.value?.let { mapScrollPane.centerLabel(it) }
     }
 
@@ -160,7 +160,7 @@ class Network : CordaView() {
     }
 
     init {
-        centralLabel = mapLabels.firstOrDefault(SimpleObjectProperty(myLabel), { centralPeer?.contains(it.text, true) ?: false })
+        centralLabel = mapLabels.firstOrDefault(SimpleObjectProperty(myLabel), { centralPeer?.contains(it.text, true) == true })
         Bindings.bindContent(notaryList.children, notaryButtons)
         Bindings.bindContent(peerList.children, peerButtons)
         // Run once when the screen is ready.

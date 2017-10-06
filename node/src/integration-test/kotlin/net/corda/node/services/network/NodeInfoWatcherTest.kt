@@ -35,7 +35,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
 
     lateinit var keyManagementService: KeyManagementService
     lateinit var nodeInfoPath: Path
-    val scheduler = TestScheduler();
+    val scheduler = TestScheduler()
     val testSubscriber = TestSubscriber<NodeInfo>()
 
     // Object under test

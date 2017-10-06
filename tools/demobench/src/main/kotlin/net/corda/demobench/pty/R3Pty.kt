@@ -21,7 +21,7 @@ class R3Pty(val name: CordaX500Name, settings: SettingsProvider, dimension: Dime
 
     val terminal = JediTermWidget(dimension, settings)
 
-    val isConnected: Boolean get() = terminal.ttyConnector?.isConnected ?: false
+    val isConnected: Boolean get() = terminal.ttyConnector?.isConnected == true
 
     override fun close() {
         log.info("Closing terminal '{}'", name)

@@ -21,8 +21,8 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     val default: String? = generateDefault()
     val mandatory: Boolean = generateMandatory()
 
-    private val isInterface: Boolean get() = resolvedType.asClass()?.isInterface ?: false
-    private val isJVMPrimitive: Boolean get() = resolvedType.asClass()?.isPrimitive ?: false
+    private val isInterface: Boolean get() = resolvedType.asClass()?.isInterface == true
+    private val isJVMPrimitive: Boolean get() = resolvedType.asClass()?.isPrimitive == true
 
     private fun generateType(): String {
         return if (isInterface || resolvedType == Any::class.java) "*" else SerializerFactory.nameForType(resolvedType)
@@ -45,7 +45,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     }
 
     private fun generateMandatory(): Boolean {
-        return isJVMPrimitive || !(readMethod?.returnsNullable() ?: true)
+        return isJVMPrimitive || readMethod?.returnsNullable() == false
     }
 
     private fun Method.returnsNullable(): Boolean {

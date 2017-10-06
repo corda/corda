@@ -454,7 +454,7 @@ class Obligation<P : Any> : Contract {
 
                 requireThat {
                     "there is a time-window from the authority" using (timeWindow != null)
-                    "the due date has passed" using (timeWindow!!.fromTime?.isAfter(deadline) ?: false)
+                    "the due date has passed" using (timeWindow!!.fromTime?.isAfter(deadline) == true)
                     "input state lifecycle is correct" using (input.lifecycle == expectedInputLifecycle)
                     "output state corresponds exactly to input state, with lifecycle changed" using (expectedOutput == actualOutput)
                 }

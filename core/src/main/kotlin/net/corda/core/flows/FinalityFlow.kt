@@ -88,7 +88,7 @@ class FinalityFlow(val transaction: SignedTransaction,
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
         val notaryKey = stx.tx.notary?.owningKey
         val signers = stx.sigs.map { it.by }.toSet()
-        return !(notaryKey?.isFulfilledBy(signers) ?: false)
+        return notaryKey?.isFulfilledBy(signers) != true
     }
 
     private fun getPartiesToSend(ltx: LedgerTransaction): Set<Party> {

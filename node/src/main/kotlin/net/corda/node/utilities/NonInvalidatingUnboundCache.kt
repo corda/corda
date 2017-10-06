@@ -29,8 +29,5 @@ class NonInvalidatingUnboundCache<K, V> private constructor(
         }
 
         override fun load(key: K) = loadFunction(key)
-        override fun loadAll(keys: Iterable<K>): MutableMap<K, V> {
-            return super.loadAll(keys)
-        }
     }
 }

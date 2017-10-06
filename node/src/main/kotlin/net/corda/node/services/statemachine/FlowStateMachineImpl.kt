@@ -265,7 +265,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // This is a hack to allow cash app access list of permitted issuer currency.
         // TODO: replace this with cordapp configuration.
         val config = serviceHub.configuration as? FullNodeConfiguration
-        val permissionGranted = config?.extraAdvertisedServiceIds?.contains(permissionName) ?: true
+        val permissionGranted = config?.extraAdvertisedServiceIds?.contains(permissionName) != false
         val checkPermissionEvent = FlowPermissionAuditEvent(
                 serviceHub.clock.instant(),
                 flowInitiator,
