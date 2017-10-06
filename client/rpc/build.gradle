@@ -90,6 +90,9 @@ task smokeTest(type: Test) {
 
 jar {
     baseName 'corda-rpc'
+    manifest {
+        attributes 'Automatic-Module-Name': 'net.corda.client.rpc'
+    }
 }
 
 publish {

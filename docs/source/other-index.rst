@@ -7,5 +7,6 @@ Other
    json
    secure-coding-guidelines
    corda-repo-layout
+   corda-modules
    building-the-docs
    codestyle
