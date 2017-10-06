@@ -55,7 +55,7 @@ class AttachmentDownloadServlet : HttpServlet() {
 
             // Closing the output stream commits our response. We cannot change the status code after this.
             resp.outputStream.close()
-        } catch(e: FileNotFoundException) {
+        } catch (e: FileNotFoundException) {
             log.warn("404 Not Found whilst trying to handle attachment download request for ${servletContext.contextPath}/$reqPath")
             resp.sendError(HttpServletResponse.SC_NOT_FOUND)
             return
