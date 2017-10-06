@@ -46,6 +46,7 @@ class NodeProcess(
     class Factory(val buildDirectory: Path = Paths.get("build"),
                   val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())) {
         val nodesDirectory = buildDirectory / formatter.format(Instant.now())
+
         init {
             nodesDirectory.createDirectories()
         }
@@ -95,11 +96,11 @@ class NodeProcess(
 
         private fun startNode(nodeDir: Path): Process {
             val builder = ProcessBuilder()
-                .command(javaPath.toString(), "-jar", cordaJar.toString())
-                .directory(nodeDir.toFile())
+                    .command(javaPath.toString(), "-jar", cordaJar.toString())
+                    .directory(nodeDir.toFile())
 
             builder.environment().putAll(mapOf(
-                "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()
+                    "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()
             ))
 
             return builder.start()

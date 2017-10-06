@@ -82,7 +82,9 @@ open class MockServices(
         fun makeTestDatabaseProperties(key: String? = null, value: String? = null): Properties {
             val props = Properties()
             props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
-            if (key != null) { props.setProperty(key, value) }
+            if (key != null) {
+                props.setProperty(key, value)
+            }
             return props
         }
 
@@ -154,10 +156,11 @@ open class MockServices(
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
-    override val myInfo: NodeInfo get() {
-        val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
-        return NodeInfo(emptyList(), listOf(identity), 1,  serial = 1L)
-    }
+    override val myInfo: NodeInfo
+        get() {
+            val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
+            return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
+        }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     val mockCordappProvider: MockCordappProvider = MockCordappProvider(CordappLoader.createWithTestPackages(cordappPackages + CordappLoader.testPackages)).start(attachments) as MockCordappProvider
     override val cordappProvider: CordappProvider = mockCordappProvider

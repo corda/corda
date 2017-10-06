@@ -22,32 +22,32 @@ fun initialiseTestSerialization() {
     // Check that everything is configured for testing with mutable delegating instances.
     try {
         check(SerializationDefaults.SERIALIZATION_FACTORY is TestSerializationFactory)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.SERIALIZATION_FACTORY = TestSerializationFactory()
     }
     try {
         check(SerializationDefaults.P2P_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.P2P_CONTEXT = TestSerializationContext()
     }
     try {
         check(SerializationDefaults.RPC_SERVER_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.RPC_SERVER_CONTEXT = TestSerializationContext()
     }
     try {
         check(SerializationDefaults.RPC_CLIENT_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.RPC_CLIENT_CONTEXT = TestSerializationContext()
     }
     try {
         check(SerializationDefaults.STORAGE_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.STORAGE_CONTEXT = TestSerializationContext()
     }
     try {
         check(SerializationDefaults.CHECKPOINT_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.CHECKPOINT_CONTEXT = TestSerializationContext()
     }
 

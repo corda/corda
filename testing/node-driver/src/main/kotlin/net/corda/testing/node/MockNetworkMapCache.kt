@@ -53,6 +53,6 @@ class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMap
      */
     @VisibleForTesting
     fun deleteRegistration(legalIdentity: Party): Boolean {
-        return partyNodes.removeIf { legalIdentity.owningKey in it.legalIdentitiesAndCerts.map { it.owningKey }}
+        return partyNodes.removeIf { legalIdentity.owningKey in it.legalIdentitiesAndCerts.map { it.owningKey } }
     }
 }
