@@ -43,7 +43,7 @@ class KryoTests : TestDependencyInjectionBase() {
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P)
+                SerializationContext.UseCase.Storage)
     }
 
     @Test
