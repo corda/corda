@@ -66,3 +66,11 @@ task notarise(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.notarydemo.NotariseKt'
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.notary'
+        )
+    }
+}

@@ -143,3 +143,11 @@ task runWebCashIssue(type: JavaExec) {
     args '--currency'
     args 'GBP'
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.bankofcorda'
+        )
+    }
+}

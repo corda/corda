@@ -35,3 +35,11 @@ run {
         systemProperty "consoleLogLevel", System.properties.getProperty('consoleLogLevel')
     }
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.tools.loadtest'
+        )
+    }
+}
