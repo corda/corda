@@ -52,8 +52,11 @@ class CordaRPCClientTest : NodeBasedTest() {
     @Before
     fun setUp() {
         setCordappPackages("net.corda.finance.contracts")
-        node = startNode(ALICE.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-        node.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        node = startNode(
+                ALICE.name,
+                rpcUsers = listOf(rpcUser),
+                advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)),
+                customSchemas = setOf(CashSchemaV1)).getOrThrow()
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }
 

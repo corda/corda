@@ -20,6 +20,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NotaryService
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -111,14 +112,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
          */
         fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                    advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                   entropyRoot: BigInteger): N
+                   entropyRoot: BigInteger, customSchemas: Set<MappedSchema>): N
     }
 
     object DefaultFactory : Factory<MockNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNode {
-            return MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot)
+                            entropyRoot: BigInteger, customSchemas: Set<MappedSchema>): MockNode {
+            return MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot, customSchemas)
         }
     }
 
@@ -151,14 +152,15 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overriden to cause nodes to have stable or colliding identity/service keys.
      */
-    open class MockNode(config: NodeConfiguration,
+    open class MockNode(val configuration: NodeConfiguration,
                         val mockNet: MockNetwork,
                         override val networkMapAddress: SingleMessageRecipient?,
                         advertisedServices: Set<ServiceInfo>,
                         val id: Int,
                         internal val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
-            AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
+                        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+                        private val customSchemas: Set<MappedSchema>) :
+            AbstractNode(configuration, advertisedServices, TestClock(), mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
         override val platformVersion: Int get() = 1
@@ -170,6 +172,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     mockNet.sharedServerThread
                 }
         override val started: StartedNode<MockNode>? get() = uncheckedCast(super.started)
+        override fun customSchemas() = super.customSchemas() + customSchemas
         override fun start(): StartedNode<MockNode> = uncheckedCast(super.start())
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
@@ -312,7 +315,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                 advertisedServices = arrayOf(),
                 entropyRoot  = BigInteger.valueOf(random63BitValue()),
                 configOverrides = {},
-                start = true
+                start = true,
+                customSchemas = emptySet()
         ).started!!.apply {
             _networkMapNode = this
         })
@@ -330,9 +334,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                                            legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                                            entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                                            vararg advertisedServices: ServiceInfo,
-                                           configOverrides: (NodeConfiguration) -> Any? = {}): N {
+                                           configOverrides: (NodeConfiguration) -> Any? = {},
+                                           customSchemas: Set<MappedSchema> = emptySet()): N {
         val networkMapAddress = networkMapNode.network.myAddress
-        return createNodeImpl(networkMapAddress, forcedID, nodeFactory, false, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides)
+        return createNodeImpl(networkMapAddress, forcedID, nodeFactory, false, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides, customSchemas)
     }
 
     /**
@@ -347,8 +352,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                    legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                    vararg advertisedServices: ServiceInfo,
-                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<MockNode> {
-        return createNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
+                   configOverrides: (NodeConfiguration) -> Any? = {},
+                   customSchemas: Set<MappedSchema> = emptySet()): StartedNode<MockNode> {
+        return createNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides, customSchemas = customSchemas)
     }
 
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
@@ -356,16 +362,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                                   legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                                   vararg advertisedServices: ServiceInfo,
-                                  configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
+                                  configOverrides: (NodeConfiguration) -> Any? = {},
+                                  customSchemas: Set<MappedSchema> = emptySet()): StartedNode<N> {
         val networkMapAddress = networkMapNode.network.myAddress
-        return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides).started)!!
+        return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides, customSchemas).started)!!
     }
 
     private fun <N : MockNode> createNodeImpl(networkMapAddress: SingleMessageRecipient?, forcedID: Int?, nodeFactory: Factory<N>,
                                               start: Boolean, legalName: CordaX500Name?, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                                               entropyRoot: BigInteger,
                                               advertisedServices: Array<out ServiceInfo>,
-                                              configOverrides: (NodeConfiguration) -> Any?): N {
+                                              configOverrides: (NodeConfiguration) -> Any?,
+                                              customSchemas: Set<MappedSchema>): N {
         val id = forcedID ?: nextNodeId++
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
@@ -373,7 +381,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }
-        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, notaryIdentity, entropyRoot).apply {
+        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, notaryIdentity, entropyRoot, customSchemas).apply {
             if (start) {
                 start()
                 if (threadPerNode && networkMapAddress != null) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
@@ -419,8 +427,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     @JvmOverloads
     fun createPartyNode(legalName: CordaX500Name? = null,
-                        notaryIdentity: Pair<ServiceInfo, KeyPair>? = null): StartedNode<MockNode> {
-        return createNode(legalName = legalName, notaryIdentity = notaryIdentity)
+                        notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
+                        customSchemas: Set<MappedSchema> = emptySet()): StartedNode<MockNode> {
+        return createNode(legalName = legalName, notaryIdentity = notaryIdentity, customSchemas = customSchemas)
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.

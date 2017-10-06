@@ -32,26 +32,14 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
     private val sessionFactories = ConcurrentHashMap<Set<MappedSchema>, SessionFactory>()
 
-    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?:"")
-
-    init {
-        logger.info("Init HibernateConfiguration for schemas: ${schemaService.schemaOptions.keys}")
-        sessionFactoryForRegisteredSchemas()
+    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?: "")
+    val sessionFactoryForRegisteredSchemas = schemaService.schemaOptions.keys.let {
+        logger.info("Init HibernateConfiguration for schemas: $it")
+        sessionFactoryForSchemas(it)
     }
 
-    fun sessionFactoryForRegisteredSchemas(): SessionFactory {
-        return sessionFactoryForSchemas(*schemaService.schemaOptions.keys.toTypedArray())
-    }
-
-    fun sessionFactoryForSchema(schema: MappedSchema): SessionFactory {
-        return sessionFactoryForSchemas(schema)
-    }
-
-    //vararg to set conversions left to preserve method signature for now
-    fun sessionFactoryForSchemas(vararg schemas: MappedSchema): SessionFactory {
-        val schemaSet: Set<MappedSchema> = schemas.toSet()
-        return sessionFactories.computeIfAbsent(schemaSet, { makeSessionFactoryForSchemas(schemaSet) })
-    }
+    /** @param key must be immutable, not just read-only. */
+    fun sessionFactoryForSchemas(key: Set<MappedSchema>) = sessionFactories.computeIfAbsent(key, { makeSessionFactoryForSchemas(key) })
 
     private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")

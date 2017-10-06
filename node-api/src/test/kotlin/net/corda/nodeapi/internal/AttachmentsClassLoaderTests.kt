@@ -54,8 +54,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     class DummyServiceHub : MockServices() {
         override val cordappProvider: CordappProviderImpl
-                = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH))).start(attachments)
-
+                = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
         private val cordapp get() = cordappProvider.cordapps.first()
         val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
         val appContext get() = cordappProvider.getAppContext(cordapp)

@@ -5,6 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
@@ -90,7 +91,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
         check(_networkMapNode == null || _networkMapNode!!.info.legalIdentitiesAndCerts.first().name == legalName)
-        return startNodeInternal(legalName, platformVersion, advertisedServices, rpcUsers, configOverrides).apply {
+        return startNodeInternal(legalName, platformVersion, advertisedServices, rpcUsers, configOverrides, false, emptySet()).apply {
             _networkMapNode = this
         }
     }
@@ -101,6 +102,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap(),
+                  customSchemas: Set<MappedSchema> = emptySet(),
                   noNetworkMap: Boolean = false,
                   waitForConnection: Boolean = true): CordaFuture<StartedNode<Node>> {
         val networkMapConf = if (noNetworkMap) {
@@ -125,7 +127,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                 advertisedServices,
                 rpcUsers,
                 networkMapConf + configOverrides,
-                noNetworkMap)
+                noNetworkMap,
+                customSchemas)
         return if (waitForConnection) node.internals.nodeReadyFuture.map { node } else doneFuture(node)
     }
 
@@ -167,7 +170,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>,
-                                  noNetworkMap: Boolean = false): StartedNode<Node> {
+                                  noNetworkMap: Boolean,
+                                  customSchemas: Set<MappedSchema>): StartedNode<Node> {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
@@ -185,8 +189,10 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         )
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
-        val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
-                initialiseSerialization = false).start()
+        val node = object : Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
+                initialiseSerialization = false) {
+            override fun customSchemas() = super.customSchemas() + customSchemas
+        }.start()
         nodes += node
         thread(name = legalName.organisation) {
             node.internals.run()

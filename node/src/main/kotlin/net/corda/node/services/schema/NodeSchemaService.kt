@@ -33,7 +33,7 @@ import net.corda.node.services.vault.VaultSchemaV1
  * TODO: support plugins for schema version upgrading or custom mapping not supported by original [QueryableState].
  * TODO: create whitelisted tables when a CorDapp is first installed
  */
-class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaService, SingletonSerializeAsToken() {
+class NodeSchemaService(customSchemas: Set<MappedSchema>) : SchemaService, SingletonSerializeAsToken() {
 
     // Entities for compulsory services
     object NodeServices
@@ -67,7 +67,7 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                   Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
                   Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
-    override var schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
+    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
         mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())
     })
 
@@ -91,11 +91,5 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
         if ((schema is VaultSchemaV1) && (state is FungibleAsset<*>))
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
         return (state as QueryableState).generateMappedObject(schema)
-    }
-
-    override fun registerCustomSchemas(_customSchemas: Set<MappedSchema>) {
-        schemaOptions = schemaOptions.plus(_customSchemas.map {
-            mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())
-        })
     }
 }

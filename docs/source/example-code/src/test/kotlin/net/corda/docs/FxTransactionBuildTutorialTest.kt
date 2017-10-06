@@ -33,10 +33,8 @@ class FxTransactionBuildTutorialTest {
                 legalName = DUMMY_NOTARY.name,
                 notaryIdentity = notaryService to DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(notaryService))
-        nodeA = mockNet.createPartyNode()
-        nodeB = mockNet.createPartyNode()
-        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
+        nodeA = mockNet.createPartyNode(customSchemas = setOf(CashSchemaV1))
+        nodeB = mockNet.createPartyNode(customSchemas = setOf(CashSchemaV1))
         nodeB.internals.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
         notary = nodeA.services.getDefaultNotary()
     }

@@ -99,7 +99,7 @@ open class NodeStartup(val args: Array<String>) {
             return
         }
         val startedNode = node.start()
-        printPluginsAndServices(startedNode.internals)
+        printPluginsAndServices(startedNode)
         startedNode.internals.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
@@ -263,11 +263,11 @@ open class NodeStartup(val args: Array<String>) {
         }
     }
 
-    private fun printPluginsAndServices(node: Node) {
-        node.configuration.extraAdvertisedServiceIds.filter { it.startsWith("corda.notary.") }.let {
+    private fun printPluginsAndServices(node: StartedNode<Node>) {
+        node.internals.configuration.extraAdvertisedServiceIds.filter { it.startsWith("corda.notary.") }.let {
             if (it.isNotEmpty()) Node.printBasicNodeInfo("Providing additional services", it.joinToString())
         }
-        Node.printBasicNodeInfo("Loaded CorDapps", node.cordappProvider.cordapps.joinToString { it.name })
+        Node.printBasicNodeInfo("Loaded CorDapps", node.services.cordappProvider.cordapps.joinToString { it.name })
     }
 
     open fun drawBanner(versionInfo: VersionInfo) {

@@ -9,12 +9,15 @@ import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SingletonSerializeAsToken
-import java.net.URLClassLoader
+
+interface CordappProviderInternal : CordappProvider {
+    val cordapps: List<Cordapp>
+}
 
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(private val cordappLoader: CordappLoader) : SingletonSerializeAsToken(), CordappProvider {
+open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
     override fun getAppContext(): CordappContext {
         // TODO: Use better supported APIs in Java 9
         Exception().stackTrace.forEach { stackFrame ->
@@ -34,17 +37,8 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader) : Singl
     /**
      * Current known CorDapps loaded on this node
      */
-    val cordapps get() = cordappLoader.cordapps
-    private lateinit var cordappAttachments: HashBiMap<SecureHash, Cordapp>
-
-    /**
-     * Should only be called once from the initialisation routine of the node or tests
-     */
-    fun start(attachmentStorage: AttachmentStorage): CordappProviderImpl {
-        cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
-        return this
-    }
-
+    override val cordapps get() = cordappLoader.cordapps
+    private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
     /**
      * Gets the attachment ID of this CorDapp. Only CorDapps with contracts have an attachment ID
      *

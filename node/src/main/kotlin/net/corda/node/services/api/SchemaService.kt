@@ -30,11 +30,5 @@ interface SchemaService {
      * or via custom logic in this service.
      */
     fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState
-
-    /**
-     * Registration mechanism to add custom contract schemas that extend the [MappedSchema] class.
-     */
-    fun registerCustomSchemas(customSchemas: Set<MappedSchema>)
-
 }
 //DOCEND SchemaService

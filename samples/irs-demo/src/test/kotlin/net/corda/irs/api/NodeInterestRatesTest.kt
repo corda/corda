@@ -64,7 +64,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     @Before
     fun setUp() {
         setCordappPackages("net.corda.finance.contracts")
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         database.transaction {
             oracle = NodeInterestRates.Oracle(services).apply { knownFixes = TEST_DATA }
         }

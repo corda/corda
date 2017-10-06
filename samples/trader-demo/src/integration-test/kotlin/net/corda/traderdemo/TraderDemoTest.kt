@@ -44,15 +44,12 @@ class TraderDemoTest : NodeBasedTest() {
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
         val notaryFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        val nodeAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser))
-        val nodeBFuture = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser))
+        val nodeAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser), customSchemas = setOf(CashSchemaV1))
+        val nodeBFuture = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser), customSchemas = setOf(CashSchemaV1, CommercialPaperSchemaV1))
         val bankNodeFuture = startNode(BOC.name, rpcUsers = listOf(bankUser))
         val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).map { it.getOrThrow() }
 
         nodeA.internals.registerInitiatedFlow(BuyerFlow::class.java)
-        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1, CommercialPaperSchemaV1))
-
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
             val client = CordaRPCClient(it.internals.configuration.rpcAddress!!)
             client.start(demoUser.username, demoUser.password).proxy

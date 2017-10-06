@@ -79,7 +79,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
         val databaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, databaseProperties, createIdentityService = ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, databaseProperties, ::makeTestIdentityService)
         val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
@@ -98,7 +98,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     network = mockMessagingService), TestReference {
                 override val vaultService: VaultService = NodeVaultService(this, database.hibernateConfig)
                 override val testReference = this@NodeSchedulerServiceTest
-                override val cordappProvider: CordappProviderImpl = CordappProviderImpl(CordappLoader.createWithTestPackages()).start(attachments)
+                override val cordappProvider = CordappProviderImpl(CordappLoader.createWithTestPackages(), attachments)
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             scheduler = NodeSchedulerService(services, schedulerGatedExecutor, serverThread = smmExecutor)

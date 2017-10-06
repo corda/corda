@@ -6,8 +6,6 @@ import net.corda.core.node.services.IdentityService
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
-import org.hibernate.SessionFactory
-
 import rx.Observable
 import rx.Subscriber
 import rx.subjects.UnicastSubject
@@ -26,18 +24,12 @@ const val NODE_DATABASE_PREFIX = "node_"
 class CordaPersistence(var dataSource: HikariDataSource, private val schemaService: SchemaService,
                        private val createIdentityService: ()-> IdentityService, databaseProperties: Properties): Closeable {
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
-
-   val hibernateConfig: HibernateConfiguration by lazy {
+    val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             HibernateConfiguration(schemaService, databaseProperties, createIdentityService)
         }
-   }
-
-    val entityManagerFactory: SessionFactory by lazy {
-        transaction {
-            hibernateConfig.sessionFactoryForRegisteredSchemas()
-        }
     }
+    val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
 
     companion object {
         fun connect(dataSource: HikariDataSource, schemaService: SchemaService, createIdentityService: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
@@ -107,7 +99,7 @@ class CordaPersistence(var dataSource: HikariDataSource, private val schemaServi
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, schemaService: SchemaService = NodeSchemaService(), createIdentityService: () -> IdentityService): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, createIdentityService: () -> IdentityService, schemaService: SchemaService = NodeSchemaService(emptySet())): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
     val persistence = CordaPersistence.connect(dataSource, schemaService, createIdentityService, databaseProperties ?: Properties())

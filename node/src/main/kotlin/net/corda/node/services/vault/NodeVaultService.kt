@@ -47,7 +47,7 @@ import javax.persistence.Tuple
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val services: ServiceHub, private val hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val services: ServiceHub, hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultService {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -378,9 +378,8 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
         return keysToCheck.any { it in myKeys }
     }
 
-    private var sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
-    private var criteriaBuilder = sessionFactory.criteriaBuilder
-
+    private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas
+    private val criteriaBuilder = sessionFactory.criteriaBuilder
     /**
      * Maintain a list of contract state interfaces to concrete types stored in the vault
      * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
@@ -407,11 +406,6 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
-
-        // refresh to include any schemas registered after initial VQ service initialisation
-        sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
-        criteriaBuilder = sessionFactory.criteriaBuilder
-
         // calculate total results where a page specification has been defined
         var totalStates = -1L
         if (!paging.isDefault) {

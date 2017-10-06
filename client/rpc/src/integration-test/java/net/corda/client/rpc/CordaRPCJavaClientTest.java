@@ -54,9 +54,8 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     public void setUp() throws ExecutionException, InterruptedException {
         setCordappPackages("net.corda.finance.contracts");
         Set<ServiceInfo> services = new HashSet<>(singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
-        CordaFuture<StartedNode<Node>> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap());
+        CordaFuture<StartedNode<Node>> nodeFuture = startNode(getALICE().getName(), 1, services, singletonList(rpcUser), emptyMap(), Collections.singleton(CashSchemaV1.INSTANCE));
         node = nodeFuture.get();
-        node.getInternals().registerCustomSchemas(Collections.singleton(CashSchemaV1.INSTANCE));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 

@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
@@ -20,7 +21,6 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
@@ -273,8 +273,9 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
                             advertisedServices: Set<ServiceInfo>,
                             id: Int,
                             notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNode {
-            return object : MockNode(config, network, null, advertisedServices, id, notaryIdentity, entropyRoot) {
+                            entropyRoot: BigInteger,
+                            customSchemas: Set<MappedSchema>): MockNode {
+            return object : MockNode(config, network, null, advertisedServices, id, notaryIdentity, entropyRoot, customSchemas) {
                 override fun makeNetworkMapService() = NullNetworkMapService
             }
         }

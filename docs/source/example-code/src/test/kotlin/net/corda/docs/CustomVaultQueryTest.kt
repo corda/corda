@@ -35,13 +35,10 @@ class CustomVaultQueryTest {
                 legalName = DUMMY_NOTARY.name,
                 notaryIdentity = notaryService to DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(notaryService))
-        nodeA = mockNet.createPartyNode()
-        nodeB = mockNet.createPartyNode()
-
+        nodeA = mockNet.createPartyNode(customSchemas = setOf(CashSchemaV1))
+        nodeB = mockNet.createPartyNode(customSchemas = setOf(CashSchemaV1))
         nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
         nodeA.internals.installCordaService(CustomVaultQuery.Service::class.java)
-        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
         notary = nodeA.services.getDefaultNotary()
     }
 
