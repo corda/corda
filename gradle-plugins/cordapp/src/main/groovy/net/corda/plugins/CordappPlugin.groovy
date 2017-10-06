@@ -10,20 +10,14 @@ import org.gradle.api.artifacts.Configuration
  */
 class CordappPlugin implements Plugin<Project> {
     void apply(Project project) {
-        createCompileConfiguration("cordapp", project)
-        createCompileConfiguration("cordaCompile", project)
+        Utils.createCompileConfiguration("cordapp", project)
+        Utils.createCompileConfiguration("cordaCompile", project)
 
         Configuration configuration = project.configurations.create("cordaRuntime")
         configuration.transitive = false
         project.configurations.runtime.extendsFrom configuration
 
         configureCordappJar(project)
-    }
-
-    private void createCompileConfiguration(String name, Project project) {
-        Configuration configuration = project.configurations.create(name)
-        configuration.transitive = false
-        project.configurations.compile.extendsFrom configuration
     }
 
     /**

@@ -23,6 +23,6 @@ class Cordformation implements Plugin<Project> {
     }
 
     void apply(Project project) {
-
+        Utils.createCompileConfiguration("cordapp", project)
     }
 }

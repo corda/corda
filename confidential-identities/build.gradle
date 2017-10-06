@@ -13,7 +13,7 @@ description 'Corda Experimental Confidential Identities'
 dependencies {
     // Note the :confidential-identities module is a CorDapp in its own right
     // and CorDapps using :confidential-identities features should use 'cordapp' not 'compile' linkage.
-    cordaCompile project(':core')
+    compile project(':core')
 
     // Quasar, for suspendable fibres.
     compileOnly "co.paralleluniverse:quasar-core:$quasar_version:jdk8"

@@ -41,6 +41,7 @@ sourceSets {
 dependencies {
     compile gradleApi()
     compile localGroovy()
+    compile project(":cordapp")
 
     noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 

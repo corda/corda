@@ -1,4 +1,4 @@
-apply plugin: 'java'
+apply plugin: 'groovy'
 apply plugin: 'net.corda.plugins.publish-utils'
 
 description 'Turns a project into a cordapp project that produces cordapp fat JARs'
@@ -9,8 +9,8 @@ repositories {
 }
 
 dependencies {
-    gradleApi()
-    localGroovy()
+    compile gradleApi()
+    compile localGroovy()
 }
 
 publish {
