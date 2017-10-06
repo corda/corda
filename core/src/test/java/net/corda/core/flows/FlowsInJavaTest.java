@@ -20,15 +20,14 @@ import static org.junit.Assert.fail;
 public class FlowsInJavaTest {
 
     private final MockNetwork mockNet = new MockNetwork();
-    private StartedNode<MockNetwork.MockNode> notaryNode;
     private StartedNode<MockNetwork.MockNode> aliceNode;
     private StartedNode<MockNetwork.MockNode> bobNode;
 
     @Before
     public void setUp() throws Exception {
-        notaryNode = mockNet.createNotaryNode();
-        aliceNode = mockNet.createPartyNode(notaryNode.getNetwork().getMyAddress(), TestConstants.getALICE().getName());
-        bobNode = mockNet.createPartyNode(notaryNode.getNetwork().getMyAddress(), TestConstants.getBOB().getName());
+        mockNet.createNotaryNode();
+        aliceNode = mockNet.createPartyNode(TestConstants.getALICE().getName());
+        bobNode = mockNet.createPartyNode(TestConstants.getBOB().getName());
         mockNet.runNetwork();
         // Ensure registration was successful
         aliceNode.getInternals().getNodeReadyFuture().get();

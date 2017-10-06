@@ -40,7 +40,7 @@ class ValidatingNotaryServiceTests {
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type))
         )
-        clientNode = mockNet.createNode(notaryNode.network.myAddress)
+        clientNode = mockNet.createNode()
         mockNet.runNetwork() // Clear network map registration messages
         notaryNode.internals.ensureRegistered()
         notary = clientNode.services.getDefaultNotary()
