@@ -5,7 +5,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
