@@ -67,6 +67,9 @@ class NodeInfoWatcher(private val nodePath: Path,
      * Read all the files contained in [nodePath] / [CordformNode.NODE_INFO_DIRECTORY] and keep watching
      * the folder for further updates.
      *
+     * We simply list the direcotry content every 5 seconds, the Java implementation of WatchService has been proven to
+     * be unreliable on MacOs and given the fairly simple use case we have, this simple implementation should do.
+     *
      * @return an [Observable] returning [NodeInfo]s, there is no guarantee that the same value isn't returned more
      *      than once.
      */

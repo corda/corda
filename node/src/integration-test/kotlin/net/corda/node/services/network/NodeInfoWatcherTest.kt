@@ -90,7 +90,6 @@ class NodeInfoWatcherTest : NodeBasedTest() {
     }
 
     @Test
-    //@Ignore
     fun `polling folder`() {
         nodeInfoPath.createDirectories()
 
