@@ -5,7 +5,7 @@ Corda artifacts can be required from Java 9 Jigsaw modules.
 From within a ``module-info.java``, you can reference one of the modules e.g., ``requires net.corda.core;``.
 
 .. warning:: while Corda artifacts can be required from ``module-info.java`` files, they are still not proper Jigsaw modules,
-because they rely on the automatic module mechanism and declare no module descriptors themselves. We plan to integrate Jigsaw more thoroughly in the future.
+   because they rely on the automatic module mechanism and declare no module descriptors themselves. We plan to integrate Jigsaw more thoroughly in the future.
 
 Corda stable modules
 --------------------
@@ -25,10 +25,9 @@ developers using them until we are able to graduate them into the public API:
 * **net.corda.node.driver**: test utilities to run nodes programmatically
 * **net.corda.confidential.identities**: experimental support for confidential identities on the ledger
 * **net.corda.node.test.utils**: generic test utilities
+* **net.corda.finance**: a range of elementary contracts (and associated schemas) and protocols, such as abstract fungible assets, cash, obligation and commercial paper
 * **net.corda.client.jfx**: support for Java FX UI
 * **net.corda.client.mock**: client mock utilities
-* **net.corda.sandbox-creator**: sandbox utilities
-* **net.corda.quasar.hook**: agent to hook into Quasar and provide types exclusion lists
 
 Corda unstable modules
 ----------------------
@@ -36,7 +35,6 @@ Corda unstable modules
 The following modules are available but we do not commit to their stability or continuation in any sense:
 
 * **net.corda.buildSrc**: necessary gradle plugins to build Corda
-* **net.corda.finance**: a range of elementary contracts (and associated schemas) and protocols, such as abstract fungible assets, cash, obligation and commercial paper
 * **net.corda.node**: core code of the Corda node (eg: node driver, node services, messaging, persistence)
 * **net.corda.node.api**: data structures shared between the node and the client module, e.g. types sent via RPC
 * **net.corda.samples.network.visualiser**: a network visualiser that uses a simulation to visualise the interaction and messages between nodes on the Corda network
@@ -54,3 +52,5 @@ The following modules are available but we do not commit to their stability or c
 * **net.corda.tools.loadtest**: Corda load tests
 * **net.corda.verifier**: allows out-of-node transaction verification, allowing verification to scale horizontally
 * **net.corda.webserver**: is a servlet container for CorDapps that export HTTP endpoints. This server is an RPC client of the node
+* **net.corda.sandbox-creator**: sandbox utilities
+* **net.corda.quasar.hook**: agent to hook into Quasar and provide types exclusion lists
