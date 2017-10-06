@@ -286,7 +286,7 @@ public class ScanApi extends DefaultTask {
             return 0;
         }
 
-        private String filterAnnotationsFor(MethodInfo method) {
+        private MethodInfo filterAnnotationsFor(MethodInfo method) {
             return new MethodInfo(
                 method.getClassName(),
                 method.getMethodName(),
@@ -295,7 +295,7 @@ public class ScanApi extends DefaultTask {
                 method.getAnnotationNames().stream()
                     .filter(ScanApi::isVisibleAnnotation)
                     .collect(toList())
-            ).toString();
+            );
         }
     }
 
