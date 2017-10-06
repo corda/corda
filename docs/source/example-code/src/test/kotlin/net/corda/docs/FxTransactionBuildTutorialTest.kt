@@ -20,7 +20,6 @@ import kotlin.test.assertEquals
 
 class FxTransactionBuildTutorialTest {
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var nodeA: StartedNode<MockNetwork.MockNode>
     lateinit var nodeB: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
@@ -30,12 +29,12 @@ class FxTransactionBuildTutorialTest {
         setCordappPackages("net.corda.finance.contracts.asset")
         mockNet = MockNetwork(threadPerNode = true)
         val notaryService = ServiceInfo(ValidatingNotaryService.type)
-        notaryNode = mockNet.createNode(
+        mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                overrideServices = mapOf(notaryService to DUMMY_NOTARY_KEY),
+                notaryIdentity = notaryService to DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(notaryService))
-        nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
-        nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
+        nodeA = mockNet.createPartyNode()
+        nodeB = mockNet.createPartyNode()
         nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
         nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1))
         nodeB.internals.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
