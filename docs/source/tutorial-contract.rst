@@ -327,7 +327,7 @@ little odd: we have a *requireThat* construct that looks like it's built into th
 ordinary function provided by the platform's contract API. Kotlin supports the creation of *domain specific languages*
 through the intersection of several features of the language, and we use it here to support the natural listing of
 requirements. To see what it compiles down to, look at the Java version. Each ``"string" using (expression)`` statement
-inside a ``requireThat`` turns into an assertion that the given expression is true, with an ``IllegalStateException``
+inside a ``requireThat`` turns into an assertion that the given expression is true, with an ``IllegalArgumentException``
 being thrown that contains the string if not. It's just another way to write out a regular assertion, but with the
 English-language requirement being put front and center.
 
@@ -340,8 +340,8 @@ the owner.
 1. We still check there is a CP input state.
 2. We want to see that the face value of the CP is being moved as a cash claim against some party, that is, the
    issuer of the CP is really paying back the face value.
-2. The transaction must be happening after the maturity date.
-3. The commercial paper must *not* be propagated by this transaction: it must be deleted, by the group having no
+3. The transaction must be happening after the maturity date.
+4. The commercial paper must *not* be propagated by this transaction: it must be deleted, by the group having no
    output state. This prevents the same CP being considered redeemable multiple times.
 
 To calculate how much cash is moving, we use the ``sumCashBy`` utility function. Again, this is an extension function,
@@ -476,7 +476,7 @@ generate methods should operate on the same transaction. You can see an example 
 for the commercial paper contract.
 
 The paper is given to us as a ``StateAndRef<CommercialPaper.State>`` object. This is exactly what it sounds like:
-a small object that has a (copy of) a state object, and also the (txhash, index) that indicates the location of this
+a small object that has a (copy of a) state object, and also the ``(txhash, index)`` that indicates the location of this
 state on the ledger.
 
 We add the existing paper state as an input, the same paper state with the owner field adjusted as an output,
