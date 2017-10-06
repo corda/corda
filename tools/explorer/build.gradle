@@ -65,3 +65,11 @@ task(runSimulationNodes, dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     args '-S'
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.tools.explorer'
+        )
+    }
+}

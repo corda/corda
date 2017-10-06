@@ -30,7 +30,10 @@ task standaloneJar(type: Jar) {
     }
     with jar
     manifest {
-        attributes 'Main-Class': 'net.corda.sandbox.tools.SandboxCreator'
+        attributes(
+                'Main-Class': 'net.corda.sandbox.tools.SandboxCreator',
+                'Automatic-Module-Name': 'net.corda.sandbox.creator'
+        )
     }
     archiveName "corda-sandbox-creator-${version}.jar"
 }
