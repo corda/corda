@@ -125,7 +125,6 @@ open class TransactionBuilder(
         return this
     }
 
-    @JvmOverloads
     fun addOutputState(state: TransactionState<*>): TransactionBuilder {
         outputs.add(state)
         return this
