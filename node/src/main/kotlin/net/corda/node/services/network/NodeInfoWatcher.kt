@@ -49,9 +49,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                 val serializedBytes = nodeInfo.serialize()
                 val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
                 val signedData = SignedData(serializedBytes, regSig)
-                Files.newOutputStream(path / ("nodeInfo-" + serializedBytes.hash.toString())).use { out ->
-                    out.write(signedData.serialize().bytes)
-                }
+                signedData.serialize().open().copyTo(path / "nodeInfo-${serializedBytes.hash}")
             } catch (e: Exception) {
                 logger.warn("Couldn't write node info to file", e)
             }
