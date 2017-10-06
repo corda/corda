@@ -22,7 +22,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
 import net.corda.node.services.api.NetworkCacheException
 import net.corda.node.services.api.NetworkMapCacheInternal
@@ -285,7 +284,6 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
             for (nodeInfo in result) {
                 try {
                     logger.info("Loaded node info: $nodeInfo")
-                    val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.single { it.isMain }.owningKey)
                     val node = nodeInfo.toNodeInfo()
                     addNode(node)
                     _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
