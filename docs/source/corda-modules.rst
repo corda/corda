@@ -1,6 +1,11 @@
 Corda modules
 =============
 
+Corda artifacts can be required from Java 9 Jigsaw modules.
+From within a ``module-info.java``, you can reference one of the modules e.g., ``requires net.corda.core;``.
+
+.. warning:: while Corda artifacts can be required from ``module-info.java`` files, they are still not proper Jigsaw modules.
+
 Corda comprises the following modules:
 
 * **net.corda.buildSrc**: necessary gradle plugins to build Corda
