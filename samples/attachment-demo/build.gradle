@@ -102,3 +102,11 @@ task runRecipient(type: JavaExec) {
     args '--role'
     args 'RECIPIENT'
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.attachment'
+        )
+    }
+}

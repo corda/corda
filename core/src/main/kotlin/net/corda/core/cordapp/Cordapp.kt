@@ -17,6 +17,7 @@ import java.net.URL
  * @property contractClassNames List of contracts
  * @property initiatedFlows List of initiatable flow classes
  * @property rpcFlows List of RPC initiable flows classes
+ * @property serviceFlows List of [CordaService] initiable flows classes
  * @property schedulableFlows List of flows startable by the scheduler
  * @property servies List of RPC services
  * @property serializationWhitelists List of Corda plugin registries
@@ -28,6 +29,7 @@ interface Cordapp {
     val contractClassNames: List<String>
     val initiatedFlows: List<Class<out FlowLogic<*>>>
     val rpcFlows: List<Class<out FlowLogic<*>>>
+    val serviceFlows:  List<Class<out FlowLogic<*>>>
     val schedulableFlows: List<Class<out FlowLogic<*>>>
     val services: List<Class<out SerializeAsToken>>
     val serializationWhitelists: List<SerializationWhitelist>

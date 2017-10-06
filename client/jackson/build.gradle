@@ -25,6 +25,9 @@ dependencies {
 
 jar {
     baseName 'corda-jackson'
+    manifest {
+        attributes 'Automatic-Module-Name': 'net.corda.client.jackson'
+    }
 }
 
 publish {

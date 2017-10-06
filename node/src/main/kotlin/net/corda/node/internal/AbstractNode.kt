@@ -20,9 +20,8 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.RPCOps
-import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.messaging.*
+import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
@@ -265,6 +264,49 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     /**
+     * This customizes the ServiceHub for each CordaService that is initiating flows
+     */
+    private class AppServiceHubImpl<T : SerializeAsToken>(val serviceHub: ServiceHubInternal): AppServiceHub, ServiceHub by serviceHub {
+        lateinit var serviceInstance: T
+        override fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T> {
+            val stateMachine = startFlowChecked(flow)
+            return FlowProgressHandleImpl(
+                    id = stateMachine.id,
+                    returnValue = stateMachine.resultFuture,
+                    progress = stateMachine.logic.track()?.updates ?: Observable.empty()
+            )
+        }
+
+        override fun <T> startFlow(flow: FlowLogic<T>): FlowHandle<T> {
+            val stateMachine = startFlowChecked(flow)
+            return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+        }
+
+        private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachineImpl<T> {
+            val logicType = flow.javaClass
+            require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
+            val currentUser = FlowInitiator.Service(serviceInstance.javaClass.name)
+            return serviceHub.startFlow(flow, currentUser)
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is AppServiceHubImpl<*>) return false
+
+            if (serviceHub != other.serviceHub) return false
+            if (serviceInstance != other.serviceInstance) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = serviceHub.hashCode()
+            result = 31 * result + serviceInstance.hashCode()
+            return result
+        }
+    }
+
+    /**
      * Use this method to install your Corda services in your tests. This is automatically done by the node when it
      * starts up for all classes it finds which are annotated with [CordaService].
      */
@@ -276,8 +318,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
                 constructor.newInstance(services, myNotaryIdentity!!.owningKey)
             } else {
-                val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
-                constructor.newInstance(services)
+                try {
+                    val extendedServiceConstructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java).apply { isAccessible = true }
+                    val serviceContext = AppServiceHubImpl<T>(services)
+                    serviceContext.serviceInstance = extendedServiceConstructor.newInstance(serviceContext)
+                    serviceContext.serviceInstance
+                } catch (ex: NoSuchMethodException) {
+                    val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
+                    log.warn("${serviceClass.name} is using legacy CordaService constructor with ServiceHub parameter. Upgrade to an AppServiceHub parameter to enable updated API features.")
+                    constructor.newInstance(services)
+                }
             }
         } catch (e: InvocationTargetException) {
             throw ServiceInstantiationException(e.cause)

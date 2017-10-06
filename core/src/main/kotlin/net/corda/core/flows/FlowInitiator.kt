@@ -20,6 +20,10 @@ sealed class FlowInitiator : Principal {
     data class Peer(val party: Party) : FlowInitiator() {
         override fun getName(): String = party.name.toString()
     }
+    /** Started by a CordaService. */
+    data class Service(val serviceClassName: String) : FlowInitiator() {
+        override fun getName(): String = serviceClassName
+    }
     /** Started as scheduled activity. */
     data class Scheduled(val scheduledState: ScheduledStateRef) : FlowInitiator() {
         override fun getName(): String = "Scheduler"
