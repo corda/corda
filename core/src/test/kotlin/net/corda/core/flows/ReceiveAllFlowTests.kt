@@ -5,71 +5,43 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockServices
-import net.corda.testing.setCordappPackages
-import net.corda.testing.unsetCordappPackages
+import net.corda.testing.node.network
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 
 class ReceiveMultipleFlowTests {
-    lateinit private var mockNet: MockNetwork
-    lateinit private var coordinator: StartedNode<MockNetwork.MockNode>
-    lateinit private var clusterMember1: StartedNode<MockNetwork.MockNode>
-    lateinit private var clusterMember2: StartedNode<MockNetwork.MockNode>
-    lateinit private var notary: StartedNode<MockNetwork.MockNode>
-    lateinit private var services: MockServices
-
-    @Before
-    fun setup() {
-        setCordappPackages("net.corda.testing.contracts")
-        services = MockServices()
-        mockNet = MockNetwork()
-        notary = mockNet.createNotaryNode()
-        coordinator = mockNet.createPartyNode()
-        clusterMember1 = mockNet.createPartyNode()
-        clusterMember2 = mockNet.createPartyNode()
-        mockNet.runNetwork()
-        coordinator.internals.ensureRegistered()
-    }
-
-    @After
-    fun tearDown() {
-        mockNet.stopNodes()
-        unsetCordappPackages()
-    }
-
     @Test
     fun `receive all messages in parallel using map style`() {
-        val doubleValue = 5.0
-        clusterMember1.registerInitiatedFlow(AlgorithmDefinition::class, { session -> Answer(session, doubleValue) })
-        val stringValue = "Thriller"
-        clusterMember2.registerInitiatedFlow(AlgorithmDefinition::class, { session -> Answer(session, stringValue) })
+        network(3) { nodes, _ ->
+            val doubleValue = 5.0
+            nodes[1].registerInitiatedFlow(AlgorithmDefinition::class, { session -> Answer(session, doubleValue) })
+            val stringValue = "Thriller"
+            nodes[2].registerInitiatedFlow(AlgorithmDefinition::class, { session -> Answer(session, stringValue) })
 
-        val flow = coordinator.services.startFlow(ParallelAlgorithmMap(clusterMember1.info.chooseIdentity(), clusterMember2.info.chooseIdentity()))
-        mockNet.runNetwork()
+            val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
+            runNetwork()
 
-        val result = flow.resultFuture.getOrThrow()
+            val result = flow.resultFuture.getOrThrow()
 
-        assertThat(result).isEqualTo(doubleValue * stringValue.length)
+            assertThat(result).isEqualTo(doubleValue * stringValue.length)
+        }
     }
 
     @Test
     fun `receive all messages in parallel using list style`() {
-        val value1 = 5.0
-        clusterMember1.registerInitiatedFlow(ParallelAlgorithmList::class, { session -> Answer(session, value1) })
-        val value2 = 6.0
-        clusterMember2.registerInitiatedFlow(ParallelAlgorithmList::class, { session -> Answer(session, value2) })
+        network(3) { nodes, _ ->
+            val value1 = 5.0
+            nodes[1].registerInitiatedFlow(ParallelAlgorithmList::class, { session -> Answer(session, value1) })
+            val value2 = 6.0
+            nodes[2].registerInitiatedFlow(ParallelAlgorithmList::class, { session -> Answer(session, value2) })
 
-        val flow = coordinator.services.startFlow(ParallelAlgorithmList(clusterMember1.info.chooseIdentity(), clusterMember2.info.chooseIdentity()))
-        mockNet.runNetwork()
-        val result = flow.resultFuture.getOrThrow()
+            val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
+            runNetwork()
+            val result = flow.resultFuture.getOrThrow()
 
-        assertThat(result).isEqualTo(value1 * value2)
+            assertThat(result).isEqualTo(value1 * value2)
+        }
     }
 
     class ParallelAlgorithmMap(doubleMember: Party, stringMember: Party) : AlgorithmDefinition(doubleMember, stringMember) {
