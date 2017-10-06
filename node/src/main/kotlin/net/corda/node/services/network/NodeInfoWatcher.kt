@@ -3,7 +3,12 @@ package net.corda.node.services.network
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.internal.*
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.isDirectory
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.list
+import net.corda.core.internal.readAll
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.deserialize
@@ -13,10 +18,6 @@ import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.nio.file.Path
-import java.nio.file.StandardWatchEventKinds
-import java.nio.file.WatchEvent
-import java.nio.file.WatchKey
-import java.nio.file.WatchService
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
 
@@ -33,7 +34,6 @@ class NodeInfoWatcher(private val nodePath: Path,
                       private val scheduler: Scheduler = Schedulers.io()) {
 
     private val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
-    private val watchService : WatchService? by lazy { initWatch() }
 
     companion object {
         private val logger = loggerFor<NodeInfoWatcher>()
@@ -72,7 +72,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      */
     fun nodeInfoUpdates(): Observable<NodeInfo> {
         val pollForFiles = Observable.interval(5, TimeUnit.SECONDS, scheduler)
-                .flatMapIterable { pollWatch() }
+                .flatMapIterable { loadFromDirectory() }
         val readCurrentFiles = Observable.from(loadFromDirectory())
         return readCurrentFiles.mergeWith(pollForFiles)
     }
@@ -84,7 +84,6 @@ class NodeInfoWatcher(private val nodePath: Path,
      * @return a list of [NodeInfo]s
      */
     private fun loadFromDirectory(): List<NodeInfo> {
-        val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
         if (!nodeInfoDirectory.isDirectory()) {
             logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
             return emptyList()
@@ -99,31 +98,6 @@ class NodeInfoWatcher(private val nodePath: Path,
         return result
     }
 
-    // Polls the watchService for changes to nodeInfoDirectory, return all the newly read NodeInfos.
-    private fun pollWatch(): List<NodeInfo> {
-        if (watchService == null) {
-            return emptyList()
-        }
-        val watchKey: WatchKey = watchService?.poll() ?: return emptyList()
-        val files = mutableSetOf<Path>()
-        for (event in watchKey.pollEvents()) {
-            val kind = event.kind()
-            if (kind == StandardWatchEventKinds.OVERFLOW) continue
-
-            val ev: WatchEvent<Path> = uncheckedCast(event)
-            val filename = ev.context()
-            val absolutePath = nodeInfoDirectory.resolve(filename)
-            if (absolutePath.isRegularFile()) {
-                files.add(absolutePath)
-            }
-        }
-        val valid = watchKey.reset()
-        if (!valid) {
-            logger.warn("Can't poll $nodeInfoDirectory anymore, it was probably deleted.")
-        }
-        return files.mapNotNull { processFile(it) }
-    }
-
     private fun processFile(file: Path) : NodeInfo? {
         try {
             logger.info("Reading NodeInfo from file: $file")
@@ -133,18 +107,5 @@ class NodeInfoWatcher(private val nodePath: Path,
             logger.warn("Exception parsing NodeInfo from file. $file", e)
             return null
         }
-    }
-
-    // Create a WatchService watching for changes in nodeInfoDirectory.
-    private fun initWatch() : WatchService? {
-        if (!nodeInfoDirectory.isDirectory()) {
-            logger.warn("Not watching folder $nodeInfoDirectory it doesn't exist or it's not a directory")
-            return null
-        }
-        val watchService = nodeInfoDirectory.fileSystem.newWatchService()
-        nodeInfoDirectory.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
-                StandardWatchEventKinds.ENTRY_MODIFY)
-        logger.info("Watching $nodeInfoDirectory for new files")
-        return watchService
     }
 }

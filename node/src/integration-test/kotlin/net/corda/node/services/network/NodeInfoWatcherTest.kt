@@ -90,6 +90,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
     }
 
     @Test
+    //@Ignore
     fun `polling folder`() {
         nodeInfoPath.createDirectories()
 
@@ -114,7 +115,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
     }
 
     private fun advanceTime() {
-        scheduler.advanceTimeBy(1, TimeUnit.HOURS)
+        scheduler.advanceTimeBy(1, TimeUnit.MINUTES)
     }
 
     // Write a nodeInfo under the right path.
