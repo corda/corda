@@ -245,15 +245,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     // Provide a mechanism to sleep within a Strand without locking any transactional state.
-    // TODO: this should checkpoint, since we cannot undo any database writes up to this point.
+    // This checkpoints, since we cannot undo any database writes up to this point.
     @Suspendable
     override fun sleepUntil(until: Instant) {
-        val db = DatabaseTransactionManager.dataSource
-        DatabaseTransactionManager.current().commit()
-        DatabaseTransactionManager.current().close()
-        Strand.sleep(Duration.between(Instant.now(), until).toNanos(), TimeUnit.NANOSECONDS)
-        DatabaseTransactionManager.dataSource = db
-        DatabaseTransactionManager.newTransaction()
+        suspend(Sleep(until, this))
     }
 
     // TODO Dummy implementation of access to application specific permission controls and audit logging
@@ -491,6 +486,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         }
 
+        if (ioRequest is Sleep) {
+            // Sleep on the fiber.  This will not sleep if it's in the past.
+            Strand.sleep(Duration.between(Instant.now(), ioRequest.until).toNanos(), TimeUnit.NANOSECONDS)
+        }
         createTransaction()
         // TODO Now that we're throwing outside of the suspend the FlowLogic can catch it. We need Quasar to terminate
         // the fiber when exceptions occur inside a suspend.

@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
+import java.time.Instant
 
 interface FlowIORequest {
     // This is used to identify where we suspended, in case of message mismatch errors and other things where we
@@ -110,6 +111,11 @@ data class WaitForLedgerCommit(val hash: SecureHash, val fiber: FlowStateMachine
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 
     override fun shouldResume(message: ExistingSessionMessage, session: FlowSessionInternal): Boolean = message is ErrorSessionEnd
+}
+
+data class Sleep(val until: Instant, val fiber: FlowStateMachineImpl<*>) : FlowIORequest {
+    @Transient
+    override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
 
 class StackSnapshot : Throwable("This is a stack trace to help identify the source of the underlying problem")
