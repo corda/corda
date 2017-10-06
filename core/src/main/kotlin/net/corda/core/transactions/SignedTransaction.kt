@@ -47,7 +47,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /** Cache the deserialized form of the transaction. This is useful when building a transaction or collecting signatures. */
-    @Volatile @Transient private var cachedTransaction: CoreTransaction? = null
+    @Volatile
+    @Transient private var cachedTransaction: CoreTransaction? = null
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
     private val transaction: CoreTransaction get() = cachedTransaction ?: txBits.deserialize().apply { cachedTransaction = this }

@@ -35,6 +35,7 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey) = DigitalSigna
  */
 @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray) = private.sign(bytesToSign, public)
+
 fun KeyPair.sign(bytesToSign: OpaqueBytes) = sign(bytesToSign.bytes)
 /**
  * Helper function for signing a [SignableData] object.
@@ -72,18 +73,18 @@ fun PublicKey.verify(content: ByteArray, signature: DigitalSignature) = Crypto.d
  * @return whether the signature is correct for this key.
  */
 @Throws(IllegalStateException::class, SignatureException::class, IllegalArgumentException::class)
-fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature) : Boolean {
+fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature): Boolean {
     if (this is CompositeKey)
         throw IllegalStateException("Verification of CompositeKey signatures currently not supported.") // TODO CompositeSignature verification.
     return Crypto.isValid(this, signature.bytes, content)
 }
 
 /** Render a public key to its hash (in Base58) of its serialised form using the DL prefix. */
-fun PublicKey.toStringShort(): String  = "DL" + this.toSHA256Bytes().toBase58()
+fun PublicKey.toStringShort(): String = "DL" + this.toSHA256Bytes().toBase58()
 
 val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: setOf(this)
 
-fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean  = isFulfilledBy(setOf(otherKey))
+fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean = isFulfilledBy(setOf(otherKey))
 fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
 
 /** Checks whether any of the given [keys] matches a leaf on the [CompositeKey] tree or a single [PublicKey]. */

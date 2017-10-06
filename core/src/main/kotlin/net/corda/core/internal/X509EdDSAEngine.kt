@@ -46,6 +46,7 @@ class X509EdDSAEngine : Signature {
     override fun engineSetParameter(params: AlgorithmParameterSpec) = engine.setParameter(params)
     @Suppress("DEPRECATION")
     override fun engineGetParameter(param: String): Any = engine.getParameter(param)
+
     @Suppress("DEPRECATION")
     override fun engineSetParameter(param: String, value: Any?) = engine.setParameter(param, value)
 }

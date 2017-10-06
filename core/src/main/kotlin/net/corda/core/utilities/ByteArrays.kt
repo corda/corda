@@ -25,6 +25,7 @@ sealed class ByteSequence : Comparable<ByteSequence> {
      * The start position of the sequence within the byte array.
      */
     abstract val offset: Int
+
     /** Returns a [ByteArrayInputStream] of the bytes */
     fun open() = ByteArrayInputStream(bytes, offset, size)
 

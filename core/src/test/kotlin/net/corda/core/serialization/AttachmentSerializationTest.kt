@@ -45,6 +45,7 @@ private fun Attachment.extractContent() = ByteArrayOutputStream().apply { extrac
 private fun StartedNode<*>.saveAttachment(content: String) = database.transaction {
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }
+
 private fun StartedNode<*>.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
     updateAttachment(attachmentId, createAttachmentData(content))
 }

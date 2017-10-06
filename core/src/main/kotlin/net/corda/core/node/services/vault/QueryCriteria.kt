@@ -49,12 +49,12 @@ sealed class QueryCriteria {
     /**
      * VaultQueryCriteria: provides query by attributes defined in [VaultSchema.VaultStates]
      */
-    data class VaultQueryCriteria @JvmOverloads constructor (override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                                             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-                                                             val stateRefs: List<StateRef>? = null,
-                                                             val notary: List<AbstractParty>? = null,
-                                                             val softLockingCondition: SoftLockingCondition? = null,
-                                                             val timeCondition: TimeCondition? = null) : CommonQueryCriteria() {
+    data class VaultQueryCriteria @JvmOverloads constructor(override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                                                            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+                                                            val stateRefs: List<StateRef>? = null,
+                                                            val notary: List<AbstractParty>? = null,
+                                                            val softLockingCondition: SoftLockingCondition? = null,
+                                                            val timeCondition: TimeCondition? = null) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
@@ -69,10 +69,10 @@ sealed class QueryCriteria {
                                                                   val externalId: List<String>? = null,
                                                                   override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                                                                   override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
-            constructor(participants: List<AbstractParty>? = null,
-                        linearId: List<UniqueIdentifier>? = null,
-                        status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                        contractStateTypes: Set<Class<out ContractState>>? = null) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
+        constructor(participants: List<AbstractParty>? = null,
+                    linearId: List<UniqueIdentifier>? = null,
+                    status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                    contractStateTypes: Set<Class<out ContractState>>? = null) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -80,13 +80,13 @@ sealed class QueryCriteria {
         }
     }
 
-   /**
-    * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleState]
-    *
-    * Valid TokenType implementations defined by Amount<T> are
-    *   [Currency] as used in [Cash] contract state
-    *   [Commodity] as used in [CommodityContract] state
-    */
+    /**
+     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleState]
+     *
+     * Valid TokenType implementations defined by Amount<T> are
+     *   [Currency] as used in [Cash] contract state
+     *   [Commodity] as used in [CommodityContract] state
+     */
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
                                                                     val owner: List<AbstractParty>? = null,
                                                                     val quantity: ColumnPredicate<Long>? = null,
@@ -94,11 +94,11 @@ sealed class QueryCriteria {
                                                                     val issuerRef: List<OpaqueBytes>? = null,
                                                                     override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                                                                     override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
-       override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-           super.visit(parser)
-           return parser.parseCriteria(this)
-       }
-   }
+        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+            super.visit(parser)
+            return parser.parseCriteria(this)
+        }
+    }
 
     /**
      * VaultCustomQueryCriteria: provides query by custom attributes defined in a contracts
@@ -111,9 +111,9 @@ sealed class QueryCriteria {
      * Refer to [CommercialPaper.State] for a concrete example.
      */
     data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor
-                                    (val expression: CriteriaExpression<L, Boolean>,
-                                     override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                     override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
+    (val expression: CriteriaExpression<L, Boolean>,
+     override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+     override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
@@ -121,13 +121,13 @@ sealed class QueryCriteria {
     }
 
     // enable composition of [QueryCriteria]
-    private data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
+    private data class AndComposition(val a: QueryCriteria, val b: QueryCriteria) : QueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseAnd(this.a, this.b)
         }
     }
 
-    private data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
+    private data class OrComposition(val a: QueryCriteria, val b: QueryCriteria) : QueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseOr(this.a, this.b)
         }
@@ -148,9 +148,9 @@ interface IQueryCriteriaParser {
     fun parseCriteria(criteria: QueryCriteria.CommonQueryCriteria): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria): Collection<Predicate>
-    fun <L: PersistentState> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate>
+    fun <L : PersistentState> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate>
     fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
     fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
-    fun parse(criteria: QueryCriteria, sorting: Sort? = null) : Collection<Predicate>
+    fun parse(criteria: QueryCriteria, sorting: Sort? = null): Collection<Predicate>
 }

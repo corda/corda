@@ -11,7 +11,9 @@ import java.security.cert.*
  */
 @CordaSerializable
 class PartyAndCertificate(val certPath: CertPath) {
-    @Transient val certificate: X509Certificate
+    @Transient
+    val certificate: X509Certificate
+
     init {
         require(certPath.type == "X.509") { "Only X.509 certificates supported" }
         val certs = certPath.certificates
@@ -19,7 +21,8 @@ class PartyAndCertificate(val certPath: CertPath) {
         certificate = certs[0] as X509Certificate
     }
 
-    @Transient val party: Party = Party(certificate)
+    @Transient
+    val party: Party = Party(certificate)
 
     val owningKey: PublicKey get() = party.owningKey
     val name: CordaX500Name get() = party.name

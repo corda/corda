@@ -63,15 +63,16 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     override val id: SecureHash get() = merkleTree.hash
 
     /** Public keys that need to be fulfilled by signatures in order for the transaction to be valid. */
-    val requiredSigningKeys: Set<PublicKey> get() {
-        val commandKeys = commands.flatMap { it.signers }.toSet()
-        // TODO: prevent notary field from being set if there are no inputs and no timestamp.
-        return if (notary != null && (inputs.isNotEmpty() || timeWindow != null)) {
-            commandKeys + notary.owningKey
-        } else {
-            commandKeys
+    val requiredSigningKeys: Set<PublicKey>
+        get() {
+            val commandKeys = commands.flatMap { it.signers }.toSet()
+            // TODO: prevent notary field from being set if there are no inputs and no timestamp.
+            return if (notary != null && (inputs.isNotEmpty() || timeWindow != null)) {
+                commandKeys + notary.owningKey
+            } else {
+                commandKeys
+            }
         }
-    }
 
     /**
      * Looks up identities and attachments from storage to generate a [LedgerTransaction]. A transaction is expected to
@@ -84,7 +85,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
         return toLedgerTransaction(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
-                resolveAttachment = { services.attachments.openAttachment(it)},
+                resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) },
                 resolveContractAttachment = { services.cordappProvider.getContractAttachmentID(it.contract) }
         )
@@ -123,7 +124,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * Build filtered transaction using provided filtering functions.
      */
     fun buildFilteredTransaction(filtering: Predicate<Any>): FilteredTransaction =
-        FilteredTransaction.buildFilteredTransaction(this, filtering)
+            FilteredTransaction.buildFilteredTransaction(this, filtering)
 
     /**
      * Builds whole Merkle tree for a transaction.
@@ -236,7 +237,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     ): List<Attachment> {
         val contractAttachments = (outputs + resolvedInputs.map { it.state }).map { Pair(it, resolveContractAttachment(it)) }
         val missingAttachments = contractAttachments.filter { it.second == null }
-        return if(missingAttachments.isEmpty()) {
+        return if (missingAttachments.isEmpty()) {
             contractAttachments.map { ContractAttachment(resolveAttachment(it.second!!) ?: throw AttachmentResolutionException(it.second!!), it.first.contract) }
         } else {
             throw MissingContractAttachments(missingAttachments.map { it.first })

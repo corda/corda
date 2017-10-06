@@ -61,11 +61,12 @@ import java.security.PublicKey
  * just in the states. If null, the default well known identity of the node is used.
  */
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
-class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: SignedTransaction,
-                                                       val sessionsToCollectFrom: Collection<FlowSession>,
-                                                       val myOptionalKeys: Iterable<PublicKey>?,
-                                                       override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
+class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: SignedTransaction,
+                                                      val sessionsToCollectFrom: Collection<FlowSession>,
+                                                      val myOptionalKeys: Iterable<PublicKey>?,
+                                                      override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
     @JvmOverloads constructor(partiallySignedTx: SignedTransaction, sessionsToCollectFrom: Collection<FlowSession>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, sessionsToCollectFrom, null, progressTracker)
+
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counter-parties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")
@@ -134,6 +135,7 @@ class CollectSignaturesFlow @JvmOverloads constructor (val partiallySignedTx: Si
 class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session: FlowSession, val signingKeys: List<PublicKey>) : FlowLogic<List<TransactionSignature>>() {
     constructor(partiallySignedTx: SignedTransaction, session: FlowSession, vararg signingKeys: PublicKey) :
             this(partiallySignedTx, session, listOf(*signingKeys))
+
     @Suspendable
     override fun call(): List<TransactionSignature> {
         // SendTransactionFlow allows counterparty to access our data to resolve the transaction.
@@ -224,7 +226,7 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
         // Perform some custom verification over the transaction.
         try {
             checkTransaction(stx)
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             if (e is IllegalStateException || e is IllegalArgumentException || e is AssertionError)
                 throw FlowException(e)
             else

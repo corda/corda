@@ -28,6 +28,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     constructor(signedTransaction: SignedTransaction, otherSide: FlowSession) : this(dependencyIDs(signedTransaction), otherSide) {
         this.signedTransaction = signedTransaction
     }
+
     companion object {
         private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
 

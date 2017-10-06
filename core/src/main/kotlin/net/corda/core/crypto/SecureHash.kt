@@ -34,11 +34,18 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             }
         }
 
-        @JvmStatic fun sha256(bytes: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bytes))
-        @JvmStatic fun sha256Twice(bytes: ByteArray) = sha256(sha256(bytes).bytes)
-        @JvmStatic fun sha256(str: String) = sha256(str.toByteArray())
+        @JvmStatic
+        fun sha256(bytes: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bytes))
 
-        @JvmStatic fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
+        @JvmStatic
+        fun sha256Twice(bytes: ByteArray) = sha256(sha256(bytes).bytes)
+
+        @JvmStatic
+        fun sha256(str: String) = sha256(str.toByteArray())
+
+        @JvmStatic
+        fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
+
         val zeroHash = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
         val allOnesHash = SecureHash.SHA256(ByteArray(32, { 255.toByte() }))
     }

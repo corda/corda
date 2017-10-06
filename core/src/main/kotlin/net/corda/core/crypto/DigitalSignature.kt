@@ -23,6 +23,7 @@ open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
         fun verify(content: ByteArray) = by.verify(content, this)
+
         /**
          * Utility to simplify the act of verifying a signature.
          *
@@ -32,6 +33,7 @@ open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
         fun verify(content: OpaqueBytes) = by.verify(content.bytes, this)
+
         /**
          * Utility to simplify the act of verifying a signature. In comparison to [verify] doesn't throw an
          * exception, making it more suitable where a boolean is required, but normally you should use the function
