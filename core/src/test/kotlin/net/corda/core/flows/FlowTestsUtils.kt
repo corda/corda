@@ -78,7 +78,7 @@ fun FlowLogic<*>.receiveAll(session: Pair<FlowSession, Class<out Any>>, vararg s
 /**
  * Suspends until a message has been received for each session in the specified [sessions].
  *
- * Consider [sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>] when sessions are expected to send different types.
+ * Consider [sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>] when sessions are expected to receive different types.
  *
  * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
  * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
@@ -92,7 +92,7 @@ fun <R : Any> FlowLogic<*>.receiveAll(receiveType: Class<R>, session: FlowSessio
 /**
  * Suspends until a message has been received for each session in the specified [sessions].
  *
- * Consider [sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>] when sessions are expected to send different types.
+ * Consider [sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>] when sessions are expected to receive different types.
  *
  * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
  * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
