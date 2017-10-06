@@ -141,11 +141,11 @@ Let's take a look at a transaction that fails.
         :end-before: DOCEND 3
         :dedent: 4
 
-            .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
-:language: java
-                :start-after: DOCSTART 3
-                :end-before: DOCEND 3
-                :dedent: 4
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 3
+        :end-before: DOCEND 3
+        :dedent: 4
 
 When run, that code produces the following error:
 
