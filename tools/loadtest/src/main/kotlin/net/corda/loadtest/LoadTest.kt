@@ -182,7 +182,8 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             val info = connection.info
             log.info("Got node info of ${connection.remoteNode.hostname}: $info!")
             val otherInfo = connection.proxy.networkMapSnapshot()
-            val pubKeysString = otherInfo.map { // TODO Rethink, we loose ability for nice showing of NodeInfos.
+            val pubKeysString = otherInfo.map {
+                // TODO Rethink, we loose ability for nice showing of NodeInfos.
                 "NodeInfo identities set:\n" +
                         it.legalIdentitiesAndCerts.fold("") { acc, elem -> acc + "\n" + elem.name + ": " + elem.owningKey.toBase58String() }
             }.joinToString("\n")

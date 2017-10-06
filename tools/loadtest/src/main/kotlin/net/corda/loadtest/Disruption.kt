@@ -45,6 +45,7 @@ val isNotary = { node: NodeConnection ->
     val notaries = node.proxy.notaryIdentities()
     node.info.legalIdentities.any { it in notaries }
 }
+
 fun <A> ((A) -> Boolean).or(other: (A) -> Boolean): (A) -> Boolean = { this(it) || other(it) }
 
 fun hang(hangIntervalRange: LongRange) = Disruption("Hang randomly") { node, random ->

@@ -33,9 +33,10 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     private var networkMapConfig: NetworkMapConfig? = null
 
-    val activeNodes: List<NodeConfig> get() = nodes.values.filter {
-        (it.state == NodeState.RUNNING) || (it.state == NodeState.STARTING)
-    }
+    val activeNodes: List<NodeConfig>
+        get() = nodes.values.filter {
+            (it.state == NodeState.RUNNING) || (it.state == NodeState.STARTING)
+        }
 
     init {
         log.info("Base directory: $baseDir")
