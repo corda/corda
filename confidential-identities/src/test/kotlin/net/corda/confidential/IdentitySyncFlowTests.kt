@@ -42,12 +42,12 @@ class IdentitySyncFlowTests {
     @Test
     fun `sync confidential identities`() {
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
-        val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+        mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
+        val bobNode = mockNet.createPartyNode(BOB.name)
         val alice: Party = aliceNode.services.myInfo.chooseIdentity()
         val bob: Party = bobNode.services.myInfo.chooseIdentity()
-        val notary = notaryNode.services.getDefaultNotary()
+        val notary = aliceNode.services.getDefaultNotary()
         bobNode.internals.registerInitiatedFlow(Receive::class.java)
 
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
@@ -73,9 +73,9 @@ class IdentitySyncFlowTests {
     fun `don't offer other's identities confidential identities`() {
         // Set up values we'll need
         val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
-        val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
-        val charlieNode = mockNet.createPartyNode(notaryNode.network.myAddress, CHARLIE.name)
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
+        val bobNode = mockNet.createPartyNode(BOB.name)
+        val charlieNode = mockNet.createPartyNode(CHARLIE.name)
         val alice: Party = aliceNode.services.myInfo.chooseIdentity()
         val bob: Party = bobNode.services.myInfo.chooseIdentity()
         val charlie: Party = charlieNode.services.myInfo.chooseIdentity()

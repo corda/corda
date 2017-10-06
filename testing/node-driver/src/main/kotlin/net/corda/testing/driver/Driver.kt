@@ -990,7 +990,8 @@ class DriverDSL(
             return Exception()
                     .stackTrace
                     .first { it.fileName != "Driver.kt" }
-                    .let { Class.forName(it.className).`package`.name }
+                    .let { Class.forName(it.className).`package`?.name }
+                    ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
         }
     }
 }

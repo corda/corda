@@ -25,9 +25,9 @@ class FinalityFlowTests {
     fun setup() {
         setCordappPackages("net.corda.finance.contracts.asset")
         mockNet = MockNetwork()
-        val notaryNode = mockNet.createNotaryNode()
-        aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
-        bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+        mockNet.createNotaryNode()
+        aliceNode = mockNet.createPartyNode(ALICE.name)
+        bobNode = mockNet.createPartyNode(BOB.name)
         mockNet.runNetwork()
         aliceNode.internals.ensureRegistered()
         notary = aliceNode.services.getDefaultNotary()

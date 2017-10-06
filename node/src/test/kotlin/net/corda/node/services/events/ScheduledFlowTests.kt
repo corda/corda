@@ -98,8 +98,8 @@ class ScheduledFlowTests {
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type)))
-        val a = mockNet.createUnstartedNode(notaryNode.network.myAddress)
-        val b = mockNet.createUnstartedNode(notaryNode.network.myAddress)
+        val a = mockNet.createUnstartedNode()
+        val b = mockNet.createUnstartedNode()
 
         notaryNode.internals.ensureRegistered()
 
