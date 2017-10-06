@@ -30,6 +30,9 @@ import kotlin.collections.LinkedHashSet
  * we can often end up pulling in a lot of objects that do not make sense to put in a checkpoint.
  * Thus, by blacklisting classes/interfaces we don't expect to be serialised, we can better handle/monitor the aforementioned behaviour.
  * Inheritance works for blacklisted items, but one can specifically exclude classes from blacklisting as well.
+ * Note: Custom serializer registration trumps white/black lists. So if a given type has a custom serializer and has its name
+ * in the blacklist - it will still be serialized as specified by custom serializer.
+ * For more details, see [net.corda.nodeapi.internal.serialization.CordaClassResolver.getRegistration]
  */
 object AllButBlacklisted : ClassWhitelist {
 
