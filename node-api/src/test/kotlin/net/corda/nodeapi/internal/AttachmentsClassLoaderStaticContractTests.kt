@@ -37,7 +37,7 @@ class AttachmentsClassLoaderStaticContractTests : TestDependencyInjectionBase() 
         fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
             val state = State(magicNumber)
             return TransactionBuilder(notary)
-                .withItems(StateAndContract(state, ATTACHMENT_PROGRAM_ID), Command(Commands.Create(), owner.party.owningKey))
+                    .withItems(StateAndContract(state, ATTACHMENT_PROGRAM_ID), Command(Commands.Create(), owner.party.owningKey))
         }
     }
 
@@ -45,7 +45,7 @@ class AttachmentsClassLoaderStaticContractTests : TestDependencyInjectionBase() 
 
     @Before
     fun `create service hub`() {
-        serviceHub = MockServices(cordappPackages=listOf("net.corda.nodeapi.internal"))
+        serviceHub = MockServices(cordappPackages = listOf("net.corda.nodeapi.internal"))
     }
 
     @After

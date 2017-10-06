@@ -72,7 +72,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         val stream = ByteArrayOutputStream()
         try {
             attachment.extractFile(path, stream)
-        } catch(e: FileNotFoundException) {
+        } catch (e: FileNotFoundException) {
             throw ClassNotFoundException(name)
         }
         val bytes = stream.toByteArray()
@@ -99,7 +99,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
             val stream = ByteArrayOutputStream()
             attachment.extractFile(path, stream)
             return ByteArrayInputStream(stream.toByteArray())
-        } catch(e: FileNotFoundException) {
+        } catch (e: FileNotFoundException) {
             return null
         }
     }

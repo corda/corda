@@ -80,9 +80,9 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     private fun <R> des(generator: () -> R): R {
         try {
             return generator()
-        } catch(nse: NotSerializableException) {
+        } catch (nse: NotSerializableException) {
             throw nse
-        } catch(t: Throwable) {
+        } catch (t: Throwable) {
             throw NotSerializableException("Unexpected throwable: ${t.message} ${t.getStackTraceAsString()}")
         } finally {
             objectHistory.clear()
@@ -152,10 +152,10 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
      * In the future tighter control might be needed
      */
     private fun Type.materiallyEquivalentTo(that: Type): Boolean =
-        when(that) {
-            is ParameterizedType -> asClass() == that.asClass()
-            is TypeVariable<*> -> isSubClassOf(that.bounds.first())
-            is WildcardType -> isSubClassOf(that.upperBounds.first())
-            else -> false
-        }
+            when (that) {
+                is ParameterizedType -> asClass() == that.asClass()
+                is TypeVariable<*> -> isSubClassOf(that.bounds.first())
+                is WildcardType -> isSubClassOf(that.upperBounds.first())
+                else -> false
+            }
 }

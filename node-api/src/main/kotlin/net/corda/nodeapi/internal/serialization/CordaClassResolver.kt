@@ -31,9 +31,9 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
      * The point is that we do not want to send Kotlin types "over the wire" via RPC.
      */
     private val javaAliases: Map<Class<*>, Class<*>> = mapOf(
-        listOf<Any>().javaClass to Collections.emptyList<Any>().javaClass,
-        setOf<Any>().javaClass to Collections.emptySet<Any>().javaClass,
-        mapOf<Any, Any>().javaClass to Collections.emptyMap<Any, Any>().javaClass
+            listOf<Any>().javaClass to Collections.emptyList<Any>().javaClass,
+            setOf<Any>().javaClass to Collections.emptySet<Any>().javaClass,
+            mapOf<Any, Any>().javaClass to Collections.emptyMap<Any, Any>().javaClass
     )
 
     private fun typeForSerializationOf(type: Class<*>): Class<*> = javaAliases[type] ?: type
@@ -194,7 +194,7 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
             if (fileName != null && fileName.isNotEmpty()) {
                 try {
                     return PrintWriter(Files.newBufferedWriter(Paths.get(fileName), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE), true)
-                } catch(ioEx: Exception) {
+                } catch (ioEx: Exception) {
                     log.error("Could not open/create whitelist journal file for append: $fileName", ioEx)
                 }
             }

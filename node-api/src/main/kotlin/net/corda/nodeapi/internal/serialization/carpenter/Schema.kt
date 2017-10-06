@@ -24,7 +24,7 @@ abstract class Schema(
         updater: (String, Field) -> Unit) {
     private fun Map<String, Field>.descriptors() = LinkedHashMap(this.mapValues { it.value.descriptor })
 
-    var flags : EnumMap<SchemaFlags, Boolean> = EnumMap(SchemaFlags::class.java)
+    var flags: EnumMap<SchemaFlags, Boolean> = EnumMap(SchemaFlags::class.java)
 
     init {
         fields.forEach { updater(it.key, it.value) }
@@ -49,15 +49,15 @@ abstract class Schema(
         get() = "[L$jvmName;"
 
     fun unsetCordaSerializable() {
-        flags.replace (SchemaFlags.CordaSerializable, false)
+        flags.replace(SchemaFlags.CordaSerializable, false)
     }
 }
 
-fun EnumMap<SchemaFlags, Boolean>.cordaSerializable() : Boolean {
+fun EnumMap<SchemaFlags, Boolean>.cordaSerializable(): Boolean {
     return this.getOrDefault(SchemaFlags.CordaSerializable, true) == true
 }
 
-fun EnumMap<SchemaFlags, Boolean>.simpleFieldAccess() : Boolean {
+fun EnumMap<SchemaFlags, Boolean>.simpleFieldAccess(): Boolean {
     return this.getOrDefault(SchemaFlags.SimpleFieldAccess, true) == true
 }
 

@@ -142,8 +142,8 @@ open class SerializationFactoryImpl : SerializationFactory() {
 private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
     override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
         val message = "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
-                    "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
-                    "confined to a private method or the reference is nulled out."
+                "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
+                "confined to a private method or the reference is nulled out."
         throw UnsupportedOperationException(message)
     }
 

@@ -140,6 +140,7 @@ object DefaultKryoCustomizer {
         // Use this to allow construction of objects using a JVM backdoor that skips invoking the constructors, if there
         // is no no-arg constructor available.
         private val defaultStrategy = Kryo.DefaultInstantiatorStrategy(fallbackStrategy)
+
         override fun <T> newInstantiatorOf(type: Class<T>): ObjectInstantiator<T> {
             // However this doesn't work for non-public classes in the java. namespace
             val strat = if (type.name.startsWith("java.") && !isPublic(type.modifiers)) fallbackStrategy else defaultStrategy
@@ -151,6 +152,7 @@ object DefaultKryoCustomizer {
         override fun write(kryo: Kryo, output: Output, obj: PartyAndCertificate) {
             kryo.writeClassAndObject(output, obj.certPath)
         }
+
         override fun read(kryo: Kryo, input: Input, type: Class<PartyAndCertificate>): PartyAndCertificate {
             return PartyAndCertificate(kryo.readClassAndObject(input) as CertPath)
         }

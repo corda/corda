@@ -12,10 +12,12 @@ class ZonedDateTimeSerializer(factory: SerializerFactory) : CustomSerializer.Pro
     // so that any change to internals of `ZonedDateTime` is detected early.
     companion object {
         val ofLenient = ZonedDateTime::class.java.getDeclaredMethod("ofLenient", LocalDateTime::class.java, ZoneOffset::class.java, ZoneId::class.java)
+
         init {
             ofLenient.isAccessible = true
         }
     }
+
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(LocalDateTimeSerializer(factory), ZoneIdSerializer(factory))
 
     override fun toProxy(obj: ZonedDateTime): ZonedDateTimeProxy = ZonedDateTimeProxy(obj.toLocalDateTime(), obj.offset, obj.zone)

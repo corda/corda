@@ -23,14 +23,13 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
     //
     // We *need* to retain knowledge for AMQP deserialisation weather that lowest primitive
     // was boxed or unboxed so just infer it recursively
-    private fun calcTypeName(type: Type) : String =
-        if (type.componentType().isArray()) {
-            val typeName = calcTypeName(type.componentType()); "$typeName[]"
-        }
-        else {
-            val arrayType = if (type.asClass()!!.componentType.isPrimitive) "[p]" else "[]"
-            "${type.componentType().typeName}$arrayType"
-        }
+    private fun calcTypeName(type: Type): String =
+            if (type.componentType().isArray()) {
+                val typeName = calcTypeName(type.componentType()); "$typeName[]"
+            } else {
+                val arrayType = if (type.asClass()!!.componentType.isPrimitive) "[p]" else "[]"
+                "${type.componentType().typeName}$arrayType"
+            }
 
     override val typeDescriptor by lazy { Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}") }
     internal val elementType: Type by lazy { type.componentType() }

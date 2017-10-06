@@ -45,6 +45,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
             whenever(serviceHub.attachments).thenReturn(attachmentStorage)
             return this.withServiceHub(serviceHub)
         }
+
         private fun SerializationContext.withServiceHub(serviceHub: ServiceHub): SerializationContext {
             return this.withTokenContext(SerializeAsTokenContextImpl(serviceHub) {}).withProperty(attachmentsClassLoaderEnabledPropertyName, true)
         }
@@ -266,7 +267,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `test serialization of sub-sequence OpaqueBytes`() {
-        val bytesSequence = ByteSequence.of("0123456789".toByteArray(), 3 ,2)
+        val bytesSequence = ByteSequence.of("0123456789".toByteArray(), 3, 2)
         val bytes = bytesSequence.serialize()
         val copiedBytesSequence = bytes.deserialize()
 
@@ -310,8 +311,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
                 val attachmentRef = serviceHub.attachmentId
                 val bytes = run {
                     val outboundContext = SerializationFactory.defaultFactory.defaultContext
-                        .withServiceHub(serviceHub)
-                        .withClassLoader(child)
+                            .withServiceHub(serviceHub)
+                            .withClassLoader(child)
                     val wireTransaction = tx.toWireTransaction(serviceHub, outboundContext)
                     wireTransaction.serialize(context = outboundContext)
                 }
