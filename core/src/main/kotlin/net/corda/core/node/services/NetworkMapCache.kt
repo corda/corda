@@ -99,7 +99,7 @@ interface NetworkMapCache {
 
     /**
      * Look up the node information entries for a legal name.
-     * Note that normally there will be only one node for a key, but for clusters of nodes or distributed services there
+     * Note that normally there will be only one node for a legal name, but for clusters of nodes or distributed services there
      * can be multiple nodes.
      */
     fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo>
