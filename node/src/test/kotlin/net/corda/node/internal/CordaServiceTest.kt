@@ -89,7 +89,7 @@ class CordaServiceTest {
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type)))
-        nodeA = mockNet.createNode(notaryNode.network.myAddress)
+        nodeA = mockNet.createNode()
         mockNet.startNodes()
     }
 
