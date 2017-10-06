@@ -13,6 +13,7 @@ class RepeatingBytesInputStream(val bytesToRepeat: ByteArray, val numberOfBytes:
             return bytesToRepeat[(numberOfBytes - bytesLeft) % bytesToRepeat.size].toInt()
         }
     }
+
     override fun read(byteArray: ByteArray, offset: Int, length: Int): Int {
         val lastIdx = Math.min(Math.min(offset + length, byteArray.size), offset + bytesLeft)
         for (i in offset until lastIdx) {

@@ -253,14 +253,15 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
         }
     }
 
-    override val size: Int get() {
-        recalculateOffsets()
-        if (nestedIndexOffsets.size > 0) {
-            return nestedIndexOffsets.last()
-        } else {
-            return 0
+    override val size: Int
+        get() {
+            recalculateOffsets()
+            if (nestedIndexOffsets.size > 0) {
+                return nestedIndexOffsets.last()
+            } else {
+                return 0
+            }
         }
-    }
 
     override fun getSourceIndex(index: Int): Int {
         throw UnsupportedOperationException("Source index not supported in concatenation")
