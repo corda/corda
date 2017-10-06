@@ -476,7 +476,7 @@ generate methods should operate on the same transaction. You can see an example 
 for the commercial paper contract.
 
 The paper is given to us as a ``StateAndRef<CommercialPaper.State>`` object. This is exactly what it sounds like:
-a small object that has a (copy of) a state object, and also the (txhash, index) that indicates the location of this
+a small object that has a (copy of a) state object, and also the ``(txhash, index)`` that indicates the location of this
 state on the ledger.
 
 We add the existing paper state as an input, the same paper state with the owner field adjusted as an output,
