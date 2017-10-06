@@ -121,3 +121,11 @@ task runSeller(type: JavaExec) {
     args '--role'
     args 'SELLER'
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.trader'
+        )
+    }
+}

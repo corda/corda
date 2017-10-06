@@ -117,3 +117,11 @@ publishing {
         }
     }
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.simmvaluation'
+        )
+    }
+}

@@ -117,4 +117,9 @@ publishing {
 
 jar {
     from sourceSets.test.output
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.irs'
+        )
+    }
 }

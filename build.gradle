@@ -116,12 +116,14 @@ allprojects {
         }
     }
 
-    tasks.withType(Jar) { // Includes War and Ear
+    tasks.withType(Jar) { task ->
+        // Includes War and Ear
         manifest {
             attributes('Corda-Release-Version': corda_release_version)
             attributes('Corda-Platform-Version': corda_platform_version)
             attributes('Corda-Revision': corda_revision)
             attributes('Corda-Vendor': 'Corda Open Source')
+            attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
         }
     }
 

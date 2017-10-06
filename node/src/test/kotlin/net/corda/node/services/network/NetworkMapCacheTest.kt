@@ -65,6 +65,18 @@ class NetworkMapCacheTest {
     }
 
     @Test
+    fun `getPeerByLegalName`() {
+        val notaryNode = mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
+        val notaryCache: NetworkMapCache = notaryNode.services.networkMapCache
+        val expected = aliceNode.info.legalIdentities.single()
+
+        mockNet.runNetwork()
+        val actual = notaryNode.database.transaction { notaryCache.getPeerByLegalName(ALICE.name) }
+        assertEquals(expected, actual)
+    }
+
+    @Test
     fun `remove node from cache`() {
         val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)

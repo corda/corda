@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
@@ -131,11 +132,14 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
         return null
     }
 
-    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = database.transaction { queryByLegalName(name).firstOrNull() }
+    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = getNodesByLegalName(name).firstOrNull()
+    override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = database.transaction { queryByLegalName(name) }
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
             database.transaction { queryByIdentityKey(identityKey) }
 
     override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(address) }
+
+    override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = database.transaction { queryIdentityByLegalName(name) }
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
@@ -337,6 +341,19 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
         createSession {
             val result = findByIdentityKey(it, identityKey)
             return result.map { it.toNodeInfo() }
+        }
+    }
+
+    private fun queryIdentityByLegalName(name: CordaX500Name): PartyAndCertificate? {
+        createSession {
+            val query = it.createQuery(
+                    // We do the JOIN here to restrict results to those present in the network map
+                    "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                    NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
+            query.setParameter("name", name.toString())
+            val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
+            // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
+            return candidates.firstOrNull()
         }
     }
 

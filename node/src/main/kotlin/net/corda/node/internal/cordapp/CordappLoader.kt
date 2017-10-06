@@ -169,6 +169,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
                 listOf(),
                 listOf(),
                 listOf(),
+                listOf(),
                 setOf(),
                 ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
         )
@@ -180,6 +181,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             CordappImpl(findContractClassNames(scanResult),
                     findInitiatedFlows(scanResult),
                     findRPCFlows(scanResult),
+                    findServiceFlows(scanResult),
                     findSchedulableFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
@@ -207,12 +209,16 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
                 }
     }
 
-    private fun findRPCFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
-        fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
-            return Modifier.isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || Modifier.isStatic(modifiers))
-        }
+    private fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
+        return Modifier.isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || Modifier.isStatic(modifiers))
+    }
 
+    private fun findRPCFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() }
+    }
+
+    private fun findServiceFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByService::class)
     }
 
     private fun findSchedulableFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
