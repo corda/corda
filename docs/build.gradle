@@ -1,5 +1,4 @@
 apply plugin: 'org.jetbrains.dokka'
-apply plugin: 'kotlin'
 
 dependencies {
     compile rootProject
@@ -24,6 +23,15 @@ dokka {
     externalDocumentationLink {
         url = new URL("http://www.bouncycastle.org/docs/docs1.5on/")
     }
+
+    packageOptions {
+        prefix = 'net.corda.core.internal'
+        suppress = true
+    }
+    packageOptions {
+        prefix = 'net.corda.client.rpc.internal'
+        suppress = true
+    }
 }
 
 task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
@@ -44,6 +52,15 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
     }
     externalDocumentationLink {
         url = new URL("http://www.bouncycastle.org/docs/docs1.5on/")
+    }
+
+    packageOptions {
+        prefix = 'net.corda.core.internal'
+        suppress = true
+    }
+    packageOptions {
+        prefix = 'net.corda.client.rpc.internal'
+        suppress = true
     }
 }
 

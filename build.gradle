@@ -42,7 +42,7 @@ buildscript {
     ext.hibernate_version = '5.2.6.Final'
     ext.h2_version = '1.4.194' // Update docs if renamed or removed.
     ext.rxjava_version = '1.2.4'
-    ext.dokka_version = '0.9.14'
+    ext.dokka_version = '0.9.15-corda'
     ext.eddsa_version = '0.2.0'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
