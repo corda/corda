@@ -104,5 +104,5 @@ fun <R : Any> FlowLogic<*>.receiveAll(receiveType: Class<R>, session: FlowSessio
 inline fun <reified R : Any> FlowLogic<*>.receiveAll(session: FlowSession, vararg sessions: FlowSession): List<UntrustworthyData<R>> = receiveAll(R::class.javaObjectType, listOf(session, *sessions))
 
 private fun Array<out Pair<FlowSession, Class<out Any>>>.enforceNoDuplicates() {
-    if (this.groupBy { it.first }.values.any { it.size > 1 }) throw IllegalArgumentException("A flow session can only appear once as argument.")
+    require(this.size == this.toSet().size) { "A flow session can only appear once as argument." }
 }

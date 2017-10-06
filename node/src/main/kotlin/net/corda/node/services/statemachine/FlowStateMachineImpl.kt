@@ -311,7 +311,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             requests.add(ReceiveOnly(sessionInternal, SessionData::class.java, receiveType))
         }
         val receivedMessages = ReceiveAll(requests).suspendAndExpectReceive(suspend)
-        val result = HashMap<FlowSession, UntrustworthyData<Any>>()
+        val result = LinkedHashMap<FlowSession, UntrustworthyData<Any>>()
         for ((sessionInternal, requestAndMessage) in receivedMessages) {
             val message = requestAndMessage.second.confirmReceiveType(requestAndMessage.first)
             result[sessionInternal.flowSession] = message.checkPayloadIs(requestAndMessage.first.userReceiveType as Class<out Any>)
