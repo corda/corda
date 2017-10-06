@@ -33,6 +33,7 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
         fun registerCustomSerializers(factory: SerializerFactory) {
             with(factory) {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.PrivateKeySerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.ThrowableSerializer(this))
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.X500NameSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
