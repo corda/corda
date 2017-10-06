@@ -34,9 +34,9 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
                             networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>,
                             id: Int,
-                            overrideServices: Map<ServiceInfo, KeyPair>?,
+                            notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNode {
-            return object : MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
+            return object : MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot) {
                 override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = SwizzleNetworkMapService(network, networkMapCache)
             }
         }

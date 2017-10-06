@@ -204,7 +204,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     fun `network tearoff`() {
         val mockNet = MockNetwork(initialiseSerialization = false)
         val n1 = mockNet.createNotaryNode()
-        val oracleNode = mockNet.createNode(n1.network.myAddress).apply {
+        val oracleNode = mockNet.createNode().apply {
             internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
