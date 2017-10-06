@@ -114,7 +114,7 @@ The above code however doesn't compile:
 
         Error:(35, 27) java: incompatible types: bad return type in lambda expression missing return value
 
-This is deliberate: The DSL forces us to specify either ``this.verifies()`` or ``this `fails with` "some text"`` on the
+This is deliberate: The DSL forces us to specify either ``verifies()`` or ```fails with`("some text")`` on the
 last line of ``transaction``:
 
 .. container:: codeset
@@ -141,11 +141,11 @@ Let's take a look at a transaction that fails.
         :end-before: DOCEND 3
         :dedent: 4
 
-            .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
-:language: java
-                :start-after: DOCSTART 3
-                :end-before: DOCEND 3
-                :dedent: 4
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 3
+        :end-before: DOCEND 3
+        :dedent: 4
 
 When run, that code produces the following error:
 
@@ -160,7 +160,7 @@ When run, that code produces the following error:
         net.corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalStateException: the state is propagated
 
 The transaction verification failed, because we wanted to move paper but didn't specify an output - but the state should be propagated.
-However we can specify that this is an intended behaviour by changing ``this.verifies()`` to ``this `fails with` "the state is propagated"``:
+However we can specify that this is an intended behaviour by changing ``verifies()`` to ```fails with`("the state is propagated")``:
 
 .. container:: codeset
 
@@ -256,7 +256,7 @@ Now that we know how to define a single transaction, let's look at how to define
         :dedent: 4
 
 In this example we declare that ``ALICE`` has $900 but we don't care where from. For this we can use
-``unverifiedTransaction``. Note how we don't need to specify ``this.verifies()``.
+``unverifiedTransaction``. Note how we don't need to specify ``verifies()``.
 
 Notice that we labelled output with ``"alice's $900"``, also in transaction named ``"Issuance"``
 we labelled a commercial paper with ``"paper"``. Now we can subsequently refer to them in other transactions, e.g.
@@ -265,7 +265,7 @@ by ``input("alice's $900")`` or ``"paper".output<ICommercialPaperState>()``.
 The last transaction named ``"Trade"`` exemplifies simple fact of selling the ``CommercialPaper`` to Alice for her $900,
 $100 less than the face value at 10% interest after only 7 days.
 
-We can also test whole ledger calling ``this.verifies()`` and ``this.fails()`` on the ledger level.
+We can also test whole ledger calling ``verifies()`` and ``fails()`` on the ledger level.
 To do so let's create a simple example that uses the same input twice:
 
 .. container:: codeset
@@ -283,7 +283,7 @@ To do so let's create a simple example that uses the same input twice:
         :dedent: 4
 
 The transactions ``verifies()`` individually, however the state was spent twice! That's why we need the global ledger
-verification (``this.fails()`` at the end). As in previous examples we can use ``tweak`` to create a local copy of the whole ledger:
+verification (``fails()`` at the end). As in previous examples we can use ``tweak`` to create a local copy of the whole ledger:
 
 .. container:: codeset
 
