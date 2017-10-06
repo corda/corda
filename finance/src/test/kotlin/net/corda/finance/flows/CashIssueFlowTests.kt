@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashIssueFlowTests {
-    private lateinit var mockNet : MockNetwork
+    private lateinit var mockNet: MockNetwork
     private lateinit var bankOfCordaNode: StartedNode<MockNode>
     private lateinit var bankOfCorda: Party
     private lateinit var notaryNode: StartedNode<MockNode>

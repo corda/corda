@@ -55,13 +55,13 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          */
         @Throws(InsufficientBalanceException::class)
         @JvmStatic
-        fun <S : FungibleAsset<T>, T: Any> generateSpend(tx: TransactionBuilder,
-                                                         amount: Amount<T>,
-                                                         to: AbstractParty,
-                                                         acceptableStates: List<StateAndRef<S>>,
-                                                         payChangeTo: AbstractParty,
-                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
-                                                         generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
+        fun <S : FungibleAsset<T>, T : Any> generateSpend(tx: TransactionBuilder,
+                                                          amount: Amount<T>,
+                                                          to: AbstractParty,
+                                                          acceptableStates: List<StateAndRef<S>>,
+                                                          payChangeTo: AbstractParty,
+                                                          deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
+                                                          generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
             return generateSpend(tx, listOf(PartyAndAmount(to, amount)), acceptableStates, payChangeTo, deriveState, generateMoveCommand)
         }
 
@@ -91,12 +91,12 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          */
         @Throws(InsufficientBalanceException::class)
         @JvmStatic
-        fun <S : FungibleAsset<T>, T: Any> generateSpend(tx: TransactionBuilder,
-                                                         payments: List<PartyAndAmount<T>>,
-                                                         acceptableStates: List<StateAndRef<S>>,
-                                                         payChangeTo: AbstractParty,
-                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
-                                                         generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
+        fun <S : FungibleAsset<T>, T : Any> generateSpend(tx: TransactionBuilder,
+                                                          payments: List<PartyAndAmount<T>>,
+                                                          acceptableStates: List<StateAndRef<S>>,
+                                                          payChangeTo: AbstractParty,
+                                                          deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
+                                                          generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
             // Discussion
             //
             // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -230,11 +230,11 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          */
         @Throws(InsufficientBalanceException::class)
         @JvmStatic
-        fun <S : FungibleAsset<T>, T: Any> generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                                                        assetStates: List<StateAndRef<S>>,
-                                                        deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
-                                                        generateMoveCommand: () -> CommandData,
-                                                        generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey> {
+        fun <S : FungibleAsset<T>, T : Any> generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
+                                                         assetStates: List<StateAndRef<S>>,
+                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
+                                                         generateMoveCommand: () -> CommandData,
+                                                         generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey> {
             val owner = assetStates.map { it.state.data.owner }.toSet().singleOrNull() ?: throw InsufficientBalanceException(amountIssued)
             val currency = amountIssued.token.product
             val amount = Amount(amountIssued.quantity, currency)
@@ -272,9 +272,9 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          * wrappers around this function, which build the state for you, and those should be used in preference.
          */
         @JvmStatic
-        fun <S : FungibleAsset<T>, T: Any> generateIssue(tx: TransactionBuilder,
-                                                         transactionState: TransactionState<S>,
-                                                         issueCommand: CommandData): Set<PublicKey> {
+        fun <S : FungibleAsset<T>, T : Any> generateIssue(tx: TransactionBuilder,
+                                                          transactionState: TransactionState<S>,
+                                                          issueCommand: CommandData): Set<PublicKey> {
             check(tx.inputStates().isEmpty())
             check(tx.outputStates().map { it.data }.filterIsInstance(transactionState.javaClass).isEmpty())
             require(transactionState.data.amount.quantity > 0)

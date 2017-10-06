@@ -73,6 +73,7 @@ class Obligation<P : Any> : Contract {
     companion object {
         const val PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.Obligation"
     }
+
     /**
      * Represents where in its lifecycle a contract state is, which in turn controls the commands that can be applied
      * to the state. Most states will not leave the [NORMAL] lifecycle. Note that settled (as an end lifecycle) is
@@ -191,7 +192,7 @@ class Obligation<P : Any> : Contract {
          */
         data class Move(override val contract: Class<out Contract>? = null) : MoveCommand
 
-                /**
+        /**
          * Allows new obligation states to be issued into existence.
          */
         class Issue : TypeOnlyCommandData()
@@ -785,9 +786,11 @@ infix fun <T : Any> Obligation.State<T>.between(parties: Pair<AbstractParty, Abs
 infix fun <T : Any> Obligation.State<T>.`owned by`(owner: AbstractParty) = copy(beneficiary = owner)
 infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy(obligor = party)
 // For Java users:
-@Suppress("unused") fun <T : Any> Obligation.State<T>.ownedBy(owner: AbstractParty) = copy(beneficiary = owner)
+@Suppress("unused")
+fun <T : Any> Obligation.State<T>.ownedBy(owner: AbstractParty) = copy(beneficiary = owner)
 
-@Suppress("unused") fun <T : Any> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
+@Suppress("unused")
+fun <T : Any> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
 
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }

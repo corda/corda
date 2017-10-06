@@ -13,7 +13,7 @@ import javax.persistence.Table
  * at the time of writing.
  */
 object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 3,
-                                         mappedTypes = listOf(PersistentCashState::class.java)) {
+        mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
     @Table(name = "cash_states_v3")
     class PersistentCashState(
