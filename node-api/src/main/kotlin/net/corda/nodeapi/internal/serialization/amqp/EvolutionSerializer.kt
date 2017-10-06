@@ -26,10 +26,10 @@ class EvolutionSerializer(
      * Represents a parameter as would be passed to the constructor of the class as it was
      * when it was serialised and NOT how that class appears now
      *
-     * @param type The jvm type of the parameter
-     * @param idx where in the parameter list this parameter falls. Required as the parameter
+     * @parameter type The jvm type of the parameter
+     * @parameter idx where in the parameter list this parameter falls. Required as the parameter
      * order may have been changed and we need to know where into the list to look
-     * @param property object to read the actual property value
+     * @parameter property object to read the actual property value
      */
     data class OldParam(val type: Type, val idx: Int, val property: PropertySerializer) {
         fun readProperty(paramValues: List<*>, schema: Schema, input: DeserializationInput) =
@@ -73,9 +73,9 @@ class EvolutionSerializer(
          * Build a serialization object for deserialisation only of objects serialised
          * as different versions of a class
          *
-         * @param old is an object holding the schema that represents the object
+         * @parameter old is an object holding the schema that represents the object
          *  as it was serialised and the type descriptor of that type
-         * @param new is the Serializer built for the Class as it exists now, not
+         * @parameter new is the Serializer built for the Class as it exists now, not
          * how it was serialised and persisted.
          */
         fun make(old: CompositeType, new: ObjectSerializer,
