@@ -22,7 +22,6 @@ import java.util.*
 class CustomVaultQueryTest {
 
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var nodeA: StartedNode<MockNetwork.MockNode>
     lateinit var nodeB: StartedNode<MockNetwork.MockNode>
     lateinit var notary: Party
@@ -32,12 +31,12 @@ class CustomVaultQueryTest {
         setCordappPackages("net.corda.finance.contracts.asset")
         mockNet = MockNetwork(threadPerNode = true)
         val notaryService = ServiceInfo(ValidatingNotaryService.type)
-        notaryNode = mockNet.createNode(
+        mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                overrideServices = mapOf(notaryService to DUMMY_NOTARY_KEY),
+                notaryIdentity = notaryService to DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(notaryService))
-        nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
-        nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
+        nodeA = mockNet.createPartyNode()
+        nodeB = mockNet.createPartyNode()
 
         nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
         nodeA.internals.installCordaService(CustomVaultQuery.Service::class.java)

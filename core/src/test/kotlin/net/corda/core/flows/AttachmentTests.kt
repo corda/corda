@@ -56,9 +56,9 @@ class AttachmentTests {
 
     @Test
     fun `download and store`() {
-        val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
-        val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+        mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
+        val bobNode = mockNet.createPartyNode(BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
@@ -94,9 +94,9 @@ class AttachmentTests {
 
     @Test
     fun `missing`() {
-        val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
-        val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
+        mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
+        val bobNode = mockNet.createPartyNode(BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
@@ -120,14 +120,14 @@ class AttachmentTests {
         val aliceNode = mockNet.createNode(legalName = ALICE.name, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceInfo>, id: Int,
-                                overrideServices: Map<ServiceInfo, KeyPair>?,
+                                notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }
         }, advertisedServices = *arrayOf(ServiceInfo(SimpleNotaryService.type)))
-        val bobNode = mockNet.createNode(aliceNode.network.myAddress, legalName = BOB.name)
+        val bobNode = mockNet.createNode(legalName = BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()

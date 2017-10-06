@@ -30,9 +30,9 @@ class ReceiveMultipleFlowTests {
         services = MockServices()
         mockNet = MockNetwork()
         notary = mockNet.createNotaryNode()
-        coordinator = mockNet.createPartyNode(notary.network.myAddress)
-        clusterMember1 = mockNet.createPartyNode(notary.network.myAddress)
-        clusterMember2 = mockNet.createPartyNode(notary.network.myAddress)
+        coordinator = mockNet.createPartyNode()
+        clusterMember1 = mockNet.createPartyNode()
+        clusterMember2 = mockNet.createPartyNode()
         mockNet.runNetwork()
         coordinator.internals.ensureRegistered()
     }

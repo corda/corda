@@ -50,11 +50,8 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     @Before
     fun setup() {
         mockNet = MockNetwork(defaultFactory = nodeFactory)
-        mapServiceNode = mockNet.createNode(
-                nodeFactory = nodeFactory,
-                legalName = DUMMY_MAP.name,
-                advertisedServices = *arrayOf(ServiceInfo(SimpleNotaryService.type)))
-        alice = mockNet.createNode(mapServiceNode.network.myAddress, nodeFactory = nodeFactory, legalName = ALICE.name)
+        mapServiceNode = mockNet.networkMapNode
+        alice = mockNet.createNode(nodeFactory = nodeFactory, legalName = ALICE.name)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
     }
@@ -249,7 +246,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun addNewNodeToNetworkMap(legalName: CordaX500Name): StartedNode<MockNode> {
-        val node = mockNet.createNode(mapServiceNode.network.myAddress, legalName = legalName)
+        val node = mockNet.createNode(legalName = legalName)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node
@@ -275,9 +272,9 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
                             networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>,
                             id: Int,
-                            overrideServices: Map<ServiceInfo, KeyPair>?,
+                            notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNode {
-            return object : MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
+            return object : MockNode(config, network, null, advertisedServices, id, notaryIdentity, entropyRoot) {
                 override fun makeNetworkMapService() = NullNetworkMapService
             }
         }
