@@ -32,7 +32,7 @@ Our extensive testing frameworks will continue to evolve alongside future Corda 
 we have introduced a new test node driver module to encapsulate all test functionality in support of building standalone node integration 
 tests using our DSL driver. 
 
-Please read :doc:`api-index` for complete details.
+Please read :doc:`corda-modules` for complete details.
 
 .. note:: it may be necessary to recompile applications against future versions of the API until we begin offering
          `ABI (Application Binary Interface) <https://en.wikipedia.org/wiki/Application_binary_interface>`_ stability as well.
