@@ -28,7 +28,7 @@ class CanonicalizerPlugin implements Plugin<Project> {
             output.setMethod(ZipOutputStream.DEFLATED)
 
             entries.each {
-                def newEntry = new ZipEntry( it.name )
+                def newEntry = new ZipEntry(it.name)
 
                 newEntry.setLastModifiedTime(zeroTime)
                 newEntry.setCreationTime(zeroTime)
