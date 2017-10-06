@@ -20,7 +20,7 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
 /**
  * Main entry point for deserializing an AMQP encoded object.
  *
- * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
+ * @parameter serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
 class DeserializationInput(internal val serializerFactory: SerializerFactory) {

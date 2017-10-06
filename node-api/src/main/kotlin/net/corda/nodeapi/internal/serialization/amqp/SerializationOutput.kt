@@ -12,7 +12,7 @@ import kotlin.collections.LinkedHashSet
 /**
  * Main entry point for serializing an object to AMQP.
  *
- * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
+ * @parameter serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
 open class SerializationOutput(internal val serializerFactory: SerializerFactory) {

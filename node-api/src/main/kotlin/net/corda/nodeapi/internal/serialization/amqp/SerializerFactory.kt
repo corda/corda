@@ -50,7 +50,7 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
      *
-     * @param actualClass Will be null if there isn't an actual object instance available (e.g. for
+     * @parameter actualClass Will be null if there isn't an actual object instance available (e.g. for
      * restricted type processing).
      */
     @Throws(NotSerializableException::class)

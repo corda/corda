@@ -34,10 +34,10 @@ fun AMQPField.typeAsString() = if (type == "*") requires[0] else type
  *  b) add the class to the dependency tree in [carpenterSchemas] if it cannot be instantiated
  *     at this time
  *
- *  @param classloader the class loader provided dby the [SerializationContext]
- *  @param carpenterSchemas structure that holds the dependency tree and list of classes that
+ *  @parameter classloader the class loader provided dby the [SerializationContext]
+ *  @parameter carpenterSchemas structure that holds the dependency tree and list of classes that
  *  need constructing
- *  @param force by default a schema is not added to [carpenterSchemas] if it already exists
+ *  @parameter force by default a schema is not added to [carpenterSchemas] if it already exists
  *  on the class path. For testing purposes schema generation can be forced
  */
 fun CompositeType.carpenterSchema(classloader: ClassLoader,
