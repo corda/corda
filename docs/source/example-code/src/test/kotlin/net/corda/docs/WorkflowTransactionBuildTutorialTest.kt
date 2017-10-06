@@ -20,7 +20,6 @@ import kotlin.test.assertEquals
 
 class WorkflowTransactionBuildTutorialTest {
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var nodeA: StartedNode<MockNetwork.MockNode>
     lateinit var nodeB: StartedNode<MockNetwork.MockNode>
 
@@ -35,12 +34,12 @@ class WorkflowTransactionBuildTutorialTest {
         setCordappPackages("net.corda.docs")
         mockNet = MockNetwork(threadPerNode = true)
         val notaryService = ServiceInfo(ValidatingNotaryService.type)
-        notaryNode = mockNet.createNode(
+        mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
+                notaryIdentity = Pair(notaryService, DUMMY_NOTARY_KEY),
                 advertisedServices = *arrayOf(notaryService))
-        nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
-        nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
+        nodeA = mockNet.createPartyNode()
+        nodeB = mockNet.createPartyNode()
         nodeA.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)
     }
 

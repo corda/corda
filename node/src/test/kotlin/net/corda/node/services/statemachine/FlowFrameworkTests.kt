@@ -79,7 +79,7 @@ class FlowFrameworkTests {
         setCordappPackages("net.corda.finance.contracts", "net.corda.testing.contracts")
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
         node1 = mockNet.createNode()
-        node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
+        node2 = mockNet.createNode()
 
         mockNet.runNetwork()
         node1.internals.ensureRegistered()
@@ -87,17 +87,15 @@ class FlowFrameworkTests {
         // We intentionally create our own notary and ignore the one provided by the network
         val notaryKeyPair = generateKeyPair()
         val notaryService = ServiceInfo(ValidatingNotaryService.type, CordaX500Name(commonName = ValidatingNotaryService.type.id, organisation = "Notary service 2000", locality = "London", country = "GB"))
-        val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
+        val notaryIdentityOverride = Pair(notaryService, notaryKeyPair)
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
-        notary1 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
-        notary2 = mockNet.createNotaryNode(networkMapAddress = node1.network.myAddress, overrideServices = overrideServices, serviceName = notaryService.name)
+        notary1 = mockNet.createNotaryNode(notaryIdentity = notaryIdentityOverride, serviceName = notaryService.name)
+        notary2 = mockNet.createNotaryNode(notaryIdentity = notaryIdentityOverride, serviceName = notaryService.name)
 
         receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
         mockNet.runNetwork()
 
-        // We don't create a network map, so manually handle registrations
-        mockNet.registerIdentities()
         notary1Identity = notary1.services.myInfo.legalIdentities[1]
         notary2Identity = notary2.services.myInfo.legalIdentities[1]
     }
@@ -160,7 +158,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `flow added before network map does run after init`() {
-        val node3 = mockNet.createNode(node1.network.myAddress) //create vanilla node
+        val node3 = mockNet.createNode() //create vanilla node
         val flow = NoOpFlow()
         node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
@@ -170,7 +168,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `flow added before network map will be init checkpointed`() {
-        var node3 = mockNet.createNode(node1.network.myAddress) //create vanilla node
+        var node3 = mockNet.createNode() //create vanilla node
         val flow = NoOpFlow()
         node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
@@ -178,7 +176,7 @@ class FlowFrameworkTests {
         node3.services.networkMapCache.clearNetworkMapCache() // zap persisted NetworkMapCache to force use of network.
         node3.dispose()
 
-        node3 = mockNet.createNode(node1.network.myAddress, node3.internals.id)
+        node3 = mockNet.createNode(node3.internals.id)
         val restoredFlow = node3.getSingleFlow<NoOpFlow>().first
         assertEquals(false, restoredFlow.flowStarted) // Not started yet as no network activity has been allowed yet
         mockNet.runNetwork() // Allow network map messages to flow
@@ -189,7 +187,7 @@ class FlowFrameworkTests {
         node3.dispose()
 
         // Now it is completed the flow should leave no Checkpoint.
-        node3 = mockNet.createNode(node1.network.myAddress, node3.internals.id)
+        node3 = mockNet.createNode(node3.internals.id)
         mockNet.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
         assertTrue(node3.smm.findStateMachines(NoOpFlow::class.java).isEmpty())
@@ -215,7 +213,7 @@ class FlowFrameworkTests {
         var sentCount = 0
         mockNet.messagingNetwork.sentMessages.toSessionTransfers().filter { it.isPayloadTransfer }.forEach { sentCount++ }
 
-        val node3 = mockNet.createNode(node1.network.myAddress)
+        val node3 = mockNet.createNode()
         val secondFlow = node3.registerFlowFactory(PingPongFlow::class) { PingPongFlow(it, payload2) }
         mockNet.runNetwork()
 
@@ -233,7 +231,7 @@ class FlowFrameworkTests {
             assertEquals(1, node2.checkpointStorage.checkpoints().size) // confirm checkpoint
             node2.services.networkMapCache.clearNetworkMapCache()
         }
-        val node2b = mockNet.createNode(node1.network.myAddress, node2.internals.id, advertisedServices = *node2.internals.advertisedServices.toTypedArray())
+        val node2b = mockNet.createNode(node2.internals.id, advertisedServices = *node2.internals.advertisedServices.toTypedArray())
         node2.internals.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
@@ -260,7 +258,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `sending to multiple parties`() {
-        val node3 = mockNet.createNode(node1.network.myAddress)
+        val node3 = mockNet.createNode()
         mockNet.runNetwork()
         node2.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         node3.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
@@ -292,7 +290,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `receiving from multiple parties`() {
-        val node3 = mockNet.createNode(node1.network.myAddress)
+        val node3 = mockNet.createNode()
         mockNet.runNetwork()
         val node2Payload = "Test 1"
         val node3Payload = "Test 2"
@@ -501,7 +499,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException propagated in invocation chain`() {
-        val node3 = mockNet.createNode(node1.network.myAddress)
+        val node3 = mockNet.createNode()
         mockNet.runNetwork()
 
         node3.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
@@ -515,7 +513,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
-        val node3 = mockNet.createNode(node1.network.myAddress)
+        val node3 = mockNet.createNode()
         mockNet.runNetwork()
 
         // Node 2 will send its payload and then block waiting for the receive from node 1. Meanwhile node 1 will move
@@ -763,7 +761,7 @@ class FlowFrameworkTests {
     private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow(networkMapNode: StartedNode<*>? = null) = internals.run {
         disableDBCloseOnStop() // Handover DB to new node copy
         stop()
-        val newNode = mockNet.createNode(networkMapNode?.network?.myAddress, id, advertisedServices = *advertisedServices.toTypedArray())
+        val newNode = mockNet.createNode(id, advertisedServices = *advertisedServices.toTypedArray())
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
