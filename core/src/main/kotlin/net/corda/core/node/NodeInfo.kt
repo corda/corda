@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.CordaSerializable
@@ -42,4 +43,10 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
 
     /** Returns true if [party] is one of the identities of this node, else false. */
     fun isLegalIdentity(party: Party): Boolean = party in legalIdentities
+
+    fun chooseIdentity(name: CordaX500Name): Party = chooseIdentityAndPath(name).party
+
+    fun chooseIdentityAndPath(name: CordaX500Name): PartyAndCertificate {
+        return legalIdentitiesAndCerts.singleOrNull { it.name == name } ?: throw IllegalArgumentException("Node does not have an identity \"$name\"")
+    }
 }

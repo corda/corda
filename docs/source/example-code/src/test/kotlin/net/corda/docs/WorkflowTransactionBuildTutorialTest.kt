@@ -39,8 +39,8 @@ class WorkflowTransactionBuildTutorialTest {
         aliceNode.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)
         aliceServices = aliceNode.services
         bobServices = bobNode.services
-        alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-        bob = notaryNode.services.networkMapCache.getPeerByLegalName(BOB_NAME)!!
+        alice = aliceNode.services.myInfo.chooseIdentity(ALICE_NAME)
+        bob = bobNode.services.myInfo.chooseIdentity(BOB_NAME)
     }
 
     @After
