@@ -397,7 +397,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
 
         val (ourFlowVersion, appName) = when (initiatedFlowFactory) {
-            // The flow version for the core flows is the platform version
+        // The flow version for the core flows is the platform version
             is InitiatedFlowFactory.Core -> serviceHub.myInfo.platformVersion to "corda"
             is InitiatedFlowFactory.CorDapp -> initiatedFlowFactory.flowVersion to initiatedFlowFactory.appName
         }
@@ -631,8 +631,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val serialized = try {
             message.serialize()
         } catch (e: Exception) {
-            when(e) {
-                // Handling Kryo and AMQP serialization problems. Unfortunately the two exception types do not share much of a common exception interface.
+            when (e) {
+            // Handling Kryo and AMQP serialization problems. Unfortunately the two exception types do not share much of a common exception interface.
                 is KryoException,
                 is NotSerializableException -> {
                     if (message !is ErrorSessionEnd || message.errorResponse == null) throw e

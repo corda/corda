@@ -44,7 +44,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     lateinit var alice: StartedNode<MockNode>
 
     companion object {
-        val subscriberLegalName = CordaX500Name(organisation ="Subscriber", locality ="New York", country ="US")
+        val subscriberLegalName = CordaX500Name(organisation = "Subscriber", locality = "New York", country = "US")
     }
 
     @Before
@@ -205,7 +205,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     private var lastSerial = Long.MIN_VALUE
 
     private fun StartedNode<*>.registration(addOrRemove: AddOrRemove,
-                                      serial: Long? = null): CordaFuture<RegistrationResponse> {
+                                            serial: Long? = null): CordaFuture<RegistrationResponse> {
         val distinctSerial = if (serial == null) {
             ++lastSerial
         } else {

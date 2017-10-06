@@ -170,8 +170,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
                     (customRetryIntervalMs?.let { mapOf("activeMQServer.bridge.retryIntervalMs" to it.toString()) } ?: emptyMap())
             if (party == DUMMY_NOTARY) {
                 startNetworkMapNode(party.name, configOverrides = configOverrides)
-            }
-            else {
+            } else {
                 startNode(party.name,
                         configOverrides = configOverrides,
                         noNetworkMap = noNetworkMap,
@@ -184,7 +183,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     private fun checkConnectivity(nodes: List<StartedNode<*>>) {
         nodes.forEach { node1 ->
             nodes.forEach { node2 ->
-                if(!(node1 === node2)) { // Do not check connectivity to itself
+                if (!(node1 === node2)) { // Do not check connectivity to itself
                     node2.internals.registerInitiatedFlow(SendBackFlow::class.java)
                     val resultFuture = node1.services.startFlow(SendFlow(node2.info.chooseIdentity())).resultFuture
                     assertThat(resultFuture.getOrThrow()).isEqualTo("Hello!")

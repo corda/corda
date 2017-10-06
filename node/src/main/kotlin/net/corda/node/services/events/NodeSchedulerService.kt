@@ -72,7 +72,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         // to wait in our code, rather than <code>Thread.sleep()</code> or other time-based pauses.
         @Suspendable
         @VisibleForTesting
-        // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
+                // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
         fun awaitWithDeadline(clock: Clock, deadline: Instant, future: Future<*> = GuavaSettableFuture.create<Any>()): Boolean {
             var nanos: Long
             do {
@@ -89,11 +89,11 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
                     try {
                         // This will return when it times out, or when the clock mutates or when when the original future completes.
                         originalFutureCompleted.get(nanos, TimeUnit.NANOSECONDS)
-                    } catch(e: ExecutionException) {
+                    } catch (e: ExecutionException) {
                         // No need to take action as will fall out of the loop due to future.isDone
-                    } catch(e: CancellationException) {
+                    } catch (e: CancellationException) {
                         // No need to take action as will fall out of the loop due to future.isDone
-                    } catch(e: TimeoutException) {
+                    } catch (e: TimeoutException) {
                         // No need to take action as will fall out of the loop due to future.isDone
                     }
                 }
@@ -111,7 +111,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
                         var txId = it.output.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
                         var index = it.output.index ?: throw IllegalStateException("DB returned null SecureHash index")
                         Pair(StateRef(SecureHash.parse(txId), index),
-                            ScheduledStateRef(StateRef(SecureHash.parse(txId), index), it.scheduledAt))
+                                ScheduledStateRef(StateRef(SecureHash.parse(txId), index), it.scheduledAt))
                     },
                     toPersistentEntity = { key: StateRef, value: ScheduledStateRef ->
                         PersistentScheduledState().apply {
@@ -152,7 +152,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     private class InnerState {
         var scheduledStates = createMap()
 
-        var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue( { a, b -> a.scheduledAt.compareTo(b.scheduledAt) } )
+        var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue({ a, b -> a.scheduledAt.compareTo(b.scheduledAt) })
 
         var rescheduled: GuavaSettableFuture<Boolean>? = null
     }
@@ -162,7 +162,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
-            scheduledStatesQueue.addAll(scheduledStates.all().map { it.second } .toMutableList())
+            scheduledStatesQueue.addAll(scheduledStates.all().map { it.second }.toMutableList())
             rescheduleWakeUp()
         }
     }
@@ -182,7 +182,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
             if (action.scheduledAt.isBefore(previousEarliest?.scheduledAt ?: Instant.MAX)) {
                 // We are earliest
                 rescheduleWakeUp()
-            } else if(previousEarliest?.ref == action.ref && previousEarliest.scheduledAt != action.scheduledAt) {
+            } else if (previousEarliest?.ref == action.ref && previousEarliest.scheduledAt != action.scheduledAt) {
                 // We were earliest but might not be any more
                 rescheduleWakeUp()
             }

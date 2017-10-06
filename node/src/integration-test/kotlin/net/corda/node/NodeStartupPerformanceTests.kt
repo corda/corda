@@ -17,7 +17,7 @@ class NodeStartupPerformanceTests {
         driver(networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false)) {
             startDedicatedNetworkMapService().get()
             val times = ArrayList<Long>()
-            for (i in 1 .. 10) {
+            for (i in 1..10) {
                 val time = Stopwatch.createStarted().apply {
                     startNode().get()
                 }.stop().elapsed(TimeUnit.MICROSECONDS)

@@ -24,7 +24,7 @@ import javax.persistence.*
 class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsToken() {
 
     @MappedSuperclass
-    open class PersistentUniqueness (
+    open class PersistentUniqueness(
             @EmbeddedId
             var id: PersistentStateRef = PersistentStateRef(),
 
@@ -45,11 +45,11 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
 
             @Column(name = "requesting_party_key", length = 255)
             var owningKey: String = ""
-    ): Serializable
+    ) : Serializable
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_commit_log")
-    class PersistentNotaryCommit(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentParty):
+    class PersistentNotaryCommit(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentParty) :
             PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
 
 
@@ -77,37 +77,37 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                                                     name = CordaX500Name.parse(it.party.name),
                                                     owningKey = parsePublicKeyBase58(it.party.owningKey))))
                         },
-                        toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty) : UniquenessProvider.ConsumingTx ->
+                        toPersistentEntity = { (txHash, index): StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
                             PersistentNotaryCommit(
                                     id = PersistentStateRef(txHash.toString(), index),
                                     consumingTxHash = id.toString(),
                                     consumingIndex = inputIndex,
                                     party = PersistentParty(requestingParty.name.toString(), requestingParty.owningKey.toBase58String())
                             )
-                    },
-                    persistentEntityClass = PersistentNotaryCommit::class.java
-            )
-        }
+                        },
+                        persistentEntityClass = PersistentNotaryCommit::class.java
+                )
+    }
 
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
 
         val conflict = mutex.locked {
-                    val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-                    for (inputState in states) {
-                        val consumingTx = committedStates.get(inputState)
-                        if (consumingTx != null) conflictingStates[inputState] = consumingTx
-                    }
-                    if (conflictingStates.isNotEmpty()) {
-                        log.debug("Failure, input states already committed: ${conflictingStates.keys}")
-                        UniquenessProvider.Conflict(conflictingStates)
-                    } else {
-                        states.forEachIndexed { i, stateRef ->
-                            committedStates[stateRef] = UniquenessProvider.ConsumingTx(txId, i, callerIdentity)
-                        }
-                        log.debug("Successfully committed all input states: $states")
-                        null
-                    }
+            val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
+            for (inputState in states) {
+                val consumingTx = committedStates.get(inputState)
+                if (consumingTx != null) conflictingStates[inputState] = consumingTx
+            }
+            if (conflictingStates.isNotEmpty()) {
+                log.debug("Failure, input states already committed: ${conflictingStates.keys}")
+                UniquenessProvider.Conflict(conflictingStates)
+            } else {
+                states.forEachIndexed { i, stateRef ->
+                    committedStates[stateRef] = UniquenessProvider.ConsumingTx(txId, i, callerIdentity)
                 }
+                log.debug("Successfully committed all input states: $states")
+                null
+            }
+        }
 
         if (conflict != null) throw UniquenessException(conflict)
     }

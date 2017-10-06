@@ -37,7 +37,7 @@ class CordappProviderImplTests {
         val provider = CordappProviderImpl(loader)
 
         provider.start(attachmentStore)
-        
+
         Assert.assertNull(provider.getCordappAttachmentId(provider.cordapps.first()))
     }
 

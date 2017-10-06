@@ -57,18 +57,18 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java
-                    ))
+            ))
 
     // Required schemas are those used by internal Corda services
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(NodeServicesV1, SchemaService.SchemaOptions()))
+                    Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
+                    Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
+                    Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
-    override var schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
-        mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())
+    override var schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map { mappedSchema ->
+        Pair(mappedSchema, SchemaService.SchemaOptions())
     })
 
     // Currently returns all schemas supported by the state, with no filtering or enrichment.
@@ -94,8 +94,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
     }
 
     override fun registerCustomSchemas(_customSchemas: Set<MappedSchema>) {
-        schemaOptions = schemaOptions.plus(_customSchemas.map {
-            mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())
+        schemaOptions = schemaOptions.plus(_customSchemas.map { mappedSchema ->
+            Pair(mappedSchema, SchemaService.SchemaOptions())
         })
     }
 }

@@ -153,7 +153,7 @@ class ScheduledFlowTests {
         val statesFromB: List<StateAndRef<ScheduledState>> = nodeB.database.transaction {
             queryStatesWithPaging(nodeB.services.vaultService)
         }
-        assertEquals("Expect all states to be present",2 * N, statesFromA.count())
+        assertEquals("Expect all states to be present", 2 * N, statesFromA.count())
         statesFromA.forEach { ref ->
             if (ref !in statesFromB) {
                 throw IllegalStateException("State $ref is only present on node A.")

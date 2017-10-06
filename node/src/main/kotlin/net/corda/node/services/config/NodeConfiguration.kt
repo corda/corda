@@ -122,12 +122,13 @@ enum class CertChainPolicyType {
 }
 
 data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
-    val certificateChainCheckPolicy: CertificateChainCheckPolicy get() {
-        return when (policy) {
-            CertChainPolicyType.Any -> CertificateChainCheckPolicy.Any
-            CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
-            CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
-            CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
+    val certificateChainCheckPolicy: CertificateChainCheckPolicy
+        get() {
+            return when (policy) {
+                CertChainPolicyType.Any -> CertificateChainCheckPolicy.Any
+                CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
+                CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
+                CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
+            }
         }
-    }
 }

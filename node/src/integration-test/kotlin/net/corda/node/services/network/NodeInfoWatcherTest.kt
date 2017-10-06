@@ -29,7 +29,9 @@ import kotlin.test.assertTrue
 
 class NodeInfoWatcherTest : NodeBasedTest() {
 
-    @Rule @JvmField var folder = TemporaryFolder()
+    @Rule
+    @JvmField
+    var folder = TemporaryFolder()
 
     lateinit var keyManagementService: KeyManagementService
     lateinit var nodeInfoPath: Path

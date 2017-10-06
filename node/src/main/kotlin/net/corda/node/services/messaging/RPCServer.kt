@@ -86,6 +86,7 @@ class RPCServer(
     private companion object {
         val log = loggerFor<RPCServer>()
     }
+
     private enum class State {
         UNSTARTED,
         STARTED,
@@ -350,6 +351,7 @@ class RPCServer(
 
     // TODO remove this User once webserver doesn't need it
     private val nodeUser = User(NODE_USER, NODE_USER, setOf())
+
     private fun getUser(message: ClientMessage): User {
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
         val rpcUser = userService.getUser(validatedUser)
@@ -365,6 +367,7 @@ class RPCServer(
 
 @JvmField
 internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcContext> = ThreadLocal()
+
 /**
  * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
  * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
@@ -422,6 +425,7 @@ class ObservableContext(
 
 object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     private object RpcObservableContextKey
+
     private val log = loggerFor<RpcServerObservableSerializer>()
 
     fun createContext(observableContext: ObservableContext): SerializationContext {
@@ -448,9 +452,11 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
                                     }
                                 }
                             }
+
                             override fun onError(exception: Throwable) {
                                 log.error("onError called in materialize()d RPC Observable", exception)
                             }
+
                             override fun onCompleted() {
                             }
                         }

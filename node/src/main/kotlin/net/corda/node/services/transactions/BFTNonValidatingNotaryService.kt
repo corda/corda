@@ -112,7 +112,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                                             name = CordaX500Name.parse(it.party.name),
                                             owningKey = parsePublicKeyBase58(it.party.owningKey))))
                 },
-                toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
+                toPersistentEntity = { (txHash, index): StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
                     PersistedCommittedState(
                             id = PersistentStateRef(txHash.toString(), index),
                             consumingTxHash = id.toString(),
