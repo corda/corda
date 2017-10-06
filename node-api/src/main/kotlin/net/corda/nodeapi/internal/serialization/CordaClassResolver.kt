@@ -158,7 +158,7 @@ sealed class AbstractMutableClassWhitelist(private val whitelist: MutableSet<Str
         /**
          * There are certain delegates like [net.corda.nodeapi.internal.serialization.AllButBlacklisted]
          * which may throw when asked whether the type is listed.
-         * In such situations - it may be a good idea to ask [delegate] first before making a check against own [whitelist]
+         * In such situations - it may be a good idea to ask [delegate] first before making a check against own [whitelist].
          */
         return delegate.hasListed(type) || (type.name in whitelist)
     }
@@ -176,7 +176,7 @@ class GlobalTransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableC
 }
 
 /**
- * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since implements [MutableClassWhitelist].
+ * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since it implements [MutableClassWhitelist].
  */
 class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(Collections.synchronizedSet(mutableSetOf()), delegate)
 
