@@ -138,7 +138,7 @@ dependencies {
     compile "com.h2database:h2:$h2_version"
 
     // For Postgres database support in persistence
-    compile "org.postgresql:postgresql:42.1.4"
+    compile "org.postgresql:postgresql:$postgresql_version"
 
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.5.1"
