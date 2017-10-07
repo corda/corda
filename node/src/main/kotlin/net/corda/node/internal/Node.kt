@@ -63,7 +63,7 @@ import kotlin.system.exitProcess
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
  */
-open class Node(override val configuration: FullNodeConfiguration,
+open class Node(configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
                 versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true
@@ -93,6 +93,7 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 
     override val log: Logger get() = logger
+    override val configuration get() = super.configuration as FullNodeConfiguration // Necessary to avoid init order NPE.
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 
