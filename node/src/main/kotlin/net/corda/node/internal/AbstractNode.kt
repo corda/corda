@@ -33,6 +33,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
+import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
@@ -95,10 +96,17 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 // TODO: Where this node is the initial network map service, currently no networkMapService is provided.
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
-abstract class AbstractNode(open val configuration: NodeConfiguration,
+abstract class AbstractNode(config: NodeConfiguration,
                             val advertisedServices: Set<ServiceInfo>,
                             val platformClock: Clock,
+                            protected val versionInfo: VersionInfo,
                             @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+    open val configuration = config.apply {
+        require(minimumPlatformVersion <= versionInfo.platformVersion) {
+            "minimumPlatformVersion cannot be greater than the node's own version"
+        }
+    }
+
     private class StartedNodeImpl<out N : AbstractNode>(
             override val internals: N,
             override val services: ServiceHubInternalImpl,
@@ -119,7 +127,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected abstract val log: Logger
     protected abstract val networkMapAddress: SingleMessageRecipient?
-    protected abstract val platformVersion: Int
 
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
@@ -452,13 +459,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         legalIdentity = obtainIdentity()
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
-
+        val networkMapCache = services.networkMapCache
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService,
-                services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
+                services.auditService, services.monitoringService, networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, cordappProvider, this)
-        makeNetworkServices(tokenizableServices)
+        makeNetworkServices(network, networkMapCache, tokenizableServices)
         return tokenizableServices
     }
 
@@ -489,7 +496,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val allIdentitiesList = mutableListOf(legalIdentity)
         myNotaryIdentity?.let { allIdentitiesList.add(it) }
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, allIdentitiesList, platformVersion, platformClock.instant().toEpochMilli())
+        return NodeInfo(addresses, allIdentitiesList, versionInfo.platformVersion, platformClock.instant().toEpochMilli())
     }
 
     /**
@@ -550,9 +557,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeNetworkServices(tokenizableServices: MutableList<Any>) {
+    private fun makeNetworkServices(network: MessagingService, networkMapCache: NetworkMapCacheInternal, tokenizableServices: MutableList<Any>) {
         val serviceTypes = advertisedServices.map { it.type }
-        inNodeNetworkMapService = if (configuration.networkMapService == null) makeNetworkMapService() else NullNetworkMapService
+        inNodeNetworkMapService = if (configuration.networkMapService == null) makeNetworkMapService(network, networkMapCache) else NullNetworkMapService
         val notaryServiceType = serviceTypes.singleOrNull { it.isNotary() }
         if (notaryServiceType != null) {
             val service = makeCoreNotaryService(notaryServiceType)
@@ -631,9 +638,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return PersistentKeyManagementService(identityService, partyKeys)
     }
 
-    open protected fun makeNetworkMapService(): NetworkMapService {
-        return PersistentNetworkMapService(services, configuration.minimumPlatformVersion)
-    }
+    abstract protected fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService
 
     open protected fun makeCoreNotaryService(type: ServiceType): NotaryService? {
         check(myNotaryIdentity != null) { "No notary identity initialized when creating a notary service" }
