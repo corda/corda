@@ -28,6 +28,9 @@ import net.corda.core.utilities.loggerFor
 import net.corda.finance.utils.WorldMapLocation
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
@@ -42,9 +45,8 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CertificateAndKeyPair
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.testing.*
+import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -152,7 +154,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overriden to cause nodes to have stable or colliding identity/service keys.
      */
-    open class MockNode(val configuration: NodeConfiguration,
+    open class MockNode(val config: NodeConfiguration,
                         val mockNet: MockNetwork,
                         override val networkMapAddress: SingleMessageRecipient?,
                         advertisedServices: Set<ServiceInfo>,
@@ -160,10 +162,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         internal val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                         private val customSchemas: Set<MappedSchema>) :
-            AbstractNode(configuration, advertisedServices, TestClock(), mockNet.busyLatch) {
+            AbstractNode(config, advertisedServices, TestClock(), MOCK_VERSION_INFO, mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
-        override val platformVersion: Int get() = 1
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
                     ServiceAffinityExecutor("Mock node $id thread", 1)
@@ -218,8 +219,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             // Nothing to do
         }
 
-        override fun makeNetworkMapService(): NetworkMapService {
-            return InMemoryNetworkMapService(services, platformVersion)
+        override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
+            return InMemoryNetworkMapService(network, networkMapCache, 1)
         }
 
         override fun getNotaryIdentity(): PartyAndCertificate? {

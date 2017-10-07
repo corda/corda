@@ -2,9 +2,10 @@ package net.corda.node.services.network
 
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.schemas.MappedSchema
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.messaging.MessagingService
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import java.math.BigInteger
@@ -37,7 +38,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
                             entropyRoot: BigInteger,
                             customSchemas: Set<MappedSchema>): MockNode {
             return object : MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot, customSchemas) {
-                override fun makeNetworkMapService() = SwizzleNetworkMapService(services)
+                override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = SwizzleNetworkMapService(network, networkMapCache)
             }
         }
     }
@@ -46,12 +47,13 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
      * We use a special [NetworkMapService] that allows us to switch in a new instance at any time to check that the
      * state within it is correctly restored.
      */
-    private class SwizzleNetworkMapService(val services: ServiceHubInternal) : NetworkMapService {
-        var delegate: PersistentNetworkMapService = PersistentNetworkMapService(services, 1)
+    private class SwizzleNetworkMapService(private val delegateFactory: () -> PersistentNetworkMapService) : NetworkMapService {
+        constructor(network: MessagingService, networkMapCache: NetworkMapCacheInternal) : this({ PersistentNetworkMapService(network, networkMapCache, 1) })
 
+        var delegate = delegateFactory()
         fun swizzle() {
             delegate.unregisterNetworkHandlers()
-            delegate = PersistentNetworkMapService(services, 1)
+            delegate = delegateFactory()
         }
     }
 }
