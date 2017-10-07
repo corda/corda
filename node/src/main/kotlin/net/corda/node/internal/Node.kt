@@ -63,7 +63,7 @@ import kotlin.system.exitProcess
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
  */
-open class Node(val configuration: FullNodeConfiguration,
+open class Node(override val configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
                 versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true
