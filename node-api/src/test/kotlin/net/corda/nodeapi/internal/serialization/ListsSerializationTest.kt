@@ -22,12 +22,12 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
     private companion object {
         val javaEmptyListClass = Collections.emptyList<Any>().javaClass
 
-        fun<T : Any> verifyEnvelope(serBytes: SerializedBytes<T>, envVerBody: (Envelope) -> Unit) =
-            amqpSpecific("AMQP specific envelope verification") {
-                val context = SerializationFactory.defaultFactory.defaultContext
-                val envelope = DeserializationInput(SerializerFactory(context.whitelist, context.deserializationClassLoader)).getEnvelope(serBytes)
-                envVerBody(envelope)
-            }
+        fun <T : Any> verifyEnvelope(serBytes: SerializedBytes<T>, envVerBody: (Envelope) -> Unit) =
+                amqpSpecific("AMQP specific envelope verification") {
+                    val context = SerializationFactory.defaultFactory.defaultContext
+                    val envelope = DeserializationInput(SerializerFactory(context.whitelist, context.deserializationClassLoader)).getEnvelope(serBytes)
+                    envVerBody(envelope)
+                }
     }
 
     @Test
@@ -54,7 +54,7 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `check empty list serialises as Java emptyList`() = kryoSpecific("Kryo specific test"){
+    fun `check empty list serialises as Java emptyList`() = kryoSpecific("Kryo specific test") {
         val nameID = 0
         val serializedForm = emptyList<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
@@ -86,7 +86,7 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
     data class Child(val value: Int) : Parent
 
     @CordaSerializable
-    data class CovariantContainer<out T: Parent>(val payload: List<T>)
+    data class CovariantContainer<out T : Parent>(val payload: List<T>)
 
     @Test
     fun `check covariance`() {
@@ -99,11 +99,11 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
             envelope.schema.types.single { typeNotation -> typeNotation.name == java.util.List::class.java.name + "<?>" }
         }
 
-        assertEqualAfterRoundTripSerialization(container, {bytes -> verifyEnvelope(bytes, ::verifyEnvelopeBody)})
+        assertEqualAfterRoundTripSerialization(container, { bytes -> verifyEnvelope(bytes, ::verifyEnvelopeBody) })
     }
 }
 
-internal inline fun<reified T : Any> assertEqualAfterRoundTripSerialization(obj: T, noinline streamValidation: ((SerializedBytes<T>) -> Unit)? = null) {
+internal inline fun <reified T : Any> assertEqualAfterRoundTripSerialization(obj: T, noinline streamValidation: ((SerializedBytes<T>) -> Unit)? = null) {
 
     val serializedForm: SerializedBytes<T> = obj.serialize()
     streamValidation?.invoke(serializedForm)

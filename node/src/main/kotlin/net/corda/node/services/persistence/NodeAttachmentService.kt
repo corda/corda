@@ -29,7 +29,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}attachments",
-           indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
+            indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
     class DBAttachment(
             @Id
             @Column(name = "att_id", length = 65535)
@@ -69,7 +69,8 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
      * around inside it, we haven't read the whole file, so we can't check the hash. But when copying it over the network
      * this will provide an additional safety check against user error.
      */
-    @VisibleForTesting @CordaSerializable
+    @VisibleForTesting
+    @CordaSerializable
     class HashCheckingStream(val expected: SecureHash.SHA256,
                              val expectedSize: Int,
                              input: InputStream,
@@ -110,16 +111,17 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         }
 
         private var _hash: HashCode? = null // Backing field for hash property
-        private val hash: HashCode get() {
-            var h = _hash
-            return if (h == null) {
-                h = stream.hash()
-                _hash = h
-                h
-            } else {
-                h
+        private val hash: HashCode
+            get() {
+                var h = _hash
+                return if (h == null) {
+                    h = stream.hash()
+                    _hash = h
+                    h
+                } else {
+                    h
+                }
             }
-        }
     }
 
     private class AttachmentImpl(override val id: SecureHash, dataLoader: () -> ByteArray, private val checkOnLoad: Boolean) : AbstractAttachment(dataLoader), SerializeAsToken {

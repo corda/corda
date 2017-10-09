@@ -29,6 +29,7 @@ import java.security.cert.X509Certificate
 class Party(val name: CordaX500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
     constructor(certificate: X509Certificate)
             : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
+
     override fun nameOrNull(): CordaX500Name = name
     fun anonymise(): AnonymousParty = AnonymousParty(owningKey)
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)

@@ -247,11 +247,11 @@ object InteractiveShell {
                 // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
                 // the tracker is done with the screen.
                 latch.await()
-            } catch(e: InterruptedException) {
+            } catch (e: InterruptedException) {
                 ANSIProgressRenderer.progressTracker = null
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
-        } catch(e: NoApplicableConstructor) {
+        } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
         } finally {
@@ -305,14 +305,14 @@ object InteractiveShell {
                     continue
                 }
                 return invoke(flow)
-            } catch(e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
+            } catch (e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
                 errors.add("${getPrototype()}: missing parameter ${e.paramName}")
-            } catch(e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
+            } catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
                 errors.add("${getPrototype()}: too many parameters")
-            } catch(e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
+            } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
                 errors.add("$argTypes: <constructor missing parameter reflection data>")
-            } catch(e: StringToMethodCallParser.UnparseableCallException) {
+            } catch (e: StringToMethodCallParser.UnparseableCallException) {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
                 errors.add("$argTypes: ${e.message}")
             }
@@ -506,7 +506,7 @@ object InteractiveShell {
             } finally {
                 try {
                     value.close()
-                } catch(e: IOException) {
+                } catch (e: IOException) {
                     // Ignore.
                 }
             }

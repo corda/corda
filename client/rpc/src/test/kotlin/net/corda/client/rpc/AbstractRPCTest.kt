@@ -20,10 +20,13 @@ open class AbstractRPCTest {
     }
 
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "Mode = {0}")
+        @JvmStatic
+        @Parameterized.Parameters(name = "Mode = {0}")
         fun defaultModes() = modes(RPCTestMode.InVm, RPCTestMode.Netty)
+
         fun modes(vararg modes: RPCTestMode) = listOf(*modes).map { arrayOf(it) }
     }
+
     @Parameterized.Parameter
     lateinit var mode: RPCTestMode
 

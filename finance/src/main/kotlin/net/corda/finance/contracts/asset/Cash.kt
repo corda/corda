@@ -401,10 +401,17 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 
 // Small DSL extensions.
 
-/** @suppress */ infix fun Cash.State.`owned by`(owner: AbstractParty) = ownedBy(owner)
-/** @suppress */ infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
-/** @suppress */ infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
-/** @suppress */ infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
+/** @suppress */
+infix fun Cash.State.`owned by`(owner: AbstractParty) = ownedBy(owner)
+
+/** @suppress */
+infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
+
+/** @suppress */
+infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
+
+/** @suppress */
+infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
 
 // Unit testing helpers. These could go in a separate file but it's hardly worth it for just a few functions.
 

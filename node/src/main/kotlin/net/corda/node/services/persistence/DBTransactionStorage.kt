@@ -30,8 +30,10 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
         fun createTransactionsMap(): AppendOnlyPersistentMap<SecureHash, SignedTransaction, DBTransaction, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
-                    fromPersistentEntity = { Pair(SecureHash.parse(it.txId),
-                            it.transaction.deserialize<SignedTransaction>( context = SerializationDefaults.STORAGE_CONTEXT)) },
+                    fromPersistentEntity = {
+                        Pair(SecureHash.parse(it.txId),
+                                it.transaction.deserialize<SignedTransaction>(context = SerializationDefaults.STORAGE_CONTEXT))
+                    },
                     toPersistentEntity = { key: SecureHash, value: SignedTransaction ->
                         DBTransaction().apply {
                             txId = key.toString()
@@ -46,9 +48,9 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
     private val txStorage = createTransactionsMap()
 
     override fun addTransaction(transaction: SignedTransaction): Boolean =
-        txStorage.addWithDuplicatesAllowed(transaction.id, transaction).apply {
-            updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
-        }
+            txStorage.addWithDuplicatesAllowed(transaction.id, transaction).apply {
+                updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
+            }
 
     override fun getTransaction(id: SecureHash): SignedTransaction? = txStorage[id]
 
@@ -59,5 +61,6 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
             DataFeed(txStorage.allPersisted().map { it.second }.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
 
     @VisibleForTesting
-    val transactions: Iterable<SignedTransaction> get() = txStorage.allPersisted().map { it.second }.toList()
+    val transactions: Iterable<SignedTransaction>
+        get() = txStorage.allPersisted().map { it.second }.toList()
 }

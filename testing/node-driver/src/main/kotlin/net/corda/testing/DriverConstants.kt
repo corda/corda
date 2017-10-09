@@ -39,11 +39,13 @@ class PredefinedTestNode internal constructor(party: Party, driver: DriverDSLExp
  * for it: you won't have [ALICE_KEY].
  */
 fun DriverDSLExposedInterface.alice(): PredefinedTestNode = PredefinedTestNode(ALICE, this, null)
+
 /**
  * Returns a plain, entirely stock node pre-configured with the [BOB] identity. Note that a random key will be generated
  * for it: you won't have [BOB_KEY].
  */
 fun DriverDSLExposedInterface.bob(): PredefinedTestNode = PredefinedTestNode(BOB, this, null)
+
 /**
  * Returns a plain single node notary pre-configured with the [DUMMY_NOTARY] identity. Note that a random key will be generated
  * for it: you won't have [DUMMY_NOTARY_KEY].

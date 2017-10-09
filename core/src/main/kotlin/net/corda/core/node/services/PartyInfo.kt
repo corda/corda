@@ -8,6 +8,7 @@ import net.corda.core.utilities.NetworkHostAndPort
  */
 sealed class PartyInfo {
     abstract val party: Party
-    data class SingleNode(override val party: Party, val addresses: List<NetworkHostAndPort>): PartyInfo()
-    data class DistributedNode(override val party: Party): PartyInfo()
+
+    data class SingleNode(override val party: Party, val addresses: List<NetworkHostAndPort>) : PartyInfo()
+    data class DistributedNode(override val party: Party) : PartyInfo()
 }

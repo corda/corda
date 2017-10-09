@@ -6,15 +6,14 @@ import java.util.Set;
 
 /**
  * A candidate method that is under evaluation. Candidate methods have one of the following states:
- *
+ * <p>
  * <ul>
- *     <li>{@link CandidateMethod.State#DETERMINISTIC} - It's deterministic and therefore is allowed to be loaded.</li>
- *     <li>{@link CandidateMethod.State#DISALLOWED} - It's not deterministic and won't be allowed to be loaded.</li>
- *     <li>{@link CandidateMethod.State#SCANNED} - We're not sure if it's deterministic or not.</li>
+ * <li>{@link CandidateMethod.State#DETERMINISTIC} - It's deterministic and therefore is allowed to be loaded.</li>
+ * <li>{@link CandidateMethod.State#DISALLOWED} - It's not deterministic and won't be allowed to be loaded.</li>
+ * <li>{@link CandidateMethod.State#SCANNED} - We're not sure if it's deterministic or not.</li>
  * </ul>
- *
+ * <p>
  * CandidateMethods themselves reference other CandidateMethods which are be checked for their deterministic state
- *
  */
 public final class CandidateMethod {
 
@@ -43,7 +42,7 @@ public final class CandidateMethod {
 
     private final Set<CandidateMethod> referencedCandidateMethods = new HashSet<>();
 
-    
+
     public State getCurrentState() {
         return currentState;
     }
@@ -59,7 +58,7 @@ public final class CandidateMethod {
 
     public void deterministic() {
         if (currentState == State.DISALLOWED) {
-            throw new IllegalArgumentException("Method "+ internalMethodName +" attempted to transition from DISALLOWED to DETERMINISTIC");
+            throw new IllegalArgumentException("Method " + internalMethodName + " attempted to transition from DISALLOWED to DETERMINISTIC");
         }
         currentState = State.DETERMINISTIC;
     }
@@ -79,7 +78,7 @@ public final class CandidateMethod {
     public String getInternalMethodName() {
         return internalMethodName;
     }
-    
+
     public void addReferencedCandidateMethod(final CandidateMethod referenceCandidateMethod) {
         referencedCandidateMethods.add(referenceCandidateMethod);
     }
@@ -94,8 +93,9 @@ public final class CandidateMethod {
 
     /**
      * This factory constructor is only called for methods that are known to be deterministic in advance
+     *
      * @param methodSignature
-     * @return 
+     * @return
      */
     public static CandidateMethod proven(String methodSignature) {
         final CandidateMethod provenCandidateMethod = new CandidateMethod(methodSignature);

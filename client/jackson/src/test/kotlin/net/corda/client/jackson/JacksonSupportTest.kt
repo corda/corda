@@ -92,10 +92,10 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
     fun writeTransaction() {
         val attachmentRef = SecureHash.randomSHA256()
         whenever(cordappProvider.getContractAttachmentID(DummyContract.PROGRAM_ID))
-            .thenReturn(attachmentRef)
+                .thenReturn(attachmentRef)
         fun makeDummyTx(): SignedTransaction {
             val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))
-                .toWireTransaction(services)
+                    .toWireTransaction(services)
             val signatures = TransactionSignature(
                     ByteArray(1),
                     ALICE_PUBKEY,

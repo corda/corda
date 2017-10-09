@@ -1,4 +1,5 @@
 @file:JvmName("ModelsUtils")
+
 package net.corda.client.jfx.model
 
 import javafx.beans.property.ObjectProperty

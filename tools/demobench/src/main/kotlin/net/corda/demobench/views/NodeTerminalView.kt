@@ -179,9 +179,9 @@ class NodeTerminalView : Fragment() {
     }
 
     private fun launchRPC(config: NodeConfig) = NodeRPC(
-        config = config,
-        start = this::initialise,
-        invoke = this::pollCashBalances
+            config = config,
+            start = this::initialise,
+            invoke = this::pollCashBalances
     )
 
     private fun initialise(config: NodeConfig, ops: CordaRPCOps) {
@@ -238,7 +238,10 @@ class NodeTerminalView : Fragment() {
         header.isDisable = true
         subscriptions.forEach {
             // Don't allow any exceptions here to halt tab destruction.
-            try { it.unsubscribe() } catch (e: Exception) {}
+            try {
+                it.unsubscribe()
+            } catch (e: Exception) {
+            }
         }
         webServer.close()
         explorer.close()

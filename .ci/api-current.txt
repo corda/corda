@@ -1519,7 +1519,6 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.VaultService getVaultService()
   @org.jetbrains.annotations.NotNull public abstract java.sql.Connection jdbcSession()
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
   public abstract void recordTransactions(Iterable)
   public abstract void recordTransactions(boolean, Iterable)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.transactions.SignedTransaction signInitialTransaction(net.corda.core.transactions.TransactionBuilder)
@@ -1527,10 +1526,12 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.transactions.SignedTransaction signInitialTransaction(net.corda.core.transactions.TransactionBuilder, java.security.PublicKey)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.StateAndRef toStateAndRef(net.corda.core.contracts.StateRef)
 ##
-public interface net.corda.core.node.ServicesForResolution
+public interface net.corda.core.node.ServicesForResolution extends net.corda.core.node.StateLoader
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.AttachmentStorage getAttachments()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.cordapp.CordappProvider getCordappProvider()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.IdentityService getIdentityService()
+##
+public interface net.corda.core.node.StateLoader
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
 ##
 public interface net.corda.core.node.services.AttachmentStorage

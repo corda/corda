@@ -54,11 +54,11 @@ class CashSelectionH2Impl : CashSelection {
      */
     @Suspendable
     override fun unconsumedCashStatesForSpending(services: ServiceHub,
-                                        amount: Amount<Currency>,
-                                        onlyFromIssuerParties: Set<AbstractParty>,
-                                        notary: Party?,
-                                        lockId: UUID,
-                                        withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
+                                                 amount: Amount<Currency>,
+                                                 onlyFromIssuerParties: Set<AbstractParty>,
+                                                 notary: Party?,
+                                                 lockId: UUID,
+                                                 withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
 
         val issuerKeysStr = onlyFromIssuerParties.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }.dropLast(1)
         val issuerRefsStr = withIssuerRefs.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }.dropLast(1)

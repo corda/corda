@@ -43,7 +43,6 @@ public class CandidacyStatus {
     }
 
     /**
-     *
      * @param signature
      * @return true if the input was absent from the underlying map
      */
@@ -52,7 +51,6 @@ public class CandidacyStatus {
     }
 
     /**
-     * 
      * @param methodSignature
      * @return true if the input was absent from the underlying map
      */
@@ -62,7 +60,7 @@ public class CandidacyStatus {
 
     /**
      * Static factory method
-     * 
+     *
      * @param startingSet
      * @return a candidacy status based on the starting set
      */
@@ -81,7 +79,7 @@ public class CandidacyStatus {
 
     /**
      * Static factory method
-     * 
+     *
      * @return a candidacy status based on the starting set
      */
     public static CandidacyStatus of() {
@@ -90,8 +88,8 @@ public class CandidacyStatus {
 
     /**
      * Add additional methods that are known to be deterministic
-     * 
-     * @param methodNames 
+     *
+     * @param methodNames
      */
     public void addKnownDeterministicMethods(final Set<String> methodNames) {
         for (String known : methodNames) {
@@ -101,7 +99,7 @@ public class CandidacyStatus {
 
     /**
      * Getter method for candidate methods
-     * 
+     *
      * @param methodSignature
      * @return the candidate method corresponding to a method signature
      */
@@ -149,10 +147,10 @@ public class CandidacyStatus {
     }
 
     /**
-     * Increases the recursive depth of this classloading process, throwing a 
+     * Increases the recursive depth of this classloading process, throwing a
      * ClassNotFoundException if it becomes too high
-     * 
-     * @throws ClassNotFoundException 
+     *
+     * @throws ClassNotFoundException
      */
     public void incRecursiveCount() throws ClassNotFoundException {
         if (recursiveDepth >= MAX_CLASSLOADING_RECURSIVE_DEPTH - 1) {
@@ -174,7 +172,7 @@ public class CandidacyStatus {
                 out.add(candidateName);
             }
         }
-        
+
         return out;
     }
 

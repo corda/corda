@@ -52,7 +52,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
      * We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
      */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
-        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean ?: false || return this
+        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
         val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContextImpl ?: return this // Some tests don't set one.
         try {
             return withClassLoader(cache.get(attachmentHashes) {
@@ -142,8 +142,8 @@ open class SerializationFactoryImpl : SerializationFactory() {
 private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
     override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
         val message = "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
-                    "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
-                    "confined to a private method or the reference is nulled out."
+                "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
+                "confined to a private method or the reference is nulled out."
         throw UnsupportedOperationException(message)
     }
 

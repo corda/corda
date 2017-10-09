@@ -14,11 +14,11 @@ import javax.persistence.Table
  * [VaultFungibleState] abstract schema
  */
 object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1,
-                                                    mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
+        mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
     @Table(name = "cp_states_v2",
-           indexes = arrayOf(Index(name = "ccy_code_index2", columnList = "ccy_code"),
-                             Index(name = "maturity_index2", columnList = "maturity_instant")))
+            indexes = arrayOf(Index(name = "ccy_code_index2", columnList = "ccy_code"),
+                    Index(name = "maturity_index2", columnList = "maturity_instant")))
     class PersistentCommercialPaperState(
             @Column(name = "maturity_instant")
             var maturity: Instant,

@@ -69,8 +69,8 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val isVersion: Boolean,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
-                          val justGenerateNodeInfo : Boolean) {
+                          val justGenerateNodeInfo: Boolean) {
     fun loadConfig() = ConfigHelper
-                .loadConfig(baseDirectory, configFile)
-                .parseAs<FullNodeConfiguration>()
+            .loadConfig(baseDirectory, configFile)
+            .parseAs<FullNodeConfiguration>()
 }

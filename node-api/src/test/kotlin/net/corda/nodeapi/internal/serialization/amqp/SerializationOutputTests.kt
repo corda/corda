@@ -50,7 +50,7 @@ class SerializationOutputTests {
 
     data class testShort(val s: Short)
 
-    data class testBoolean(val b : Boolean)
+    data class testBoolean(val b: Boolean)
 
     interface FooInterface {
         val pub: Int
@@ -145,13 +145,13 @@ class SerializationOutputTests {
 
     data class PolymorphicProperty(val foo: FooInterface?)
 
-    private inline fun<reified T : Any> serdes(obj: T,
-                       factory: SerializerFactory = SerializerFactory (
-                               AllWhitelist, ClassLoader.getSystemClassLoader()),
-                       freshDeserializationFactory: SerializerFactory = SerializerFactory(
-                               AllWhitelist, ClassLoader.getSystemClassLoader()),
-                       expectedEqual: Boolean = true,
-                       expectDeserializedEqual: Boolean = true): T {
+    private inline fun <reified T : Any> serdes(obj: T,
+                                                factory: SerializerFactory = SerializerFactory(
+                                                        AllWhitelist, ClassLoader.getSystemClassLoader()),
+                                                freshDeserializationFactory: SerializerFactory = SerializerFactory(
+                                                        AllWhitelist, ClassLoader.getSystemClassLoader()),
+                                                expectedEqual: Boolean = true,
+                                                expectDeserializedEqual: Boolean = true): T {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
 
@@ -446,10 +446,10 @@ class SerializationOutputTests {
         try {
             try {
                 throw IOException("Layer 1")
-            } catch(t: Throwable) {
+            } catch (t: Throwable) {
                 throw IllegalStateException("Layer 2", t)
             }
-        } catch(t: Throwable) {
+        } catch (t: Throwable) {
             val desThrowable = serdesThrowableWithInternalInfo(t, factory, factory2, false)
             assertSerializedThrowableEquivalent(t, desThrowable)
         }
@@ -476,12 +476,12 @@ class SerializationOutputTests {
         try {
             try {
                 throw IOException("Layer 1")
-            } catch(t: Throwable) {
+            } catch (t: Throwable) {
                 val e = IllegalStateException("Layer 2")
                 e.addSuppressed(t)
                 throw e
             }
-        } catch(t: Throwable) {
+        } catch (t: Throwable) {
             val desThrowable = serdesThrowableWithInternalInfo(t, factory, factory2, false)
             assertSerializedThrowableEquivalent(t, desThrowable)
         }
@@ -535,6 +535,7 @@ class SerializationOutputTests {
     }
 
     val FOO_PROGRAM_ID = "net.corda.nodeapi.internal.serialization.amqp.SerializationOutputTests.FooContract"
+
     class FooState : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }

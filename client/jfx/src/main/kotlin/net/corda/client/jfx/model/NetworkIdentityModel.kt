@@ -38,7 +38,7 @@ class NetworkIdentityModel {
             })
 
     val notaries: ObservableList<Party> = networkIdentities.map {
-        it.legalIdentitiesAndCerts.find { it.name.commonName?.let { ServiceType.parse(it).isNotary() } ?: false }
+        it.legalIdentitiesAndCerts.find { it.name.commonName?.let { ServiceType.parse(it).isNotary() } == true }
     }.map { it?.party }.filterNotNull()
 
     val notaryNodes: ObservableList<NodeInfo> = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()

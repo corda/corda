@@ -80,6 +80,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             return listOf(true, false)
         }
     }
+
     private lateinit var mockNet: MockNetwork
 
     @Before
@@ -164,8 +165,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
             val cashStates = bobNode.database.transaction {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, notary, 3, 3,
-                            issuedBy = issuer)
-                }
+                        issuedBy = issuer)
+            }
 
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, issuer, aliceNode.info.chooseIdentity(),

@@ -1,16 +1,16 @@
 package net.corda.node.services.network
 
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import net.corda.cordform.CordformNode
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.utilities.seconds
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.ALICE
 import net.corda.testing.ALICE_KEY
 import net.corda.testing.DEV_TRUST_ROOT
-import net.corda.testing.eventually
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.NodeBasedTest
@@ -29,11 +29,13 @@ import kotlin.test.assertTrue
 
 class NodeInfoWatcherTest : NodeBasedTest() {
 
-    @Rule @JvmField var folder = TemporaryFolder()
+    @Rule
+    @JvmField
+    var folder = TemporaryFolder()
 
     lateinit var keyManagementService: KeyManagementService
     lateinit var nodeInfoPath: Path
-    val scheduler = TestScheduler();
+    val scheduler = TestScheduler()
     val testSubscriber = TestSubscriber<NodeInfo>()
 
     // Object under test
@@ -54,6 +56,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
 
     @Test
     fun `save a NodeInfo`() {
+        assertEquals(0, folder.root.list().size)
         NodeInfoWatcher.saveToFile(folder.root.toPath(), nodeInfo, keyManagementService)
 
         assertEquals(1, folder.root.list().size)
@@ -65,28 +68,44 @@ class NodeInfoWatcherTest : NodeBasedTest() {
     }
 
     @Test
+    fun `save a NodeInfo to JimFs`() {
+        val jimFs = Jimfs.newFileSystem(Configuration.unix())
+        val jimFolder = jimFs.getPath("/nodeInfo")
+        NodeInfoWatcher.saveToFile(jimFolder, nodeInfo, keyManagementService)
+    }
+
+    @Test
     fun `load an empty Directory`() {
         nodeInfoPath.createDirectories()
 
-        nodeInfoWatcher.nodeInfoUpdates()
+        val subscription = nodeInfoWatcher.nodeInfoUpdates()
                 .subscribe(testSubscriber)
+        try {
+            advanceTime()
 
-        val readNodes = testSubscriber.onNextEvents.distinct()
-        advanceTime()
-        assertEquals(0, readNodes.size)
+            val readNodes = testSubscriber.onNextEvents.distinct()
+            assertEquals(0, readNodes.size)
+        } finally {
+            subscription.unsubscribe()
+        }
     }
 
     @Test
     fun `load a non empty Directory`() {
         createNodeInfoFileInPath(nodeInfo)
 
-        nodeInfoWatcher.nodeInfoUpdates()
+        val subscription = nodeInfoWatcher.nodeInfoUpdates()
                 .subscribe(testSubscriber)
+        advanceTime()
 
-        val readNodes = testSubscriber.onNextEvents.distinct()
+        try {
+            val readNodes = testSubscriber.onNextEvents.distinct()
 
-        assertEquals(1, readNodes.size)
-        assertEquals(nodeInfo, readNodes.first())
+            assertEquals(1, readNodes.size)
+            assertEquals(nodeInfo, readNodes.first())
+        } finally {
+            subscription.unsubscribe()
+        }
     }
 
     @Test
@@ -94,27 +113,29 @@ class NodeInfoWatcherTest : NodeBasedTest() {
         nodeInfoPath.createDirectories()
 
         // Start polling with an empty folder.
-        nodeInfoWatcher.nodeInfoUpdates()
+        val subscription = nodeInfoWatcher.nodeInfoUpdates()
                 .subscribe(testSubscriber)
-        // Ensure the watch service is started.
-        advanceTime()
-        // Check no nodeInfos are read.
-        assertEquals(0, testSubscriber.valueCount)
-        createNodeInfoFileInPath(nodeInfo)
+        try {
+            // Ensure the watch service is started.
+            advanceTime()
+            // Check no nodeInfos are read.
+            assertEquals(0, testSubscriber.valueCount)
+            createNodeInfoFileInPath(nodeInfo)
 
-        advanceTime()
+            advanceTime()
 
-        // We need the WatchService to report a change and that might not happen immediately.
-        eventually<AssertionError, Unit>(5.seconds) {
+            // We need the WatchService to report a change and that might not happen immediately.
+            testSubscriber.awaitValueCount(1, 5, TimeUnit.SECONDS)
             // The same folder can be reported more than once, so take unique values.
             val readNodes = testSubscriber.onNextEvents.distinct()
-            assertEquals(1, readNodes.size)
             assertEquals(nodeInfo, readNodes.first())
+        } finally {
+            subscription.unsubscribe()
         }
     }
 
     private fun advanceTime() {
-        scheduler.advanceTimeBy(1, TimeUnit.HOURS)
+        scheduler.advanceTimeBy(1, TimeUnit.MINUTES)
     }
 
     // Write a nodeInfo under the right path.

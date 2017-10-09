@@ -8,12 +8,18 @@ import net.corda.core.contracts.PartyAndReference
 import java.math.BigDecimal
 import java.util.*
 
-@JvmField val USD: Currency = Currency.getInstance("USD")
-@JvmField val GBP: Currency = Currency.getInstance("GBP")
-@JvmField val EUR: Currency = Currency.getInstance("EUR")
-@JvmField val CHF: Currency = Currency.getInstance("CHF")
-@JvmField val JPY: Currency = Currency.getInstance("JPY")
-@JvmField val RUB: Currency = Currency.getInstance("RUB")
+@JvmField
+val USD: Currency = Currency.getInstance("USD")
+@JvmField
+val GBP: Currency = Currency.getInstance("GBP")
+@JvmField
+val EUR: Currency = Currency.getInstance("EUR")
+@JvmField
+val CHF: Currency = Currency.getInstance("CHF")
+@JvmField
+val JPY: Currency = Currency.getInstance("JPY")
+@JvmField
+val RUB: Currency = Currency.getInstance("RUB")
 
 fun <T : Any> AMOUNT(amount: Int, token: T): Amount<T> = AMOUNT(amount.toLong(), token)
 fun <T : Any> AMOUNT(amount: Long, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount), token)

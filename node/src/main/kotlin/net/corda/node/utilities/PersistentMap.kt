@@ -11,9 +11,9 @@ import java.util.*
 /**
  * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
  */
-class PersistentMap<K, V, E, out EK> (
+class PersistentMap<K, V, E, out EK>(
         val toPersistentEntityKey: (K) -> EK,
-        val fromPersistentEntity: (E) -> Pair<K,V>,
+        val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
         val persistentEntityClass: Class<E>
 ) : MutableMap<K, V>, AbstractMap<K, V>() {
@@ -34,7 +34,7 @@ class PersistentMap<K, V, E, out EK> (
         getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
     }
 
-    class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>): RemovalListener<K,V> {
+    class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, V> {
         override fun onRemoval(notification: RemovalNotification<K, V>?) {
             when (notification?.cause) {
                 RemovalCause.EXPLICIT -> {
@@ -47,7 +47,8 @@ class PersistentMap<K, V, E, out EK> (
                 RemovalCause.EXPIRED, RemovalCause.SIZE, RemovalCause.COLLECTED -> {
                     log.error("Entry was removed from cache!!!")
                 }
-                RemovalCause.REPLACED -> {}
+                RemovalCause.REPLACED -> {
+                }
             }
         }
     }
@@ -62,10 +63,11 @@ class PersistentMap<K, V, E, out EK> (
 
     override val size get() = cache.size().toInt()
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?, replace: (K, V) -> Unit) : Boolean {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K, V) -> V?, replace: (K, V) -> Unit): Boolean {
         var insertionAttempt = false
         var isUnique = true
-        val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
+        val existingInCache = cache.get(key) {
+            // Thread safe, if multiple threads may wait until the first one has loaded.
             insertionAttempt = true
             // Value wasn't in the cache and wasn't in DB (because the cache is unbound).
             // Store the value, depending on store implementation this may replace existing entry in DB.
@@ -98,7 +100,7 @@ class PersistentMap<K, V, E, out EK> (
     operator fun set(key: K, value: V) =
             set(key, value,
                     logWarning = false,
-                    store =  { k: K, v: V ->
+                    store = { k: K, v: V ->
                         currentSession().save(toPersistentEntity(k, v))
                         null
                     },
@@ -147,10 +149,10 @@ class PersistentMap<K, V, E, out EK> (
         val session = currentSession()
         val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(key))
         return if (existingEntry != null) {
-            session.merge(toPersistentEntity(key,value))
+            session.merge(toPersistentEntity(key, value))
             fromPersistentEntity(existingEntry).second
         } else {
-            session.save(toPersistentEntity(key,value))
+            session.save(toPersistentEntity(key, value))
             null
         }
     }
@@ -195,56 +197,59 @@ class PersistentMap<K, V, E, out EK> (
         }
     }
 
-    override val keys: MutableSet<K> get() {
-        return object : AbstractSet<K>() {
-            override val size: Int get() = this@PersistentMap.size
-            override fun iterator(): MutableIterator<K> {
-                return object : MutableIterator<K> {
-                    private val entryIterator = EntryIterator()
+    override val keys: MutableSet<K>
+        get() {
+            return object : AbstractSet<K>() {
+                override val size: Int get() = this@PersistentMap.size
+                override fun iterator(): MutableIterator<K> {
+                    return object : MutableIterator<K> {
+                        private val entryIterator = EntryIterator()
 
-                    override fun hasNext(): Boolean = entryIterator.hasNext()
-                    override fun next(): K = entryIterator.next().key
-                    override fun remove() {
-                        entryIterator.remove()
+                        override fun hasNext(): Boolean = entryIterator.hasNext()
+                        override fun next(): K = entryIterator.next().key
+                        override fun remove() {
+                            entryIterator.remove()
+                        }
                     }
                 }
             }
         }
-    }
 
-    override val values: MutableCollection<V> get() {
-        return object : AbstractCollection<V>() {
-            override val size: Int get() = this@PersistentMap.size
-            override fun iterator(): MutableIterator<V> {
-                return object : MutableIterator<V> {
-                    private val entryIterator = EntryIterator()
+    override val values: MutableCollection<V>
+        get() {
+            return object : AbstractCollection<V>() {
+                override val size: Int get() = this@PersistentMap.size
+                override fun iterator(): MutableIterator<V> {
+                    return object : MutableIterator<V> {
+                        private val entryIterator = EntryIterator()
 
-                    override fun hasNext(): Boolean = entryIterator.hasNext()
-                    override fun next(): V = entryIterator.next().value
-                    override fun remove() {
-                        entryIterator.remove()
+                        override fun hasNext(): Boolean = entryIterator.hasNext()
+                        override fun next(): V = entryIterator.next().value
+                        override fun remove() {
+                            entryIterator.remove()
+                        }
                     }
                 }
             }
         }
-    }
 
-    override val entries: MutableSet<MutableMap.MutableEntry<K, V>> get() {
-        return object : AbstractSet<MutableMap.MutableEntry<K, V>>() {
-            override val size: Int get() = this@PersistentMap.size
-            override fun iterator(): MutableIterator<MutableMap.MutableEntry<K, V>> {
-                return object : MutableIterator<MutableMap.MutableEntry<K, V>> {
-                    private val entryIterator = EntryIterator()
+    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
+        get() {
+            return object : AbstractSet<MutableMap.MutableEntry<K, V>>() {
+                override val size: Int get() = this@PersistentMap.size
+                override fun iterator(): MutableIterator<MutableMap.MutableEntry<K, V>> {
+                    return object : MutableIterator<MutableMap.MutableEntry<K, V>> {
+                        private val entryIterator = EntryIterator()
 
-                    override fun hasNext(): Boolean = entryIterator.hasNext()
-                    override fun next(): MutableMap.MutableEntry<K, V> = entryIterator.next()
-                    override fun remove() {
-                        entryIterator.remove()
+                        override fun hasNext(): Boolean = entryIterator.hasNext()
+                        override fun next(): MutableMap.MutableEntry<K, V> = entryIterator.next()
+                        override fun remove() {
+                            entryIterator.remove()
+                        }
                     }
                 }
             }
         }
-    }
 
     override fun put(key: K, value: V): V? {
         val old = cache.get(key)

@@ -38,9 +38,9 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
     ) : PersistentState() {
         constructor(uid: UniqueIdentifier, _participants: Set<AbstractParty>)
-            : this(participants = _participants.toMutableSet(),
-                   externalId = uid.externalId,
-                   uuid = uid.id)
+                : this(participants = _participants.toMutableSet(),
+                externalId = uid.externalId,
+                uuid = uid.id)
     }
 
     @MappedSuperclass
