@@ -132,8 +132,9 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
     // TODO This method has been added temporarily, to be deleted once the set of notaries is defined at the network level.
     fun startNotaryNode(name: CordaX500Name,
                         rpcUsers: List<User> = emptyList(),
-                        validating: Boolean = true): CordaFuture<StartedNode<Node>> {
-        return startNode(name, rpcUsers = rpcUsers, configOverrides = mapOf("notary" to mapOf("validating" to validating)))
+                        validating: Boolean = true,
+                        customSchemas: Set<MappedSchema> = emptySet()): CordaFuture<StartedNode<Node>> {
+        return startNode(name, rpcUsers = rpcUsers, configOverrides = mapOf("notary" to mapOf("validating" to validating)), customSchemas = customSchemas)
     }
 
     fun startNotaryCluster(notaryName: CordaX500Name, clusterSize: Int): CordaFuture<List<StartedNode<Node>>> {
