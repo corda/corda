@@ -93,7 +93,8 @@ Identity synchronization flow
 
 When constructing a transaction whose input states reference confidential identities, it is common for other signing
 entities (counterparties) to require to know which well known identities those confidential identities map to. The
-``IdentitySyncFlow`` handles this process, and you can see an example of its use in ``TwoPartyTradeFlow.kt``:
+``IdentitySyncFlow`` handles distribution of a node's confidential identities, and you can see an example of its
+use in ``TwoPartyTradeFlow.kt``:
 
 .. container:: codeset
 
@@ -105,27 +106,33 @@ entities (counterparties) to require to know which well known identities those c
 
 The identity synchronization flow goes through the following key steps:
 
-1. Extract participant identities from all input and output states and remove any well known identities. Required signers
-   on commands are currently ignored as they are presumed to be included in the participants on states, or to be well
-   known identities of services (such as an oracle service).
+1. Extract participant identities from all input and output states. Filter this set down to confidential identities
+   of the flow's well known identity. Required signers on commands are currently ignored as they are presumed to be
+   included in the participants on states, or to be well known identities of services (such as an oracle service).
 2. For each counterparty node, send a list of the public keys of the confidential identities, and receive back a list
    of those the counterparty needs the certificate path for.
 3. Verify the requested list of identities contains only confidential identities in the offered list, and abort otherwise.
 4. Send the requested confidential identities as ``PartyAndCertificate`` instances to the counterparty.
 
-.. note:: ``IdentitySyncFlow`` works on a push basis. The initiating node can only send confidential identities it has
-   the X.509 certificates for, and the remote nodes can only request confidential identities being offered (are
-   referenced in the transaction passed to the initiating flow). There is no standard flow for nodes to collect
+.. note:: ``IdentitySyncFlow`` works on a push basis. Receiving nodes can only request confidential identities being
+   offered by the initiating node. There is no standard flow for nodes to collect
    confidential identities before assembling a transaction, and this is left for individual flows to manage if required.
 
-``IdentitySyncFlow`` will serve all confidential identities in the provided transaction, irrespective of well known
-identity. This is important for more complex transaction cases with 3+ parties, for example:
+``IdentitySyncFlow`` will serve only confidential identities in the provided transaction, limited to those that are
+signed by the well known identity the flow is initiated by. This is done to avoid a risk of a node including
+states it doesn't have the well known identity of participants in, to try convincing one of its counterparties to
+reveal the identity. In case of a more complex transaction where multiple well known identities need confidential
+identities distributed this flow should be run by each node in turn. For example:
 
 * Alice is building the transaction, and provides some input state *x* owned by a confidential identity of Alice
 * Bob provides some input state *y* owned by a confidential identity of Bob
 * Charlie provides some input state *z* owned by a confidential identity of Charlie
 
-Alice may know all of the confidential identities ahead of time, but Bob not know about Charlie's and vice-versa.
-The assembled transaction therefore has three input states *x*, *y* and *z*, for which only Alice possesses certificates
-for all confidential identities. ``IdentitySyncFlow`` must send not just Alice's confidential identity but also any other
-identities in the transaction to the Bob and Charlie.
+Alice, Bob and Charlie must all run ``IdentitySyncFlow`` to send their involved confidential identities to the other
+parties. For an illustration of the security implications of not requiring this, consider:
+
+1. Alice is building the transaction, and provides some input state *x* owned by a confidential identity of Alice
+2. Bob provides some input state *y* owned by a confidential identity it doesn't know the well known identity of, but
+   Alice does.
+3. Alice runs ``IdentitySyncFlow`` and sends not just their confidential identity, but also the confidential identity
+   in state *y*, violating the privacy model.
