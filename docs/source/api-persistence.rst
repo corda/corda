@@ -7,6 +7,8 @@
 API: Persistence
 ================
 
+.. contents::
+
 Corda offers developers the option to expose all or some part of a contract state to an *Object Relational Mapping*
 (ORM) tool to be persisted in a RDBMS.  The purpose of this is to assist *vault* development by effectively indexing
 persisted contract states held in the vault for the purpose of running queries over them and to allow relational joins
