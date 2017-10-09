@@ -16,25 +16,13 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.NodeBasedTest
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class RaftNotaryServiceTests : NodeBasedTest() {
+class RaftNotaryServiceTests : NodeBasedTest(listOf("net.corda.testing.contracts")) {
     private val notaryName = CordaX500Name(RaftValidatingNotaryService.id, "RAFT Notary Service", "London", "GB")
-
-    @Before
-    fun setup() {
-        setCordappPackages("net.corda.testing.contracts")
-    }
-
-    @After
-    fun tearDown() {
-        unsetCordappPackages()
-    }
 
     @Test
     fun `detect double spend`() {

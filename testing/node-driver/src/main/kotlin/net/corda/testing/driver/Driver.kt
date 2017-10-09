@@ -24,6 +24,7 @@ import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.ServiceIdentityGenerator
@@ -516,7 +517,6 @@ class ShutdownManager(private val executorService: ExecutorService) {
     }
 
     fun shutdown() {
-        unsetCordappPackages()
         val shutdownActionFutures = state.locked {
             if (isShutdown) {
                 emptyList<CordaFuture<() -> Unit>>()
@@ -600,14 +600,14 @@ class DriverDSL(
         val isDebug: Boolean,
         val networkMapStartStrategy: NetworkMapStartStrategy,
         val startNodesInProcess: Boolean,
-        val extraCordappPackagesToScan: List<String>
+        extraCordappPackagesToScan: List<String>
 ) : DriverDSLInternalInterface {
     private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    private val packagesToScanString = extraCordappPackagesToScan + getCallerPackage()
+    private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
 
     class State {
         val processes = ArrayList<CordaFuture<Process>>()
@@ -829,8 +829,6 @@ class DriverDSL(
     override fun start() {
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
-        // We set this property so that in-process nodes find cordapps. Out-of-process nodes need this passed in when started.
-        setCordappPackages(*packagesToScanString.toTypedArray())
         if (networkMapStartStrategy.startDedicated) {
             startDedicatedNetworkMapService().andForget(log) // Allow it to start concurrently with other nodes.
         }
@@ -867,7 +865,7 @@ class DriverDSL(
     private fun startNodeInternal(config: Config, webAddress: NetworkHostAndPort, startInProcess: Boolean?, maximumHeapSize: String): CordaFuture<NodeHandle> {
         val nodeConfiguration = config.parseAs<FullNodeConfiguration>()
         if (startInProcess ?: startNodesInProcess) {
-            val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config)
+            val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config, cordappPackages)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
                         {
@@ -885,7 +883,7 @@ class DriverDSL(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, packagesToScanString.joinToString(","), maximumHeapSize)
+            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize)
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
                 val processDeathFuture = poll(executorService, "process death") {
@@ -928,14 +926,16 @@ class DriverDSL(
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
-                config: Config
+                config: Config,
+                cordappPackages: List<String>
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${nodeConf.myLegalName.organisation}")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 // TODO pass the version in?
-                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false).start()
+                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false,
+                        cordappLoader = CordappLoader.createDefaultWithTestPackages(nodeConf, cordappPackages)).start()
                 val nodeThread = thread(name = nodeConf.myLegalName.organisation) {
                     node.internals.run()
                 }
@@ -950,7 +950,7 @@ class DriverDSL(
                 quasarJarPath: String,
                 debugPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
-                packagesToScanString: String,
+                cordappPackages: List<String>,
                 maximumHeapSize: String
         ): CordaFuture<Process> {
             val processFuture = executorService.fork {
@@ -961,7 +961,7 @@ class DriverDSL(
                 val systemProperties = overriddenSystemProperties + mapOf(
                         "name" to nodeConf.myLegalName,
                         "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
-                        "net.corda.node.cordapp.scan.packages" to packagesToScanString,
+                        Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator),
                         "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
                 // See experimental/quasar-hook/README.md for how to generate.

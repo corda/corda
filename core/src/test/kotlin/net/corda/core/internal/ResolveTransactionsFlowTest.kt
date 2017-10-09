@@ -36,8 +36,7 @@ class ResolveTransactionsFlowTest {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.testing.contracts")
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         notaryNode = mockNet.createNotaryNode()
         megaCorpNode = mockNet.createPartyNode(MEGA_CORP.name)
         miniCorpNode = mockNet.createPartyNode(MINI_CORP.name)
@@ -52,7 +51,6 @@ class ResolveTransactionsFlowTest {
     @After
     fun tearDown() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 // DOCEND 3
 

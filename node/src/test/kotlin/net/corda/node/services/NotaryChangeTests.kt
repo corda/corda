@@ -35,8 +35,7 @@ class NotaryChangeTests {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.testing.contracts")
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         oldNotaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
         clientNodeA = mockNet.createNode()
         clientNodeB = mockNet.createNode()
@@ -50,7 +49,6 @@ class NotaryChangeTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test

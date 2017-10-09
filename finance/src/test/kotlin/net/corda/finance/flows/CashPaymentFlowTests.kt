@@ -31,8 +31,7 @@ class CashPaymentFlowTests {
 
     @Before
     fun start() {
-        setCordappPackages("net.corda.finance.contracts.asset")
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts.asset"))
         notaryNode = mockNet.createNotaryNode()
         bankOfCordaNode = mockNet.createPartyNode(BOC.name)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()

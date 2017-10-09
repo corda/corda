@@ -10,11 +10,9 @@ import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
 import net.corda.testing.getDefaultNotary
 import net.corda.testing.BOC
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.setCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -30,8 +28,7 @@ class CashIssueFlowTests {
 
     @Before
     fun start() {
-        setCordappPackages("net.corda.finance.contracts.asset")
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts.asset"))
         notaryNode = mockNet.createNotaryNode()
         bankOfCordaNode = mockNet.createPartyNode(BOC.name)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
