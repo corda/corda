@@ -404,9 +404,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     private fun ReceiveRequest<*>.suspendAndExpectReceive(): ReceivedSessionMessage<*> {
-        fun pollForMessage() = session.receivedMessages.poll()
-
-        val polledMessage = pollForMessage()
+        val polledMessage = session.receivedMessages.poll()
         return if (polledMessage != null) {
             if (this is SendAndReceive) {
                 // Since we've already received the message, we downgrade to a send only to get the payload out and not
@@ -417,7 +415,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         } else {
             // Suspend while we wait for a receive
             suspend(this)
-            pollForMessage() ?:
+            session.receivedMessages.poll() ?:
                     throw IllegalStateException("Was expecting a ${receiveType.simpleName} but instead got nothing for $this")
         }
     }

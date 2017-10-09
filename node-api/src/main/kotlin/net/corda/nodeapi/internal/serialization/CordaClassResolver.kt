@@ -63,8 +63,6 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         if (type.isArray) return checkClass(type.componentType)
         // Specialised enum entry, so just resolve the parent Enum type since cannot annotate the specialised entry.
         if (!type.isEnum && Enum::class.java.isAssignableFrom(type)) return checkClass(type.superclass)
-        // Kotlin lambdas require some special treatment
-        if (kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type)) return null
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         // If we use a whitelist with blacklisting capabilities, whitelist.hasListed(type) may throw an IllegalStateException if input class is blacklisted.
         // Thus, blacklisting precedes annotation checking.
