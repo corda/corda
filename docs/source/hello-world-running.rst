@@ -28,7 +28,8 @@ Let's take a look at the nodes we're going to deploy. Open the project's ``build
             networkMap "O=Controller,L=London,C=GB"
             node {
                 name "O=Controller,L=London,C=GB"
-                advertisedServices = ["corda.notary.validating"]
+                notary = [validating : true]
+                advertisedServices = []
                 p2pPort 10002
                 rpcPort 10003
                 cordapps = ["net.corda:corda-finance:$corda_release_version"]

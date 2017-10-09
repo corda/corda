@@ -19,9 +19,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
@@ -52,11 +50,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     @Before
     fun setUp() {
         setCordappPackages("net.corda.finance.contracts")
-        node = startNode(
-                ALICE.name,
-                rpcUsers = listOf(rpcUser),
-                advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)),
-                customSchemas = setOf(CashSchemaV1)).getOrThrow()
+        node = startNotaryNode(ALICE.name, rpcUsers = listOf(rpcUser), customSchemas = setOf(CashSchemaV1)).getOrThrow()
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }
 
