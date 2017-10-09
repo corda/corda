@@ -45,12 +45,11 @@ class CollectSignaturesFlowTests {
         bobNode = mockNet.createPartyNode(BOB.name)
         charlieNode = mockNet.createPartyNode(CHARLIE.name)
         mockNet.runNetwork()
-        val notaryServices = notaryNode.services
         aliceNode.internals.ensureRegistered()
         alice = aliceNode.services.myInfo.chooseIdentityAndPath(ALICE_NAME)
         bob = bobNode.services.myInfo.chooseIdentityAndPath(BOB_NAME)
         charlie = charlieNode.services.myInfo.chooseIdentityAndPath(CHARLIE_NAME)
-        notary = notaryServices.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
+        notary = notaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
     }
 
     @After
