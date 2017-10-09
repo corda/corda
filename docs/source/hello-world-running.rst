@@ -117,15 +117,9 @@ commands.
 
 We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
 
-.. container:: codeset
+.. code:: bash
 
-    .. code-block:: java
-
-        start IOUFlow arg0: 99, arg1: "O=PartyB,L=New York,C=US"
-
-    .. code-block:: kotlin
-
-        start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
+    start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
 
 PartyA and PartyB will automatically agree an IOU. If the flow worked, it should have led to the recording of a new IOU
 in the vaults of both PartyA and PartyB.

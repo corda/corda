@@ -7,6 +7,7 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StateLoader
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -181,10 +182,12 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * If [transaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
      * [NotaryChangeLedgerTransaction] so the signatures can be verified.
      */
-    fun resolveNotaryChangeTransaction(services: ServiceHub): NotaryChangeLedgerTransaction {
+    fun resolveNotaryChangeTransaction(services: ServiceHub) = resolveNotaryChangeTransaction(services as StateLoader)
+
+    fun resolveNotaryChangeTransaction(stateLoader: StateLoader): NotaryChangeLedgerTransaction {
         val ntx = transaction as? NotaryChangeWireTransaction
                 ?: throw IllegalStateException("Expected a ${NotaryChangeWireTransaction::class.simpleName} but found ${transaction::class.simpleName}")
-        return ntx.resolve(services, sigs)
+        return ntx.resolve(stateLoader, sigs)
     }
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
