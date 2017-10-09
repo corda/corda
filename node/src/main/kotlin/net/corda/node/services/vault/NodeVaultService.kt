@@ -4,16 +4,16 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.tee
-import net.corda.core.messaging.DataFeed
-import net.corda.core.node.ServiceHub
+import net.corda.core.internal.*
+import net.corda.core.node.StateLoader
+import net.corda.core.node.services.*
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.VaultQueryException
-import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
@@ -24,6 +24,7 @@ import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
+import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.DatabaseTransactionManager
@@ -33,6 +34,7 @@ import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.time.Clock
 import java.time.Instant
 import java.util.*
 import javax.persistence.Tuple
@@ -47,7 +49,7 @@ import javax.persistence.Tuple
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val services: ServiceHub, private val hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val clock: Clock, private val keyManagementService: KeyManagementService, private val stateLoader: StateLoader, private val hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultServiceInternal {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -78,7 +80,7 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = services.clock.instant())
+                        recordedTime = clock.instant())
                 state.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(state)
             }
@@ -86,11 +88,11 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
                     stateStatus = Vault.StateStatus.CONSUMED
-                    consumedTime = services.clock.instant()
+                    consumedTime = clock.instant()
                     // remove lock (if held)
                     if (lockId != null) {
                         lockId = null
-                        lockUpdateTime = services.clock.instant()
+                        lockUpdateTime = clock.instant()
                         log.trace("Releasing soft lock on consumed state: $stateRef")
                     }
                     session.save(state)
@@ -106,13 +108,7 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
     override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }
 
-    /**
-     * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
-     * This is required because the batches get aggregated into single updates, and we want to be able to
-     * indicate whether an update consists entirely of regular or notary change transactions, which may require
-     * different processing logic.
-     */
-    fun notifyAll(txns: Iterable<CoreTransaction>) {
+    override fun notifyAll(txns: Iterable<CoreTransaction>) {
         // It'd be easier to just group by type, but then we'd lose ordering.
         val regularTxns = mutableListOf<WireTransaction>()
         val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
@@ -140,12 +136,9 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
         if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList())
     }
 
-    /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
-
     private fun notifyRegular(txns: Iterable<WireTransaction>) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
-            val myKeys = services.keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val ourNewStates = tx.outputs.
                     filter { isRelevant(it.data, myKeys.toSet()) }.
                     map { tx.outRef<ContractState>(it.data) }
@@ -171,8 +164,8 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
             // input positions
-            val ltx = tx.resolve(services, emptyList())
-            val myKeys = services.keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val ltx = tx.resolve(stateLoader, emptyList())
+            val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
                     filter { (_, output) -> isRelevant(output.data, myKeys.toSet()) }.
@@ -246,7 +239,7 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
 
     @Throws(StatesNotAvailableException::class)
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
-        val softLockTimestamp = services.clock.instant()
+        val softLockTimestamp = clock.instant()
         try {
             val session = DatabaseTransactionManager.current().session
             val criteriaBuilder = session.criteriaBuilder
@@ -292,7 +285,7 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
     }
 
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
-        val softLockTimestamp = services.clock.instant()
+        val softLockTimestamp = clock.instant()
         val session = DatabaseTransactionManager.current().session
         val criteriaBuilder = session.criteriaBuilder
         if (stateRefs == null) {
@@ -440,8 +433,8 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
                 // pagination checks
                 if (!paging.isDefault) {
                     // pagination
-                    if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from ${DEFAULT_PAGE_NUM}]")
-                    if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and ${MAX_PAGE_SIZE}]")
+                    if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
+                    if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
                 }
 
                 query.firstResult = (paging.pageNumber - 1) * paging.pageSize
@@ -452,7 +445,7 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
 
                 // final pagination check (fail-fast on too many results when no pagination specified)
                 if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
-                    throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [${DEFAULT_PAGE_SIZE}]")
+                    throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
 
                 val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
                 val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
@@ -495,8 +488,7 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-            @Suppress("UNCHECKED_CAST")
-            val updates = _updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
+            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
             DataFeed(snapshotResults, updates)
         }
     }
@@ -522,8 +514,7 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
 
             val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
             distinctTypes.forEach { type ->
-                @Suppress("UNCHECKED_CAST")
-                val concreteType = Class.forName(type) as Class<ContractState>
+                val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
                 val contractInterfaces = deriveContractInterfaces(concreteType)
                 contractInterfaces.map {
                     val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
@@ -537,10 +528,9 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
         val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
         clazz.interfaces.forEach {
-            if (!it.equals(ContractState::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                myInterfaces.add(it as Class<T>)
-                myInterfaces.addAll(deriveContractInterfaces(it))
+            if (it != ContractState::class.java) {
+                myInterfaces.add(uncheckedCast(it))
+                myInterfaces.addAll(deriveContractInterfaces(uncheckedCast(it)))
             }
         }
         return myInterfaces

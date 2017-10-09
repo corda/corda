@@ -25,7 +25,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache {
@@ -73,6 +72,7 @@ interface ServiceHubInternal : ServiceHub {
         private val log = loggerFor<ServiceHubInternal>()
     }
 
+    override val vaultService: VaultServiceInternal
     /**
      * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
@@ -104,7 +104,7 @@ interface ServiceHubInternal : ServiceHub {
 
         if (notifyVault) {
             val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
-            (vaultService as NodeVaultService).notifyAll(toNotify)
+            vaultService.notifyAll(toNotify)
         }
     }
 
