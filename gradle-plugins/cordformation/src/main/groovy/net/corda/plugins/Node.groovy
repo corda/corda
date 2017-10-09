@@ -99,7 +99,7 @@ class Node extends CordformNode {
     }
 
     protected void build() {
-        configureRpcUsers()
+        configureProperties()
         installCordaJar()
         if (config.hasPath("webAddress")) {
             installWebserverJar()
@@ -118,11 +118,12 @@ class Node extends CordformNode {
         return config.getString("p2pAddress")
     }
 
-    /**
-     * Write the RPC users to the config
-     */
-    private void configureRpcUsers() {
+    private void configureProperties() {
         config = config.withValue("rpcUsers", ConfigValueFactory.fromIterable(rpcUsers))
+        if (notary) {
+            config = config.withValue("notary", ConfigValueFactory.fromMap(notary))
+        }
+        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromIterable(advertisedServices*.toString()))
     }
 
     /**
@@ -177,11 +178,6 @@ class Node extends CordformNode {
      * Installs the configuration file to this node's directory and detokenises it.
      */
     private void installConfig() {
-        // Adding required default values
-        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromIterable(advertisedServices*.toString()))
-        if (notaryClusterAddresses.size() > 0) {
-            config = config.withValue('notaryClusterAddresses', ConfigValueFactory.fromIterable(notaryClusterAddresses*.toString()))
-        }
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
 
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.

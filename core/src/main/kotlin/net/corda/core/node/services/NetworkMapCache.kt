@@ -116,10 +116,8 @@ interface NetworkMapCache {
     fun isNotary(party: Party): Boolean = party in notaryIdentities
 
     /** Checks whether a given party is an validating notary identity. */
-    fun isValidatingNotary(party: Party): Boolean {
-        require(isNotary(party)) { "No notary found with identity $party." }
-        return !party.name.toString().contains("corda.notary.simple", true) // TODO This implementation will change after introducing of NetworkParameters.
-    }
+    // TODO This implementation will change after introducing of NetworkParameters.
+    fun isValidatingNotary(party: Party): Boolean = isNotary(party) && "validating" in party.name.commonName!!
 
     /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()

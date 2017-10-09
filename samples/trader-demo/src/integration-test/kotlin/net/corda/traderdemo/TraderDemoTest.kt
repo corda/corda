@@ -9,9 +9,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.driver.poll
 import net.corda.testing.node.NodeBasedTest
@@ -43,7 +41,7 @@ class TraderDemoTest : NodeBasedTest() {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
-        val notaryFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, validating = false)
         val nodeAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser))
         val nodeBFuture = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser))
         val bankNodeFuture = startNode(BOC.name, rpcUsers = listOf(bankUser))

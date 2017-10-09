@@ -28,9 +28,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -68,7 +66,7 @@ class CordaRPCOpsImplTest {
 
         mockNet = MockNetwork()
         aliceNode = mockNet.createNode()
-        notaryNode = mockNet.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type))
+        notaryNode = mockNet.createNotaryNode(validating = false)
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),

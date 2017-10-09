@@ -26,16 +26,14 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.config.RaftConfig
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.CordaPersistence
 import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
+import javax.persistence.*
 
 /**
  * A uniqueness provider that records committed input states in a distributed collection replicated and
@@ -46,7 +44,7 @@ import javax.persistence.Lob
  * to the cluster leader to be actioned.
  */
 @ThreadSafe
-class RaftUniquenessProvider(private val services: ServiceHubInternal) : UniquenessProvider, SingletonSerializeAsToken() {
+class RaftUniquenessProvider(private val services: ServiceHubInternal, private val raftConfig: RaftConfig) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
@@ -67,7 +65,7 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal) : Uniquen
     }
 
     @Entity
-    @javax.persistence.Table(name = "notary_committed_states")
+    @Table(name = "notary_committed_states")
     class RaftState(
             @Id
             @Column
@@ -81,13 +79,6 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal) : Uniquen
     /** Directory storing the Raft log and state machine snapshots */
     private val storagePath: Path = services.configuration.baseDirectory
     /** Address of the Copycat node run by this Corda node */
-    private val myAddress = services.configuration.notaryNodeAddress
-            ?: throw IllegalArgumentException("notaryNodeAddress must be specified in configuration")
-    /**
-     * List of node addresses in the existing Copycat cluster. At least one active node must be
-     * provided to join the cluster. If empty, a new cluster will be bootstrapped.
-     */
-    private val clusterAddresses = services.configuration.notaryClusterAddresses
     /** The database to store the state machine state in */
     private val db: CordaPersistence = services.database
     /** SSL configuration */
@@ -95,7 +86,6 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal) : Uniquen
 
     private lateinit var _clientFuture: CompletableFuture<CopycatClient>
     private lateinit var server: CopycatServer
-
 
     /**
      * Copycat clients are responsible for connecting to the cluster and submitting commands and queries that operate
@@ -108,7 +98,7 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal) : Uniquen
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
         val stateMachineFactory = {
             DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createMap) }
-        val address = Address(myAddress.host, myAddress.port)
+        val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)
         val transport = buildTransport(transportConfiguration)
         val serializer = Serializer().apply {
@@ -142,9 +132,9 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal) : Uniquen
                 .withSerializer(serializer)
                 .build()
 
-        val serverFuture = if (clusterAddresses.isNotEmpty()) {
-            log.info("Joining an existing Copycat cluster at $clusterAddresses")
-            val cluster = clusterAddresses.map { Address(it.host, it.port) }
+        val serverFuture = if (raftConfig.clusterAddresses.isNotEmpty()) {
+            log.info("Joining an existing Copycat cluster at ${raftConfig.clusterAddresses}")
+            val cluster = raftConfig.clusterAddresses.map { Address(it.host, it.port) }
             server.join(cluster)
         } else {
             log.info("Bootstrapping a Copycat cluster at $address")

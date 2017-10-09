@@ -77,53 +77,65 @@ class ConfigParsingTest {
     }
 
     @Test
+    fun CordaX500Name() {
+        testPropertyType<CordaX500NameData, CordaX500NameListData, CordaX500Name>(
+                CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB"),
+                CordaX500Name(organisation = "Mock Party 2", locality = "London", country = "GB"),
+                valuesToString = true)
+    }
+
+    @Test
     fun `flat Properties`() {
         val config = config("value" to mapOf("key" to "prop"))
-        assertThat(config.parseAs<PropertiesData>().value).isEqualTo(Properties().apply { this["key"] = "prop" })
+        val data = PropertiesData(Properties().apply { this["key"] = "prop" })
+        assertThat(config.parseAs<PropertiesData>()).isEqualTo(data)
+        assertThat(data.toConfig()).isEqualTo(config)
     }
 
     @Test
     fun `Properties key with dot`() {
         val config = config("value" to mapOf("key.key2" to "prop"))
-        assertThat(config.parseAs<PropertiesData>().value).isEqualTo(Properties().apply { this["key.key2"] = "prop" })
+        val data = PropertiesData(Properties().apply { this["key.key2"] = "prop" })
+        assertThat(config.parseAs<PropertiesData>().value).isEqualTo(data.value)
     }
 
     @Test
     fun `nested Properties`() {
         val config = config("value" to mapOf("first" to mapOf("second" to "prop")))
-        assertThat(config.parseAs<PropertiesData>().value).isEqualTo(Properties().apply { this["first.second"] = "prop" })
+        val data = PropertiesData(Properties().apply { this["first.second"] = "prop" })
+        assertThat(config.parseAs<PropertiesData>().value).isEqualTo(data.value)
+        assertThat(data.toConfig()).isEqualTo(config)
     }
 
     @Test
     fun `List of Properties`() {
         val config = config("values" to listOf(emptyMap(), mapOf("key" to "prop")))
-        assertThat(config.parseAs<PropertiesListData>().values).containsExactly(
+        val data = PropertiesListData(listOf(
                 Properties(),
-                Properties().apply { this["key"] = "prop" })
+                Properties().apply { this["key"] = "prop" }))
+        assertThat(config.parseAs<PropertiesListData>().values).isEqualTo(data.values)
+        assertThat(data.toConfig()).isEqualTo(config)
     }
 
     @Test
     fun `Set`() {
-        val config = config("values" to listOf("a", "a", "b"))
-        assertThat(config.parseAs<StringSetData>().values).containsOnly("a", "b")
+        val data = StringSetData(setOf("a", "b"))
+        assertThat(config("values" to listOf("a", "a", "b")).parseAs<StringSetData>()).isEqualTo(data)
+        assertThat(data.toConfig()).isEqualTo(config("values" to listOf("a", "b")))
         assertThat(empty().parseAs<StringSetData>().values).isEmpty()
     }
 
     @Test
-    fun x500Name() {
-        testPropertyType<X500NameData, X500NameListData, CordaX500Name>(CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB"), CordaX500Name(organisation = "Mock Party 2", locality = "London", country = "GB"), valuesToString = true)
-    }
-
-    @Test
     fun `multi property data class`() {
-        val data = config(
+        val config = config(
                 "b" to true,
                 "i" to 123,
                 "l" to listOf("a", "b"))
-                .parseAs<MultiPropertyData>()
+        val data = config.parseAs<MultiPropertyData>()
         assertThat(data.i).isEqualTo(123)
         assertThat(data.b).isTrue()
         assertThat(data.l).containsExactly("a", "b")
+        assertThat(data.toConfig()).isEqualTo(config)
     }
 
     @Test
@@ -133,6 +145,7 @@ class ConfigParsingTest {
                         "value" to "nested"))
         val data = NestedData(StringData("nested"))
         assertThat(config.parseAs<NestedData>()).isEqualTo(data)
+        assertThat(data.toConfig()).isEqualTo(config)
     }
 
     @Test
@@ -143,12 +156,14 @@ class ConfigParsingTest {
                         mapOf("value" to "2")))
         val data = DataListData(listOf(StringData("1"), StringData("2")))
         assertThat(config.parseAs<DataListData>()).isEqualTo(data)
+        assertThat(data.toConfig()).isEqualTo(config)
     }
 
     @Test
     fun `default value property`() {
         assertThat(config("a" to 3).parseAs<DefaultData>()).isEqualTo(DefaultData(3, 2))
         assertThat(config("a" to 3, "defaultOfTwo" to 3).parseAs<DefaultData>()).isEqualTo(DefaultData(3, 3))
+        assertThat(DefaultData(3).toConfig()).isEqualTo(config("a" to 3, "defaultOfTwo" to 2))
     }
 
     @Test
@@ -156,12 +171,14 @@ class ConfigParsingTest {
         assertThat(empty().parseAs<NullableData>().nullable).isNull()
         assertThat(config("nullable" to null).parseAs<NullableData>().nullable).isNull()
         assertThat(config("nullable" to "not null").parseAs<NullableData>().nullable).isEqualTo("not null")
+        assertThat(NullableData(null).toConfig()).isEqualTo(empty())
     }
 
     @Test
     fun `old config property`() {
         assertThat(config("oldValue" to "old").parseAs<OldData>().newValue).isEqualTo("old")
         assertThat(config("newValue" to "new").parseAs<OldData>().newValue).isEqualTo("new")
+        assertThat(OldData("old").toConfig()).isEqualTo(config("newValue" to "old"))
     }
 
     private inline fun <reified S : SingleData<V>, reified L : ListData<V>, V : Any> testPropertyType(
@@ -177,6 +194,7 @@ class ConfigParsingTest {
         val config = config("value" to if (valueToString) value.toString() else value)
         val data = constructor.call(value)
         assertThat(config.parseAs<T>().value).isEqualTo(data.value)
+        assertThat(data.toConfig()).isEqualTo(config)
     }
 
     private inline fun <reified T : ListData<V>, V : Any> testListProperty(value1: V, value2: V, valuesToString: Boolean) {
@@ -187,6 +205,7 @@ class ConfigParsingTest {
             val config = config("values" to configValues.take(n))
             val data = constructor.call(rawValues.take(n))
             assertThat(config.parseAs<T>().values).isEqualTo(data.values)
+            assertThat(data.toConfig()).isEqualTo(config)
         }
         assertThat(empty().parseAs<T>().values).isEmpty()
     }
@@ -228,8 +247,8 @@ class ConfigParsingTest {
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>
     data class URLListData(override val values: List<URL>) : ListData<URL>
-    data class X500NameData(override val value: CordaX500Name) : SingleData<CordaX500Name>
-    data class X500NameListData(override val values: List<CordaX500Name>) : ListData<CordaX500Name>
+    data class CordaX500NameData(override val value: CordaX500Name) : SingleData<CordaX500Name>
+    data class CordaX500NameListData(override val values: List<CordaX500Name>) : ListData<CordaX500Name>
     data class PropertiesData(override val value: Properties) : SingleData<Properties>
     data class PropertiesListData(override val values: List<Properties>) : ListData<Properties>
     data class MultiPropertyData(val i: Int, val b: Boolean, val l: List<String>)
@@ -242,5 +261,4 @@ class ConfigParsingTest {
             val newValue: String)
 
     enum class TestEnum { Value1, Value2 }
-
 }

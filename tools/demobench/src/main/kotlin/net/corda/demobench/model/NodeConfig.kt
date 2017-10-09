@@ -8,7 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
-class NodeConfig(
+class NodeConfig constructor(
         baseDir: Path,
         legalName: CordaX500Name,
         p2pPort: Int,
@@ -42,20 +42,22 @@ class NodeConfig(
      * The configuration object depends upon the networkMap,
      * which is mutable.
      */
-    fun toFileConfig(): Config = ConfigFactory.empty()
-            .withValue("myLegalName", valueFor(legalName.toString()))
-            .withValue("p2pAddress", addressValueFor(p2pPort))
-            .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
-            .withFallback(optional("networkMapService", networkMap, { c, n ->
-                c.withValue("address", addressValueFor(n.p2pPort))
-                    .withValue("legalName", valueFor(n.legalName.toString()))
-            }))
-            .withValue("webAddress", addressValueFor(webPort))
-            .withValue("rpcAddress", addressValueFor(rpcPort))
-            .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
-            .withValue("h2port", valueFor(h2Port))
-            .withValue("useTestClock", valueFor(true))
-            .withValue("detectPublicIp", valueFor(false))
+    fun toFileConfig(): Config {
+        return ConfigFactory.empty()
+                .withValue("myLegalName", valueFor(legalName.toString()))
+                .withValue("p2pAddress", addressValueFor(p2pPort))
+                .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
+                .withFallback(optional("networkMapService", networkMap, { c, n ->
+                    c.withValue("address", addressValueFor(n.p2pPort))
+                            .withValue("legalName", valueFor(n.legalName.toString()))
+                }))
+                .withValue("webAddress", addressValueFor(webPort))
+                .withValue("rpcAddress", addressValueFor(rpcPort))
+                .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
+                .withValue("h2port", valueFor(h2Port))
+                .withValue("useTestClock", valueFor(true))
+                .withValue("detectPublicIp", valueFor(false))
+    }
 
     fun toText(): String = toFileConfig().root().render(renderOptions)
 

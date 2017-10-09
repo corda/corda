@@ -26,12 +26,11 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -96,6 +95,14 @@ interface DriverDSLExposedInterface : CordformContext {
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize): CordaFuture<NodeHandle>
 
+    // TODO This method has been added temporarily, to be deleted once the set of notaries is defined at the network level.
+    fun startNotaryNode(providedName: CordaX500Name,
+                        rpcUsers: List<User> = emptyList(),
+                        verifierType: VerifierType = VerifierType.InMemory,
+                        customOverrides: Map<String, Any?> = emptyMap(),
+                        //TODO Switch the default value
+                        validating: Boolean = true): CordaFuture<NodeHandle>
+
     /**
      * Helper function for starting a [node] with custom parameters from Java.
      *
@@ -118,7 +125,6 @@ interface DriverDSLExposedInterface : CordformContext {
      *
      * @param notaryName The legal name of the advertised distributed notary service.
      * @param clusterSize Number of nodes to create for the cluster.
-     * @param type The advertised notary service type. Currently the only supported type is [RaftValidatingNotaryService.type].
      * @param verifierType The type of transaction verifier to use. See: [VerifierType]
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
@@ -128,7 +134,6 @@ interface DriverDSLExposedInterface : CordformContext {
     fun startNotaryCluster(
             notaryName: CordaX500Name,
             clusterSize: Int = 3,
-            type: ServiceType = RaftValidatingNotaryService.type,
             verifierType: VerifierType = VerifierType.InMemory,
             rpcUsers: List<User> = emptyList(),
             startInSameProcess: Boolean? = null): CordaFuture<Pair<Party, List<NodeHandle>>>
@@ -668,9 +673,9 @@ class DriverDSL(
                     }
                 }
                 is NetworkMapStartStrategy.Nominated -> {
-                    serviceConfig(networkMapCandidates.filter {
+                    serviceConfig(networkMapCandidates.single {
                         it.name == legalName.toString()
-                    }.single().config.getString("p2pAddress").let(NetworkHostAndPort.Companion::parse)).let {
+                    }.config.getString("p2pAddress").let(NetworkHostAndPort.Companion::parse)).let {
                         { nodeName: CordaX500Name -> if (nodeName == legalName) null else it }
                     }
                 }
@@ -715,6 +720,15 @@ class DriverDSL(
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
     }
 
+    override fun startNotaryNode(providedName: CordaX500Name,
+                                 rpcUsers: List<User>,
+                                 verifierType: VerifierType,
+                                 customOverrides: Map<String, Any?>,
+                                 validating: Boolean): CordaFuture<NodeHandle> {
+        val config = customOverrides + NotaryConfig(validating).toConfigMap()
+        return startNode(providedName = providedName, rpcUsers = rpcUsers, verifierType = verifierType, customOverrides = config)
+    }
+
     override fun startNodes(nodes: List<CordformNode>, startInSameProcess: Boolean?, maximumHeapSize: String): List<CordaFuture<NodeHandle>> {
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(nodes)
         return nodes.map { node ->
@@ -722,50 +736,62 @@ class DriverDSL(
             val webAddress = portAllocation.nextHostAndPort()
             val name = CordaX500Name.parse(node.name)
             val rpcUsers = node.rpcUsers
+            val notary = if (node.notary != null) mapOf("notary" to node.notary) else emptyMap()
             val config = ConfigHelper.loadConfig(
                     baseDirectory = baseDirectory(name),
                     allowMissingConfig = true,
-                    configOverrides = node.config + mapOf(
+                    configOverrides = node.config + notary + mapOf(
                             "extraAdvertisedServiceIds" to node.advertisedServices,
                             "networkMapService" to networkMapServiceConfigLookup(name),
-                            "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers,
-                            "notaryClusterAddresses" to node.notaryClusterAddresses
+                            "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
                     )
             )
             startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
         }
     }
 
+    // TODO This mapping is done is several plaecs including the gradle plugin. In general we need a better way of
+    // generating the configs for the nodes, probably making use of Any.toConfig()
+    private fun NotaryConfig.toConfigMap(): Map<String, Any> = mapOf("notary" to toConfig().root().unwrapped())
+
     override fun startNotaryCluster(
             notaryName: CordaX500Name,
             clusterSize: Int,
-            type: ServiceType,
             verifierType: VerifierType,
             rpcUsers: List<User>,
             startInSameProcess: Boolean?
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
+        fun notaryConfig(nodeAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): Map<String, Any> {
+            val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
+            val config = NotaryConfig(validating = true, raft = RaftConfig(nodeAddress = nodeAddress, clusterAddresses = clusterAddresses))
+            return config.toConfigMap()
+        }
+
         val nodeNames = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }
         val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, notaryName)
-        val advertisedServices = setOf(ServiceInfo(type, notaryName))
-        val notaryClusterAddress = portAllocation.nextHostAndPort()
+        val clusterAddress = portAllocation.nextHostAndPort()
 
         // Start the first node that will bootstrap the cluster
         val firstNotaryFuture = startNode(
                 providedName = nodeNames.first(),
-                advertisedServices = advertisedServices,
                 rpcUsers = rpcUsers,
                 verifierType = verifierType,
-                customOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString(),
-                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("[^0-9A-Za-z]+"), "") else ""),
+                customOverrides = notaryConfig(clusterAddress) + mapOf(
+                        "database.serverNameTablePrefix" to if (nodeNames.isNotEmpty()) nodeNames.first().toString().replace(Regex("[^0-9A-Za-z]+"), "") else ""
+                ),
                 startInSameProcess = startInSameProcess
         )
         // All other nodes will join the cluster
         val restNotaryFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
-            val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()),
-                    "database.serverNameTablePrefix" to it.toString().replace(Regex("[^0-9A-Za-z]+"), ""))
-            startNode(providedName = it, advertisedServices = advertisedServices, rpcUsers = rpcUsers, verifierType = verifierType, customOverrides = configOverride)
+            startNode(
+                    providedName = it,
+                    rpcUsers = rpcUsers,
+                    verifierType = verifierType,
+                    customOverrides = notaryConfig(nodeAddress, clusterAddress) + mapOf(
+                            "database.serverNameTablePrefix" to it.toString().replace(Regex("[^0-9A-Za-z]+"), "")
+                    ))
         }
 
         return firstNotaryFuture.flatMap { firstNotary ->

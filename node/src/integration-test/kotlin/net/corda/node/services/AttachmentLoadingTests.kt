@@ -18,9 +18,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.TestDependencyInjectionBase
@@ -120,7 +118,7 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
         val nodes = listOf(
                 startNode(providedName = bankAName, rpcUsers = listOf(adminUser)),
                 startNode(providedName = bankBName, rpcUsers = listOf(adminUser)),
-                startNode(providedName = notaryName, rpcUsers = listOf(adminUser), advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+                startNotaryNode(providedName = notaryName, rpcUsers = listOf(adminUser), validating = false)
         ).transpose().getOrThrow()   // Wait for all nodes to start up.
         nodes.forEach { it.rpc.waitUntilNetworkReady().getOrThrow() }
         return nodes
