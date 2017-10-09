@@ -60,8 +60,6 @@ class CashSelectionPostgreSQLImpl : CashSelection {
         lockId: UUID,
         withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
         // TODO: extract out commonalities between CashSelection implementations
-        val issuerKeysStr = onlyFromIssuerParties.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }.dropLast(1)
-        val issuerRefsStr = withIssuerRefs.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }.dropLast(1)
 
         val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
 
@@ -74,9 +72,8 @@ class CashSelectionPostgreSQLImpl : CashSelection {
         for (retryCount in 1..MAX_RETRIES) {
 
             spendLock.withLock {
-                val statement = services.jdbcSession().createStatement()
-                try {
-                    val selectJoin = """SELECT nested.transaction_id, nested.output_index, nested.contract_state, nested.pennies,
+                val session = services.jdbcSession()
+                val selectJoin = """SELECT nested.transaction_id, nested.output_index, nested.contract_state, nested.pennies,
                         nested.total+nested.pennies as total_pennies, nested.lock_id
                        FROM
                        (SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies,
@@ -85,23 +82,45 @@ class CashSelectionPostgreSQLImpl : CashSelection {
                         FROM vault_states AS vs, contract_cash_states AS ccs
                         WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
                         AND vs.state_status = 0
-                        AND ccs.ccy_code = '${amount.token}'
-                        AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
+                        AND ccs.ccy_code = ?
+                        AND (vs.lock_id = ? OR vs.lock_id is null)
                         """ +
-                        (if (notary != null)
-                            " AND vs.notary_name = '${notary.name}'" else "") +
-                        (if (onlyFromIssuerParties.isNotEmpty())
-                            " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
-                        (if (withIssuerRefs.isNotEmpty())
-                            " AND ccs.issuer_ref IN ($issuerRefsStr)" else "") +
-                        """)
-                        nested WHERE nested.total < ${amount.quantity}
+                    (if (notary != null)
+                        " AND vs.notary_name = ?" else "") +
+                    (if (onlyFromIssuerParties.isNotEmpty())
+                        " AND ccs.issuer_key = ANY (?)" else "") +
+                    (if (withIssuerRefs.isNotEmpty())
+                        " AND ccs.issuer_ref = ANY (?)" else "") +
+                    """)
+                        nested WHERE nested.total < ?
                      """
+                val statement = session.prepareStatement(selectJoin)
+                try {
+                    statement.setString(1, amount.token.toString())
+                    statement.setString(2, lockId.toString())
+                    var paramOffset = 0
+                    if (notary != null) {
+                        statement.setString(3, notary.name.toString())
+                        paramOffset += 1
+                    }
+                    if (onlyFromIssuerParties.isNotEmpty()) {
+                        val issuerKeys = session.createArrayOf("VARCHAR", onlyFromIssuerParties.map
+                        { it.owningKey.toBase58String() }.toTypedArray())
+                        statement.setArray(3 + paramOffset, issuerKeys)
+                        paramOffset += 1
+                    }
+                    if (withIssuerRefs.isNotEmpty()) {
+                        val issuerRefs = session.createArrayOf("BYTEA", withIssuerRefs.map
+                        { it.bytes }.toTypedArray())
+                        statement.setArray(3 + paramOffset, issuerRefs)
+                        paramOffset += 1
+                    }
+                    statement.setLong(3 + paramOffset, amount.quantity)
 
                     // Retrieve spendable state refs
-                    val rs = statement.executeQuery(selectJoin)
+                    val rs = statement.executeQuery()
                     stateAndRefs.clear()
-                    log.debug(selectJoin)
+                    log.debug(statement.toString())
                     var totalPennies = 0L
                     while (rs.next()) {
                         val txHash = SecureHash.parse(rs.getString(1))
