@@ -16,7 +16,6 @@ class CashSelectionH2Test {
     fun `check does not hold connection over retries`() {
         val mockNet = MockNetwork(threadPerNode = true)
         try {
-
             val notaryNode = mockNet.createNotaryNode()
             val bankA = mockNet.createNode(configOverrides = { existingConfig ->
                 // Tweak connections to be minimal to make this easier (1 result in hung node during start up).
@@ -34,7 +33,6 @@ class CashSelectionH2Test {
             assertThatThrownBy { flow1.resultFuture.getOrThrow() }.isInstanceOf(CashException::class.java)
             assertThatThrownBy { flow2.resultFuture.getOrThrow() }.isInstanceOf(CashException::class.java)
             assertThatThrownBy { flow3.resultFuture.getOrThrow() }.isInstanceOf(CashException::class.java)
-
         } finally {
             mockNet.stopNodes()
         }
