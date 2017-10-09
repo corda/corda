@@ -33,6 +33,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val messageRedeliveryDelaySeconds: Int
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
+    val additionalNodeInfoPollingFrequencyMsec: Long
 }
 
 data class NotaryConfig(val validating: Boolean, val raft: RaftConfig? = null, val bftSMaRt: BFTSMaRtConfiguration? = null) {
@@ -86,7 +87,8 @@ data class FullNodeConfiguration(
         override val devMode: Boolean = false,
         val useTestClock: Boolean = false,
         val detectPublicIp: Boolean = true,
-        override val activeMQServer: ActiveMqServerConfiguration
+        override val activeMQServer: ActiveMqServerConfiguration,
+        override val additionalNodeInfoPollingFrequencyMsec: Long
 ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
