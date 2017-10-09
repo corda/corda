@@ -6,6 +6,7 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``FlowLogic`` now exposes a series of function called ``receiveAll(...)`` allowing to join ``receive(...)`` instructions.
 
 * ``Cordform`` and node identity generation
   * Cordform may not specify a value for ``NetworkMap``, when that happens, during the task execution the following happens:

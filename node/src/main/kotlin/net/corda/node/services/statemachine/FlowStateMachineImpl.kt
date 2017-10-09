@@ -12,9 +12,13 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.abbreviate
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.staticField
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
@@ -171,8 +175,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                             "@${InitiatingFlow::class.java.simpleName} sub-flow."
             )
         }
-        createNewSession(otherParty, sessionFlow)
         val flowSession = FlowSessionImpl(otherParty)
+        createNewSession(otherParty, flowSession, sessionFlow)
         flowSession.stateMachine = this
         flowSession.sessionFlow = sessionFlow
         return flowSession
@@ -299,6 +303,22 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         FlowStackSnapshotFactory.instance.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id)
     }
 
+    @Suspendable
+    override fun receiveAll(sessions: Map<FlowSession, Class<out Any>>, sessionFlow: FlowLogic<*>): Map<FlowSession, UntrustworthyData<Any>> {
+        val requests = ArrayList<ReceiveOnly<SessionData>>()
+        for ((session, receiveType) in sessions) {
+            val sessionInternal = getConfirmedSession(session.counterparty, sessionFlow)
+            requests.add(ReceiveOnly(sessionInternal, SessionData::class.java, receiveType))
+        }
+        val receivedMessages = ReceiveAll(requests).suspendAndExpectReceive(suspend)
+        val result = LinkedHashMap<FlowSession, UntrustworthyData<Any>>()
+        for ((sessionInternal, requestAndMessage) in receivedMessages) {
+            val message = requestAndMessage.message.confirmReceiveType(requestAndMessage.request)
+            result[sessionInternal.flowSession] = message.checkPayloadIs(requestAndMessage.request.userReceiveType as Class<out Any>)
+        }
+        return result
+    }
+
     /**
      * This method will suspend the state machine and wait for incoming session init response from other party.
      */
@@ -362,10 +382,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun createNewSession(
             otherParty: Party,
+            flowSession: FlowSession,
             sessionFlow: FlowLogic<*>
     ) {
         logger.trace { "Creating a new session with $otherParty" }
-        val session = FlowSessionInternal(sessionFlow, random63BitValue(), null, FlowSessionState.Uninitiated(otherParty))
+        val session = FlowSessionInternal(sessionFlow, flowSession, random63BitValue(), null, FlowSessionState.Uninitiated(otherParty))
         openSessions[Pair(sessionFlow, otherParty)] = session
     }
 
@@ -400,6 +421,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     private fun <M : ExistingSessionMessage> waitForMessage(receiveRequest: ReceiveRequest<M>): ReceivedSessionMessage<M> {
         return receiveRequest.suspendAndExpectReceive().confirmReceiveType(receiveRequest)
+    }
+
+    private val suspend : ReceiveAll.Suspend = object : ReceiveAll.Suspend {
+        @Suspendable
+        override fun invoke(request: FlowIORequest) {
+            suspend(request)
+        }
     }
 
     @Suspendable
