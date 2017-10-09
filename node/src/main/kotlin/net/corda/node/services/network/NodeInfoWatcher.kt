@@ -1,14 +1,8 @@
 package net.corda.node.services.network
 
 import net.corda.cordform.CordformNode
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.isDirectory
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
-import net.corda.core.internal.readAll
+import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.deserialize
@@ -17,6 +11,7 @@ import net.corda.core.utilities.loggerFor
 import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
@@ -52,11 +47,9 @@ class NodeInfoWatcher(private val nodePath: Path,
             try {
                 path.createDirectories()
                 val serializedBytes = nodeInfo.serialize()
-                val regSig = keyManager.sign(serializedBytes.bytes,
-                        nodeInfo.legalIdentities.first().owningKey)
+                val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
                 val signedData = SignedData(serializedBytes, regSig)
-                val file = (path / ("nodeInfo-" + SecureHash.sha256(serializedBytes.bytes).toString())).toFile()
-                file.writeBytes(signedData.serialize().bytes)
+                signedData.serialize().open().copyTo(path / "nodeInfo-${serializedBytes.hash}")
             } catch (e: Exception) {
                 logger.warn("Couldn't write node info to file", e)
             }
