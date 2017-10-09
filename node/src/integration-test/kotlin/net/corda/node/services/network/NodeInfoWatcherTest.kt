@@ -70,9 +70,9 @@ class NodeInfoWatcherTest : NodeBasedTest() {
 
         nodeInfoWatcher.nodeInfoUpdates()
                 .subscribe(testSubscriber)
+        advanceTime()
 
         val readNodes = testSubscriber.onNextEvents.distinct()
-        advanceTime()
         assertEquals(0, readNodes.size)
     }
 
@@ -82,6 +82,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
 
         nodeInfoWatcher.nodeInfoUpdates()
                 .subscribe(testSubscriber)
+        advanceTime()
 
         val readNodes = testSubscriber.onNextEvents.distinct()
 
@@ -114,7 +115,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
     }
 
     private fun advanceTime() {
-        scheduler.advanceTimeBy(1, TimeUnit.HOURS)
+        scheduler.advanceTimeBy(1, TimeUnit.MINUTES)
     }
 
     // Write a nodeInfo under the right path.
