@@ -15,9 +15,7 @@ import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
@@ -49,7 +47,7 @@ fun main(args: Array<String>) {
             startFlowPermission<CashExitFlow>()))
 
     driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance")) {
-        startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+        startNotaryNode(DUMMY_NOTARY.name)
         val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()
         // END 1
 

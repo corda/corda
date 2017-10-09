@@ -75,7 +75,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     networkMap "O=Notary Service,OU=corda,L=London,C=GB"
     node {
         name "O=Notary Service,OU=corda,L=London,C=GB"
-        advertisedServices = ["corda.notary.validating"]
+        notary = [validating : true]
+        advertisedServices = []
         p2pPort 10002
         rpcPort 10003
         webPort 10004

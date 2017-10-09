@@ -7,6 +7,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
@@ -20,11 +22,9 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -275,7 +275,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
                             notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNode {
             return object : MockNode(config, network, null, advertisedServices, id, notaryIdentity, entropyRoot) {
-                override fun makeNetworkMapService() = NullNetworkMapService
+                override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = NullNetworkMapService
             }
         }
     }

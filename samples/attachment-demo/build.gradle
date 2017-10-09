@@ -40,7 +40,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     networkMap "O=Notary Service,L=Zurich,C=CH"
     node {
         name "O=Notary Service,L=Zurich,C=CH"
-        advertisedServices["corda.notary.validating"]
+        notary = [validating : true]
+        advertisedServices = []
         p2pPort 10002
         rpcPort 10003
         cordapps = []
@@ -101,4 +102,12 @@ task runRecipient(type: JavaExec) {
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
     args '--role'
     args 'RECIPIENT'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.attachment'
+        )
+    }
 }

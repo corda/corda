@@ -27,9 +27,7 @@ import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.driver.driver
 import net.corda.testing.node.DriverBasedTest
@@ -59,7 +57,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                 startFlowPermission<CashExitFlow>())
         )
         val aliceNodeFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser))
-        val notaryHandle = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+        val notaryHandle = startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()
         val aliceNodeHandle = aliceNodeFuture.getOrThrow()
         aliceNode = aliceNodeHandle.nodeInfo
         newNode = { nodeName -> startNode(providedName = nodeName).getOrThrow().nodeInfo }

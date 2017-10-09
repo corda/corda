@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.map
@@ -12,6 +13,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -80,10 +82,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                         //       Notary certificates have to be signed by the doorman directly
                         it.legalIdentities
                     }
-                    .filter {
-                        it.name.toString().contains("corda.notary", true)
-                    }
-                    .distinct() // Distinct, because of distributed service nodes
+                    .filter { it.name.commonName?.startsWith(NotaryService.ID_PREFIX) ?: false }
+                    .toSet() // Distinct, because of distributed service nodes
                     .sortedBy { it.name.toString() }
         }
 
@@ -114,7 +114,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         return null
     }
 
-    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = serviceHub.database.transaction { queryByLegalName(name).firstOrNull() }
+    override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = getNodesByLegalName(name).firstOrNull()
+    override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = serviceHub.database.transaction { queryByLegalName(name) }
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
             serviceHub.database.transaction { queryByIdentityKey(identityKey) }
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
@@ -125,6 +126,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     }
 
     override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = serviceHub.database.transaction { queryByAddress(address) }
+
+    override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = serviceHub.database.transaction { queryIdentityByLegalName(name) }
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
@@ -326,6 +329,19 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         createSession {
             val result = findByIdentityKey(it, identityKey)
             return result.map { it.toNodeInfo() }
+        }
+    }
+
+    private fun queryIdentityByLegalName(name: CordaX500Name): PartyAndCertificate? {
+        createSession {
+            val query = it.createQuery(
+                    // We do the JOIN here to restrict results to those present in the network map
+                    "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                    NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
+            query.setParameter("name", name.toString())
+            val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
+            // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
+            return candidates.firstOrNull()
         }
     }
 

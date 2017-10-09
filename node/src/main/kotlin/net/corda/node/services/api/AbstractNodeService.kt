@@ -10,10 +10,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Abstract superclass for services that a node can host, which provides helper functions.
  */
 @ThreadSafe
-abstract class AbstractNodeService(val services: ServiceHubInternal) : SingletonSerializeAsToken() {
-
-    val network: MessagingService get() = services.networkService
-
+abstract class AbstractNodeService(val network: MessagingService) : SingletonSerializeAsToken() {
     /**
      * Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
      * common boilerplate code. Exceptions are caught and passed to the provided consumer.  If you just want a simple
@@ -36,7 +33,7 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
                     val msg = network.createMessage(topic, request.sessionID, response.serialize().bytes)
                     network.send(msg, request.replyTo)
                 }
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 exceptionConsumer(message, e)
             }
         }

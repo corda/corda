@@ -13,7 +13,7 @@ class NodeConfig(
         val p2pPort: Int,
         val rpcPort: Int,
         val webPort: Int,
-        val extraServices: List<String>,
+        val isNotary: Boolean,
         val users: List<User>,
         var networkMap: NodeConfig? = null
 ) {
@@ -27,18 +27,25 @@ class NodeConfig(
      * The configuration object depends upon the networkMap,
      * which is mutable.
      */
-    fun toFileConfig(): Config = empty()
-            .withValue("myLegalName", valueFor(legalName.toString()))
-            .withValue("p2pAddress", addressValueFor(p2pPort))
-            .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
-            .withFallback(optional("networkMapService", networkMap, { c, n ->
-                c.withValue("address", addressValueFor(n.p2pPort))
-                    .withValue("legalName", valueFor(n.legalName.toString()))
-            }))
-            .withValue("webAddress", addressValueFor(webPort))
-            .withValue("rpcAddress", addressValueFor(rpcPort))
-            .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
-            .withValue("useTestClock", valueFor(true))
+    //TODO Make use of Any.toConfig
+    private fun toFileConfig(): Config {
+        val config = empty()
+                .withValue("myLegalName", valueFor(legalName.toString()))
+                .withValue("p2pAddress", addressValueFor(p2pPort))
+                .withFallback(optional("networkMapService", networkMap, { c, n ->
+                    c.withValue("address", addressValueFor(n.p2pPort))
+                            .withValue("legalName", valueFor(n.legalName.toString()))
+                }))
+                .withValue("webAddress", addressValueFor(webPort))
+                .withValue("rpcAddress", addressValueFor(rpcPort))
+                .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
+                .withValue("useTestClock", valueFor(true))
+        return if (isNotary) {
+            config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))
+        } else {
+            config
+        }
+    }
 
     fun toText(): String = toFileConfig().root().render(renderOptions)
 

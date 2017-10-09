@@ -42,3 +42,11 @@ task deployVisualiser(type: FatCapsule) {
         javaAgents = [configurations.quasar.singleFile.name]
     }
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.network.visualiser'
+        )
+    }
+}

@@ -111,6 +111,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
             is FlowInitiator.Shell -> "Shell" // TODO Change when we will have more information on shell user.
             is FlowInitiator.Peer -> flowInitiator.party.name.organisation
             is FlowInitiator.RPC -> "RPC: " + flowInitiator.username
+            is FlowInitiator.Service -> "Service: " + flowInitiator.name
         }
     }
 
