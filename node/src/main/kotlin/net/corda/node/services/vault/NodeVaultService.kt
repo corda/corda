@@ -247,7 +247,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
             val vaultStates = criteriaUpdate.from(VaultSchemaV1.VaultStates::class.java)
             val stateStatusPredication = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
             val lockIdPredicate = criteriaBuilder.or(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name).isNull,
-                                  criteriaBuilder.equal(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString()))
+                    criteriaBuilder.equal(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString()))
             val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
             val compositeKey = vaultStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
             val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
@@ -468,8 +468,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
                                         vaultState.lockId,
                                         vaultState.lockUpdateTime))
                                 statesAndRefs.add(StateAndRef(state, stateRef))
-                            }
-                            else {
+                            } else {
                                 // TODO: improve typing of returned other results
                                 log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
                                 otherResults.addAll(result.toArray().asList())

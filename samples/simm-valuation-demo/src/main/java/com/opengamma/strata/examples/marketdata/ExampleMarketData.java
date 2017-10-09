@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2015 - present by OpenGamma Inc. and the OpenGamma group of companies
- * 
+ * <p>
  * Please see distribution for license.
  */
 package com.opengamma.strata.examples.marketdata;
@@ -10,25 +10,26 @@ package com.opengamma.strata.examples.marketdata;
  */
 public final class ExampleMarketData {
 
-  /**
-   * Root resource directory of the built-in example market data
-   */
-  private static final String EXAMPLE_MARKET_DATA_ROOT = "example-marketdata";
+    /**
+     * Root resource directory of the built-in example market data
+     */
+    private static final String EXAMPLE_MARKET_DATA_ROOT = "example-marketdata";
 
-  /**
-   * Restricted constructor.
-   */
-  private ExampleMarketData() {
-  }
+    /**
+     * Restricted constructor.
+     */
+    private ExampleMarketData() {
+    }
 
-  //-------------------------------------------------------------------------
-  /**
-   * Gets a market data builder for the built-in example market data.
-   * 
-   * @return the market data builder
-   */
-  public static ExampleMarketDataBuilder builder() {
-    return ExampleMarketDataBuilder.ofResource(EXAMPLE_MARKET_DATA_ROOT);
-  }
+    //-------------------------------------------------------------------------
+
+    /**
+     * Gets a market data builder for the built-in example market data.
+     *
+     * @return the market data builder
+     */
+    public static ExampleMarketDataBuilder builder() {
+        return ExampleMarketDataBuilder.ofResource(EXAMPLE_MARKET_DATA_ROOT);
+    }
 
 }

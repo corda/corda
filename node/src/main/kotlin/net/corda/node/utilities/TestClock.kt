@@ -21,7 +21,8 @@ class TestClock(private var delegateClock: Clock = Clock.systemUTC()) : MutableC
 
     override fun toToken(context: SerializeAsTokenContext) = token.registerWithContext(context, this)
 
-    @Synchronized fun updateDate(date: LocalDate): Boolean {
+    @Synchronized
+    fun updateDate(date: LocalDate): Boolean {
         val currentDate = LocalDate.now(this)
         if (currentDate.isBefore(date)) {
             // It's ok to increment

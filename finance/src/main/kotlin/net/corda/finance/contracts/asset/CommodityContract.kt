@@ -44,6 +44,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     ) : FungibleAsset<Commodity> {
         constructor(deposit: PartyAndReference, amount: Amount<Commodity>, owner: AbstractParty)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
+
         override val exitKeys: Set<PublicKey> = Collections.singleton(owner.owningKey)
         override val participants = listOf(owner)
 
@@ -91,7 +92,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
             val party = issuer.party
 
             requireThat {
-                "there are no zero sized outputs" using ( outputs.none { it.amount.quantity == 0L } )
+                "there are no zero sized outputs" using (outputs.none { it.amount.quantity == 0L })
             }
 
             val issueCommand = tx.commands.select<Commands.Issue>().firstOrNull()
@@ -107,7 +108,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
                 val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, commodity))
 
                 requireThat {
-                    "there are no zero sized inputs" using ( inputs.none { it.amount.quantity == 0L } )
+                    "there are no zero sized inputs" using (inputs.none { it.amount.quantity == 0L })
                     "for reference ${issuer.reference} at issuer ${party.nameOrNull()} the amounts balance" using
                             (inputAmount == outputAmount + amountExitingLedger)
                 }

@@ -173,5 +173,5 @@ sealed class NotaryError {
         override fun toString() = cause.toString()
     }
 
-    object WrongNotary: NotaryError()
+    object WrongNotary : NotaryError()
 }

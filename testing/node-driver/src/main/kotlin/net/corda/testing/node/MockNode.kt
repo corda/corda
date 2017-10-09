@@ -51,6 +51,7 @@ import net.corda.testing.resetTestSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
+import java.io.Closeable
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
@@ -81,12 +82,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
                   InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory<*> = MockNetwork.DefaultFactory,
-                  private val initialiseSerialization: Boolean = true) {
+                  private val initialiseSerialization: Boolean = true) : Closeable {
     companion object {
         // TODO In future PR we're removing the concept of network map node so the details of this mock are not important.
         val MOCK_NET_MAP = Party(CordaX500Name(organisation = "Mock Network Map", locality = "Madrid", country = "ES"), DUMMY_KEY_1.public)
     }
-
     var nextNodeId = 0
         private set
     private val filesystem = Jimfs.newFileSystem(unix())
@@ -247,7 +247,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.
-        @Suppress("unused") val place: WorldMapLocation get() = findMyLocation()!!
+        @Suppress("unused")
+        val place: WorldMapLocation
+            get() = findMyLocation()!!
 
         private var dbCloser: (() -> Any?)? = null
         override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T) = super.initialiseDatabasePersistence(schemaService) {
@@ -302,7 +304,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                 legalName = MOCK_NET_MAP.name,
                 notaryIdentity = null,
                 advertisedServices = arrayOf(),
-                entropyRoot  = BigInteger.valueOf(random63BitValue()),
+                entropyRoot = BigInteger.valueOf(random63BitValue()),
                 configOverrides = {},
                 start = true
         ).started!!.apply {
@@ -444,5 +446,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // and network activity has ceased.
     fun waitQuiescent() {
         busyLatch.await()
+    }
+
+    override fun close() {
+        stopNodes()
+    }
+}
+
+fun network(nodesCount: Int, action: MockNetwork.(nodes: List<StartedNode<MockNetwork.MockNode>>, notary: StartedNode<MockNetwork.MockNode>) -> Unit) {
+    MockNetwork().use {
+        it.runNetwork()
+        val notary = it.createNotaryNode()
+        val nodes = (1..nodesCount).map { _ -> it.createPartyNode() }
+        action(it, nodes, notary)
     }
 }

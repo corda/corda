@@ -141,11 +141,12 @@ class FloatingRatePaymentEvent(date: LocalDate,
         val CSVHeader = RatePaymentEvent.CSVHeader + ",FixingDate"
     }
 
-    override val flow: Amount<Currency> get() {
-        // TODO: Should an uncalculated amount return a zero ? null ? etc.
-        val v = rate.ratioUnit?.value ?: return Amount(0, notional.token)
-        return Amount(dayCountFactor.times(BigDecimal(notional.quantity)).times(v).toLong(), notional.token)
-    }
+    override val flow: Amount<Currency>
+        get() {
+            // TODO: Should an uncalculated amount return a zero ? null ? etc.
+            val v = rate.ratioUnit?.value ?: return Amount(0, notional.token)
+            return Amount(dayCountFactor.times(BigDecimal(notional.quantity)).times(v).toLong(), notional.token)
+        }
 
     override fun toString(): String = "FloatingPaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate (fix on $fixingDate): $flow"
 

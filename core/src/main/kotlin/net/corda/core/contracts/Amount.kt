@@ -167,7 +167,7 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
                         }
                     }
                 }
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 throw IllegalArgumentException("Could not parse $input as a currency", e)
             }
             throw IllegalArgumentException("Did not recognise the currency in $input or could not parse")

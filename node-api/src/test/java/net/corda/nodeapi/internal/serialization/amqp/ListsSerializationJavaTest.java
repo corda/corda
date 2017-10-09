@@ -12,7 +12,8 @@ import java.util.List;
 public class ListsSerializationJavaTest {
 
     @CordaSerializable
-    interface Parent {}
+    interface Parent {
+    }
 
     public static class Child implements Parent {
         private final int value;
@@ -123,7 +124,7 @@ public class ListsSerializationJavaTest {
     }
 
     // Have to have own version as Kotlin inline functions cannot be easily called from Java
-    private static<T> void assertEqualAfterRoundTripSerialization(T container, Class<T> clazz) throws Exception {
+    private static <T> void assertEqualAfterRoundTripSerialization(T container, Class<T> clazz) throws Exception {
         SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader());
         SerializationOutput ser = new SerializationOutput(factory1);
         SerializedBytes<Object> bytes = ser.serialize(container);

@@ -70,7 +70,7 @@ class AttachmentLoadingTests : TestDependencyInjectionBase() {
         val contract = contractClass.newInstance()
         val txBuilder = generateInitialMethod.invoke(contract, PartyAndReference(DUMMY_BANK_A, OpaqueBytes(kotlin.ByteArray(1))), 1, DUMMY_NOTARY) as TransactionBuilder
         val context = SerializationFactory.defaultFactory.defaultContext
-            .withClassLoader(appClassLoader)
+                .withClassLoader(appClassLoader)
         val ledgerTx = txBuilder.toLedgerTransaction(services, context)
         contract.verify(ledgerTx)
 

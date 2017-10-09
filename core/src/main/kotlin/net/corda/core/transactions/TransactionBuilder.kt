@@ -38,8 +38,8 @@ open class TransactionBuilder(
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt()
-    ) {
-    constructor(notary: Party) : this (notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
+) {
+    constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     /**
      * Creates a copy of the builder.
@@ -179,6 +179,7 @@ open class TransactionBuilder(
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)
+
     fun attachments(): List<SecureHash> = ArrayList(attachments)
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
     fun commands(): List<Command<*>> = ArrayList(commands)

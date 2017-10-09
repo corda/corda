@@ -32,7 +32,7 @@ class EvolvabilityTests {
         // f.writeBytes(sc.bytes)
 
         // new version of the class, in this case the order of the parameters has been swapped
-        data class C (val b: Int, val a: Int)
+        data class C(val b: Int, val a: Int)
 
         val sc2 = f.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
@@ -56,7 +56,7 @@ class EvolvabilityTests {
         // f.writeBytes(sc.bytes)
 
         // new version of the class, in this case the order of the parameters has been swapped
-        data class C (val b: String, val a: Int)
+        data class C(val b: String, val a: Int)
 
         val sc2 = f.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
@@ -79,13 +79,13 @@ class EvolvabilityTests {
         // f.writeBytes(sc.bytes)
         // println ("Path = $path")
 
-        data class C (val a: Int, val b: Int?)
+        data class C(val a: Int, val b: Int?)
 
         val sc2 = f.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
-        assertEquals (A, deserializedC.a)
-        assertEquals (null, deserializedC.b)
+        assertEquals(A, deserializedC.a)
+        assertEquals(null, deserializedC.b)
     }
 
     @Test(expected = NotSerializableException::class)
@@ -104,7 +104,7 @@ class EvolvabilityTests {
         // println ("Path = $path")
 
         // new version of the class, in this case a new parameter has been added (b)
-        data class C (val a: Int, val b: Int)
+        data class C(val a: Int, val b: Int)
 
         val sc2 = f.readBytes()
 
@@ -132,13 +132,13 @@ class EvolvabilityTests {
         // f.writeBytes(scc.bytes)
         // println ("Path = $path")
 
-        data class CC (val b: String, val d: Int)
+        data class CC(val b: String, val d: Int)
 
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
-        assertEquals (B, deserializedCC.b)
-        assertEquals (D, deserializedCC.d)
+        assertEquals(B, deserializedCC.b)
+        assertEquals(D, deserializedCC.d)
     }
 
     @Suppress("UNUSED_VARIABLE")
@@ -185,16 +185,16 @@ class EvolvabilityTests {
         // println ("Path = $path")
 
         @Suppress("UNUSED")
-        data class CC (val a: Int, val b: String) {
+        data class CC(val a: Int, val b: String) {
             @DeprecatedConstructorForDeserialization(1)
-            constructor (a: Int) : this (a, "hello")
+            constructor (a: Int) : this(a, "hello")
         }
 
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
-        assertEquals (A, deserializedCC.a)
-        assertEquals ("hello", deserializedCC.b)
+        assertEquals(A, deserializedCC.a)
+        assertEquals("hello", deserializedCC.b)
     }
 
     @Test(expected = NotSerializableException::class)
@@ -214,9 +214,9 @@ class EvolvabilityTests {
         // f.writeBytes(scc.bytes)
         // println ("Path = $path")
 
-        data class CC (val a: Int, val b: String) {
+        data class CC(val a: Int, val b: String) {
             // constructor annotation purposefully omitted
-            constructor (a: Int) : this (a, "hello")
+            constructor (a: Int) : this(a, "hello")
         }
 
         // we expect this to throw as we should not find any constructors
@@ -242,20 +242,20 @@ class EvolvabilityTests {
         // println ("Path = $path")
 
         @Suppress("UNUSED")
-        data class CC (val a: Int, val b: Int, val c: String, val d: String) {
+        data class CC(val a: Int, val b: Int, val c: String, val d: String) {
             // ensure none of the original parameters align with the initial
             // construction order
             @DeprecatedConstructorForDeserialization(1)
-            constructor (c: String, a: Int, b: Int) : this (a, b, c, "wibble")
+            constructor (c: String, a: Int, b: Int) : this(a, b, c, "wibble")
         }
 
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
-        assertEquals (A, deserializedCC.a)
-        assertEquals (B, deserializedCC.b)
-        assertEquals (C, deserializedCC.c)
-        assertEquals ("wibble", deserializedCC.d)
+        assertEquals(A, deserializedCC.a)
+        assertEquals(B, deserializedCC.b)
+        assertEquals(C, deserializedCC.c)
+        assertEquals("wibble", deserializedCC.d)
     }
 
     @Test
@@ -277,20 +277,20 @@ class EvolvabilityTests {
         // println ("Path = $path")
 
         // b is removed, d is added
-        data class CC (val a: Int, val c: String, val d: String) {
+        data class CC(val a: Int, val c: String, val d: String) {
             // ensure none of the original parameters align with the initial
             // construction order
             @Suppress("UNUSED")
             @DeprecatedConstructorForDeserialization(1)
-            constructor (c: String, a: Int) : this (a, c, "wibble")
+            constructor (c: String, a: Int) : this(a, c, "wibble")
         }
 
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
-        assertEquals (A, deserializedCC.a)
-        assertEquals (C, deserializedCC.c)
-        assertEquals ("wibble", deserializedCC.d)
+        assertEquals(A, deserializedCC.a)
+        assertEquals(C, deserializedCC.c)
+        assertEquals("wibble", deserializedCC.d)
     }
 
     @Test
@@ -322,13 +322,15 @@ class EvolvabilityTests {
         // println ("Path = $path1")
 
         @Suppress("UNUSED")
-        data class C (val e: Int, val c: Int, val b: Int, val a: Int, val d: Int) {
+        data class C(val e: Int, val c: Int, val b: Int, val a: Int, val d: Int) {
             @DeprecatedConstructorForDeserialization(1)
-            constructor (b: Int, a: Int) : this (-1, -1, b, a, -1)
+            constructor (b: Int, a: Int) : this(-1, -1, b, a, -1)
+
             @DeprecatedConstructorForDeserialization(2)
-            constructor (a: Int, c: Int, b: Int) : this (-1, c, b, a, -1)
+            constructor (a: Int, c: Int, b: Int) : this(-1, c, b, a, -1)
+
             @DeprecatedConstructorForDeserialization(3)
-            constructor (a: Int, b: Int, c: Int, d: Int) : this (-1, c, b, a, d)
+            constructor (a: Int, b: Int, c: Int, d: Int) : this(-1, c, b, a, d)
         }
 
         val sb1 = File(path1.toURI()).readBytes()
@@ -376,15 +378,16 @@ class EvolvabilityTests {
         // println ("Path = $path")
 
         // Add a parameter to inner but keep outer unchanged
-        data class Inner (val a: Int, val b: String?)
-        data class Outer (val a: Int, val b: Inner)
+        data class Inner(val a: Int, val b: String?)
+
+        data class Outer(val a: Int, val b: Inner)
 
         val sc2 = f.readBytes()
         val outer = DeserializationInput(sf).deserialize(SerializedBytes<Outer>(sc2))
 
-        assertEquals (oa, outer.a)
-        assertEquals (ia, outer.b.a)
-        assertEquals (null, outer.b.b)
+        assertEquals(oa, outer.a)
+        assertEquals(ia, outer.b.a)
+        assertEquals(null, outer.b.b)
     }
 
     @Test
@@ -416,15 +419,18 @@ class EvolvabilityTests {
         // println ("Path = $path1")
 
         @Suppress("UNUSED")
-        data class C (val b: Int, val c: Int, val d: Int, val e: Int, val f: Int, val g: Int) {
+        data class C(val b: Int, val c: Int, val d: Int, val e: Int, val f: Int, val g: Int) {
             @DeprecatedConstructorForDeserialization(1)
-            constructor (b: Int, c: Int) : this (b, c, -1, -1, -1, -1)
+            constructor (b: Int, c: Int) : this(b, c, -1, -1, -1, -1)
+
             @DeprecatedConstructorForDeserialization(2)
-            constructor (b: Int, c: Int, d: Int) : this (b, c, d, -1, -1, -1)
+            constructor (b: Int, c: Int, d: Int) : this(b, c, d, -1, -1, -1)
+
             @DeprecatedConstructorForDeserialization(3)
-            constructor (b: Int, c: Int, d: Int, e: Int) : this (b, c, d, e, -1, -1)
+            constructor (b: Int, c: Int, d: Int, e: Int) : this(b, c, d, e, -1, -1)
+
             @DeprecatedConstructorForDeserialization(4)
-            constructor (b: Int, c: Int, d: Int, e: Int, f: Int) : this (b, c, d, e, f, -1)
+            constructor (b: Int, c: Int, d: Int, e: Int, f: Int) : this(b, c, d, e, f, -1)
         }
 
         val sb1 = File(path1.toURI()).readBytes()

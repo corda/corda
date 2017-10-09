@@ -62,7 +62,7 @@ class NodeConfig constructor(
     fun toText(): String = toFileConfig().root().render(renderOptions)
 
     fun moveTo(baseDir: Path) = NodeConfig(
-        baseDir, legalName, p2pPort, rpcPort, webPort, h2Port, extraServices, users, networkMap
+            baseDir, legalName, p2pPort, rpcPort, webPort, h2Port, extraServices, users, networkMap
     )
 
     fun install(plugins: Collection<Path>) {

@@ -13,7 +13,8 @@ import java.util.concurrent.CompletableFuture.supplyAsync
 
 class AttachmentDemoTest {
     // run with a 10,000,000 bytes in-memory zip file. In practice, a slightly bigger file will be used (~10,002,000 bytes).
-    @Test fun `attachment demo using a 10MB zip file`() {
+    @Test
+    fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
         driver(isDebug = true, portAllocation = PortAllocation.Incremental(20000)) {
             val demoUser = listOf(User("demo", "demo", setOf(startFlowPermission<AttachmentDemoFlow>())))

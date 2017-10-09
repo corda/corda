@@ -349,7 +349,7 @@ open class Node(override val configuration: FullNodeConfiguration,
                 _startupComplete.set(Unit)
             }
         },
-        { th -> logger.error("Unexpected exception", th)}
+                { th -> logger.error("Unexpected exception", th) }
         )
         shutdownHook = addShutdownHook {
             stop()

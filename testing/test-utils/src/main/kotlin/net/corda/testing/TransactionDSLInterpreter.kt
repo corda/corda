@@ -119,7 +119,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      */
     @JvmOverloads
     fun output(contractClassName: ContractClassName, contractState: ContractState, attachmentConstraint: AttachmentConstraint = AutomaticHashConstraint) =
-            _output(contractClassName,null, DUMMY_NOTARY, null, attachmentConstraint, contractState)
+            _output(contractClassName, null, DUMMY_NOTARY, null, attachmentConstraint, contractState)
 
     /**
      * Adds a command to the transaction.
@@ -146,5 +146,5 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      */
     fun attachment(contractClassName: ContractClassName) = _attachment(contractClassName)
 
-    fun attachments(vararg contractClassNames: ContractClassName) = contractClassNames.forEach { attachment(it)}
+    fun attachments(vararg contractClassNames: ContractClassName) = contractClassNames.forEach { attachment(it) }
 }

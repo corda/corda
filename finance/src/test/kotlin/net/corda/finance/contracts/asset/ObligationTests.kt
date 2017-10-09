@@ -286,7 +286,7 @@ class ObligationTests {
         assertEquals(expected, actual)
     }
 
-    private inline fun <reified T: ContractState> getStateAndRef(state: T, contractClassName: ContractClassName): StateAndRef<T> {
+    private inline fun <reified T : ContractState> getStateAndRef(state: T, contractClassName: ContractClassName): StateAndRef<T> {
         val txState = TransactionState(state, contractClassName, DUMMY_NOTARY)
         return StateAndRef(txState, StateRef(SecureHash.randomSHA256(), 0))
 
@@ -418,7 +418,7 @@ class ObligationTests {
     @Test
     fun `payment netting`() {
         // Try netting out two obligations
-        ledger(mockService)  {
+        ledger(mockService) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
