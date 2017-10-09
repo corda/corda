@@ -30,9 +30,7 @@ class FullNodeConfigurationTest {
                 rpcAddress = NetworkHostAndPort("localhost", 1),
                 messagingServerAddress = null,
                 extraAdvertisedServiceIds = emptyList(),
-                bftSMaRt = BFTSMaRtConfiguration(-1, false),
-                notaryNodeAddress = null,
-                notaryClusterAddresses = emptyList(),
+                notary = null,
                 certificateChainCheckPolicies = emptyList(),
                 devMode = true,
                 activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)))

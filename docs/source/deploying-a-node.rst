@@ -20,7 +20,8 @@ notary/network map node:
         networkMap "O=Controller,OU=corda,L=London,C=UK"
         node {
             name "O=Controller,OU=corda,L=London,C=UK"
-            advertisedServices = ["corda.notary.validating"]
+            notary = [validating : true]
+            advertisedServices = []
             p2pPort 10002
             rpcPort 10003
             webPort 10004

@@ -20,6 +20,11 @@ UNRELEASED
   either annotated with the @CordaSerializable annotation or explicitly whitelisted then a NotSerializableException is
   thrown.
 
+* ``extraAdvertisedServiceIds`` config has been removed as part of the previous work to retire the concept of advertised
+  services. The remaining use of this config was for notaries, the configuring of which has been cleaned up and simplified.
+  ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` have also been removed and replaced by a single
+  ``notary`` config object. See :doc:`corda-configuration-file` for more details.
+
 .. _changelog_v1:
 
 Release 1.0

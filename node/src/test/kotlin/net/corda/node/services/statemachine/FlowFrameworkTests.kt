@@ -6,10 +6,8 @@ import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
@@ -21,23 +19,16 @@ import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.finance.DOLLARS
-import net.corda.finance.flows.CashIssueFlow
-import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.checkpoints
-import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
@@ -69,10 +60,8 @@ class FlowFrameworkTests {
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
     private lateinit var node1: StartedNode<MockNode>
     private lateinit var node2: StartedNode<MockNode>
-    private lateinit var notary1: StartedNode<MockNode>
-    private lateinit var notary2: StartedNode<MockNode>
-    private lateinit var notary1Identity: Party
-    private lateinit var notary2Identity: Party
+    private lateinit var notary: StartedNode<MockNode>
+    private lateinit var notaryIdentity: Party
 
     @Before
     fun start() {
@@ -85,19 +74,13 @@ class FlowFrameworkTests {
         node1.internals.ensureRegistered()
 
         // We intentionally create our own notary and ignore the one provided by the network
-        val notaryKeyPair = generateKeyPair()
-        val notaryService = ServiceInfo(ValidatingNotaryService.type, CordaX500Name(commonName = ValidatingNotaryService.type.id, organisation = "Notary service 2000", locality = "London", country = "GB"))
-        val notaryIdentityOverride = Pair(notaryService, notaryKeyPair)
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
-        notary1 = mockNet.createNotaryNode(notaryIdentity = notaryIdentityOverride, serviceName = notaryService.name)
-        notary2 = mockNet.createNotaryNode(notaryIdentity = notaryIdentityOverride, serviceName = notaryService.name)
+        notary = mockNet.createNotaryNode()
 
         receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
         mockNet.runNetwork()
-
-        notary1Identity = notary1.services.myInfo.legalIdentities[1]
-        notary2Identity = notary2.services.myInfo.legalIdentities[1]
+        notaryIdentity = notary.services.myInfo.legalIdentities[1]
     }
 
     @After
@@ -336,62 +319,6 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `different notaries are picked when addressing shared notary identity`() {
-        assertEquals(notary1Identity, notary2Identity)
-        assertThat(node1.services.networkMapCache.notaryIdentities.size == 1)
-        node1.services.startFlow(CashIssueFlow(
-                2000.DOLLARS,
-                OpaqueBytes.of(0x01),
-                notary1Identity)).resultFuture.getOrThrow()
-        // We pay a couple of times, the notary picking should go round robin
-        for (i in 1..3) {
-            val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.chooseIdentity()))
-            mockNet.runNetwork()
-            flow.resultFuture.getOrThrow()
-        }
-        val endpoint = mockNet.messagingNetwork.endpoint(notary1.network.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
-        val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1Identity)!!
-        assertTrue(party1Info is PartyInfo.DistributedNode)
-        val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1Identity)!!)
-        assertThat(notary1Address).isInstanceOf(InMemoryMessagingNetwork.ServiceHandle::class.java)
-        assertEquals(notary1Address, endpoint.getAddressOfParty(notary2.services.networkMapCache.getPartyInfo(notary2Identity)!!))
-        receivedSessionMessages.expectEvents(isStrict = false) {
-            sequence(
-                    // First Pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
-                        it.message as SessionInit
-                        assertEquals(node1.internals.id, it.from)
-                        assertEquals(notary1Address, it.to)
-                    },
-                    expect(match = { it.message is SessionConfirm }) {
-                        it.message as SessionConfirm
-                        assertEquals(notary1.internals.id, it.from)
-                    },
-                    // Second pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
-                        it.message as SessionInit
-                        assertEquals(node1.internals.id, it.from)
-                        assertEquals(notary1Address, it.to)
-                    },
-                    expect(match = { it.message is SessionConfirm }) {
-                        it.message as SessionConfirm
-                        assertEquals(notary2.internals.id, it.from)
-                    },
-                    // Third pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java.name }) {
-                        it.message as SessionInit
-                        assertEquals(node1.internals.id, it.from)
-                        assertEquals(notary1Address, it.to)
-                    },
-                    expect(match = { it.message is SessionConfirm }) {
-                        it.message as SessionConfirm
-                        assertEquals(it.from, notary1.internals.id)
-                    }
-            )
-        }
-    }
-
-    @Test
     fun `other side ends before doing expected send`() {
         node2.registerFlowFactory(ReceiveFlow::class) { NoOpFlow() }
         val resultFuture = node1.services.startFlow(ReceiveFlow(node2.info.chooseIdentity())).resultFuture
@@ -604,7 +531,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `wait for transaction`() {
-        val ptx = TransactionBuilder(notary = notary1Identity)
+        val ptx = TransactionBuilder(notary = notaryIdentity)
                 .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
                 .addCommand(dummyCommand(node1.info.chooseIdentity().owningKey))
         val stx = node1.services.signInitialTransaction(ptx)
@@ -619,7 +546,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `committer throws exception before calling the finality flow`() {
-        val ptx = TransactionBuilder(notary = notary1Identity)
+        val ptx = TransactionBuilder(notary = notaryIdentity)
                 .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
                 .addCommand(dummyCommand())
         val stx = node1.services.signInitialTransaction(ptx)
@@ -636,7 +563,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
-        val ptx = TransactionBuilder(notary = notary1Identity)
+        val ptx = TransactionBuilder(notary = notaryIdentity)
                 .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
                 .addCommand(dummyCommand(node1.info.chooseIdentity().owningKey))
         val stx = node1.services.signInitialTransaction(ptx)

@@ -11,7 +11,7 @@ class UserTest {
         val user = toUser(emptyMap())
         assertEquals("none", user.username)
         assertEquals("none", user.password)
-        assertEquals(emptySet<String>(), user.permissions)
+        assertEquals(emptySet(), user.permissions)
     }
 
     @Test
@@ -33,7 +33,7 @@ class UserTest {
         val map = user.toMap()
         assertEquals("MyName", map["username"])
         assertEquals("MyPassword", map["password"])
-        assertEquals(setOf("Flow.MyFlow"), map["permissions"])
+        assertEquals(listOf("Flow.MyFlow"), map["permissions"])
     }
 
     @Test

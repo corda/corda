@@ -16,6 +16,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.NodeLookup
+import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -98,10 +99,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
                         //       Notary certificates have to be signed by the doorman directly
                         it.legalIdentities
                     }
-                    .filter {
-                        it.name.toString().contains("corda.notary", true)
-                    }
-                    .distinct() // Distinct, because of distributed service nodes
+                    .filter { it.name.commonName?.startsWith(NotaryService.ID_PREFIX) ?: false }
+                    .toSet() // Distinct, because of distributed service nodes
                     .sortedBy { it.name.toString() }
         }
 

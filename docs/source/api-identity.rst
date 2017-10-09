@@ -69,6 +69,7 @@ You can see an example of it being used in ``TwoPartyDealFlow.kt``:
         :language: kotlin
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
+        :dedent: 8
 
 The swap identities flow goes through the following key steps:
 
@@ -100,6 +101,7 @@ entities (counterparties) to require to know which well known identities those c
         :language: kotlin
         :start-after: DOCSTART 6
         :end-before: DOCEND 6
+        :dedent: 12
 
 The identity synchronization flow goes through the following key steps:
 

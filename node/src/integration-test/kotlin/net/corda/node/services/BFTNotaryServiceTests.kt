@@ -10,6 +10,7 @@ import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -18,11 +19,11 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
+import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
@@ -30,14 +31,13 @@ import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Test
-import java.nio.file.Files
+import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
     companion object {
-        private val serviceType = BFTNonValidatingNotaryService.type
-        private val clusterName = CordaX500Name(serviceType.id, "BFT", "Zurich", "CH")
+        private val clusterName = CordaX500Name(BFTNonValidatingNotaryService.id, "BFT", "Zurich", "CH")
     }
 
     private val mockNet = MockNetwork()
@@ -49,20 +49,17 @@ class BFTNotaryServiceTests {
     }
 
     private fun bftNotaryCluster(clusterSize: Int, exposeRaces: Boolean = false) {
-        Files.deleteIfExists("config" / "currentView") // XXX: Make config object warn if this exists?
+        (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
         val replicaIds = (0 until clusterSize)
         ServiceIdentityGenerator.generateToDisk(
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
                 clusterName)
-        val bftNotaryService = ServiceInfo(serviceType, clusterName)
-        val notaryClusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
+        val clusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
         replicaIds.forEach { replicaId ->
-            mockNet.createNode(
-                    advertisedServices = bftNotaryService,
-                    configOverrides = {
-                        whenever(it.bftSMaRt).thenReturn(BFTSMaRtConfiguration(replicaId, false, exposeRaces))
-                        whenever(it.notaryClusterAddresses).thenReturn(notaryClusterAddresses)
-                    })
+            mockNet.createNode(configOverrides = {
+                val notary = NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces))
+                whenever(it.notary).thenReturn(notary)
+            })
         }
         mockNet.runNetwork() // Exchange initial network map registration messages.
     }
