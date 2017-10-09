@@ -22,8 +22,6 @@ import net.corda.finance.flows.CashExitFlow.ExitRequest
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
@@ -71,19 +69,19 @@ class ExplorerSimulation(val options: OptionSet) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val notary = startNotaryNode(DUMMY_NOTARY.name, customOverrides = mapOf("nearestCity" to "Zurich"), validating = false)
             val alice = startNode(providedName = ALICE.name, rpcUsers = arrayListOf(user),
-                    advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Milan"))
             val bob = startNode(providedName = BOB.name, rpcUsers = arrayListOf(user),
-                    advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Madrid"))
             val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
             val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
             val issuerGBP = startNode(providedName = ukBankName, rpcUsers = arrayListOf(manager),
-                    advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
-                    customOverrides = mapOf("nearestCity" to "London"))
+                    customOverrides = mapOf(
+                            "issuableCurrencies" to listOf("GBP"),
+                            "nearestCity" to "London"))
             val issuerUSD = startNode(providedName = usaBankName, rpcUsers = arrayListOf(manager),
-                    advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))),
-                    customOverrides = mapOf("nearestCity" to "New York"))
+                    customOverrides = mapOf(
+                            "issuableCurrencies" to listOf("USD"),
+                            "nearestCity" to "New York"))
 
             notaryNode = notary.get()
             aliceNode = alice.get()

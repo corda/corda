@@ -43,6 +43,7 @@
       <module name="explorer-capsule_test" target="1.6" />
       <module name="explorer_main" target="1.8" />
       <module name="explorer_test" target="1.8" />
+      <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
       <module name="gradle-plugins-cordform-common_main" target="1.8" />

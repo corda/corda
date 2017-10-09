@@ -3,7 +3,6 @@ package net.corda.demobench
 import net.corda.demobench.config.LoggingConfig
 import net.corda.demobench.model.JVMConfigTest
 import net.corda.demobench.model.NodeControllerTest
-import net.corda.demobench.model.ServiceControllerTest
 import org.junit.BeforeClass
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
@@ -13,7 +12,6 @@ import org.junit.runners.Suite
  */
 @RunWith(Suite::class)
 @Suite.SuiteClasses(
-        ServiceControllerTest::class,
         NodeControllerTest::class,
         JVMConfigTest::class
 )

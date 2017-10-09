@@ -12,6 +12,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
+import java.lang.reflect.Modifier.isStatic
 import java.lang.reflect.ParameterizedType
 import java.net.Proxy
 import java.net.URL
@@ -142,7 +143,7 @@ fun Any.toConfig(): Config = ConfigValueFactory.fromMap(toConfigMap()).toConfig(
 private fun Any.toConfigMap(): Map<String, Any> {
     val values = HashMap<String, Any>()
     for (field in javaClass.declaredFields) {
-        if (field.isSynthetic) continue
+        if (isStatic(field.modifiers) || field.isSynthetic) continue
         field.isAccessible = true
         val value = field.get(this) ?: continue
         val configValue = if (value is String || value is Boolean || value is Number) {

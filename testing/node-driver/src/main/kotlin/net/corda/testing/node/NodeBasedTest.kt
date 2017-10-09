@@ -14,7 +14,6 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.config.toConfig
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
@@ -83,11 +82,10 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
      */
     fun startNetworkMapNode(legalName: CordaX500Name = DUMMY_MAP.name,
                             platformVersion: Int = 1,
-                            advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
         check(_networkMapNode == null || _networkMapNode!!.info.legalIdentitiesAndCerts.first().name == legalName)
-        return startNodeInternal(legalName, platformVersion, advertisedServices, rpcUsers, configOverrides).apply {
+        return startNodeInternal(legalName, platformVersion, rpcUsers, configOverrides).apply {
             _networkMapNode = this
         }
     }
@@ -95,7 +93,6 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = 1,
-                  advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap(),
                   noNetworkMap: Boolean = false,
@@ -119,7 +116,6 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val node = startNodeInternal(
                 legalName,
                 platformVersion,
-                advertisedServices,
                 rpcUsers,
                 networkMapConf + configOverrides,
                 noNetworkMap)
@@ -175,7 +171,6 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
 
     private fun startNodeInternal(legalName: CordaX500Name,
                                   platformVersion: Int,
-                                  advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>,
                                   noNetworkMap: Boolean = false): StartedNode<Node> {
@@ -189,14 +184,15 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
                         "rpcAddress" to localPort[1].toString(),
-                        "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                         "rpcUsers" to rpcUsers.map { it.toMap() },
                         "noNetworkMap" to noNetworkMap
                 ) + configOverrides
         )
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
-        val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
+        val node = Node(
+                parsedConfig,
+                MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
                 initialiseSerialization = false).start()
         nodes += node
         thread(name = legalName.organisation) {

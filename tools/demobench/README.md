@@ -70,9 +70,6 @@ node in a new tab.
 
 ![Configure Bank Node](demobench-configure-bank.png)
 
-This time, there will be additional services available. Select `corda.cash` and
-`corda.issuer.GBP`, and then press the `Start node` button.
-
 When you press the `Launch Web Server` this time, your browser should open to a
 page saying:
 > ### Installed CorDapps

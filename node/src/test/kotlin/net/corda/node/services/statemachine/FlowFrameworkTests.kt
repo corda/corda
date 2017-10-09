@@ -135,7 +135,7 @@ class FlowFrameworkTests {
         node2.internals.acceptableLiveFiberCountOnStop = 1
         node2.dispose()
         mockNet.runNetwork()
-        val restoredFlow = node2.restartAndGetRestoredFlow<InitiatedReceiveFlow>(node1)
+        val restoredFlow = node2.restartAndGetRestoredFlow<InitiatedReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
 
@@ -184,7 +184,7 @@ class FlowFrameworkTests {
         node2.smm.executor.flush()
         node2.internals.disableDBCloseOnStop()
         node2.dispose() // kill receiver
-        val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveFlow>(node1)
+        val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
 
@@ -214,7 +214,7 @@ class FlowFrameworkTests {
             assertEquals(1, node2.checkpointStorage.checkpoints().size) // confirm checkpoint
             node2.services.networkMapCache.clearNetworkMapCache()
         }
-        val node2b = mockNet.createNode(node2.internals.id, advertisedServices = *node2.internals.advertisedServices.toTypedArray())
+        val node2b = mockNet.createNode(node2.internals.id)
         node2.internals.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
@@ -685,10 +685,10 @@ class FlowFrameworkTests {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
 
-    private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow(networkMapNode: StartedNode<*>? = null) = internals.run {
+    private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow() = internals.run {
         disableDBCloseOnStop() // Handover DB to new node copy
         stop()
-        val newNode = mockNet.createNode(id, advertisedServices = *advertisedServices.toTypedArray())
+        val newNode = mockNet.createNode(id)
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine

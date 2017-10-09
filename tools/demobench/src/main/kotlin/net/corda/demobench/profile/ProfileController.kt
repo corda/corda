@@ -4,6 +4,8 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import javafx.stage.FileChooser
 import javafx.stage.FileChooser.ExtensionFilter
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.demobench.model.InstallConfig
 import net.corda.demobench.model.InstallFactory
 import net.corda.demobench.model.JVMConfig
@@ -58,8 +60,8 @@ class ProfileController : Controller() {
             FileSystems.newFileSystem(URI.create("jar:" + target.toURI()), mapOf("create" to "true")).use { fs ->
                 configs.forEach { config ->
                     // Write the configuration file.
-                    val nodeDir = Files.createDirectories(fs.getPath(config.key))
-                    val file = Files.write(nodeDir.resolve("node.conf"), config.toText().toByteArray(UTF_8))
+                    val nodeDir = fs.getPath(config.key).createDirectories()
+                    val file = Files.write(nodeDir / "node.conf", config.nodeConfig.toText().toByteArray(UTF_8))
                     log.info("Wrote: $file")
 
                     // Write all of the non-built-in plugins.

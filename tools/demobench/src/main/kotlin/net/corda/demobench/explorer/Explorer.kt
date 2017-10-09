@@ -5,13 +5,12 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.JVMConfig
-import net.corda.demobench.model.NodeConfig
-import net.corda.demobench.model.forceDirectory
+import net.corda.demobench.model.NodeConfigWrapper
 import net.corda.demobench.readErrorLines
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
-import java.nio.file.StandardCopyOption.*
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.concurrent.Executors
 
 class Explorer internal constructor(private val explorerController: ExplorerController) : AutoCloseable {
@@ -23,29 +22,32 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
     private var process: Process? = null
 
     @Throws(IOException::class)
-    fun open(config: NodeConfig, onExit: (NodeConfig) -> Unit) {
-        val explorerDir = config.explorerDir.toFile()
+    fun open(config: NodeConfigWrapper, onExit: (NodeConfigWrapper) -> Unit) {
+        val explorerDir = config.explorerDir
 
-        if (!explorerDir.forceDirectory()) {
-            log.warn("Failed to create working directory '{}'", explorerDir.absolutePath)
+        try {
+            explorerDir.createDirectories()
+        } catch (e: IOException) {
+            log.warn("Failed to create working directory '{}'", explorerDir.toAbsolutePath())
             onExit(config)
             return
         }
 
+        val legalName = config.nodeConfig.myLegalName
         try {
             installApps(config)
 
-            val user = config.users.elementAt(0)
+            val user = config.nodeConfig.rpcUsers[0]
             val p = explorerController.process(
                     "--host=localhost",
-                    "--port=${config.rpcPort}",
+                    "--port=${config.nodeConfig.rpcAddress.port}",
                     "--username=${user.username}",
                     "--password=${user.password}")
-                    .directory(explorerDir)
+                    .directory(explorerDir.toFile())
                     .start()
             process = p
 
-            log.info("Launched Node Explorer for '{}'", config.legalName)
+            log.info("Launched Node Explorer for '{}'", legalName)
 
             // Close these streams because no-one is using them.
             safeClose(p.outputStream)
@@ -57,21 +59,21 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
                 process = null
 
                 if (errors.isEmpty()) {
-                    log.info("Node Explorer for '{}' has exited (value={})", config.legalName, exitValue)
+                    log.info("Node Explorer for '{}' has exited (value={})", legalName, exitValue)
                 } else {
-                    log.error("Node Explorer for '{}' has exited (value={}, {})", config.legalName, exitValue, errors)
+                    log.error("Node Explorer for '{}' has exited (value={}, {})", legalName, exitValue, errors)
                 }
 
                 onExit(config)
             }
         } catch (e: IOException) {
-            log.error("Failed to launch Node Explorer for '{}': {}", config.legalName, e.message)
+            log.error("Failed to launch Node Explorer for '{}': {}", legalName, e.message)
             onExit(config)
             throw e
         }
     }
 
-    private fun installApps(config: NodeConfig) {
+    private fun installApps(config: NodeConfigWrapper) {
         // Make sure that the explorer has cordapps on its class path. This is only necessary because currently apps
         // require the original class files to deserialise states: Kryo serialisation doesn't let us write generic
         // tools that work with serialised data structures. But the AMQP serialisation revamp will fix this by

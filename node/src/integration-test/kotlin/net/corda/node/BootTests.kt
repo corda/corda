@@ -1,20 +1,20 @@
 package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.internal.div
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.ALICE
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.nodeapi.User
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.ServiceType
-import net.corda.nodeapi.User
+import net.corda.testing.ALICE
+import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.driver.ListenProcessDeathException
 import net.corda.testing.driver.NetworkMapStartStrategy
-import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -60,7 +60,7 @@ class BootTests {
     fun `node quits on failure to register with network map`() {
         val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.notary.getSubType("$it")) }.toSet()
         driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
-            val future = startNode(providedName = ALICE.name, advertisedServices = tooManyAdvertisedServices)
+            val future = startNode(providedName = ALICE.name)
             assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
         }
     }
