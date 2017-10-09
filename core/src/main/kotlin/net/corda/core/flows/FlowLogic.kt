@@ -50,6 +50,7 @@ abstract class FlowLogic<out T> {
         /**
          * Return the outermost [FlowLogic] instance, or null if not in a flow.
          */
+        @JvmStatic
         val currentTopLevel: FlowLogic<*>? get() = (Strand.currentStrand() as? FlowStateMachine<*>)?.logic
 
         /**
@@ -60,6 +61,7 @@ abstract class FlowLogic<out T> {
          * support for flow migration!
          */
         @Suspendable
+        @JvmStatic
         fun sleep(duration: Duration) {
             (Strand.currentStrand() as? FlowStateMachine<*>)?.sleepUntil(Instant.now() + duration) ?: Strand.sleep(duration.toMillis())
         }
