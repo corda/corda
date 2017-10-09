@@ -11,8 +11,6 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Corda Experimental Confidential Identities'
 
 dependencies {
-    // Note the :confidential-identities module is a CorDapp in its own right
-    // and CorDapps using :confidential-identities features should use 'cordapp' not 'compile' linkage.
     compile project(':core')
 
     // Quasar, for suspendable fibres.

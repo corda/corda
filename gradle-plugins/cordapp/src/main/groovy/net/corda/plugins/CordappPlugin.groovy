@@ -2,7 +2,9 @@ package net.corda.plugins
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencySet
 
 /**
  * The Cordapp plugin will turn a project into a cordapp project which builds cordapp JARs with the correct format
@@ -26,7 +28,7 @@ class CordappPlugin implements Plugin<Project> {
      */
     private void configureCordappJar(Project project) {
         // Note: project.afterEvaluate did not have full dependency resolution completed, hence a task is used instead
-        def task = project.task('configureCordappFatJar') {
+        Task task = project.task('configureCordappFatJar') {
             doLast {
                 project.tasks.jar.from(getDirectNonCordaDependencies(project).collect { project.zipTree(it)}) {
                     exclude "META-INF/*.SF"
@@ -35,11 +37,11 @@ class CordappPlugin implements Plugin<Project> {
                 }
             }
         }
-        project.tasks.jar.dependsOn task
+        project.tasks.jar.dependsOn(task)
     }
 
     private static Set<File> getDirectNonCordaDependencies(Project project) {
-        def excludes = [
+        DependencySet excludes = [
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib'],
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jre8'],
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-reflect'],
@@ -48,10 +50,10 @@ class CordappPlugin implements Plugin<Project> {
 
         project.with {
             // The direct dependencies of this project
-            def excludeDeps = configurations.cordapp.allDependencies + configurations.cordaCompile.allDependencies + configurations.cordaRuntime.allDependencies
-            def directDeps = configurations.runtime.allDependencies - excludeDeps
+            DependencySet excludeDeps = configurations.cordapp.allDependencies + configurations.cordaCompile.allDependencies + configurations.cordaRuntime.allDependencies
+            DependencySet directDeps = configurations.runtime.allDependencies - excludeDeps
             // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
-            def filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
+            DependencySet filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
             filteredDeps.each {
                 // net.corda or com.r3.corda.enterprise may be a core dependency which shouldn't be included in this cordapp so give a warning
                 if (it.group && (it.group.startsWith('net.corda.') || it.group.startsWith('com.r3.corda.enterprise.'))) {
@@ -62,7 +64,7 @@ class CordappPlugin implements Plugin<Project> {
                     logger.info("Including dependency in CorDapp JAR: $it")
                 }
             }
-            return filteredDeps.collect { configurations.runtime.files it }.flatten().toSet()
+            return filteredDeps.collect { configurations.runtime.files(it) }.flatten().toSet()
         }
     }
 }
