@@ -57,7 +57,7 @@ can find the latest published version of both here: https://bintray.com/r3/corda
 
 ``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
 ``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
-versions can be found here: https://bintray.com/r3/corda/plugins/cordapp.
+versions can be found here: https://bintray.com/r3/corda/cordapp.
 
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
 
