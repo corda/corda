@@ -1,10 +1,7 @@
 package net.corda.plugins
 
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.*
+import org.gradle.api.artifacts.*
 
 /**
  * The Cordapp plugin will turn a project into a cordapp project which builds cordapp JARs with the correct format
@@ -41,7 +38,7 @@ class CordappPlugin implements Plugin<Project> {
     }
 
     private static Set<File> getDirectNonCordaDependencies(Project project) {
-        DependencySet excludes = [
+        List<Map<String, String>> excludes = [
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib'],
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jre8'],
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-reflect'],
@@ -50,10 +47,10 @@ class CordappPlugin implements Plugin<Project> {
 
         project.with {
             // The direct dependencies of this project
-            DependencySet excludeDeps = configurations.cordapp.allDependencies + configurations.cordaCompile.allDependencies + configurations.cordaRuntime.allDependencies
-            DependencySet directDeps = configurations.runtime.allDependencies - excludeDeps
+            Set<Dependency> excludeDeps = configurations.cordapp.allDependencies + configurations.cordaCompile.allDependencies + configurations.cordaRuntime.allDependencies
+            Set<Dependency> directDeps = configurations.runtime.allDependencies - excludeDeps
             // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
-            DependencySet filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
+            Set<Dependency> filteredDeps = directDeps.findAll { excludes.collect { exclude -> (exclude.group == it.group) && (exclude.name == it.name) }.findAll { it }.isEmpty() }
             filteredDeps.each {
                 // net.corda or com.r3.corda.enterprise may be a core dependency which shouldn't be included in this cordapp so give a warning
                 if (it.group && (it.group.startsWith('net.corda.') || it.group.startsWith('com.r3.corda.enterprise.'))) {
