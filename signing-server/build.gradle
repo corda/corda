@@ -1,0 +1,88 @@
+ext {
+    // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
+    // align with the corresponding Corda release.
+    corda_dependency_version = '0.16-20170913.101300-6'
+}
+
+version "$corda_dependency_version"
+
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'kotlin'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev'
+    }
+}
+
+configurations{
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets{
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+task buildSigningServerJAR(type: FatCapsule, dependsOn: 'jar') {
+    group = 'build'
+    applicationClass 'com.r3.corda.signing.MainKt'
+
+    capsuleManifest {
+        applicationVersion = corda_dependency_version
+        systemProperties['visualvm.display.name'] = 'Signing Server'
+        minJavaVersion = '1.8.0'
+        jvmArgs = ['-XX:+UseG1GC']
+    }
+    // Make the resulting JAR file directly executable on UNIX by prepending a shell script to it.
+    // This lets you run the file like so: ./corda.jar
+    // Other than being slightly less typing, this has one big advantage: Ctrl-C works properly in the terminal.
+    reallyExecutable { trampolining() }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    compile fileTree(dir: 'libs', include: '*.jar')
+    compile "net.corda:corda-core:$corda_dependency_version"
+    compile "net.corda:corda-node:$corda_dependency_version"
+    compile "net.corda:corda-node-api:$corda_dependency_version"
+    testCompile "net.corda:corda-test-utils:$corda_dependency_version"
+    testCompile "net.corda:corda-node-driver:$corda_dependency_version"
+
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
+
+    // JOpt: for command line flags.
+    compile "net.sf.jopt-simple:jopt-simple:5.0.2"
+
+    // TypeSafe Config: for simple and human friendly config files.
+    compile "com.typesafe:config:1.3.0"
+
+    // Unit testing helpers.
+    testCompile 'junit:junit:4.12'
+    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile project(':doorman')
+}

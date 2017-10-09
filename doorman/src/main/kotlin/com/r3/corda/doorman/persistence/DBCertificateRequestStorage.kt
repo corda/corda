@@ -45,6 +45,7 @@ open class DBCertificateRequestStorage(private val database: CordaPersistence) :
             var approvedBy: String? = null,
 
             @Column
+            @Enumerated(EnumType.STRING)
             var status: Status = Status.New,
 
             @Column(name = "signed_by", length = 512)

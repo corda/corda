@@ -45,3 +45,5 @@ include 'cordform-common'
 include 'doorman'
 include 'verify-enclave'
 include 'sgx-jvm/hsm-tool'
+include 'signing-server'
+
