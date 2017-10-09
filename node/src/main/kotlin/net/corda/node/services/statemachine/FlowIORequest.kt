@@ -69,7 +69,7 @@ class ReceiveAll(val requests: List<ReceiveRequest<SessionData>>) : WaitingReque
             if (isComplete(receivedMessages)) {
                 receivedMessages
             } else {
-                throw IllegalStateException(requests.filter { it.session !in receivedMessages.keys }.map { "Was expecting a ${it.receiveType} but instead got nothing for $it." }.joinToString { "\n" })
+                throw IllegalStateException(requests.filter { it.session !in receivedMessages.keys }.map { "Was expecting a ${it.receiveType.simpleName} but instead got nothing for $it." }.joinToString { "\n" })
             }
         }
     }
