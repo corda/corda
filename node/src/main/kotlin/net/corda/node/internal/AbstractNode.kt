@@ -18,6 +18,10 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.RPCOps
+import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.*
 import net.corda.core.messaging.*
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NodeInfo
@@ -449,10 +453,11 @@ abstract class AbstractNode(config: NodeConfiguration,
      */
     private fun makeServices(schemaService: SchemaService): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
+        val transactionStorage = makeTransactionStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics)
         val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
-        _services = ServiceHubInternalImpl(schemaService, MonitoringService(metrics), cordappProvider)
+        _services = ServiceHubInternalImpl(schemaService, transactionStorage, StateLoaderImpl(transactionStorage), MonitoringService(metrics), cordappProvider)
         legalIdentity = obtainIdentity(notaryConfig = null)
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
@@ -752,16 +757,17 @@ abstract class AbstractNode(config: NodeConfiguration,
 
     private inner class ServiceHubInternalImpl(
             override val schemaService: SchemaService,
+            override val validatedTransactions: WritableTransactionStorage,
+            private val stateLoader: StateLoader,
             override val monitoringService: MonitoringService,
             override val cordappProvider: CordappProviderInternal
-    ) : SingletonSerializeAsToken(), ServiceHubInternal {
+    ) : SingletonSerializeAsToken(), ServiceHubInternal, StateLoader by stateLoader {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
-        override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
-        override val vaultService by lazy { NodeVaultService(this, database.hibernateConfig) }
+        override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader, this@AbstractNode.database.hibernateConfig) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because

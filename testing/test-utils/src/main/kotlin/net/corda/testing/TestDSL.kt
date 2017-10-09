@@ -8,10 +8,12 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.node.MockCordappProvider
 import java.io.InputStream
 import java.security.KeyPair
@@ -72,7 +74,7 @@ data class TestTransactionDSLInterpreter private constructor(
             transactionBuilder: TransactionBuilder
     ) : this(ledgerInterpreter, transactionBuilder, HashMap())
 
-    val services = object : ServiceHub by ledgerInterpreter.services {
+    val services = object : ServicesForResolution by ledgerInterpreter.services {
         override fun loadState(stateRef: StateRef) = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
         override val cordappProvider: CordappProvider = ledgerInterpreter.services.cordappProvider
     }
@@ -136,7 +138,7 @@ data class TestTransactionDSLInterpreter private constructor(
     ) = dsl(TransactionDSL(copy()))
 
     override fun _attachment(contractClassName: ContractClassName) {
-        (services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services)
+        (services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services.attachments as MockAttachmentStorage)
     }
 }
 
