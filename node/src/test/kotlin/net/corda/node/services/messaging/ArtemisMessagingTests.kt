@@ -39,7 +39,9 @@ import kotlin.test.assertNull
 
 //TODO This needs to be merged into P2PMessagingTest as that creates a more realistic environment
 class ArtemisMessagingTests : TestDependencyInjectionBase() {
-    @Rule @JvmField val temporaryFolder = TemporaryFolder()
+    @Rule
+    @JvmField
+    val temporaryFolder = TemporaryFolder()
 
     val serverPort = freePort()
     val rpcPort = freePort()

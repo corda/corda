@@ -50,7 +50,7 @@ open class EventGenerator(val parties: List<Party>, val currencies: List<Currenc
  * [Generator]s for incoming/outgoing events of starting different cash flows. It invokes flows that throw exceptions
  * for use in explorer flow triage. Exceptions are of kind spending/exiting too much cash.
  */
-class ErrorFlowsEventGenerator(parties: List<Party>, currencies: List<Currency>, notary: Party): EventGenerator(parties, currencies, notary) {
+class ErrorFlowsEventGenerator(parties: List<Party>, currencies: List<Currency>, notary: Party) : EventGenerator(parties, currencies, notary) {
     enum class IssuerEvents {
         NORMAL_EXIT,
         EXIT_ERROR
@@ -62,7 +62,7 @@ class ErrorFlowsEventGenerator(parties: List<Party>, currencies: List<Currency>,
         when (errorType) {
             IssuerEvents.NORMAL_EXIT -> {
                 println("Normal exit")
-                if (currencyMap[ccy]!! <=  amount) addToMap(ccy, -amount)
+                if (currencyMap[ccy]!! <= amount) addToMap(ccy, -amount)
                 ExitRequest(Amount(amount, ccy), issueRef) // It may fail at the beginning, but we don't care.
             }
             IssuerEvents.EXIT_ERROR -> {

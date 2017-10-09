@@ -1,4 +1,5 @@
 @file:JvmName("StateSumming")
+
 package net.corda.finance.utils
 
 import net.corda.core.contracts.Amount

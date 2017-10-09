@@ -7,10 +7,11 @@ enum class Positivity {
     Negative
 }
 
-val Positivity.sign: String get() = when (this) {
-    Positivity.Positive -> ""
-    Positivity.Negative -> "-"
-}
+val Positivity.sign: String
+    get() = when (this) {
+        Positivity.Positive -> ""
+        Positivity.Negative -> "-"
+    }
 
 data class AmountDiff<T : Any>(
         val positivity: Positivity,

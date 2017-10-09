@@ -12,7 +12,7 @@ import java.lang.reflect.Type
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
-class InStatic : Exception ("Help!, help!, I'm being repressed")
+class InStatic : Exception("Help!, help!, I'm being repressed")
 
 class C {
     companion object {
@@ -28,7 +28,7 @@ class C {
 // comment out the companion object from here,  comment out the test code and uncomment
 // the generation code, then re-run the test and copy the file shown in the output print
 // to the resource directory
-class C2 (var b: Int) {
+class C2(var b: Int) {
     /*
     companion object {
         init {
@@ -39,14 +39,14 @@ class C2 (var b: Int) {
 }
 
 class StaticInitialisationOfSerializedObjectTest {
-    @Test(expected=java.lang.ExceptionInInitializerError::class)
+    @Test(expected = java.lang.ExceptionInInitializerError::class)
     fun itBlowsUp() {
         C()
     }
 
     @Test
     fun KotlinObjectWithCompanionObject() {
-        data class D (val c : C)
+        data class D(val c: C)
 
         val sf = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
 
@@ -71,7 +71,7 @@ class StaticInitialisationOfSerializedObjectTest {
 
     @Test
     fun deserializeTest() {
-        data class D (val c : C2)
+        data class D(val c: C2)
 
         val path = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest")
         val f = File(path.toURI())
@@ -86,7 +86,7 @@ class StaticInitialisationOfSerializedObjectTest {
         class WL : ClassWhitelist {
             override fun hasListed(type: Class<*>) =
                     type.name == "net.corda.nodeapi.internal.serialization.amqp" +
-                    ".StaticInitialisationOfSerializedObjectTest\$deserializeTest\$D"
+                            ".StaticInitialisationOfSerializedObjectTest\$deserializeTest\$D"
         }
 
         val sf2 = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
@@ -100,14 +100,14 @@ class StaticInitialisationOfSerializedObjectTest {
     // Version of a serializer factory that will allow the class carpenter living on the
     // factory to have a different whitelist applied to it than the factory
     class TestSerializerFactory(wl1: ClassWhitelist, wl2: ClassWhitelist) :
-            SerializerFactory (wl1, ClassLoader.getSystemClassLoader()) {
+            SerializerFactory(wl1, ClassLoader.getSystemClassLoader()) {
         override val classCarpenter = ClassCarpenter(ClassLoader.getSystemClassLoader(), wl2)
     }
 
     // This time have the serilization factory and the carpenter use different whitelists
     @Test
     fun deserializeTest2() {
-        data class D (val c : C2)
+        data class D(val c: C2)
 
         val path = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest2")
         val f = File(path.toURI())

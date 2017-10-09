@@ -21,8 +21,8 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     val default: String? = generateDefault()
     val mandatory: Boolean = generateMandatory()
 
-    private val isInterface: Boolean get() = resolvedType.asClass()?.isInterface ?: false
-    private val isJVMPrimitive: Boolean get() = resolvedType.asClass()?.isPrimitive ?: false
+    private val isInterface: Boolean get() = resolvedType.asClass()?.isInterface == true
+    private val isJVMPrimitive: Boolean get() = resolvedType.asClass()?.isPrimitive == true
 
     private fun generateType(): String {
         return if (isInterface || resolvedType == Any::class.java) "*" else SerializerFactory.nameForType(resolvedType)
@@ -45,14 +45,14 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     }
 
     private fun generateMandatory(): Boolean {
-        return isJVMPrimitive || !(readMethod?.returnsNullable() ?: true)
+        return isJVMPrimitive || readMethod?.returnsNullable() == false
     }
 
     private fun Method.returnsNullable(): Boolean {
         try {
             val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull { it.javaGetter == this }?.returnType?.toString() ?: "?"
             return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
-        } catch(e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
+        } catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
             // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue is: https://youtrack.jetbrains.com/issue/KT-13077
             // TODO: Revisit this when Kotlin issue is fixed.
             logger.error("Unexpected internal Kotlin error", e)
@@ -66,7 +66,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
         fun make(name: String, readMethod: Method?, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
             readMethod?.isAccessible = true
             if (SerializerFactory.isPrimitive(resolvedType)) {
-                return when(resolvedType) {
+                return when (resolvedType) {
                     Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, readMethod)
                     else -> AMQPPrimitivePropertySerializer(name, readMethod, resolvedType)
                 }
@@ -86,17 +86,17 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
         // This is lazy so we don't get an infinite loop when a method returns an instance of the class.
         private val typeSerializer: AMQPSerializer<*> by lazy { lazyTypeSerializer() }
 
-        override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({nameForDebug}) {
+        override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({ nameForDebug }) {
             if (resolvedType != Any::class.java) {
                 typeSerializer.writeClassInfo(output)
             }
         }
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? = ifThrowsAppend({nameForDebug}) {
+        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? = ifThrowsAppend({ nameForDebug }) {
             input.readObjectOrNull(obj, schema, resolvedType)
         }
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) = ifThrowsAppend({nameForDebug}) {
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) = ifThrowsAppend({ nameForDebug }) {
             output.writeObjectOrNull(readMethod!!.invoke(obj), data, resolvedType)
         }
 
@@ -133,7 +133,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
         override fun writeClassInfo(output: SerializationOutput) {}
 
         override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
-            return if(obj == null) null else (obj as Short).toChar()
+            return if (obj == null) null else (obj as Short).toChar()
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {

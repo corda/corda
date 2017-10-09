@@ -75,6 +75,7 @@ abstract class FlowSession {
     inline fun <reified R : Any> sendAndReceive(payload: Any): UntrustworthyData<R> {
         return sendAndReceive(R::class.java, payload)
     }
+
     /**
      * Serializes and queues the given [payload] object for sending to the [counterparty]. Suspends until a response
      * is received, which must be of the given [receiveType]. Remember that when receiving data from other parties the data
@@ -100,6 +101,7 @@ abstract class FlowSession {
     inline fun <reified R : Any> receive(): UntrustworthyData<R> {
         return receive(R::class.java)
     }
+
     /**
      * Suspends until [counterparty] sends us a message of type [receiveType].
      *

@@ -188,10 +188,10 @@ class KryoTests : TestDependencyInjectionBase() {
     @Test
     fun `serialize - deserialize PrivacySalt`() {
         val expected = PrivacySalt(byteArrayOf(
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-            11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-            31, 32
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                31, 32
         ))
         val serializedBytes = expected.serialize(factory, context)
         val actual = serializedBytes.deserialize(factory, context)
@@ -267,7 +267,7 @@ class KryoTests : TestDependencyInjectionBase() {
         assertEquals(exception.message, exception2.message)
 
         assertEquals(1, exception2.suppressed.size)
-        assertNotNull({ exception2.suppressed.find { it.message == toBeSuppressedOnSenderSide.message  }})
+        assertNotNull({ exception2.suppressed.find { it.message == toBeSuppressedOnSenderSide.message } })
 
         val toBeSuppressedOnReceiverSide = IllegalStateException("bazz2")
         exception2.addSuppressed(toBeSuppressedOnReceiverSide)

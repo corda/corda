@@ -80,7 +80,8 @@ class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
 @RunWith(Parameterized::class)
 class CommercialPaperTestsGeneric {
     companion object {
-        @Parameterized.Parameters @JvmStatic
+        @Parameterized.Parameters
+        @JvmStatic
         fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest(), KotlinCommercialPaperLegacyTest())
     }
 
@@ -227,7 +228,7 @@ class CommercialPaperTestsGeneric {
 
     private lateinit var moveTX: SignedTransaction
 
-//    @Test
+    //    @Test
     @Ignore
     fun `issue move and then redeem`() {
         setCordappPackages("net.corda.finance.contracts")

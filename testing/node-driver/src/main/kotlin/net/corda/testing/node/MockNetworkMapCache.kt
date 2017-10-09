@@ -53,6 +53,6 @@ class MockNetworkMapCache(database: CordaPersistence, configuration: NodeSSLConf
      */
     @VisibleForTesting
     fun deleteRegistration(legalIdentity: Party): Boolean {
-        return partyNodes.removeIf { legalIdentity.owningKey in it.legalIdentitiesAndCerts.map { it.owningKey }}
+        return partyNodes.removeIf { legalIdentity.owningKey in it.legalIdentitiesAndCerts.map { it.owningKey } }
     }
 }

@@ -30,7 +30,7 @@ class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseT
     }
 
     val session: Session by sessionDelegate
-    private lateinit var hibernateTransaction : Transaction
+    private lateinit var hibernateTransaction: Transaction
 
     private val outerTransaction: DatabaseTransaction? = threadLocal.get()
 

@@ -6,6 +6,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -177,6 +178,38 @@ abstract class FlowLogic<out T> {
         return stateMachine.receive(receiveType, otherParty, flowUsedForSessions)
     }
 
+    /** Suspends until a message has been received for each session in the specified [sessions].
+     *
+     * Consider [receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>] when the same type is expected from all sessions.
+     *
+     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
+     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
+     * corrupted data in order to exploit your code.
+     *
+     * @returns a [Map] containing the objects received, wrapped in an [UntrustworthyData], by the [FlowSession]s who sent them.
+     */
+    @Suspendable
+    open fun receiveAll(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
+        return stateMachine.receiveAll(sessions, this)
+    }
+
+    /**
+     * Suspends until a message has been received for each session in the specified [sessions].
+     *
+     * Consider [sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>] when sessions are expected to receive different types.
+     *
+     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
+     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
+     * corrupted data in order to exploit your code.
+     *
+     * @returns a [List] containing the objects received, wrapped in an [UntrustworthyData], with the same order of [sessions].
+     */
+    @Suspendable
+    open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>> {
+        enforceNoDuplicates(sessions)
+        return castMapValuesToKnownType(receiveAll(associateSessionsToReceiveType(receiveType, sessions)))
+    }
+
     /**
      * Queues the given [payload] for sending to the [otherParty] and continues without suspending.
      *
@@ -230,7 +263,6 @@ abstract class FlowLogic<out T> {
     fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
         stateMachine.checkFlowPermission(permissionName, extraAuditData)
     }
-
 
     /**
      * Flows can call this method to record application level flow audit events
@@ -333,6 +365,18 @@ abstract class FlowLogic<out T> {
             }
             ours.setChildProgressTracker(ours.currentStep, theirs)
         }
+    }
+
+    private fun enforceNoDuplicates(sessions: List<FlowSession>) {
+        require(sessions.size == sessions.toSet().size) { "A flow session can only appear once as argument." }
+    }
+
+    private fun <R> associateSessionsToReceiveType(receiveType: Class<R>, sessions: List<FlowSession>): Map<FlowSession, Class<R>> {
+        return sessions.associateByTo(LinkedHashMap(), { it }, { receiveType })
+    }
+
+    private fun <R> castMapValuesToKnownType(map: Map<FlowSession, UntrustworthyData<Any>>): List<UntrustworthyData<R>> {
+        return map.values.map { uncheckedCast<Any, UntrustworthyData<R>>(it) }
     }
 }
 

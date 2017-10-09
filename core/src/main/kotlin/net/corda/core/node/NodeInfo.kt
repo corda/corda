@@ -35,9 +35,10 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
      * are porting code from earlier versions of Corda that expected a single party per node, just use the first item
      * in the returned list.
      */
-    val legalIdentities: List<Party> get() {
-        return _legalIdentities ?: legalIdentitiesAndCerts.map { it.party }.also { _legalIdentities = it }
-    }
+    val legalIdentities: List<Party>
+        get() {
+            return _legalIdentities ?: legalIdentitiesAndCerts.map { it.party }.also { _legalIdentities = it }
+        }
 
     /** Returns true if [party] is one of the identities of this node, else false. */
     fun isLegalIdentity(party: Party): Boolean = party in legalIdentities

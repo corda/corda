@@ -32,7 +32,7 @@ class BootTests {
         driver {
             val user = User("u", "p", setOf(startFlowPermission<ObjectInputStreamFlow>()))
             val future = startNode(rpcUsers = listOf(user)).getOrThrow().rpcClientToNode().
-                start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
+                    start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
             assertThatThrownBy { future.getOrThrow() }.isInstanceOf(InvalidClassException::class.java).hasMessage("filter status: REJECTED")
         }
     }

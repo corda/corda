@@ -4,7 +4,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- *
  * @author ben
  */
 public final class Utils {
@@ -12,7 +11,7 @@ public final class Utils {
     public final static String SANDBOX_PREFIX_INTERNAL = "sandbox/";
 
     public final static String CLASSFILE_NAME_SUFFIX = "^(.*)\\.class$";
-    
+
     public static final Pattern JAVA_LANG_PATTERN_INTERNAL = Pattern.compile("^java/lang/(.*)");
 
     public static final Pattern SANDBOX_PATTERN_INTERNAL = Pattern.compile("^" + SANDBOX_PREFIX_INTERNAL + "(.*)");
@@ -28,13 +27,13 @@ public final class Utils {
     public static final Pattern CLASSNAME_PATTERN_QUALIFIED = Pattern.compile("([^\\.]+)\\.");
 
     public static final String OBJECT = "java/lang/Object";
-    
+
     public static final String THROWABLE = "java/lang/Throwable";
-    
+
     public static final String ERROR = "java/lang/Error";
-    
+
     public static final String THREAD_DEATH = "java/lang/ThreadDeath";
-    
+
     // Hide constructor
     private Utils() {
     }
@@ -43,6 +42,7 @@ public final class Utils {
      * Helper method that converts from the internal class name format (as used in the
      * Constant Pool) to a fully-qualified class name. No obvious library method to do this
      * appears to exist, hence this code. If one exists, rip this out.
+     *
      * @param classInternalName
      * @return
      */
@@ -52,12 +52,11 @@ public final class Utils {
     }
 
     /**
-     * This method takes in an internal method name but needs to return a qualified 
+     * This method takes in an internal method name but needs to return a qualified
      * classname (suitable for loading)
-     * 
-     * 
+     *
      * @param internalMethodName
-     * @return 
+     * @return
      */
     public static String convertInternalMethodNameToQualifiedClassName(final String internalMethodName) {
         final Matcher classMatch = CLASSNAME_PATTERN_QUALIFIED.matcher(internalMethodName);
@@ -72,6 +71,7 @@ public final class Utils {
      * Helper method that converts from a fully-qualified class name to the internal class
      * name format (as used in the Constant Pool). No obvious library method to do this
      * appears to exist, hence this code. If one exists, rip this out.
+     *
      * @param qualifiedClassName
      * @return
      */
@@ -81,7 +81,7 @@ public final class Utils {
     }
 
     /**
-     * This method potentially rewrites the classname. 
+     * This method potentially rewrites the classname.
      *
      * @param internalClassname - specified in internal form
      * @return
@@ -102,9 +102,8 @@ public final class Utils {
     }
 
     /**
-     * 
      * @param qualifiedTypeName
-     * @return 
+     * @return
      */
     public static String sandboxQualifiedTypeName(final String qualifiedTypeName) {
         final String internal = convertQualifiedClassNameToInternalForm(qualifiedTypeName);
@@ -118,7 +117,7 @@ public final class Utils {
     /**
      * This method removes the sandboxing prefix from a method or type name, if it has
      * one, otherwise it returns the input string.
-     * 
+     *
      * @param internalClassname
      * @return the internal classname, unsandboxed if that was required
      */
@@ -131,7 +130,6 @@ public final class Utils {
     }
 
     /**
-     * 
      * @param desc - internal
      * @return the rewritten desc string
      */
@@ -169,9 +167,9 @@ public final class Utils {
      * loading. This should not attempt to load a classname that starts with java. as
      * the only permissable classes have already been transformed into sandboxed
      * methods
-     * 
+     *
      * @param qualifiedClassName
-     * @return 
+     * @return
      */
     public static boolean shouldAttemptToTransitivelyLoad(final String qualifiedClassName) {
         return !JAVA_PATTERN_QUALIFIED.asPredicate().test(qualifiedClassName);
@@ -179,7 +177,7 @@ public final class Utils {
 
     /**
      * Helper method that determines whether this class requires sandboxing
-     * 
+     *
      * @param clazzName - specified in internal form
      * @return true if the class should be sandboxed
      */

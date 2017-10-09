@@ -99,7 +99,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
     companion object {
         val NoUpdate = Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL)
-        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(),  type = Vault.UpdateType.NOTARY_CHANGE)
+        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE)
     }
 
     @CordaSerializable

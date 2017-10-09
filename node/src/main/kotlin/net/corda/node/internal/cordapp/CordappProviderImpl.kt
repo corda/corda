@@ -19,7 +19,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader) : Singl
         // TODO: Use better supported APIs in Java 9
         Exception().stackTrace.forEach { stackFrame ->
             val cordapp = getCordappForClass(stackFrame.className)
-            if(cordapp != null) {
+            if (cordapp != null) {
                 return getAppContext(cordapp)
             }
         }

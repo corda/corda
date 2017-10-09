@@ -101,9 +101,7 @@ public class JavaCommercialPaper implements Contract {
             if (issuance != null ? !issuance.equals(state.issuance) : state.issuance != null) return false;
             if (owner != null ? !owner.equals(state.owner) : state.owner != null) return false;
             if (faceValue != null ? !faceValue.equals(state.faceValue) : state.faceValue != null) return false;
-            if (maturityDate != null ? !maturityDate.equals(state.maturityDate) : state.maturityDate != null)
-                return false;
-            return true;
+            return maturityDate != null ? maturityDate.equals(state.maturityDate) : state.maturityDate == null;
         }
 
         @Override

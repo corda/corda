@@ -2,15 +2,17 @@ package net.corda.sandbox.visitors;
 
 import net.corda.sandbox.Utils;
 import net.corda.sandbox.WhitelistClassLoader;
+
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This helper class visits each file (represented as a Path) in some directory
  * tree containing classes to be sandboxed.
- * 
+ *
  * @author ben
  */
 public final class SandboxPathVisitor extends SimpleFileVisitor<Path> {
@@ -30,10 +32,10 @@ public final class SandboxPathVisitor extends SimpleFileVisitor<Path> {
     public FileVisitResult visitFile(final Path path, final BasicFileAttributes attr) {
         // Check that this is a class file
         if (!path.toString().matches(Utils.CLASSFILE_NAME_SUFFIX)) {
-            System.out.println("Skipping: "+ path);
+            System.out.println("Skipping: " + path);
             return FileVisitResult.CONTINUE;
         }
-        
+
         // Check to see if this path corresponds to an allowedClass
         final String classFileName = startFrom.relativize(path).toString().replace(".class", "");
 

@@ -97,7 +97,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     companion object {
         private val log = loggerFor<ArtemisMessagingServer>()
         /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
-        @JvmStatic val MAX_FILE_SIZE = 10485760
+        @JvmStatic
+        val MAX_FILE_SIZE = 10485760
 
         val ipDetectRequestProperty = "ip-request-id"
         val ipDetectResponseProperty = "ip-address"

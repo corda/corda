@@ -115,7 +115,7 @@ object X509Utilities {
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
                           nameConstraints: NameConstraints? = null): X509CertificateHolder
-    = createCertificate(certificateType, issuerCertificate, issuerKeyPair, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
+            = createCertificate(certificateType, issuerCertificate, issuerKeyPair, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
 
     /**
      * Create a X509 v3 certificate for use as a CA or for TLS. This does not require a [CordaX500Name] because the
@@ -267,9 +267,9 @@ object X509Utilities {
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
     internal fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+                                   subject: X500Name, subjectPublicKey: PublicKey,
+                                   validityWindow: Pair<Date, Date>,
+                                   nameConstraints: NameConstraints? = null): X509CertificateHolder {
 
         val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
         val provider = Crypto.findProvider(signatureScheme.providerName)

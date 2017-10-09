@@ -702,8 +702,7 @@ class FlowFrameworkTests {
     private inline fun <reified P : FlowLogic<*>> StartedNode<*>.registerFlowFactory(
             initiatingFlowClass: KClass<out FlowLogic<*>>,
             initiatedFlowVersion: Int = 1,
-            noinline flowFactory: (FlowSession) -> P): CordaFuture<P>
-    {
+            noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {
         val observable = internals.internalRegisterFlowFactory(
                 initiatingFlowClass.java,
                 InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
@@ -715,6 +714,7 @@ class FlowFrameworkTests {
     private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
         return SessionInit(0, clientFlowClass.java.name, flowVersion, "", payload)
     }
+
     private fun sessionConfirm(flowVersion: Int = 1) = SessionConfirm(0, 0, flowVersion, "")
     private fun sessionData(payload: Any) = SessionData(0, payload)
     private val normalEnd = NormalSessionEnd(0)
@@ -766,14 +766,15 @@ class FlowFrameworkTests {
     private infix fun StartedNode<MockNode>.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(internals.id, message)
     private infix fun Pair<Int, SessionMessage>.to(node: StartedNode<*>): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
-    private val FlowLogic<*>.progressSteps: CordaFuture<List<Notification<ProgressTracker.Step>>> get() {
-        return progressTracker!!.changes
-                .ofType(Change.Position::class.java)
-                .map { it.newStep }
-                .materialize()
-                .toList()
-                .toFuture()
-    }
+    private val FlowLogic<*>.progressSteps: CordaFuture<List<Notification<ProgressTracker.Step>>>
+        get() {
+            return progressTracker!!.changes
+                    .ofType(Change.Position::class.java)
+                    .map { it.newStep }
+                    .materialize()
+                    .toList()
+                    .toFuture()
+        }
 
     private class LazyServiceHubAccessFlow : FlowLogic<Unit>() {
         val lazyTime: Instant by lazy { serviceHub.clock.instant() }
@@ -782,7 +783,8 @@ class FlowFrameworkTests {
     }
 
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
-        @Transient var flowStarted = false
+        @Transient
+        var flowStarted = false
 
         @Suspendable
         override fun call() {
@@ -833,7 +835,8 @@ class FlowFrameworkTests {
 
         override val progressTracker: ProgressTracker = ProgressTracker(START_STEP, RECEIVED_STEP)
         private var nonTerminating: Boolean = false
-        @Transient var receivedPayloads: List<String> = emptyList()
+        @Transient
+        var receivedPayloads: List<String> = emptyList()
 
         @Suspendable
         override fun call() {
@@ -879,6 +882,7 @@ class FlowFrameworkTests {
     @InitiatingFlow
     private class SendAndReceiveFlow(val otherParty: Party, val payload: Any, val otherPartySession: FlowSession? = null) : FlowLogic<Any>() {
         constructor(otherPartySession: FlowSession, payload: Any) : this(otherPartySession.counterparty, payload, otherPartySession)
+
         @Suspendable
         override fun call(): Any = (otherPartySession ?: initiateFlow(otherParty)).sendAndReceive<Any>(payload).unwrap { it }
     }
@@ -891,8 +895,11 @@ class FlowFrameworkTests {
     @InitiatingFlow
     private class PingPongFlow(val otherParty: Party, val payload: Long, val otherPartySession: FlowSession? = null) : FlowLogic<Unit>() {
         constructor(otherPartySession: FlowSession, payload: Long) : this(otherPartySession.counterparty, payload, otherPartySession)
-        @Transient var receivedPayload: Long? = null
-        @Transient var receivedPayload2: Long? = null
+
+        @Transient
+        var receivedPayload: Long? = null
+        @Transient
+        var receivedPayload2: Long? = null
 
         @Suspendable
         override fun call() {
@@ -959,6 +966,7 @@ class FlowFrameworkTests {
     @InitiatingFlow(version = 2)
     private class UpgradedFlow(val otherParty: Party, val otherPartySession: FlowSession? = null) : FlowLogic<Pair<Any, Int>>() {
         constructor(otherPartySession: FlowSession) : this(otherPartySession.counterparty, otherPartySession)
+
         @Suspendable
         override fun call(): Pair<Any, Int> {
             val otherPartySession = this.otherPartySession ?: initiateFlow(otherParty)

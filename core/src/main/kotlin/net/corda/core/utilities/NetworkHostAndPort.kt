@@ -27,7 +27,7 @@ data class NetworkHostAndPort(val host: String, val port: Int) {
         fun parse(str: String): NetworkHostAndPort {
             val uri = try {
                 URI(null, str, null, null, null)
-            } catch(ex: URISyntaxException) {
+            } catch (ex: URISyntaxException) {
                 throw IllegalArgumentException("Host and port syntax is invalid, expected host:port")
             }
             require(uri.host != null) { NetworkHostAndPort.UNPARSEABLE_ADDRESS_FORMAT.format(str) }

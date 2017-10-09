@@ -88,7 +88,7 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
                 try {
                     // Try making a symlink to make things faster and use less disk space.
                     Files.createSymbolicLink(destPath, path)
-                } catch(e: UnsupportedOperationException) {
+                } catch (e: UnsupportedOperationException) {
                     // OS doesn't support symbolic links?
                     Files.copy(path, destPath, REPLACE_EXISTING)
                 } catch (e: java.nio.file.FileAlreadyExistsException) {
