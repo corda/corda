@@ -9,7 +9,7 @@ Writing a custom notary service
 
 Similarly to writing an oracle service, the first step is to create a service class in your CorDapp and annotate it
 with ``@CordaService``. The Corda node scans for any class with this annotation and initialises them. The only requirement
-is that the class provide a constructor with a single parameter of type ``ServiceHub``.
+is that the class provide a constructor with a single parameter of type ``AppServiceHub``.
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/CustomNotaryTutorial.kt
    :language: kotlin
