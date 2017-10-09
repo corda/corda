@@ -5,7 +5,6 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.excludeHostNode
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.SignedTransaction
@@ -32,9 +31,9 @@ class CollectSignaturesFlowTests {
     lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
     lateinit var bobNode: StartedNode<MockNetwork.MockNode>
     lateinit var charlieNode: StartedNode<MockNetwork.MockNode>
-    lateinit var alice: PartyAndCertificate
-    lateinit var bob: PartyAndCertificate
-    lateinit var charlie: PartyAndCertificate
+    lateinit var alice: Party
+    lateinit var bob: Party
+    lateinit var charlie: Party
     lateinit var notary: Party
 
     @Before
@@ -46,9 +45,9 @@ class CollectSignaturesFlowTests {
         charlieNode = mockNet.createPartyNode(CHARLIE.name)
         mockNet.runNetwork()
         aliceNode.internals.ensureRegistered()
-        alice = aliceNode.services.myInfo.chooseIdentityAndPath(ALICE_NAME)
-        bob = bobNode.services.myInfo.chooseIdentityAndPath(BOB_NAME)
-        charlie = charlieNode.services.myInfo.chooseIdentityAndPath(CHARLIE_NAME)
+        alice = aliceNode.services.myInfo.chooseIdentity(ALICE_NAME)
+        bob = bobNode.services.myInfo.chooseIdentity(BOB_NAME)
+        charlie = charlieNode.services.myInfo.chooseIdentity(CHARLIE_NAME)
         notary = notaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
     }
 
@@ -150,7 +149,8 @@ class CollectSignaturesFlowTests {
     @Test
     fun `successfully collects two signatures`() {
         val bConfidentialIdentity = bobNode.database.transaction {
-            bobNode.services.keyManagementService.freshKeyAndCert(bob, false)
+            val bobCert = bobNode.services.myInfo.legalIdentitiesAndCerts.single { it.name == bob.name }
+            bobNode.services.keyManagementService.freshKeyAndCert(bobCert, false)
         }
         aliceNode.database.transaction {
             // Normally this is handled by TransactionKeyFlow, but here we have to manually let A know about the identity
@@ -158,7 +158,7 @@ class CollectSignaturesFlowTests {
         }
         registerFlowOnAllNodes(TestFlowTwo.Responder::class)
         val magicNumber = 1337
-        val parties = listOf(alice.party, bConfidentialIdentity.party, charlie.party)
+        val parties = listOf(alice, bConfidentialIdentity.party, charlie)
         val state = DummyContract.MultiOwnerState(magicNumber, parties)
         val flow = aliceNode.services.startFlow(TestFlowTwo.Initiator(state))
         mockNet.runNetwork()
@@ -170,7 +170,7 @@ class CollectSignaturesFlowTests {
 
     @Test
     fun `no need to collect any signatures`() {
-        val onePartyDummyContract = DummyContract.generateInitial(1337, notary, alice.party.ref(1))
+        val onePartyDummyContract = DummyContract.generateInitial(1337, notary, alice.ref(1))
         val ptx = aliceNode.services.signInitialTransaction(onePartyDummyContract)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
@@ -182,7 +182,7 @@ class CollectSignaturesFlowTests {
 
     @Test
     fun `fails when not signed by initiator`() {
-        val onePartyDummyContract = DummyContract.generateInitial(1337, notary, alice.party.ref(1))
+        val onePartyDummyContract = DummyContract.generateInitial(1337, notary, alice.ref(1))
         val miniCorpServices = MockServices(cordappPackages, MINI_CORP_KEY)
         val ptx = miniCorpServices.signInitialTransaction(onePartyDummyContract)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
@@ -195,9 +195,9 @@ class CollectSignaturesFlowTests {
     @Test
     fun `passes with multiple initial signatures`() {
         val twoPartyDummyContract = DummyContract.generateInitial(1337, notary,
-                alice.party.ref(1),
-                bob.party.ref(2),
-                bob.party.ref(3))
+                alice.ref(1),
+                bob.ref(2),
+                bob.ref(3))
         val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)
         val signedByBoth = bobNode.services.addSignature(signedByA)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(signedByBoth, emptySet()))
