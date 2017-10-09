@@ -39,8 +39,6 @@ class SwapIdentitiesFlow(private val otherParty: Party,
 
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
-        val ASSERTION_PREFIX: ByteArray = "Assertion of identity ownership ".toByteArray(Charset.forName("US-ASCII"))
-        val ASSERTION_POSTFIX: ByteArray = "Identity assertion ends".toByteArray(Charset.forName("US-ASCII"))
 
         fun tracker() = ProgressTracker(AWAITING_KEY)
         /**
@@ -55,13 +53,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
             // actual certificate signing requests as these could theoretically be resubmitted to a signing service.
             val cert = confidentialIdentity.certificate.toX509CertHolder()
             val certReqInfo = CertificationRequestInfo(cert.subject, cert.subjectPublicKeyInfo, DERSet())
-            val data = ByteArrayOutputStream(1024).use { out ->
-                out.write(ASSERTION_PREFIX)
-                out.write(certReqInfo.encoded)
-                out.write(ASSERTION_POSTFIX)
-                out.toByteArray()
-            }
-            return data
+            return certReqInfo.encoded
         }
 
         @Throws(SwapIdentitiesException::class)
