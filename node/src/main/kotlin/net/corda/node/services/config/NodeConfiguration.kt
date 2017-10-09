@@ -2,6 +2,7 @@ package net.corda.node.services.config
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.nodeapi.User
@@ -88,7 +89,7 @@ data class FullNodeConfiguration(
         val useTestClock: Boolean = false,
         val detectPublicIp: Boolean = true,
         override val activeMQServer: ActiveMqServerConfiguration,
-        override val additionalNodeInfoPollingFrequencyMsec: Long
+        override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
 ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
