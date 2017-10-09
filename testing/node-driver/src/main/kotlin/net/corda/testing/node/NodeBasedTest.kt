@@ -5,19 +5,16 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.configOf
-import net.corda.node.services.config.plus
-import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
@@ -129,30 +126,44 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         return if (waitForConnection) node.internals.nodeReadyFuture.map { node } else doneFuture(node)
     }
 
-    fun startNotaryCluster(notaryName: CordaX500Name,
-                           clusterSize: Int,
-                           serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<StartedNode<Node>>> {
+    // TODO This method has been added temporarily, to be deleted once the set of notaries is defined at the network level.
+    fun startNotaryNode(name: CordaX500Name,
+                        rpcUsers: List<User> = emptyList(),
+                        validating: Boolean = true): CordaFuture<StartedNode<Node>> {
+        return startNode(name, rpcUsers = rpcUsers, configOverrides = mapOf("notary" to mapOf("validating" to validating)))
+    }
+
+    fun startNotaryCluster(notaryName: CordaX500Name, clusterSize: Int): CordaFuture<List<StartedNode<Node>>> {
+        fun notaryConfig(nodeAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): Map<String, Any> {
+            val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
+            val config = NotaryConfig(validating = true, raft = RaftConfig(nodeAddress = nodeAddress, clusterAddresses = clusterAddresses))
+            return mapOf("notary" to config.toConfig().root().unwrapped())
+        }
+
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { baseDirectory(notaryName.copy(organisation = "${notaryName.organisation}-$it")) },
                 notaryName)
 
-        val serviceInfo = ServiceInfo(serviceType, notaryName)
-        val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
+        val nodeAddresses = getFreeLocalPorts("localhost", clusterSize)
 
         val masterNodeFuture = startNode(
                 CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country),
-                advertisedServices = setOf(serviceInfo),
-                configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
-                        "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
+                configOverrides = notaryConfig(nodeAddresses[0]) + mapOf(
+                        "database" to mapOf(
+                                "serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else ""
+                        )
+                )
+        )
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
                     CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country),
-                    advertisedServices = setOf(serviceInfo),
-                    configOverrides = mapOf(
-                            "notaryNodeAddress" to nodeAddresses[it],
-                            "notaryClusterAddresses" to listOf(nodeAddresses[0]),
-                            "database" to mapOf("serverNameTablePrefix" to "${notaryName.organisation}$it".replace(Regex("[^0-9A-Za-z]+"), ""))))
+                    configOverrides = notaryConfig(nodeAddresses[it], nodeAddresses[0]) + mapOf(
+                            "database" to mapOf(
+                                    "serverNameTablePrefix" to "${notaryName.organisation}$it".replace(Regex("[^0-9A-Za-z]+"), "")
+                            )
+                    )
+            )
         }
 
         return remainingNodesFutures.transpose().flatMap { remainingNodes ->

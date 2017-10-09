@@ -7,14 +7,14 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
@@ -103,10 +103,10 @@ class NodePerformanceTests {
     @Test
     fun `self pay rate`() {
         driver(startNodesInProcess = true) {
-            val a = startNode(
-                    rpcUsers = listOf(User("A", "A", setOf(startFlowPermission<CashIssueFlow>(), startFlowPermission<CashPaymentFlow>()))),
-                    advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))
-            ).get()
+            val a = startNotaryNode(
+                    DUMMY_NOTARY.name,
+                    rpcUsers = listOf(User("A", "A", setOf(startFlowPermission<CashIssueFlow>(), startFlowPermission<CashPaymentFlow>())))
+            ).getOrThrow()
             a as NodeHandle.InProcess
             val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
             a.rpcClientToNode().use("A", "A") { connection ->

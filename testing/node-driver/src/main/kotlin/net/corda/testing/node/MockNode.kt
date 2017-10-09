@@ -19,7 +19,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.NotaryService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -28,10 +27,10 @@ import net.corda.finance.utils.WorldMapLocation
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.node.services.api.SchemaService
+import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
@@ -40,18 +39,22 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CertificateAndKeyPair
-import net.corda.testing.*
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.testing.DUMMY_KEY_1
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.resetTestSerialization
+import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
+import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -220,17 +223,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return InMemoryNetworkMapService(network, networkMapCache, 1)
         }
 
-        override fun getNotaryIdentity(): PartyAndCertificate? {
-            val defaultIdentity = super.getNotaryIdentity()
-            return if (notaryIdentity == null || !notaryIdentity.first.type.isNotary() || defaultIdentity == null)
-                defaultIdentity
-            else {
-                // Ensure that we always have notary in name and type of it. TODO It is temporary solution until we will have proper handling of NetworkParameters
-                myNotaryIdentity = getTestPartyAndCertificate(defaultIdentity.name, notaryIdentity.second.public)
-                myNotaryIdentity
-            }
-        }
-
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
         override fun generateKeyPair(): KeyPair {
             counter = counter.add(BigInteger.ONE)
@@ -277,12 +269,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
 
-        override fun makeCoreNotaryService(type: ServiceType): NotaryService? {
-            if (type != BFTNonValidatingNotaryService.type) return super.makeCoreNotaryService(type)
-            return BFTNonValidatingNotaryService(services, myNotaryIdentity!!.owningKey, object : BFTSMaRt.Cluster {
+        override fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
+            return object : BFTSMaRt.Cluster {
                 override fun waitUntilAllReplicasHaveInitialized() {
-                    val clusterNodes = mockNet.nodes.filter { myNotaryIdentity!!.owningKey in it.started!!.info.legalIdentities.map { it.owningKey } }
-                    if (clusterNodes.size != configuration.notaryClusterAddresses.size) {
+                    val clusterNodes = mockNet.nodes.filter { notaryKey in it.started!!.info.legalIdentities.map { it.owningKey } }
+                    if (clusterNodes.size != bftSMaRtConfig.clusterAddresses.size) {
                         throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
                     }
                     clusterNodes.forEach {
@@ -290,7 +281,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         notaryService.waitUntilReplicaHasInitialized()
                     }
                 }
-            })
+            }
         }
 
         /**
@@ -406,16 +397,19 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
     }
 
-    /**
-     * Construct a default notary node.
-     */
-    fun createNotaryNode() = createNotaryNode(DUMMY_NOTARY.name, null, null)
+    @JvmOverloads
+    fun createNotaryNode(legalName: CordaX500Name? = null, validating: Boolean = true): StartedNode<MockNode> {
+        return createNode(legalName = legalName, configOverrides = {
+            whenever(it.notary).thenReturn(NotaryConfig(validating))
+        })
+    }
 
-    fun createNotaryNode(legalName: CordaX500Name? = null,
-                         notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
-                         serviceName: CordaX500Name? = null): StartedNode<MockNode> {
-        return createNode(legalName = legalName, notaryIdentity = notaryIdentity,
-                advertisedServices = *arrayOf(ServiceInfo(ValidatingNotaryService.type, serviceName)))
+    fun <N : MockNode> createNotaryNode(legalName: CordaX500Name? = null,
+                                        validating: Boolean = true,
+                                        nodeFactory: Factory<N>): StartedNode<N> {
+        return createNode(legalName = legalName, nodeFactory = nodeFactory, configOverrides = {
+            whenever(it.notary).thenReturn(NotaryConfig(validating))
+        })
     }
 
     @JvmOverloads

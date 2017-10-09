@@ -11,20 +11,20 @@ At present we have several prototype notary implementations:
    we are using the `Copycat <http://atomix.io/copycat/>`_ framework
 4. ``RaftValidatingNotaryService`` (distributed) -- as above, but performs validation on the transactions received
 
-To have a node run a notary service, you need to set appropriate configuration values before starting it
+To have a node run a notary service, you need to set appropriate ``notary`` configuration before starting it
 (see :doc:`corda-configuration-file` for reference).
 
-For ``SimpleNotaryService``, simply add the following service id to the list of advertised services:
+For ``SimpleNotaryService`` the config is simply:
 
 .. parsed-literal::
 
-  extraAdvertisedServiceIds : [ "net.corda.notary.simple" ]
+    notary : { validating : false }
 
 For ``ValidatingNotaryService``, it is:
 
 .. parsed-literal::
 
-  extraAdvertisedServiceIds : [ "net.corda.notary.validating" ]
+    notary : { validating : true }
 
 Setting up a Raft notary is currently slightly more involved and is not recommended for prototyping purposes. There is
 work in progress to simplify it. To see it in action, however, you can try out the :ref:`notary-demo`.

@@ -12,7 +12,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
@@ -117,7 +116,7 @@ class AttachmentTests {
     @Test
     fun `malicious response`() {
         // Make a node that doesn't do sanity checking at load time.
-        val aliceNode = mockNet.createNode(legalName = ALICE.name, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
+        val aliceNode = mockNet.createNotaryNode(legalName = ALICE.name, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceInfo>, id: Int,
                                 notaryIdentity: Pair<ServiceInfo, KeyPair>?,
@@ -126,7 +125,7 @@ class AttachmentTests {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }
-        }, advertisedServices = *arrayOf(ServiceInfo(SimpleNotaryService.type)))
+        }, validating = false)
         val bobNode = mockNet.createNode(legalName = BOB.name)
 
         // Ensure that registration was successful before progressing any further
