@@ -29,6 +29,7 @@ class HttpApi(val root: URL, val mapper: ObjectMapper = defaultMapper) {
     companion object {
         fun fromHostAndPort(hostAndPort: NetworkHostAndPort, base: String, protocol: String = "http", mapper: ObjectMapper = defaultMapper): HttpApi
                 = HttpApi(URL("$protocol://$hostAndPort/$base/"), mapper)
+
         private val defaultMapper: ObjectMapper by lazy {
             net.corda.client.jackson.JacksonSupport.createNonRpcMapper()
         }

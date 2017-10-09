@@ -85,6 +85,7 @@ abstract class TimeWindow {
         init {
             require(fromTime < untilTime) { "fromTime must be earlier than untilTime" }
         }
+
         override val midpoint: Instant get() = fromTime + (fromTime until untilTime) / 2
         override fun contains(instant: Instant): Boolean = instant >= fromTime && instant < untilTime
         override fun toString(): String = "[$fromTime, $untilTime)"

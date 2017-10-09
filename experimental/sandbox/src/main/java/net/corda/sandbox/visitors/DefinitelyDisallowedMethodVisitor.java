@@ -11,5 +11,5 @@ class DefinitelyDisallowedMethodVisitor extends MethodVisitor {
     DefinitelyDisallowedMethodVisitor(MethodVisitor baseMethodVisitor) {
         super(Opcodes.ASM5, baseMethodVisitor);
     }
-    
+
 }

@@ -102,9 +102,9 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
      * custom serializers.
      */
     abstract class Proxy<T : Any, P : Any>(clazz: Class<T>,
-                               protected val proxyClass: Class<P>,
-                               protected val factory: SerializerFactory,
-                               withInheritance: Boolean = true) : CustomSerializerImp<T>(clazz, withInheritance) {
+                                           protected val proxyClass: Class<P>,
+                                           protected val factory: SerializerFactory,
+                                           withInheritance: Boolean = true) : CustomSerializerImp<T>(clazz, withInheritance) {
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
 
         private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(proxyClass, factory) }
@@ -151,11 +151,10 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
      * @param unmake A lambda that extracts the string value for an instance, that defaults to the [toString] method.
      */
     abstract class ToString<T : Any>(clazz: Class<T>, withInheritance: Boolean = false,
-                               private val maker: (String) -> T = clazz.getConstructor(String::class.java).let {
-                                   `constructor` ->
-                                   { string -> `constructor`.newInstance(string) }
-                               },
-                               private val unmaker: (T) -> String = { obj -> obj.toString() })
+                                     private val maker: (String) -> T = clazz.getConstructor(String::class.java).let { `constructor` ->
+                                         { string -> `constructor`.newInstance(string) }
+                                     },
+                                     private val unmaker: (T) -> String = { obj -> obj.toString() })
         : CustomSerializerImp<T>(clazz, withInheritance) {
 
         override val schemaForDocumentation = Schema(

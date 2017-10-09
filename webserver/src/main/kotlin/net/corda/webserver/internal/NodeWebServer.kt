@@ -120,7 +120,7 @@ class NodeWebServer(val config: WebServerConfig) {
                 }
 
                 @Throws(IOException::class)
-                override fun writeErrorPageMessage(request: HttpServletRequest, writer: Writer, code: Int, message: String , uri: String) {
+                override fun writeErrorPageMessage(request: HttpServletRequest, writer: Writer, code: Int, message: String, uri: String) {
                     writer.write("<h1>Corda $safeLegalName</h1>\n")
                     super.writeErrorPageMessage(request, writer, code, message, uri)
                 }
@@ -135,10 +135,10 @@ class NodeWebServer(val config: WebServerConfig) {
             }
 
             val resourceConfig = ResourceConfig()
-                .register(ObjectMapperConfig(rpcObjectMapper))
-                .register(ResponseFilter())
-                .register(CordaConverterProvider)
-                .register(APIServerImpl(localRpc))
+                    .register(ObjectMapperConfig(rpcObjectMapper))
+                    .register(ResponseFilter())
+                    .register(CordaConverterProvider)
+                    .register(APIServerImpl(localRpc))
 
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
             for (webapi in webAPIsOnClasspath) {

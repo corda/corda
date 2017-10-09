@@ -71,7 +71,6 @@ class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
     fun isPositive(): Boolean = ratioUnit!!.value > BigDecimal("0.0")
 
     override fun equals(other: Any?) = other?.javaClass == javaClass && super.equals(other)
-    override fun hashCode() = super.hashCode()
 }
 
 /**

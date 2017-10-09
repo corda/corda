@@ -41,7 +41,7 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `auto scanning of custom schemas for testing with Driver`() {
-        driver (startNodesInProcess = true) {
+        driver(startNodesInProcess = true) {
             val node = startNode()
             val nodeHandle = node.getOrThrow()
             val result = nodeHandle.rpc.startFlow(::MappedSchemasFlow)
@@ -63,7 +63,7 @@ class NodeSchemaServiceTest {
     @StartableByRPC
     class MappedSchemasFlow : FlowLogic<List<String>>() {
         @Suspendable
-        override fun call() : List<String> {
+        override fun call(): List<String> {
             // returning MappedSchema's as String'ified family names to avoid whitelist serialization errors
             return (this.serviceHub as ServiceHubInternal).schemaService.schemaOptions.keys.map { it.name }
         }

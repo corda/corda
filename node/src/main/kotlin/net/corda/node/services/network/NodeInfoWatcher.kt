@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
 import net.corda.cordform.CordformNode
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
@@ -12,11 +11,8 @@ import net.corda.core.utilities.loggerFor
 import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
+import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardWatchEventKinds
-import java.nio.file.WatchEvent
-import java.nio.file.WatchKey
-import java.nio.file.WatchService
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
 
@@ -33,7 +29,6 @@ class NodeInfoWatcher(private val nodePath: Path,
                       private val scheduler: Scheduler = Schedulers.io()) {
 
     private val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
-    private val watchService : WatchService? by lazy { initWatch() }
 
     companion object {
         private val logger = loggerFor<NodeInfoWatcher>()
@@ -52,11 +47,9 @@ class NodeInfoWatcher(private val nodePath: Path,
             try {
                 path.createDirectories()
                 val serializedBytes = nodeInfo.serialize()
-                val regSig = keyManager.sign(serializedBytes.bytes,
-                        nodeInfo.legalIdentities.first().owningKey)
+                val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
                 val signedData = SignedData(serializedBytes, regSig)
-                val file = (path / ("nodeInfo-" + SecureHash.sha256(serializedBytes.bytes).toString())).toFile()
-                file.writeBytes(signedData.serialize().bytes)
+                signedData.serialize().open().copyTo(path / "nodeInfo-${serializedBytes.hash}")
             } catch (e: Exception) {
                 logger.warn("Couldn't write node info to file", e)
             }
@@ -67,14 +60,15 @@ class NodeInfoWatcher(private val nodePath: Path,
      * Read all the files contained in [nodePath] / [CordformNode.NODE_INFO_DIRECTORY] and keep watching
      * the folder for further updates.
      *
+     * We simply list the directory content every 5 seconds, the Java implementation of WatchService has been proven to
+     * be unreliable on MacOs and given the fairly simple use case we have, this simple implementation should do.
+     *
      * @return an [Observable] returning [NodeInfo]s, there is no guarantee that the same value isn't returned more
      *      than once.
      */
     fun nodeInfoUpdates(): Observable<NodeInfo> {
-        val pollForFiles = Observable.interval(5, TimeUnit.SECONDS, scheduler)
-                .flatMapIterable { pollWatch() }
-        val readCurrentFiles = Observable.from(loadFromDirectory())
-        return readCurrentFiles.mergeWith(pollForFiles)
+        return Observable.interval(5, TimeUnit.SECONDS, scheduler)
+                .flatMapIterable { loadFromDirectory() }
     }
 
     /**
@@ -84,7 +78,6 @@ class NodeInfoWatcher(private val nodePath: Path,
      * @return a list of [NodeInfo]s
      */
     private fun loadFromDirectory(): List<NodeInfo> {
-        val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
         if (!nodeInfoDirectory.isDirectory()) {
             logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
             return emptyList()
@@ -99,32 +92,7 @@ class NodeInfoWatcher(private val nodePath: Path,
         return result
     }
 
-    // Polls the watchService for changes to nodeInfoDirectory, return all the newly read NodeInfos.
-    private fun pollWatch(): List<NodeInfo> {
-        if (watchService == null) {
-            return emptyList()
-        }
-        val watchKey: WatchKey = watchService?.poll() ?: return emptyList()
-        val files = mutableSetOf<Path>()
-        for (event in watchKey.pollEvents()) {
-            val kind = event.kind()
-            if (kind == StandardWatchEventKinds.OVERFLOW) continue
-
-            val ev: WatchEvent<Path> = uncheckedCast(event)
-            val filename = ev.context()
-            val absolutePath = nodeInfoDirectory.resolve(filename)
-            if (absolutePath.isRegularFile()) {
-                files.add(absolutePath)
-            }
-        }
-        val valid = watchKey.reset()
-        if (!valid) {
-            logger.warn("Can't poll $nodeInfoDirectory anymore, it was probably deleted.")
-        }
-        return files.mapNotNull { processFile(it) }
-    }
-
-    private fun processFile(file: Path) : NodeInfo? {
+    private fun processFile(file: Path): NodeInfo? {
         try {
             logger.info("Reading NodeInfo from file: $file")
             val signedData = file.readAll().deserialize<SignedData<NodeInfo>>()
@@ -133,18 +101,5 @@ class NodeInfoWatcher(private val nodePath: Path,
             logger.warn("Exception parsing NodeInfo from file. $file", e)
             return null
         }
-    }
-
-    // Create a WatchService watching for changes in nodeInfoDirectory.
-    private fun initWatch() : WatchService? {
-        if (!nodeInfoDirectory.isDirectory()) {
-            logger.warn("Not watching folder $nodeInfoDirectory it doesn't exist or it's not a directory")
-            return null
-        }
-        val watchService = nodeInfoDirectory.fileSystem.newWatchService()
-        nodeInfoDirectory.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
-                StandardWatchEventKinds.ENTRY_MODIFY)
-        logger.info("Watching $nodeInfoDirectory for new files")
-        return watchService
     }
 }

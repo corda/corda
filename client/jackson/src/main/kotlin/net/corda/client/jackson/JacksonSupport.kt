@@ -119,12 +119,14 @@ object JacksonSupport {
      * match an identity known from the network map. If true, the name is matched more leniently but if the match
      * is ambiguous a [JsonParseException] is thrown.
      */
-    @JvmStatic @JvmOverloads
+    @JvmStatic
+    @JvmOverloads
     fun createDefaultMapper(rpc: CordaRPCOps, factory: JsonFactory = JsonFactory(),
                             fuzzyIdentityMatch: Boolean = false): ObjectMapper = configureMapper(RpcObjectMapper(rpc, factory, fuzzyIdentityMatch))
 
     /** For testing or situations where deserialising parties is not required */
-    @JvmStatic @JvmOverloads
+    @JvmStatic
+    @JvmOverloads
     fun createNonRpcMapper(factory: JsonFactory = JsonFactory()): ObjectMapper = configureMapper(NoPartyObjectMapper(factory))
 
     /**
@@ -134,7 +136,8 @@ object JacksonSupport {
      * match an identity known from the network map. If true, the name is matched more leniently but if the match
      * is ambiguous a [JsonParseException] is thrown.
      */
-    @JvmStatic @JvmOverloads
+    @JvmStatic
+    @JvmOverloads
     fun createInMemoryMapper(identityService: IdentityService, factory: JsonFactory = JsonFactory(),
                              fuzzyIdentityMatch: Boolean = false) = configureMapper(IdentityObjectMapper(identityService, factory, fuzzyIdentityMatch))
 
@@ -227,7 +230,7 @@ object JacksonSupport {
 
             return try {
                 CordaX500Name.parse(parser.text)
-            } catch(ex: IllegalArgumentException) {
+            } catch (ex: IllegalArgumentException) {
                 throw JsonParseException(parser, "Invalid Corda X.500 name ${parser.text}: ${ex.message}", ex)
             }
         }
@@ -310,7 +313,7 @@ object JacksonSupport {
                     // Attempt parsing as a currency token. TODO: This needs thought about how to extend to other token types.
                     val currency = Currency.getInstance(token)
                     return Amount(quantity, currency)
-                } catch(e2: Exception) {
+                } catch (e2: Exception) {
                     throw JsonParseException(parser, "Invalid amount ${parser.text}", e2)
                 }
             }

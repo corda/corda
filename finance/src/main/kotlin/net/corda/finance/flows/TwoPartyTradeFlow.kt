@@ -136,6 +136,7 @@ object TwoPartyTradeFlow {
                      private val anonymous: Boolean) : FlowLogic<SignedTransaction>() {
         constructor(otherSideSession: FlowSession, notary: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>) :
                 this(otherSideSession, notary, acceptablePrice, typeToBuy, true)
+
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
 

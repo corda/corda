@@ -81,7 +81,7 @@ data class CordaX500Name(val commonName: String?,
         private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries())
 
         @JvmStatic
-        fun build(principal: X500Principal) : CordaX500Name {
+        fun build(principal: X500Principal): CordaX500Name {
             val x500Name = X500Name.getInstance(principal.encoded)
             val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
                     .flatMap { it.typesAndValues.asList() }
@@ -109,7 +109,7 @@ data class CordaX500Name(val commonName: String?,
         }
 
         @JvmStatic
-        fun parse(name: String) : CordaX500Name = build(X500Principal(name))
+        fun parse(name: String): CordaX500Name = build(X500Principal(name))
     }
 
     @Transient

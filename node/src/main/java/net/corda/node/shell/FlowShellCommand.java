@@ -12,11 +12,11 @@ import java.util.*;
 import static net.corda.node.shell.InteractiveShell.*;
 
 @Man(
-    "Allows you to start flows, list the ones available and to watch flows currently running on the node.\n\n" +
-    "Starting flow is the primary way in which you command the node to change the ledger.\n\n" +
-    "This command is generic, so the right way to use it depends on the flow you wish to start. You can use the 'flow start'\n" +
-    "command with either a full class name, or a substring of the class name that's unambiguous. The parameters to the \n" +
-    "flow constructors (the right one is picked automatically) are then specified using the same syntax as for the run command."
+        "Allows you to start flows, list the ones available and to watch flows currently running on the node.\n\n" +
+                "Starting flow is the primary way in which you command the node to change the ledger.\n\n" +
+                "This command is generic, so the right way to use it depends on the flow you wish to start. You can use the 'flow start'\n" +
+                "command with either a full class name, or a substring of the class name that's unambiguous. The parameters to the \n" +
+                "flow constructors (the right one is picked automatically) are then specified using the same syntax as for the run command."
 )
 public class FlowShellCommand extends InteractiveShellCommand {
     @Command

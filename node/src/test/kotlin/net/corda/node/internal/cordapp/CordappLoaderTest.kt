@@ -9,25 +9,29 @@ import java.nio.file.Paths
 @InitiatingFlow
 class DummyFlow : FlowLogic<Unit>() {
     @Suspendable
-    override fun call() { }
+    override fun call() {
+    }
 }
 
 @InitiatedBy(DummyFlow::class)
 class LoaderTestFlow(unusedSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
-    override fun call() { }
+    override fun call() {
+    }
 }
 
 @SchedulableFlow
 class DummySchedulableFlow : FlowLogic<Unit>() {
     @Suspendable
-    override fun call() { }
+    override fun call() {
+    }
 }
 
 @StartableByRPC
 class DummyRPCFlow : FlowLogic<Unit>() {
     @Suspendable
-    override fun call() { }
+    override fun call() {
+    }
 }
 
 class CordappLoaderTest {

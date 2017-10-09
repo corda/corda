@@ -100,7 +100,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     val methodParamNames: Map<String, List<String>> = targetType.declaredMethods.mapNotNull {
         try {
             it.name to paramNamesFromMethod(it)
-        } catch(e: KotlinReflectionInternalError) {
+        } catch (e: KotlinReflectionInternalError) {
             // Kotlin reflection doesn't support every method that can exist on an object (in particular, reified
             // inline methods) so we just ignore those here.
             null
@@ -175,7 +175,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
             try {
                 val args = parseArguments(name, paramNamesFromMethod(method).zip(method.parameterTypes), argStr)
                 return ParsedMethodCall(target, method, args)
-            } catch(e: UnparseableCallException) {
+            } catch (e: UnparseableCallException) {
                 if (index == methods.size - 1)
                     throw e
             }
@@ -198,7 +198,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
             val entry = tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
             try {
                 om.readValue(entry.traverse(om), argType)
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 throw UnparseableCallException.FailedParse(e)
             }
         }
@@ -212,16 +212,17 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     }
 
     /** Returns a string-to-string map of commands to a string describing available parameter types. */
-    val availableCommands: Map<String, String> get() {
-        return methodMap.entries().map { entry ->
-            val (name, args) = entry   // TODO: Kotlin 1.1
-            val argStr = if (args.parameterCount == 0) "" else {
-                val paramNames = methodParamNames[name]!!
-                val typeNames = args.parameters.map { it.type.simpleName }
-                val paramTypes = paramNames.zip(typeNames)
-                paramTypes.map { "${it.first}: ${it.second}" }.joinToString(", ")
-            }
-            Pair(name, argStr)
-        }.toMap()
-    }
+    val availableCommands: Map<String, String>
+        get() {
+            return methodMap.entries().map { entry ->
+                val (name, args) = entry   // TODO: Kotlin 1.1
+                val argStr = if (args.parameterCount == 0) "" else {
+                    val paramNames = methodParamNames[name]!!
+                    val typeNames = args.parameters.map { it.type.simpleName }
+                    val paramTypes = paramNames.zip(typeNames)
+                    paramTypes.map { "${it.first}: ${it.second}" }.joinToString(", ")
+                }
+                Pair(name, argStr)
+            }.toMap()
+        }
 }

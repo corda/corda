@@ -13,7 +13,6 @@ import org.objectweb.asm.Label;
 /**
  * A MethodVisitor which checks method instructions in order to determine if this
  * method is deterministic or not
- *
  */
 final class WhitelistCheckingMethodVisitor extends MethodVisitor {
 
@@ -29,7 +28,7 @@ final class WhitelistCheckingMethodVisitor extends MethodVisitor {
     }
 
     /**
-     * Visits a method instruction. A method instruction is an instruction that 
+     * Visits a method instruction. A method instruction is an instruction that
      * invokes a method.
      * <p>
      * Some method instructions are by their nature un-deterministic, so we set those methods to have a
@@ -84,15 +83,15 @@ final class WhitelistCheckingMethodVisitor extends MethodVisitor {
     }
 
     /**
-     * Currently a no-op. 
-     *
+     * Currently a no-op.
+     * <p>
      * The JVMspec seems to permit the possibility of using a backwards branch in a
-     * tableswitch to try to create an infinite loop. However, it seems to be 
+     * tableswitch to try to create an infinite loop. However, it seems to be
      * impossible in practice - the specification of StackMapFrame seems to prevent
      * it in modern classfile formats, and even by explicitly generating a version
      * 49 (Java 5) classfile, the verifier seems to be specifically resistant to a
-     * backwards branch from a tableswitch. 
-     * 
+     * backwards branch from a tableswitch.
+     * <p>
      * We could still add a belt-and-braces static instrumentation to protect
      * against this but it currently seems unnecessary - at worse it is a branch that
      * should count against the branch limit, or an explicit disallow of a backwards
@@ -102,7 +101,7 @@ final class WhitelistCheckingMethodVisitor extends MethodVisitor {
      * @param min
      * @param max
      * @param dflt
-     * @param labels 
+     * @param labels
      */
     @Override
     public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
@@ -112,11 +111,11 @@ final class WhitelistCheckingMethodVisitor extends MethodVisitor {
     /**
      * Visits an invokedynamic instruction - which is specifically disallowed for
      * deterministic apps.
-     * 
+     *
      * @param name
      * @param desc
      * @param bsm
-     * @param bsmArgs 
+     * @param bsmArgs
      */
     @Override
     public void visitInvokeDynamicInsn(final String name, final String desc, final Handle bsm, final Object... bsmArgs) {

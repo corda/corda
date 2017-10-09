@@ -57,15 +57,15 @@ class NodeSchemaService(customSchemas: Set<MappedSchema>) : SchemaService, Singl
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java
-                    ))
+            ))
 
     // Required schemas are those used by internal Corda services
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
-                  Pair(NodeServicesV1, SchemaService.SchemaOptions()))
+                    Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
+                    Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
+                    Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
         mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())

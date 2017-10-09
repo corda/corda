@@ -19,8 +19,7 @@ class DummyDealContract : Contract {
 
     data class State(
             override val participants: List<AbstractParty>,
-            override val linearId: UniqueIdentifier) : DealState, QueryableState
-    {
+            override val linearId: UniqueIdentifier) : DealState, QueryableState {
         constructor(participants: List<AbstractParty> = listOf(),
                     ref: String) : this(participants, UniqueIdentifier(ref))
 

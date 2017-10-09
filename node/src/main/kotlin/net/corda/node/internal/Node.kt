@@ -350,7 +350,7 @@ open class Node(configuration: FullNodeConfiguration,
                 _startupComplete.set(Unit)
             }
         },
-        { th -> logger.error("Unexpected exception", th)}
+                { th -> logger.error("Unexpected exception", th) }
         )
         shutdownHook = addShutdownHook {
             stop()

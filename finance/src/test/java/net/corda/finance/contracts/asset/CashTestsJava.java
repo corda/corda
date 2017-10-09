@@ -34,7 +34,7 @@ public class CashTestsJava {
             });
 
             tx.tweak(tw -> {
-                tw.output(Cash.PROGRAM_ID,  () -> outState );
+                tw.output(Cash.PROGRAM_ID, () -> outState);
                 tw.command(getMEGA_CORP_PUBKEY(), DummyCommandData.INSTANCE);
                 // Invalid command
                 return tw.failsWith("required net.corda.finance.contracts.asset.Cash.Commands.Move command");

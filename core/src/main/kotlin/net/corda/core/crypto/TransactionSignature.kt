@@ -11,7 +11,7 @@ import java.util.*
  * This is similar to [DigitalSignature.WithKey], but targeted to DLT transaction signatures.
  */
 @CordaSerializable
-class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata): DigitalSignature(bytes) {
+class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata) : DigitalSignature(bytes) {
     /**
      * Function to verify a [SignableData] object's signature.
      * Note that [SignableData] contains the id of the transaction and extra metadata, such as DLT's platform version.

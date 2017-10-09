@@ -118,6 +118,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = serviceHub.database.transaction { queryByLegalName(name) }
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
             serviceHub.database.transaction { queryByIdentityKey(identityKey) }
+
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
         val wellKnownParty = serviceHub.identityService.wellKnownPartyFromAnonymous(party)
         return wellKnownParty?.let {

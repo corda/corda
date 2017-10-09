@@ -70,6 +70,7 @@ object SimmFlow {
                     private val existing: StateAndRef<PortfolioState>?)
         : FlowLogic<RevisionedState<PortfolioState.Update>>() {
         constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
+
         lateinit var notary: Party
         lateinit var otherPartySession: FlowSession
 
@@ -318,7 +319,7 @@ object SimmFlow {
             logger.info("Handshake finished, awaiting Simm update")
             replyToSession.send(Ack) // Hack to state that this party is ready.
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToSession) {
-                override fun verifyProposal(stx:SignedTransaction, proposal: Proposal<PortfolioState.Update>) {
+                override fun verifyProposal(stx: SignedTransaction, proposal: Proposal<PortfolioState.Update>) {
                     super.verifyProposal(stx, proposal)
                     if (proposal.modification.portfolio != portfolio.refs) throw StateReplacementException()
                 }

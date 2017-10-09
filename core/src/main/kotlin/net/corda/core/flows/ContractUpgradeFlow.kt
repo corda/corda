@@ -28,7 +28,7 @@ object ContractUpgradeFlow {
             val stateAndRef: StateAndRef<*>,
             private val upgradedContractClass: Class<out UpgradedContract<*, *>>
     ) : FlowLogic<Void?>() {
-    // DOCEND 1
+        // DOCEND 1
         @Suspendable
         override fun call(): Void? {
             val upgrade = upgradedContractClass.newInstance()
@@ -50,7 +50,7 @@ object ContractUpgradeFlow {
     class Deauthorise(val stateRef: StateRef) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
-    //DOCEND 2
+            //DOCEND 2
             serviceHub.contractUpgradeService.removeAuthorisedContractUpgrade(stateRef)
             return null
         }

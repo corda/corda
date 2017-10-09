@@ -111,7 +111,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
 
         /** Takes a package of classes and creates a JAR from them - only use in tests. */
         private fun createDevCordappJar(scanPackage: String, path: URL, jarPackageName: String): URI {
-            if(!generatedCordapps.contains(path)) {
+            if (!generatedCordapps.contains(path)) {
                 val cordappDir = File("build/tmp/generated-test-cordapps")
                 cordappDir.mkdirs()
                 val cordappJAR = File(cordappDir, "$scanPackage-${UUID.randomUUID()}.jar")

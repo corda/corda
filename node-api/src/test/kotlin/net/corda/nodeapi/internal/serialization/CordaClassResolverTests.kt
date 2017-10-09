@@ -271,6 +271,7 @@ class CordaClassResolverTests {
     }
 
     open class SubHashSet<E> : HashSet<E>()
+
     @Test
     fun `Check blacklisted subclass`() {
         expectedEx.expect(IllegalStateException::class.java)
@@ -281,6 +282,7 @@ class CordaClassResolverTests {
     }
 
     class SubSubHashSet<E> : SubHashSet<E>()
+
     @Test
     fun `Check blacklisted subsubclass`() {
         expectedEx.expect(IllegalStateException::class.java)
@@ -291,6 +293,7 @@ class CordaClassResolverTests {
     }
 
     class ConnectionImpl(private val connection: Connection) : Connection by connection
+
     @Test
     fun `Check blacklisted interface impl`() {
         expectedEx.expect(IllegalStateException::class.java)
@@ -302,6 +305,7 @@ class CordaClassResolverTests {
 
     interface SubConnection : Connection
     class SubConnectionImpl(private val subConnection: SubConnection) : SubConnection by subConnection
+
     @Test
     fun `Check blacklisted super-interface impl`() {
         expectedEx.expect(IllegalStateException::class.java)
@@ -320,6 +324,7 @@ class CordaClassResolverTests {
 
     @CordaSerializable
     class CordaSerializableHashSet<E> : HashSet<E>()
+
     @Test
     fun `Check blacklist precedes CordaSerializable`() {
         expectedEx.expect(IllegalStateException::class.java)

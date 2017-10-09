@@ -32,7 +32,8 @@ class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
-    @Test fun `should commit a transaction with unused inputs without exception`() {
+    @Test
+    fun `should commit a transaction with unused inputs without exception`() {
         database.transaction {
             val provider = PersistentUniquenessProvider()
             val inputState = generateStateRef()
@@ -41,7 +42,8 @@ class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
         }
     }
 
-    @Test fun `should report a conflict for a transaction with previously used inputs`() {
+    @Test
+    fun `should report a conflict for a transaction with previously used inputs`() {
         database.transaction {
             val provider = PersistentUniquenessProvider()
             val inputState = generateStateRef()

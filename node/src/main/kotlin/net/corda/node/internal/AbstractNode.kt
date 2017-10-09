@@ -274,7 +274,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     /**
      * This customizes the ServiceHub for each CordaService that is initiating flows
      */
-    private class AppServiceHubImpl<T : SerializeAsToken>(val serviceHub: ServiceHubInternal): AppServiceHub, ServiceHub by serviceHub {
+    private class AppServiceHubImpl<T : SerializeAsToken>(val serviceHub: ServiceHubInternal) : AppServiceHub, ServiceHub by serviceHub {
         lateinit var serviceInstance: T
         override fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T> {
             val stateMachine = startFlowChecked(flow)

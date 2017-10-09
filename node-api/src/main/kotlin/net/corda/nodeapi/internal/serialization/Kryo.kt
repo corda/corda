@@ -546,7 +546,7 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
 
     override fun read(kryo: Kryo, input: Input, type: Class<Throwable>): Throwable {
         val throwableRead = delegate.read(kryo, input, type)
-        if(throwableRead.suppressed.isEmpty()) {
+        if (throwableRead.suppressed.isEmpty()) {
             throwableRead.setSuppressedToSentinel()
         }
         return throwableRead

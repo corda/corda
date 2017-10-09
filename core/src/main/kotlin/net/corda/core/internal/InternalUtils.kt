@@ -49,6 +49,7 @@ operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multipl
  * separator problems.
  */
 operator fun Path.div(other: String): Path = resolve(other)
+
 operator fun String.div(other: String): Path = Paths.get(this) / other
 
 /**
@@ -104,6 +105,7 @@ fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
     Files.copy(this, targetFile, *options)
     return targetFile
 }
+
 fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(this, target, *options)
 fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
 fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
@@ -238,10 +240,13 @@ fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) e
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
 fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
+
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
+
 /** @suppress Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
+
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
@@ -250,7 +255,7 @@ fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaCl
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
 /** creates a new instance if not a Kotlin object */
-fun <T: Any> KClass<T>.objectOrNewInstance(): T {
+fun <T : Any> KClass<T>.objectOrNewInstance(): T {
     return this.objectInstance ?: this.createInstance()
 }
 
