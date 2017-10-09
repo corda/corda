@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX509CertHolder
@@ -19,8 +20,10 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import org.bouncycastle.asn1.DERSet
 import org.bouncycastle.asn1.pkcs.CertificationRequestInfo
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
+import java.security.PublicKey
 import java.security.SignatureException
 import java.security.cert.CertPath
 import java.util.*
@@ -48,12 +51,8 @@ class SwapIdentitiesFlow(private val otherParty: Party,
          * the expected blob.
          */
         fun buildDataToSign(confidentialIdentity: PartyAndCertificate): ByteArray {
-            // We build a blob with fixed header/footer to make it harder to trick a system into signing one of these
-            // inappropriately. The blob contains the core of a certificate signing request, however we avoid using
-            // actual certificate signing requests as these could theoretically be resubmitted to a signing service.
-            val cert = confidentialIdentity.certificate.toX509CertHolder()
-            val certReqInfo = CertificationRequestInfo(cert.subject, cert.subjectPublicKeyInfo, DERSet())
-            return certReqInfo.encoded
+            val certReqInfo = CertificateOwnershipAssertion(confidentialIdentity.name, confidentialIdentity.owningKey)
+            return certReqInfo.serialize().bytes
         }
 
         @Throws(SwapIdentitiesException::class)
@@ -108,8 +107,14 @@ class SwapIdentitiesFlow(private val otherParty: Party,
     data class IdentityWithSignature(val identity: SerializedBytes<PartyAndCertificate>, val signature: DigitalSignature)
 }
 
-data class CertificateOwnershipAssertion(val certReqInfo: CertificationRequestInfo,
-                                         val certPath: CertPath)
+/**
+ * Data class used only in the context of asserting the owner of the private key for the listed key wants to use it
+ * to represent the named entity. This is pairs with an X.509 certificate (which asserts the signing identity says
+ * the key represents the named entity), but protects against a certificate authority incorrectly claiming others'
+ * keys.
+ */
+data class CertificateOwnershipAssertion(val x500Name: CordaX500Name,
+                                         val publicKey: PublicKey)
 
 open class SwapIdentitiesException @JvmOverloads constructor(message: String, cause: Throwable? = null)
     : FlowException(message, cause)
