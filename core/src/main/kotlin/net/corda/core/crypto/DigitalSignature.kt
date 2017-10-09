@@ -46,5 +46,6 @@ open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
         fun isValid(content: ByteArray) = by.isValid(content, this)
+        fun withoutKey() : DigitalSignature = DigitalSignature(this.bytes)
     }
 }
