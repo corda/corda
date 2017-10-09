@@ -259,9 +259,10 @@ Kotlin Objects
 ``````````````
 
     #.  Kotlin ``object`` s are singletons and treated differently.  They are recorded into the stream with no properties
-        and deserialize back to the singleton instance.
-
-Currently, the same is not true of Java singletons, and they will deserialize to new instances of the class.
+        and deserialize back to the singleton instance. Currently, the same is not true of Java singletons,
+        and they will deserialize to new instances of the class.
+    #.  Kotlin's anonymous ``object`` s are not currrently supported. I.e. constructs like:
+        ``object : Contract {...}`` will not serialize corrrectly and need to be re-written as an explicit class declarations.
 
 The Carpenter
 `````````````

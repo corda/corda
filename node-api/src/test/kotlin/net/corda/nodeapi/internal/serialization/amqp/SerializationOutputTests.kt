@@ -540,6 +540,7 @@ class SerializationOutputTests {
     }
 
     @Test
+    @Ignore("Cannot serialize due to known Kotlin/serialization limitation")
     fun `test custom anonymous object`() {
         val anonymous: Contract = object : Contract {
             override fun verify(tx: LedgerTransaction) {
