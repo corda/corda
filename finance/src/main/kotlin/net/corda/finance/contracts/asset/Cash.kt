@@ -129,10 +129,10 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
 
         override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
-        fun ownedBy(owner: AbstractParty) = copy(owner = owner)
-        fun issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
-        fun issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
-        fun withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
+        infix fun ownedBy(owner: AbstractParty) = copy(owner = owner)
+        infix fun issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
+        infix fun issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
+        infix fun withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
@@ -398,20 +398,6 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         }
     }
 }
-
-// Small DSL extensions.
-
-/** @suppress */
-infix fun Cash.State.`owned by`(owner: AbstractParty) = ownedBy(owner)
-
-/** @suppress */
-infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
-
-/** @suppress */
-infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
-
-/** @suppress */
-infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
 
 // Unit testing helpers. These could go in a separate file but it's hardly worth it for just a few functions.
 

@@ -31,8 +31,7 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.`issued by`
-import net.corda.finance.contracts.asset.`owned by`
+import net.corda.finance.contracts.asset.ownedBy
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
@@ -679,8 +678,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         // wants to sell to Bob.
         val eb1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             // Issued money to itself.
-            output(Cash.PROGRAM_ID, "elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }
-            output(Cash.PROGRAM_ID, "elbonian money 2", notary = notary) { 1000.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }
+            output(Cash.PROGRAM_ID, "elbonian money 1", notary = notary) { 800.DOLLARS.CASH issuedBy issuer ownedBy interimOwner }
+            output(Cash.PROGRAM_ID, "elbonian money 2", notary = notary) { 1000.DOLLARS.CASH issuedBy issuer ownedBy interimOwner }
             if (!withError) {
                 command(issuer.party.owningKey) { Cash.Commands.Issue() }
             } else {
@@ -698,15 +697,15 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         // Bob gets some cash onto the ledger from BoE
         val bc1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 1")
-            output(Cash.PROGRAM_ID, "bob cash 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` owner }
+            output(Cash.PROGRAM_ID, "bob cash 1", notary = notary) { 800.DOLLARS.CASH issuedBy issuer ownedBy owner }
             command(interimOwner.owningKey) { Cash.Commands.Move() }
             this.verifies()
         }
 
         val bc2 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 2")
-            output(Cash.PROGRAM_ID, "bob cash 2", notary = notary) { 300.DOLLARS.CASH `issued by` issuer `owned by` owner }
-            output(Cash.PROGRAM_ID, notary = notary) { 700.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }   // Change output.
+            output(Cash.PROGRAM_ID, "bob cash 2", notary = notary) { 300.DOLLARS.CASH issuedBy issuer ownedBy owner }
+            output(Cash.PROGRAM_ID, notary = notary) { 700.DOLLARS.CASH issuedBy issuer ownedBy interimOwner }   // Change output.
             command(interimOwner.owningKey) { Cash.Commands.Move() }
             this.verifies()
         }
