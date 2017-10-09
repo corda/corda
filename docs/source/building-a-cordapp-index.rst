@@ -7,6 +7,6 @@ Building a CorDapp
    cordapp-overview
    writing-cordapps
    cordapp-build-systems
-   corda-modules
+   corda-api
    flow-cookbook
    cheat-sheet

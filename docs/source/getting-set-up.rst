@@ -169,7 +169,7 @@ The best way to check that everything is working fine is by taking a deeper look
 Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
 By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
-:doc:`Hello, World tutorial <hello-world-index>`. You may want to refer to the :doc:`Modules documentation <corda-modules>` along the
+:doc:`Hello, World tutorial <hello-world-index>`. You may want to refer to the :doc:`API documentation <corda-api>` along the
 way.
 
 If you encounter any issues, please see the :doc:`troubleshooting` page, or get in touch with us on the
