@@ -9,6 +9,7 @@ import org.gradle.api.artifacts.Configuration
  * and with the information needed to run on Corda.
  */
 class CordappPlugin implements Plugin<Project> {
+    @Override
     void apply(Project project) {
         Utils.createCompileConfiguration("cordapp", project)
         Utils.createCompileConfiguration("cordaCompile", project)
