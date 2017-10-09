@@ -534,8 +534,21 @@ class SerializationOutputTests {
         }
     }
 
-    val FOO_PROGRAM_ID = "net.corda.nodeapi.internal.serialization.amqp.SerializationOutputTests.FooContract"
+    @Test
+    fun `test custom object`() {
+        serdes(FooContract)
+    }
 
+    @Test
+    fun `test custom anonymous object`() {
+        val anonymous: Contract = object : Contract {
+            override fun verify(tx: LedgerTransaction) {
+            }
+        }
+        serdes(anonymous)
+    }
+
+    private val FOO_PROGRAM_ID = "net.corda.nodeapi.internal.serialization.amqp.SerializationOutputTests.FooContract"
     class FooState : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }
