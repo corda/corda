@@ -9,12 +9,12 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
@@ -96,7 +96,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     overrideClock = testClock,
                     keyManagement = kms,
                     network = mockMessagingService), TestReference {
-                override val vaultService: VaultService = NodeVaultService(this, database.hibernateConfig)
+                override val vaultService: VaultServiceInternal = NodeVaultService(testClock, kms, stateLoader, database.hibernateConfig)
                 override val testReference = this@NodeSchedulerServiceTest
                 override val cordappProvider: CordappProviderImpl = CordappProviderImpl(CordappLoader.createWithTestPackages()).start(attachments)
             }

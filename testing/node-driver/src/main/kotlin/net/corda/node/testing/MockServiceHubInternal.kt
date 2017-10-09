@@ -6,9 +6,11 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.serialization.NodeClock
@@ -34,7 +36,7 @@ import java.time.Clock
 open class MockServiceHubInternal(
         override val database: CordaPersistence,
         override val configuration: NodeConfiguration,
-        val customVault: VaultService? = null,
+        val customVault: VaultServiceInternal? = null,
         val keyManagement: KeyManagementService? = null,
         val network: MessagingService? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
@@ -47,11 +49,12 @@ open class MockServiceHubInternal(
         val schemas: SchemaService? = NodeSchemaService(),
         val customContractUpgradeService: ContractUpgradeService? = null,
         val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2),
-        override val cordappProvider: CordappProvider = CordappProviderImpl(CordappLoader.createDefault(Paths.get("."))).start(attachments)
-) : ServiceHubInternal {
+        override val cordappProvider: CordappProvider = CordappProviderImpl(CordappLoader.createDefault(Paths.get("."))).start(attachments),
+        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
+) : ServiceHubInternal, StateLoader by stateLoader {
     override val transactionVerifierService: TransactionVerifierService
         get() = customTransactionVerifierService ?: throw UnsupportedOperationException()
-    override val vaultService: VaultService
+    override val vaultService: VaultServiceInternal
         get() = customVault ?: throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService
         get() = customContractUpgradeService ?: throw UnsupportedOperationException()

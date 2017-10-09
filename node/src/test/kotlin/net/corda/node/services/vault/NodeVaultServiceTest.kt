@@ -47,7 +47,7 @@ import kotlin.test.assertTrue
 class NodeVaultServiceTest : TestDependencyInjectionBase() {
     lateinit var services: MockServices
     lateinit var issuerServices: MockServices
-    val vaultService: VaultService get() = services.vaultService
+    val vaultService get() = services.vaultService as NodeVaultService
     lateinit var database: CordaPersistence
 
     @Before
@@ -98,7 +98,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
             val originalVault = vaultService
             val services2 = object : MockServices() {
-                override val vaultService: NodeVaultService get() = originalVault as NodeVaultService
+                override val vaultService: NodeVaultService get() = originalVault
                 override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
@@ -473,7 +473,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
     @Test
     fun `is ownable state relevant`() {
-        val service = (services.vaultService as NodeVaultService)
+        val service = vaultService
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
         val wellKnownCash = Cash.State(amount, services.myInfo.chooseIdentity())
         val myKeys = services.keyManagementService.filterMyKeys(listOf(wellKnownCash.owner.owningKey))
@@ -494,7 +494,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
     @Test
     fun `correct updates are generated for general transactions`() {
-        val service = (services.vaultService as NodeVaultService)
+        val service = vaultService
         val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
             service.updates.subscribe(this)
         }
@@ -527,7 +527,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
     @Test
     fun `correct updates are generated when changing notaries`() {
-        val service = (services.vaultService as NodeVaultService)
+        val service = vaultService
         val notary = services.myInfo.chooseIdentity()
 
         val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
