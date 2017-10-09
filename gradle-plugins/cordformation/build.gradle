@@ -1,10 +1,4 @@
 buildscript {
-    // For sharing constants between builds
-    Properties constants = new Properties()
-    file("$projectDir/../../constants.properties").withInputStream { constants.load(it) }
-
-    ext.kotlin_version = constants.getProperty("kotlinVersion")
-
     repositories {
         mavenCentral()
     }
