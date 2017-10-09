@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit
 class FlowPermissionException(message: String) : FlowException(message)
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
-                              val logic: FlowLogic<R>,
+                              override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
                               override val flowInitiator: FlowInitiator,
         // Store the Party rather than the full cert path with PartyAndCertificate

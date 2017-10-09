@@ -90,6 +90,4 @@ open class MockServiceHubInternal(
     override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? = null
 
     override fun jdbcSession(): Connection = database.createSession()
-
-    override fun getCurrentTopLevelFlowLogic() = FlowStateMachineImpl.currentStateMachine()?.logic
 }

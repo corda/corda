@@ -49,6 +49,7 @@ interface FlowStateMachine<R> {
     @Suspendable
     fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>)
 
+    val logic: FlowLogic<R>
     val serviceHub: ServiceHub
     val logger: Logger
     val id: StateMachineRunId

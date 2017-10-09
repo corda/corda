@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -44,6 +45,25 @@ import java.time.Instant
 abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
+
+    companion object {
+        /**
+         * Return the outermost [FlowLogic] instance, or null if not in a flow.
+         */
+        val currentTopLevel: FlowLogic<*>? get() = (Strand.currentStrand() as? FlowStateMachine<*>)?.logic
+
+        /**
+         * If on a flow, suspends the flow and only wakes it up after at least [duration] time has passed.  Otherwise,
+         * just sleep for [duration].
+         *
+         * Note that long sleeps and in general long running flows are highly discouraged, as there is currently no
+         * support for flow migration!
+         */
+        @Suspendable
+        fun sleep(duration: Duration) {
+            (Strand.currentStrand() as? FlowStateMachine<*>)?.sleepUntil(Instant.now() + duration) ?: Strand.sleep(duration.toMillis())
+        }
+    }
 
     /**
      * Returns a wrapped [java.util.UUID] object that identifies this state machine run (i.e. subflows have the same
@@ -314,17 +334,6 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash): SignedTransaction = stateMachine.waitForLedgerCommit(hash, this)
-
-    /**
-     * Suspends the flow and only wakes it up after at least [duration] time has passed.
-     *
-     * Note that long sleeps and in general long running flows are highly discouraged, as there is currently no
-     * support for flow migration!
-     */
-    @Suspendable
-    open fun sleep(duration: Duration) {
-        stateMachine.sleepUntil(Instant.now() + duration)
-    }
 
     /**
      * Returns a shallow copy of the Quasar stack frames at the time of call to [flowStackSnapshot]. Use this to inspect

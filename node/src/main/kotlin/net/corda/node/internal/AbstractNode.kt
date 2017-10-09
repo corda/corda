@@ -796,8 +796,6 @@ abstract class AbstractNode(config: NodeConfiguration,
         }
 
         override fun jdbcSession(): Connection = database.createSession()
-
-        override fun getCurrentTopLevelFlowLogic() = FlowStateMachineImpl.currentStateMachine()?.logic
     }
 
     fun registerCustomSchemas(schemas: Set<MappedSchema>) {

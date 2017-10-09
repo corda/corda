@@ -1,12 +1,12 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -80,7 +80,7 @@ class CashSelectionH2Impl : CashSelection {
                 if (retryCount != MAX_RETRIES) {
                     stateAndRefs.clear()
                     val durationMillis = (minOf(RETRY_SLEEP.shl(retryCount), RETRY_CAP / 2) * (1.0 + Math.random())).toInt()
-                    services.getCurrentTopLevelFlowLogic()?.sleep(durationMillis.millis) ?: Strand.sleep(durationMillis.toLong())
+                    FlowLogic.sleep(durationMillis.millis)
                 } else {
                     log.warn("Insufficient spendable states identified for $amount")
                 }
