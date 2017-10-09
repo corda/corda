@@ -371,10 +371,6 @@ abstract class FlowLogic<out T> {
         require(sessions.size == sessions.toSet().size) { "A flow session can only appear once as argument." }
     }
 
-    private fun enforceNoDuplicates(sessions: Array<out Pair<FlowSession, Class<out Any>>>) {
-        if (sessions.groupBy { it.first }.values.any { it.size > 1 }) throw IllegalArgumentException("A flow session can only appear once as argument.")
-    }
-
     private fun <R> associateSessionsToReceiveType(receiveType: Class<R>, sessions: List<FlowSession>): Map<FlowSession, Class<R>> {
         return sessions.associateByTo(LinkedHashMap(), { it }, { receiveType })
     }

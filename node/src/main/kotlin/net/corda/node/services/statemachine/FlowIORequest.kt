@@ -47,10 +47,14 @@ class ReceiveAll(val requests: List<ReceiveRequest<SessionData>>) : WaitingReque
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 
-    private fun isComplete(received: LinkedHashMap<FlowSessionInternal, RequestMessage>) = received.keys == requests.map { it.session }.toSet()
+    private fun isComplete(received: LinkedHashMap<FlowSessionInternal, RequestMessage>): Boolean {
+        return received.keys == requests.map { it.session }.toSet()
+    }
     private fun shouldResumeIfRelevant() = requests.all { hasSuccessfulEndMessage(it) }
 
-    private fun hasSuccessfulEndMessage(it: ReceiveRequest<SessionData>) = it.session.receivedMessages.map { it.message }.any { it is SessionData || it is SessionEnd }
+    private fun hasSuccessfulEndMessage(it: ReceiveRequest<SessionData>): Boolean {
+        return it.session.receivedMessages.map { it.message }.any { it is SessionData || it is SessionEnd }
+    }
 
     @Suspendable
     fun suspendAndExpectReceive(suspend: Suspend): Map<FlowSessionInternal, RequestMessage> {
