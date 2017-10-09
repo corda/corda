@@ -116,7 +116,6 @@ class CashSelectionH2Impl : CashSelection {
 
                 // Retrieve spendable state refs
                 val rs = statement.executeQuery(selectJoin)
-                stateAndRefs.clear()
                 log.debug(selectJoin)
                 var totalPennies = 0L
                 while (rs.next()) {
