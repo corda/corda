@@ -11,5 +11,5 @@ Useful commands include 'help' to see what is available, and 'bye' to shut down 
 """
 
 prompt = { ->
-    return "${new Date()}>>> ";
+    return "${new Date()}>>> "
 }

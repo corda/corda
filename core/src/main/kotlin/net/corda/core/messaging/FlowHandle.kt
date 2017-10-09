@@ -43,7 +43,7 @@ data class FlowHandleImpl<A>(
         override val id: StateMachineRunId,
         override val returnValue: CordaFuture<A>) : FlowHandle<A> {
 
-     // Remember to add @Throws to FlowHandle.close() if this throws an exception.
+    // Remember to add @Throws to FlowHandle.close() if this throws an exception.
     override fun close() {
         returnValue.cancel(false)
     }

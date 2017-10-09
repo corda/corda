@@ -48,11 +48,13 @@ class NonEmptySet<T> private constructor(private val elements: Set<T>) : Set<T> 
 
     /** Returns the first element of the set. */
     fun head(): T = elements.iterator().next()
+
     override fun isEmpty(): Boolean = false
     override fun iterator() = object : Iterator<T> by elements.iterator() {}
 
     // Following methods are not delegated by Kotlin's Class delegation
     override fun forEach(action: Consumer<in T>) = elements.forEach(action)
+
     override fun stream(): Stream<T> = elements.stream()
     override fun parallelStream(): Stream<T> = elements.parallelStream()
     override fun spliterator(): Spliterator<T> = elements.spliterator()

@@ -774,9 +774,10 @@ object Crypto {
         // it forms, by itself, the new private key, which in turn is used to compute the new public key.
         val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
         // This is unlikely to happen, but we should check for point at infinity.
-        if (pointQ.isInfinity)
+        if (pointQ.isInfinity) {
             // Instead of throwing an exception, we retry with SHA256(seed).
             return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
+        }
         val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
         val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)
 
@@ -849,6 +850,7 @@ object Crypto {
         override fun generatePublic(keyInfo: SubjectPublicKeyInfo?): PublicKey? {
             return keyInfo?.let { decodePublicKey(signatureScheme, it.encoded) }
         }
+
         override fun generatePrivate(keyInfo: PrivateKeyInfo?): PrivateKey? {
             return keyInfo?.let { decodePrivateKey(signatureScheme, it.encoded) }
         }

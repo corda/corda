@@ -97,7 +97,8 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal, private v
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
         val stateMachineFactory = {
-            DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createMap) }
+            DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createMap)
+        }
         val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)
         val transport = buildTransport(transportConfiguration)
@@ -110,6 +111,7 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal, private v
                                        serializer: Serializer) {
                         writeMap(obj.entries, buffer, serializer)
                     }
+
                     override fun read(type: Class<DistributedImmutableMap.Commands.PutAll<*, *>>,
                                       buffer: BufferInput<out BufferInput<*>>,
                                       serializer: Serializer): DistributedImmutableMap.Commands.PutAll<Any, Any> {

@@ -25,7 +25,8 @@ class LoggingTestSuite {
      */
     companion object {
         @BeforeClass
-        @JvmStatic fun `setup logging`() {
+        @JvmStatic
+        fun `setup logging`() {
             LoggingConfig()
         }
     }

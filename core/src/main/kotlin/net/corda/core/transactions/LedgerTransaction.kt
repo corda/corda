@@ -57,7 +57,7 @@ data class LedgerTransaction(
     }
 
     private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state.contract } + outputs.map { it.contract })
-                    .toSet().map { it to createContractFor(it) }.toMap()
+            .toSet().map { it to createContractFor(it) }.toMap()
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
 
@@ -79,8 +79,7 @@ data class LedgerTransaction(
         // TODO: make contract upgrade transactions have a separate type
         if (commands.any { it.value is UpgradeCommand }) {
             verifyContractUpgrade()
-        }
-        else {
+        } else {
             verifyContracts()
         }
     }

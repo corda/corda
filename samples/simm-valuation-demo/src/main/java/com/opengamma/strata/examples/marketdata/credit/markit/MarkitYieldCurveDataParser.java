@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2015 - present by OpenGamma Inc. and the OpenGamma group of companies
- *
+ * <p>
  * Please see distribution for license.
  */
 package com.opengamma.strata.examples.marketdata.credit.markit;
@@ -31,104 +31,105 @@ import java.util.Map;
  */
 public class MarkitYieldCurveDataParser {
 
-  private static final String DATE = "Valuation Date";
-  private static final String TENOR = "Tenor";
-  private static final String INSTRUMENT = "Instrument Type";
-  private static final String RATE = "Rate";
-  private static final String CONVENTION = "Curve Convention";
+    private static final String DATE = "Valuation Date";
+    private static final String TENOR = "Tenor";
+    private static final String INSTRUMENT = "Instrument Type";
+    private static final String RATE = "Rate";
+    private static final String CONVENTION = "Curve Convention";
 
-  /**
-   * Parses the specified source.
-   * 
-   * @param source the source to parse
-   * @return the map of parsed yield curve par rates
-   */
-  public static Map<IsdaYieldCurveInputsId, IsdaYieldCurveInputs> parse(CharSource source) {
-    // parse the curve data
-    Map<IsdaYieldCurveConvention, List<Point>> curveData = Maps.newHashMap();
-    CsvFile csv = CsvFile.of(source, true);
-    for (CsvRow row : csv.rows()) {
-      String dateText = row.getField(DATE);
-      String tenorText = row.getField(TENOR);
-      String instrumentText = row.getField(INSTRUMENT);
-      String rateText = row.getField(RATE);
-      String conventionText = row.getField(CONVENTION);
+    /**
+     * Parses the specified source.
+     *
+     * @param source the source to parse
+     * @return the map of parsed yield curve par rates
+     */
+    public static Map<IsdaYieldCurveInputsId, IsdaYieldCurveInputs> parse(CharSource source) {
+        // parse the curve data
+        Map<IsdaYieldCurveConvention, List<Point>> curveData = Maps.newHashMap();
+        CsvFile csv = CsvFile.of(source, true);
+        for (CsvRow row : csv.rows()) {
+            String dateText = row.getField(DATE);
+            String tenorText = row.getField(TENOR);
+            String instrumentText = row.getField(INSTRUMENT);
+            String rateText = row.getField(RATE);
+            String conventionText = row.getField(CONVENTION);
 
-      Point point = new Point(
-          Tenor.parse(tenorText),
-          LocalDate.parse(dateText, DateTimeFormatter.ISO_LOCAL_DATE),
-          mapUnderlyingType(instrumentText),
-          Double.parseDouble(rateText));
-      IsdaYieldCurveConvention convention = IsdaYieldCurveConvention.of(conventionText);
+            Point point = new Point(
+                    Tenor.parse(tenorText),
+                    LocalDate.parse(dateText, DateTimeFormatter.ISO_LOCAL_DATE),
+                    mapUnderlyingType(instrumentText),
+                    Double.parseDouble(rateText));
+            IsdaYieldCurveConvention convention = IsdaYieldCurveConvention.of(conventionText);
 
-      List<Point> points = curveData.get(convention);
-      if (points == null) {
-        points = Lists.newArrayList();
-        curveData.put(convention, points);
-      }
-      points.add(point);
+            List<Point> points = curveData.get(convention);
+            if (points == null) {
+                points = Lists.newArrayList();
+                curveData.put(convention, points);
+            }
+            points.add(point);
+        }
+
+        // convert the curve data into the result map
+        Map<IsdaYieldCurveInputsId, IsdaYieldCurveInputs> result = Maps.newHashMap();
+        for (IsdaYieldCurveConvention convention : curveData.keySet()) {
+            List<Point> points = curveData.get(convention);
+            result.put(IsdaYieldCurveInputsId.of(convention.getCurrency()),
+                    IsdaYieldCurveInputs.of(
+                            CurveName.of(convention.getName()),
+                            points.stream().map(s -> s.getTenor().getPeriod()).toArray(Period[]::new),
+                            points.stream().map(s -> s.getDate()).toArray(LocalDate[]::new),
+                            points.stream().map(s -> s.getInstrumentType()).toArray(IsdaYieldCurveUnderlyingType[]::new),
+                            points.stream().mapToDouble(s -> s.getRate()).toArray(),
+                            convention));
+        }
+        return result;
     }
 
-    // convert the curve data into the result map
-    Map<IsdaYieldCurveInputsId, IsdaYieldCurveInputs> result = Maps.newHashMap();
-    for (IsdaYieldCurveConvention convention : curveData.keySet()) {
-      List<Point> points = curveData.get(convention);
-      result.put(IsdaYieldCurveInputsId.of(convention.getCurrency()),
-          IsdaYieldCurveInputs.of(
-              CurveName.of(convention.getName()),
-              points.stream().map(s -> s.getTenor().getPeriod()).toArray(Period[]::new),
-              points.stream().map(s -> s.getDate()).toArray(LocalDate[]::new),
-              points.stream().map(s -> s.getInstrumentType()).toArray(IsdaYieldCurveUnderlyingType[]::new),
-              points.stream().mapToDouble(s -> s.getRate()).toArray(),
-              convention));
-    }
-    return result;
-  }
-
-  // parse the M/S instrument type flag
-  private static IsdaYieldCurveUnderlyingType mapUnderlyingType(String type) {
-    switch (type) {
-      case "M":
-        return IsdaYieldCurveUnderlyingType.ISDA_MONEY_MARKET;
-      case "S":
-        return IsdaYieldCurveUnderlyingType.ISDA_SWAP;
-      default:
-        throw new IllegalStateException("Unknown underlying type, only M or S allowed: " + type);
-    }
-  }
-
-  //-------------------------------------------------------------------------
-  /**
-   * Stores the parsed data points.
-   */
-  private static class Point {
-    private final Tenor tenor;
-    private final LocalDate date;
-    private final IsdaYieldCurveUnderlyingType instrumentType;
-    private final double rate;
-
-    private Point(Tenor tenor, LocalDate baseDate, IsdaYieldCurveUnderlyingType instrumentType, double rate) {
-      this.tenor = tenor;
-      this.date = baseDate.plus(tenor.getPeriod());
-      this.instrumentType = instrumentType;
-      this.rate = rate;
+    // parse the M/S instrument type flag
+    private static IsdaYieldCurveUnderlyingType mapUnderlyingType(String type) {
+        switch (type) {
+            case "M":
+                return IsdaYieldCurveUnderlyingType.ISDA_MONEY_MARKET;
+            case "S":
+                return IsdaYieldCurveUnderlyingType.ISDA_SWAP;
+            default:
+                throw new IllegalStateException("Unknown underlying type, only M or S allowed: " + type);
+        }
     }
 
-    public Tenor getTenor() {
-      return tenor;
-    }
+    //-------------------------------------------------------------------------
 
-    public LocalDate getDate() {
-      return date;
-    }
+    /**
+     * Stores the parsed data points.
+     */
+    private static class Point {
+        private final Tenor tenor;
+        private final LocalDate date;
+        private final IsdaYieldCurveUnderlyingType instrumentType;
+        private final double rate;
 
-    public IsdaYieldCurveUnderlyingType getInstrumentType() {
-      return instrumentType;
-    }
+        private Point(Tenor tenor, LocalDate baseDate, IsdaYieldCurveUnderlyingType instrumentType, double rate) {
+            this.tenor = tenor;
+            this.date = baseDate.plus(tenor.getPeriod());
+            this.instrumentType = instrumentType;
+            this.rate = rate;
+        }
 
-    public double getRate() {
-      return rate;
+        public Tenor getTenor() {
+            return tenor;
+        }
+
+        public LocalDate getDate() {
+            return date;
+        }
+
+        public IsdaYieldCurveUnderlyingType getInstrumentType() {
+            return instrumentType;
+        }
+
+        public double getRate() {
+            return rate;
+        }
     }
-  }
 
 }

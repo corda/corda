@@ -36,11 +36,11 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
     // incrementally build list of root entities (for later use in Sort parsing)
     private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
     private val aggregateExpressions = mutableListOf<Expression<*>>()
-    private val commonPredicates = mutableMapOf<Pair<String,Operator>, Predicate>()   // schema attribute Name, operator -> predicate
+    private val commonPredicates = mutableMapOf<Pair<String, Operator>, Predicate>()   // schema attribute Name, operator -> predicate
 
     var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
 
-    override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria) : Collection<Predicate> {
+    override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate> {
         log.trace { "Parsing VaultQueryCriteria: $criteria" }
         val predicateSet = mutableSetOf<Predicate>()
 
@@ -48,7 +48,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         criteria.softLockingCondition?.let {
             val softLocking = criteria.softLockingCondition
             val type = softLocking!!.type
-            when(type) {
+            when (type) {
                 QueryCriteria.SoftLockingType.UNLOCKED_ONLY ->
                     predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
                 QueryCriteria.SoftLockingType.LOCKED_ONLY ->
@@ -56,7 +56,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED -> {
                     require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
                     predicateSet.add(criteriaBuilder.or(vaultStates.get<String>("lockId").isNull,
-                                                        vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                            vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
                 }
                 QueryCriteria.SoftLockingType.SPECIFIED -> {
                     require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
@@ -154,7 +154,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
     }
 
     private fun <O> parseExpression(entityRoot: Root<O>, expression: CriteriaExpression<O, Boolean>, predicateSet: MutableSet<Predicate>) {
-        if (expression is CriteriaExpression.AggregateFunctionExpression<O,*>) {
+        if (expression is CriteriaExpression.AggregateFunctionExpression<O, *>) {
             parseAggregateFunction(entityRoot, expression)
         } else {
             predicateSet.add(parseExpression(entityRoot, expression) as Predicate)
@@ -221,7 +221,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
     }
 
-    override fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria) : Collection<Predicate> {
+    override fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria): Collection<Predicate> {
         log.trace { "Parsing FungibleAssetQueryCriteria: $criteria" }
 
         val predicateSet = mutableSetOf<Predicate>()
@@ -265,7 +265,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         return predicateSet
     }
 
-    override fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria) : Collection<Predicate> {
+    override fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria): Collection<Predicate> {
         log.trace { "Parsing LinearStateQueryCriteria: $criteria" }
 
         val predicateSet = mutableSetOf<Predicate>()
@@ -314,8 +314,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
             // resolve general criteria expressions
             parseExpression(entityRoot, criteria.expression, predicateSet)
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             e.message?.let { message ->
                 if (message.contains("Not an entity"))
                     throw VaultQueryException("""
@@ -386,8 +385,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::stateStatus.name}] value $existingStatus with ${criteria.status}")
                     commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status))
                 }
-            }
-            else {
+            } else {
                 commonPredicates.put(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status))
             }
         }
@@ -417,7 +415,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         sorting.columns.map { (sortAttribute, direction) ->
             val (entityStateClass, entityStateAttributeParent, entityStateAttributeChild) =
-                    when(sortAttribute) {
+                    when (sortAttribute) {
                         is SortAttribute.Standard -> parse(sortAttribute.attribute)
                         is SortAttribute.Custom -> Triple(sortAttribute.entityStateClass, sortAttribute.entityStateColumnName, null)
                     }
@@ -451,8 +449,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
     }
 
     private fun parse(sortAttribute: Sort.Attribute): Triple<Class<out PersistentState>, String, String?> {
-        val entityClassAndColumnName : Triple<Class<out PersistentState>, String, String?> =
-                when(sortAttribute) {
+        val entityClassAndColumnName: Triple<Class<out PersistentState>, String, String?> =
+                when (sortAttribute) {
                     is Sort.CommonStateAttribute -> {
                         Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
                     }

@@ -402,7 +402,8 @@ class DeserializeSimpleTypesTests {
     @Test
     fun arrayOfArrayOfInt() {
         class C(val c: Array<Array<Int>>)
-        val c = C (arrayOf (arrayOf(1,2,3), arrayOf(4,5,6)))
+
+        val c = C(arrayOf(arrayOf(1, 2, 3), arrayOf(4, 5, 6)))
 
         val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
         val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
@@ -421,7 +422,8 @@ class DeserializeSimpleTypesTests {
     @Test
     fun arrayOfIntArray() {
         class C(val c: Array<IntArray>)
-        val c = C (arrayOf (IntArray(3), IntArray(3)))
+
+        val c = C(arrayOf(IntArray(3), IntArray(3)))
         c.c[0][0] = 1; c.c[0][1] = 2; c.c[0][2] = 3
         c.c[1][0] = 4; c.c[1][1] = 5; c.c[1][2] = 6
 
@@ -444,22 +446,32 @@ class DeserializeSimpleTypesTests {
         class C(val c: Array<Array<IntArray>>)
 
         val c = C(arrayOf(arrayOf(IntArray(3), IntArray(3), IntArray(3)),
-                          arrayOf(IntArray(3), IntArray(3), IntArray(3)),
-                          arrayOf(IntArray(3), IntArray(3), IntArray(3))))
+                arrayOf(IntArray(3), IntArray(3), IntArray(3)),
+                arrayOf(IntArray(3), IntArray(3), IntArray(3))))
 
-        for (i in 0..2) { for (j in 0..2) { for (k in 0..2) { c.c[i][j][k] = i + j + k } } }
+        for (i in 0..2) {
+            for (j in 0..2) {
+                for (k in 0..2) {
+                    c.c[i][j][k] = i + j + k
+                }
+            }
+        }
 
         val serialisedC = TestSerializationOutput(VERBOSE, sf1).serialize(c)
         val deserializedC = DeserializationInput(sf1).deserialize(serialisedC)
 
-        for (i in 0..2) { for (j in 0..2) { for (k in 0..2) {
-            assertEquals(c.c[i][j][k], deserializedC.c[i][j][k])
-        }}}
+        for (i in 0..2) {
+            for (j in 0..2) {
+                for (k in 0..2) {
+                    assertEquals(c.c[i][j][k], deserializedC.c[i][j][k])
+                }
+            }
+        }
     }
 
     @Test
     fun nestedRepeatedTypes() {
-        class A(val a : A?, val b: Int)
+        class A(val a: A?, val b: Int)
 
         var a = A(A(A(A(A(null, 1), 2), 3), 4), 5)
 

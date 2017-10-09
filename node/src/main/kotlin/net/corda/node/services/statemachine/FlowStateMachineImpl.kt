@@ -42,7 +42,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
                               override val flowInitiator: FlowInitiator,
-                              // Store the Party rather than the full cert path with PartyAndCertificate
+        // Store the Party rather than the full cert path with PartyAndCertificate
                               val ourIdentity: Party) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
 
     companion object {
@@ -265,7 +265,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // This is a hack to allow cash app access list of permitted issuer currency.
         // TODO: replace this with cordapp configuration.
         val config = serviceHub.configuration as? FullNodeConfiguration
-        val permissionGranted = config?.extraAdvertisedServiceIds?.contains(permissionName) ?: true
+        val permissionGranted = config?.extraAdvertisedServiceIds?.contains(permissionName) != false
         val checkPermissionEvent = FlowPermissionAuditEvent(
                 serviceHub.clock.instant(),
                 flowInitiator,
@@ -482,7 +482,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun suspend(ioRequest: FlowIORequest) {
         // We have to pass the thread local database transaction across via a transient field as the fiber park
         // swaps them out.
-        txTrampoline =  DatabaseTransactionManager.setThreadLocalTx(null)
+        txTrampoline = DatabaseTransactionManager.setThreadLocalTx(null)
         if (ioRequest is WaitingRequest)
             waitingForResponse = ioRequest
 
@@ -541,28 +541,30 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 }
 
-val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out FlowLogic<*>>> get() {
-    var current: Class<*> = this
-    var found: Pair<Int, Class<out FlowLogic<*>>>? = null
-    while (true) {
-        val annotation = current.getDeclaredAnnotation(InitiatingFlow::class.java)
-        if (annotation != null) {
-            if (found != null) throw IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated once")
-            require(annotation.version > 0) { "Flow versions have to be greater or equal to 1" }
-            found = annotation.version to uncheckedCast(current)
+val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out FlowLogic<*>>>
+    get() {
+        var current: Class<*> = this
+        var found: Pair<Int, Class<out FlowLogic<*>>>? = null
+        while (true) {
+            val annotation = current.getDeclaredAnnotation(InitiatingFlow::class.java)
+            if (annotation != null) {
+                if (found != null) throw IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated once")
+                require(annotation.version > 0) { "Flow versions have to be greater or equal to 1" }
+                found = annotation.version to uncheckedCast(current)
+            }
+            current = current.superclass
+                    ?: return found
+                    ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
+                    "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
         }
-        current = current.superclass
-            ?: return found
-            ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
-                "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
     }
-}
 
-val Class<out FlowLogic<*>>.appName: String get() {
-    val jarFile = Paths.get(protectionDomain.codeSource.location.toURI())
-    return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
-        jarFile.fileName.toString().removeSuffix(".jar")
-    } else {
-        "<unknown>"
+val Class<out FlowLogic<*>>.appName: String
+    get() {
+        val jarFile = Paths.get(protectionDomain.codeSource.location.toURI())
+        return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
+            jarFile.fileName.toString().removeSuffix(".jar")
+        } else {
+            "<unknown>"
+        }
     }
-}

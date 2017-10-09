@@ -2,10 +2,12 @@ package net.corda.sandbox.visitors;
 
 import net.corda.sandbox.WhitelistClassLoader;
 import net.corda.sandbox.CandidacyStatus;
+
 import java.util.Arrays;
 
 import net.corda.sandbox.CandidateMethod;
 import net.corda.sandbox.Utils;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,6 +16,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import static org.objectweb.asm.Opcodes.*;
 
 /**
@@ -57,7 +60,7 @@ public final class WhitelistCheckingClassVisitor extends ClassVisitor {
     /**
      * We initially take the method passed in and store an internal representation of
      * the method signature in the our CandidacyStatus working set.
-     *
+     * <p>
      * We then get an ASM MethodVisitor (which can read the byte code of the method) and pass that to our
      * custom method visitor which perform additional checks.
      *
@@ -66,7 +69,7 @@ public final class WhitelistCheckingClassVisitor extends ClassVisitor {
      * @param desc
      * @param signature
      * @param exceptions
-     * @return 
+     * @return
      */
     @Override
     public MethodVisitor visitMethod(final int access, final String name, final String desc, final String signature, final String[] exceptions) {
@@ -77,7 +80,7 @@ public final class WhitelistCheckingClassVisitor extends ClassVisitor {
         // Force new access control flags - for now just strictfp for deterministic
         // compliance to IEEE 754
         final int maskedAccess = access | ACC_STRICT;
-        
+
         final String internalName = classname + "." + name + ":" + desc;
         internalMethodNames.add(internalName);
         candidacyStatus.putIfAbsent(internalName);
@@ -151,10 +154,10 @@ public final class WhitelistCheckingClassVisitor extends ClassVisitor {
     }
 
     /**
-     * Take the name of a class and attempts to load it using a WLCL. 
-     * 
+     * Take the name of a class and attempts to load it using a WLCL.
+     *
      * @param qualifiedClassname
-     * @return 
+     * @return
      */
     CandidateMethod.State resolveState(final String qualifiedClassname) {
         Class<?> clz = null;

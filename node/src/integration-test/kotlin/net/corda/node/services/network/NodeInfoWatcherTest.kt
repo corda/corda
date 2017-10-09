@@ -29,11 +29,13 @@ import kotlin.test.assertTrue
 
 class NodeInfoWatcherTest : NodeBasedTest() {
 
-    @Rule @JvmField var folder = TemporaryFolder()
+    @Rule
+    @JvmField
+    var folder = TemporaryFolder()
 
     lateinit var keyManagementService: KeyManagementService
     lateinit var nodeInfoPath: Path
-    val scheduler = TestScheduler();
+    val scheduler = TestScheduler()
     val testSubscriber = TestSubscriber<NodeInfo>()
 
     // Object under test

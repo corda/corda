@@ -247,7 +247,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.
-        @Suppress("unused") val place: WorldMapLocation get() = findMyLocation()!!
+        @Suppress("unused")
+        val place: WorldMapLocation
+            get() = findMyLocation()!!
 
         private var dbCloser: (() -> Any?)? = null
         override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T) = super.initialiseDatabasePersistence(schemaService) {
@@ -302,7 +304,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                 legalName = MOCK_NET_MAP.name,
                 notaryIdentity = null,
                 advertisedServices = arrayOf(),
-                entropyRoot  = BigInteger.valueOf(random63BitValue()),
+                entropyRoot = BigInteger.valueOf(random63BitValue()),
                 configOverrides = {},
                 start = true
         ).started!!.apply {

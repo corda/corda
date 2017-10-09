@@ -3,7 +3,6 @@ package net.corda.sandbox;
 import org.objectweb.asm.commons.Remapper;
 
 /**
- *
  * @author ben
  */
 public final class SandboxRemapper extends Remapper {

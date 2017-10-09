@@ -11,7 +11,6 @@ import java.util.*;
 import static org.junit.Assert.*;
 
 /**
- *
  * @author ben
  */
 public class DeterministicClassInstrumenterTest {
@@ -66,7 +65,7 @@ public class DeterministicClassInstrumenterTest {
 //        TestUtils.printBytes(basic);
         final int origOffset = TestUtils.findOffset(basic, originalSeq);
         final int tmfdOffset = TestUtils.findOffset(tfmd, tfmdSeq);
-        
+
         for (int i = 0; i < originalSeq.length; i++) {
             assertEquals(originalSeq[i], basic[origOffset + i]);
             assertEquals(tfmdSeq[i], tfmd[tmfdOffset + i]);

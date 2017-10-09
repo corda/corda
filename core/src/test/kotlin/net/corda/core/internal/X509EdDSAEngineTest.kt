@@ -15,11 +15,11 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class TestX509Key(algorithmId: AlgorithmId, key: BitArray) : X509Key() {
-   init {
-       this.algid = algorithmId
-       this.setKey(key)
-       this.encode()
-   }
+    init {
+        this.algid = algorithmId
+        this.setKey(key)
+        this.encode()
+    }
 }
 
 class X509EdDSAEngineTest {

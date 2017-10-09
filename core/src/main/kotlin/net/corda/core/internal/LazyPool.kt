@@ -27,6 +27,7 @@ class LazyPool<A>(
         STARTED,
         FINISHED
     }
+
     private val lifeCycle = LifeCycle(State.STARTED)
 
     private fun clearIfNeeded(instance: A): A {

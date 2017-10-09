@@ -65,8 +65,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
         identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY),
-                                                                  createIdentityService = { identitySvc },
-                                                                  customSchemas = setOf(CashSchemaV1, CommercialPaperSchemaV1, DummyLinearStateSchemaV1))
+                createIdentityService = { identitySvc },
+                customSchemas = setOf(CashSchemaV1, CommercialPaperSchemaV1, DummyLinearStateSchemaV1))
         database = databaseAndServices.first
         services = databaseAndServices.second
         notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
@@ -1064,7 +1064,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         }
         database.transaction {
             @Suppress("EXPECTED_CONDITION")
-            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, @Suppress("INTEGER_OVERFLOW")MAX_PAGE_SIZE + 1)  // overflow = -2147483648
+            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, @Suppress("INTEGER_OVERFLOW") MAX_PAGE_SIZE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
         }

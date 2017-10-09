@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author ben
  */
 public final class CostInstrumentingMethodVisitor extends GeneratorAdapter {
@@ -34,9 +33,10 @@ public final class CostInstrumentingMethodVisitor extends GeneratorAdapter {
     }
 
     /**
-     * This method replaces MONITORENTER / MONITOREXIT opcodes with POP - basically 
+     * This method replaces MONITORENTER / MONITOREXIT opcodes with POP - basically
      * stripping the synchronization out of any sandboxed code.
-     * @param opcode 
+     *
+     * @param opcode
      */
     @Override
     public void visitInsn(final int opcode) {
@@ -60,7 +60,7 @@ public final class CostInstrumentingMethodVisitor extends GeneratorAdapter {
      * For our purposes this is a NEWARRAY opcode.
      *
      * @param opcode
-     * @param operand 
+     * @param operand
      */
     @Override
     public void visitIntInsn(final int opcode, final int operand) {
@@ -103,11 +103,11 @@ public final class CostInstrumentingMethodVisitor extends GeneratorAdapter {
     /**
      * This method is called when visiting an opcode with a single operand, that
      * is a type (represented here as a String).
-     *
+     * <p>
      * For our purposes this is either a NEW opcode or a ANEWARRAY
      *
-     * @param opcode 
-     * @param type 
+     * @param opcode
+     * @param type
      */
     @Override
     public void visitTypeInsn(final int opcode, final String type) {

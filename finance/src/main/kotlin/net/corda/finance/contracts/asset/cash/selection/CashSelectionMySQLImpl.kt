@@ -29,4 +29,4 @@ class CashSelectionMySQLImpl : CashSelection {
                                                  withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
         TODO("MySQL cash selection not implemented")
     }
- }
+}

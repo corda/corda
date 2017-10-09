@@ -98,7 +98,7 @@ class WebServer internal constructor(private val webServerController: WebServerC
                 conn.connect()
                 conn.disconnect()
                 return url
-            } catch(e: IOException) {
+            } catch (e: IOException) {
             }
         }
         throw TimeoutException("Web server did not start within ${timeout.seconds} seconds")

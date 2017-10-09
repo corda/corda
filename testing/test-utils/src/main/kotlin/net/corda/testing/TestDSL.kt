@@ -274,7 +274,7 @@ data class TestLedgerDSLInterpreter private constructor(
             transactionLabel: String?,
             transactionBuilder: TransactionBuilder,
             dsl: TransactionDSL<TestTransactionDSLInterpreter>.() -> Unit
-    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, nonVerifiedTransactionWithLocations, fillTransaction =  true)
+    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, nonVerifiedTransactionWithLocations, fillTransaction = true)
 
     override fun tweak(
             dsl: LedgerDSL<TestTransactionDSLInterpreter,

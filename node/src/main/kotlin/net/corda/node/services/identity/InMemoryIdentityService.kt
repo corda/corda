@@ -30,6 +30,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     constructor(wellKnownIdentities: Iterable<PartyAndCertificate> = emptySet(),
                 confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
                 trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
+
     companion object {
         private val log = loggerFor<InMemoryIdentityService>()
     }
@@ -45,7 +46,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
-        keyToParties.putAll(identities.associateBy { it.owningKey } )
+        keyToParties.putAll(identities.associateBy { it.owningKey })
         principalToParties.putAll(identities.associateBy { it.name })
         confidentialIdentities.forEach { identity ->
             principalToParties.computeIfAbsent(identity.name) { identity }
@@ -94,6 +95,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
             null
         }
     }
+
     override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
     override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
         return wellKnownPartyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")

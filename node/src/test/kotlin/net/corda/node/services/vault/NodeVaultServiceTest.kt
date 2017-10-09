@@ -55,7 +55,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         setCordappPackages("net.corda.finance.contracts.asset")
         LogHelper.setLevel(NodeVaultService::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(BOC_KEY, DUMMY_CASH_ISSUER_KEY),
-                                                                  customSchemas = setOf(CashSchemaV1))
+                customSchemas = setOf(CashSchemaV1))
         database = databaseAndServices.first
         services = databaseAndServices.second
         issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOC_KEY)
@@ -195,7 +195,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
                     assertThat(vaultService.queryBy<Cash.State>(criteriaByLockId1).states).hasSize(3)
                 }
                 println("SOFT LOCK STATES #1 succeeded")
-            } catch(e: Throwable) {
+            } catch (e: Throwable) {
                 println("SOFT LOCK STATES #1 failed")
             } finally {
                 countDown.countDown()
@@ -211,7 +211,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
                     assertThat(vaultService.queryBy<Cash.State>(criteriaByLockId2).states).hasSize(3)
                 }
                 println("SOFT LOCK STATES #2 succeeded")
-            } catch(e: Throwable) {
+            } catch (e: Throwable) {
                 println("SOFT LOCK STATES #2 failed")
             } finally {
                 countDown.countDown()

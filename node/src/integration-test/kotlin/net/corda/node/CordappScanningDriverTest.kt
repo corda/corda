@@ -36,7 +36,7 @@ class CordappScanningDriverTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class ReceiveFlow(val otherParty: Party) :FlowLogic<String>() {
+    class ReceiveFlow(val otherParty: Party) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
     }

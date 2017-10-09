@@ -68,7 +68,7 @@ object RPCApi {
 
     val RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_REMOVED.name}' AND " +
-            "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
+                    "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
     val RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_ADDED.name}' AND " +
                     "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
@@ -141,7 +141,7 @@ object RPCApi {
                         val ids = ArrayList<ObservableId>()
                         val buffer = message.bodyBuffer
                         val numberOfIds = buffer.readInt()
-                        for (i in 1 .. numberOfIds) {
+                        for (i in 1..numberOfIds) {
                             ids.add(ObservableId(buffer.readLong()))
                         }
                         ObservablesClosed(ids)

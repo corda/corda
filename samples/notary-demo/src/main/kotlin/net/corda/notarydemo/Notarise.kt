@@ -31,7 +31,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val counterparty by lazy {
         val parties = rpc.networkMapSnapshot()
         parties.fold(ArrayList<PartyAndCertificate>()) { acc, elem ->
-            acc.addAll(elem.legalIdentitiesAndCerts.filter { it.name == BOB.name})
+            acc.addAll(elem.legalIdentitiesAndCerts.filter { it.name == BOB.name })
             acc
         }.single().party
     }

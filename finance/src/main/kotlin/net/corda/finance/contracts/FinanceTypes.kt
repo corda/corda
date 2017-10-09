@@ -202,7 +202,7 @@ enum class Frequency(val annualCompoundCount: Int, val offset: LocalDate.(Long) 
  * no staff are around to handle problems.
  */
 @CordaSerializable
-open class BusinessCalendar (val holidayDates: List<LocalDate>) {
+open class BusinessCalendar(val holidayDates: List<LocalDate>) {
     @CordaSerializable
     class UnknownCalendar(name: String) : FlowException("$name not found")
 

@@ -13,10 +13,10 @@ import java.util.*;
 public class RunShellCommand extends InteractiveShellCommand {
     @Command
     @Man(
-        "Runs a method from the CordaRPCOps interface, which is the same interface exposed to RPC clients.\n\n" +
+            "Runs a method from the CordaRPCOps interface, which is the same interface exposed to RPC clients.\n\n" +
 
-        "You can learn more about what commands are available by typing 'run' just by itself, or by\n" +
-        "consulting the developer guide at https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html"
+                    "You can learn more about what commands are available by typing 'run' just by itself, or by\n" +
+                    "consulting the developer guide at https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html"
     )
     @Usage("runs a method from the CordaRPCOps interface on the node.")
     public Object main(

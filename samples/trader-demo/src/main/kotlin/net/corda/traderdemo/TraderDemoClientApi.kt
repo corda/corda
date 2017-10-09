@@ -27,19 +27,21 @@ import java.util.*
  * Interface for communicating with nodes running the trader demo.
  */
 class TraderDemoClientApi(val rpc: CordaRPCOps) {
-    val cashCount: Long get() {
-        val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-        val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
-        return rpc.vaultQueryBy<Cash.State>(countCriteria).otherResults.single() as Long
-    }
+    val cashCount: Long
+        get() {
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
+            return rpc.vaultQueryBy<Cash.State>(countCriteria).otherResults.single() as Long
+        }
 
     val dollarCashBalance: Amount<Currency> get() = rpc.getCashBalance(USD)
 
-    val commercialPaperCount: Long get() {
-        val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-        val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
-        return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
-    }
+    val commercialPaperCount: Long
+        get() {
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
+            return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
+        }
 
     fun runIssuer(amount: Amount<Currency>, buyerName: CordaX500Name, sellerName: CordaX500Name) {
         val ref = OpaqueBytes.of(1)

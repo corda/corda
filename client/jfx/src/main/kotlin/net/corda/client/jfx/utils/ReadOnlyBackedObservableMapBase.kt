@@ -50,18 +50,19 @@ open class ReadOnlyBackedObservableMapBase<K, A, B> : ObservableMap<K, A> {
 
     override fun isEmpty() = backingMap.isEmpty()
 
-    override val entries: MutableSet<MutableMap.MutableEntry<K, A>> get() = backingMap.entries.fold(mutableSetOf()) { set, entry ->
-        set.add(object : MutableMap.MutableEntry<K, A> {
-            override var value: A = entry.value.first
-            override val key = entry.key
-            override fun setValue(newValue: A): A {
-                val old = value
-                value = newValue
-                return old
-            }
-        })
-        set
-    }
+    override val entries: MutableSet<MutableMap.MutableEntry<K, A>>
+        get() = backingMap.entries.fold(mutableSetOf()) { set, entry ->
+            set.add(object : MutableMap.MutableEntry<K, A> {
+                override var value: A = entry.value.first
+                override val key = entry.key
+                override fun setValue(newValue: A): A {
+                    val old = value
+                    value = newValue
+                    return old
+                }
+            })
+            set
+        }
     override val keys: MutableSet<K> get() = backingMap.keys
     override val values: MutableCollection<A> get() = ArrayList(backingMap.values.map { it.first })
 

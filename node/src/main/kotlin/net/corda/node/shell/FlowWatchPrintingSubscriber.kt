@@ -59,7 +59,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
     }
 
     private fun createStateMachinesTable(): TableElement {
-        val table = TableElement(1,2,1,2).overflow(Overflow.HIDDEN).rightCellPadding(1)
+        val table = TableElement(1, 2, 1, 2).overflow(Overflow.HIDDEN).rightCellPadding(1)
         val header = RowElement(true).add("Id", "Flow name", "Initiator", "Status").style(Decoration.bold.fg(Color.black).bg(Color.white))
         table.add(header)
         return table
@@ -102,12 +102,12 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
     }
 
     private fun formatFlowId(flowId: StateMachineRunId): String {
-        return flowId.toString().removeSurrounding("[","]")
+        return flowId.toString().removeSurrounding("[", "]")
     }
 
     private fun formatFlowInitiator(flowInitiator: FlowInitiator): String {
         return when (flowInitiator) {
-            is FlowInitiator.Scheduled ->  flowInitiator.scheduledState.ref.toString()
+            is FlowInitiator.Scheduled -> flowInitiator.scheduledState.ref.toString()
             is FlowInitiator.Shell -> "Shell" // TODO Change when we will have more information on shell user.
             is FlowInitiator.Peer -> flowInitiator.party.name.organisation
             is FlowInitiator.RPC -> "RPC: " + flowInitiator.username
@@ -117,7 +117,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
 
     private fun formatFlowResult(flowResult: Try<*>): String {
         fun successFormat(value: Any?): String {
-            return when(value) {
+            return when (value) {
                 is SignedTransaction -> "Tx ID: " + value.id.toString()
                 is kotlin.Unit -> "No return value"
                 null -> "No return value"

@@ -1,4 +1,5 @@
 @file:JvmName("ConfigUtilities")
+
 package net.corda.nodeapi.config
 
 import com.typesafe.config.Config

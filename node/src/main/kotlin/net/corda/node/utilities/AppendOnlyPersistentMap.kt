@@ -9,9 +9,9 @@ import java.util.*
  * behaviour is unpredictable! There is a best-effort check for double inserts, but this should *not* be relied on, so
  * ONLY USE THIS IF YOUR TABLE IS APPEND-ONLY
  */
-class AppendOnlyPersistentMap<K, V, E, out EK> (
+class AppendOnlyPersistentMap<K, V, E, out EK>(
         val toPersistentEntityKey: (K) -> EK,
-        val fromPersistentEntity: (E) -> Pair<K,V>,
+        val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
         val persistentEntityClass: Class<E>,
         cacheBound: Long = 1024
@@ -48,10 +48,11 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean, store: (K,V) -> V?): Boolean {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean, store: (K, V) -> V?): Boolean {
         var insertionAttempt = false
         var isUnique = true
-        val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
+        val existingInCache = cache.get(key) {
+            // Thread safe, if multiple threads may wait until the first one has loaded.
             insertionAttempt = true
             // Key wasn't in the cache and might be in the underlying storage.
             // Depending on 'store' method, this may insert without checking key duplication or it may avoid inserting a duplicated key.
@@ -85,8 +86,8 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw an error from the underlying storage.
      */
     operator fun set(key: K, value: V) =
-            set(key, value, logWarning = false) {
-                k, v -> DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
+            set(key, value, logWarning = false) { k, v ->
+                DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
                 null
             }
 
@@ -96,8 +97,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean =
-            set(key, value, logWarning) {
-                k, v ->
+            set(key, value, logWarning) { k, v ->
                 val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(k))
                 if (existingEntry == null) {
                     DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
@@ -107,7 +107,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
                 }
             }
 
-    fun putAll(entries: Map<K,V>) {
+    fun putAll(entries: Map<K, V>) {
         entries.forEach {
             set(it.key, it.value)
         }

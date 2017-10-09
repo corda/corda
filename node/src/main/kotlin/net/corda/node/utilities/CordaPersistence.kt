@@ -24,14 +24,14 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
 class CordaPersistence(var dataSource: HikariDataSource, private val schemaService: SchemaService,
-                       private val createIdentityService: ()-> IdentityService, databaseProperties: Properties): Closeable {
+                       private val createIdentityService: () -> IdentityService, databaseProperties: Properties) : Closeable {
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
-   val hibernateConfig: HibernateConfiguration by lazy {
+    val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             HibernateConfiguration(schemaService, databaseProperties, createIdentityService)
         }
-   }
+    }
 
     val entityManagerFactory: SessionFactory by lazy {
         transaction {
@@ -70,8 +70,7 @@ class CordaPersistence(var dataSource: HikariDataSource, private val schemaServi
 
         return if (outer != null) {
             outer.statement()
-        }
-        else {
+        } else {
             inTopLevelTransaction(transactionIsolation, repetitionAttempts, statement)
         }
     }
@@ -84,19 +83,16 @@ class CordaPersistence(var dataSource: HikariDataSource, private val schemaServi
                 val answer = transaction.statement()
                 transaction.commit()
                 return answer
-            }
-            catch (e: SQLException) {
+            } catch (e: SQLException) {
                 transaction.rollback()
                 repetitions++
                 if (repetitions >= repetitionAttempts) {
                     throw e
                 }
-            }
-            catch (e: Throwable) {
+            } catch (e: Throwable) {
                 transaction.rollback()
                 throw e
-            }
-            finally {
+            } finally {
                 transaction.close()
             }
         }
@@ -170,7 +166,7 @@ private class DatabaseTransactionWrappingSubscriber<U>(val db: CordaPersistence?
 }
 
 // A subscriber that wraps another but does not pass on observations to it.
-private class NoOpSubscriber<U>(t: Subscriber<in U>): Subscriber<U>(t) {
+private class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
     override fun onCompleted() {
     }
 

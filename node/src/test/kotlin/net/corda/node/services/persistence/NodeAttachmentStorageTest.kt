@@ -99,18 +99,18 @@ class NodeAttachmentStorageTest {
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
         val id =
-        database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
-            val id = testJar.read { storage.importAttachment(it) }
+                database.transaction {
+                    val storage = NodeAttachmentService(MetricRegistry())
+                    val id = testJar.read { storage.importAttachment(it) }
 
-            // Corrupt the file in the store.
-            val bytes = testJar.readAll()
-            val corruptBytes = "arggghhhh".toByteArray()
-            System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
-            DatabaseTransactionManager.current().session.merge(corruptAttachment)
-            id
-        }
+                    // Corrupt the file in the store.
+                    val bytes = testJar.readAll()
+                    val corruptBytes = "arggghhhh".toByteArray()
+                    System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
+                    val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+                    DatabaseTransactionManager.current().session.merge(corruptAttachment)
+                    id
+                }
         database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
             val e = assertFailsWith<NodeAttachmentService.HashMismatchException> {

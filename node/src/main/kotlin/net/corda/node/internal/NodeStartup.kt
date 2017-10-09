@@ -110,14 +110,14 @@ open class NodeStartup(val args: Array<String>) {
             startedNode.internals.startupComplete.then {
                 try {
                     InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, startedNode)
-                } catch(e: Throwable) {
+                } catch (e: Throwable) {
                     logger.error("Shell failed to start", e)
                 }
             }
         },
-        {
-            th -> logger.error("Unexpected exception during registration", th)
-        })
+                { th ->
+                    logger.error("Unexpected exception during registration", th)
+                })
         startedNode.internals.run()
     }
 

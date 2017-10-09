@@ -590,9 +590,9 @@ class CashTests : TestDependencyInjectionBase() {
     fun generateSimpleDirectSpend() {
         initialiseTestSerialization()
         val wtx =
-           database.transaction {
-                makeSpend(100.DOLLARS, THEIR_IDENTITY_1)
-            }
+                database.transaction {
+                    makeSpend(100.DOLLARS, THEIR_IDENTITY_1)
+                }
         database.transaction {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             assertEquals(vaultState.ref, wtx.inputs[0])
@@ -617,9 +617,9 @@ class CashTests : TestDependencyInjectionBase() {
     fun generateSimpleSpendWithChange() {
         initialiseTestSerialization()
         val wtx =
-            database.transaction {
-                makeSpend(10.DOLLARS, THEIR_IDENTITY_1)
-            }
+                database.transaction {
+                    makeSpend(10.DOLLARS, THEIR_IDENTITY_1)
+                }
         database.transaction {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             val changeAmount = 90.DOLLARS `issued by` defaultIssuer
@@ -643,9 +643,9 @@ class CashTests : TestDependencyInjectionBase() {
     fun generateSpendWithTwoInputs() {
         initialiseTestSerialization()
         val wtx =
-            database.transaction {
-                makeSpend(500.DOLLARS, THEIR_IDENTITY_1)
-            }
+                database.transaction {
+                    makeSpend(500.DOLLARS, THEIR_IDENTITY_1)
+                }
         database.transaction {
             val vaultState0 = vaultStatesUnconsumed.elementAt(0)
             val vaultState1 = vaultStatesUnconsumed.elementAt(1)
@@ -660,11 +660,11 @@ class CashTests : TestDependencyInjectionBase() {
     fun generateSpendMixedDeposits() {
         initialiseTestSerialization()
         val wtx =
-            database.transaction {
-                val wtx = makeSpend(580.DOLLARS, THEIR_IDENTITY_1)
-                assertEquals(3, wtx.inputs.size)
-                wtx
-            }
+                database.transaction {
+                    val wtx = makeSpend(580.DOLLARS, THEIR_IDENTITY_1)
+                    assertEquals(3, wtx.inputs.size)
+                    wtx
+                }
         database.transaction {
             val vaultState0: StateAndRef<Cash.State> = vaultStatesUnconsumed.elementAt(0)
             val vaultState1: StateAndRef<Cash.State> = vaultStatesUnconsumed.elementAt(1)
@@ -796,7 +796,7 @@ class CashTests : TestDependencyInjectionBase() {
             transaction {
                 attachment(Cash.PROGRAM_ID)
                 input("MEGA_CORP cash")
-                output(Cash.PROGRAM_ID, "MEGA_CORP cash 2", "MEGA_CORP cash".output<Cash.State>().copy(owner = AnonymousParty(ALICE_PUBKEY)) )
+                output(Cash.PROGRAM_ID, "MEGA_CORP cash 2", "MEGA_CORP cash".output<Cash.State>().copy(owner = AnonymousParty(ALICE_PUBKEY)))
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                 this.verifies()
             }

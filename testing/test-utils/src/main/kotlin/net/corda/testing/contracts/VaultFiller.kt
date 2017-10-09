@@ -32,7 +32,7 @@ import java.util.*
 @JvmOverloads
 fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
                                      participants: List<AbstractParty> = emptyList(),
-                                     notary: Party = DUMMY_NOTARY) : Vault<DealState> {
+                                     notary: Party = DUMMY_NOTARY): Vault<DealState> {
     val myKey: PublicKey = myInfo.chooseIdentity().owningKey
     val me = AnonymousParty(myKey)
 
@@ -63,7 +63,7 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
                                             linearString: String = "",
                                             linearNumber: Long = 0L,
                                             linearBoolean: Boolean = false,
-                                            linearTimestamp: Instant = now()) : Vault<LinearState> {
+                                            linearTimestamp: Instant = now()): Vault<LinearState> {
     val myKey: PublicKey = myInfo.chooseIdentity().owningKey
     val me = AnonymousParty(myKey)
     val issuerKey = DUMMY_NOTARY_KEY
@@ -196,7 +196,7 @@ fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int,
 fun <T : LinearState> ServiceHub.consume(states: List<StateAndRef<T>>, notary: Party) {
     // Create a txn consuming different contract types
     states.forEach {
-        val builder =  TransactionBuilder(notary = notary).apply {
+        val builder = TransactionBuilder(notary = notary).apply {
             addInputState(it)
             addCommand(dummyCommand(notary.owningKey))
         }
@@ -238,7 +238,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(states: List<StateAndRef<T>>,
 fun ServiceHub.consumeDeals(dealStates: List<StateAndRef<DealState>>, notary: Party) = consume(dealStates, notary)
 fun ServiceHub.consumeLinearStates(linearStates: List<StateAndRef<LinearState>>, notary: Party) = consume(linearStates, notary)
 fun ServiceHub.evolveLinearStates(linearStates: List<StateAndRef<LinearState>>, notary: Party) = consumeAndProduce(linearStates, notary)
-fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>, notary: Party) : StateAndRef<LinearState> = consumeAndProduce(linearState, notary)
+fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>, notary: Party): StateAndRef<LinearState> = consumeAndProduce(linearState, notary)
 
 /**
  * Consume cash, sending any change to the default identity for this node. Only suitable for use in test scenarios,
@@ -254,7 +254,7 @@ fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE, notary
  */
 @JvmOverloads
 fun ServiceHub.consumeCash(amount: Amount<Currency>, ourIdentity: PartyAndCertificate, to: Party = CHARLIE, notary: Party): Vault.Update<ContractState> {
-    val update =  vaultService.rawUpdates.toFuture()
+    val update = vaultService.rawUpdates.toFuture()
     val services = this
 
     // A tx that spends our money.

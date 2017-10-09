@@ -118,6 +118,7 @@ data class FlowPermissionAuditEvent(override val timestamp: Instant,
                                     override val flowId: StateMachineRunId,
                                     val permissionRequested: String,
                                     val permissionGranted: Boolean) : AuditEvent(), FlowAuditInfo
+
 /**
  * Minimal interface for recording audit information within the system. The AuditService is assumed to be available only
  * to trusted internal components via ServiceHubInternal.

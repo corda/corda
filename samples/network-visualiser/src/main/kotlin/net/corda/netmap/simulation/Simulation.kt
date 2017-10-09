@@ -162,8 +162,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     // These are used from the network visualiser tool.
     private val _allFlowSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()
     private val _doneSteps = PublishSubject.create<Collection<SimulatedNode>>()
-    @Suppress("unused") val allFlowSteps: Observable<Pair<SimulatedNode, ProgressTracker.Change>> = _allFlowSteps
-    @Suppress("unused") val doneSteps: Observable<Collection<SimulatedNode>> = _doneSteps
+    @Suppress("unused")
+    val allFlowSteps: Observable<Pair<SimulatedNode, ProgressTracker.Change>> = _allFlowSteps
+    @Suppress("unused")
+    val doneSteps: Observable<Collection<SimulatedNode>> = _doneSteps
 
     private var pumpCursor = 0
 

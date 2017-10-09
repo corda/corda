@@ -79,6 +79,7 @@ class RPCClientProxyHandler(
         STARTED,
         FINISHED
     }
+
     private val lifeCycle = LifeCycle(State.UNSTARTED)
 
     private companion object {

@@ -22,6 +22,7 @@ class InMemoryStateMachineRecordedTransactionMappingStorage : StateMachineRecord
         val stateMachineTransactionMap = HashMap<StateMachineRunId, HashSet<SecureHash>>()
         val updates = PublishSubject.create<StateMachineTransactionMapping>()!!
     }
+
     private val mutex = ThreadBox(InnerState())
 
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {

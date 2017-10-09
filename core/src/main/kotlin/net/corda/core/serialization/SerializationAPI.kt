@@ -115,6 +115,7 @@ interface SerializationContext {
      * The use case we are serializing or deserializing for.  See [UseCase].
      */
     val useCase: UseCase
+
     /**
      * Helper method to return a new context based on this context with the property added.
      */

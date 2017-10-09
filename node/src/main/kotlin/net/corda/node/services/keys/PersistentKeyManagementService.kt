@@ -48,8 +48,10 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toBase58String() },
-                    fromPersistentEntity = { Pair(parsePublicKeyBase58(it.publicKey),
-                            it.privateKey.deserialize<PrivateKey>(context = SerializationDefaults.STORAGE_CONTEXT)) },
+                    fromPersistentEntity = {
+                        Pair(parsePublicKeyBase58(it.publicKey),
+                                it.privateKey.deserialize<PrivateKey>(context = SerializationDefaults.STORAGE_CONTEXT))
+                    },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey().apply {
                             publicKey = key.toBase58String()
@@ -81,7 +83,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate =
             freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
 
-    private fun getSigner(publicKey: PublicKey): ContentSigner  = getSigner(getSigningKeyPair(publicKey))
+    private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
 
     //It looks for the PublicKey in the (potentially) CompositeKey that is ours, and then returns the associated PrivateKey to use in signing
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {

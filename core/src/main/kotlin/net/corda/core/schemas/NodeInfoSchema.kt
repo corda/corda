@@ -31,8 +31,8 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "legal_identities_certs")
             @ManyToMany(cascade = arrayOf(CascadeType.ALL))
             @JoinTable(name = "link_nodeinfo_party",
-                    joinColumns = arrayOf(JoinColumn(name="node_info_id")),
-                    inverseJoinColumns = arrayOf(JoinColumn(name="party_name")))
+                    joinColumns = arrayOf(JoinColumn(name = "node_info_id")),
+                    inverseJoinColumns = arrayOf(JoinColumn(name = "party_name")))
             val legalIdentitiesAndCerts: List<DBPartyAndCertificate>,
 
             @Column(name = "platform_version")
@@ -64,14 +64,15 @@ object NodeInfoSchemaV1 : MappedSchema(
 
     @Entity
     data class DBHostAndPort(
-                @EmbeddedId
-                private val pk: PKHostAndPort
+            @EmbeddedId
+            private val pk: PKHostAndPort
     ) {
         companion object {
             fun fromHostAndPort(hostAndPort: NetworkHostAndPort) = DBHostAndPort(
                     PKHostAndPort(hostAndPort.host, hostAndPort.port)
             )
         }
+
         fun toHostAndPort(): NetworkHostAndPort {
             return NetworkHostAndPort(this.pk.host!!, this.pk.port!!)
         }

@@ -99,7 +99,7 @@ class NodeInfoWatcher(private val nodePath: Path,
         return result
     }
 
-    private fun processFile(file: Path) : NodeInfo? {
+    private fun processFile(file: Path): NodeInfo? {
         try {
             logger.info("Reading NodeInfo from file: $file")
             val signedData = file.readAll().deserialize<SignedData<NodeInfo>>()

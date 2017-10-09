@@ -28,8 +28,7 @@ class ServiceController(resourceName: String = "/services.conf") : Controller() 
                         val service = line.split(":").map { it.trim() }
                         if (service.size != 2) {
                             log.warning("Encountered corrupted line '$line' while reading services from config: $url")
-                        }
-                        else {
+                        } else {
                             map[service[1]] = service[0]
                             log.info("Supports: $service")
                         }

@@ -78,14 +78,15 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
         return FlowStackSnapshot(Instant.now(), flowClass.name, frames)
     }
 
-    private val StackTraceElement.instrumentedAnnotation: Instrumented? get() {
-        Class.forName(className).methods.forEach {
-            if (it.name == methodName && it.isAnnotationPresent(Instrumented::class.java)) {
-                return it.getAnnotation(Instrumented::class.java)
+    private val StackTraceElement.instrumentedAnnotation: Instrumented?
+        get() {
+            Class.forName(className).methods.forEach {
+                if (it.name == methodName && it.isAnnotationPresent(Instrumented::class.java)) {
+                    return it.getAnnotation(Instrumented::class.java)
+                }
             }
+            return null
         }
-        return null
-    }
 
     private fun removeConstructorStackTraceElements(stackTrace: List<StackTraceElement>): List<StackTraceElement> {
         val newStackTrace = ArrayList<StackTraceElement>()
