@@ -47,12 +47,12 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         /**
          * Generate the determinstic data blob the confidential identity's key holder signs to indicate they want to
          * represent the subject named in the X.509 certificate. Note that this is never actually sent between nodes,
-         * but only the signature is sent. The blob is built independently and the received signature verified against
-         * the expected blob.
+         * but only the signature is sent. The blob is built independently on each node and the received signature
+         * verified against the expected blob, rather than exchanging the blob.
          */
         fun buildDataToSign(confidentialIdentity: PartyAndCertificate): ByteArray {
-            val certReqInfo = CertificateOwnershipAssertion(confidentialIdentity.name, confidentialIdentity.owningKey)
-            return certReqInfo.serialize().bytes
+            val certOwnerAssert = CertificateOwnershipAssertion(confidentialIdentity.name, confidentialIdentity.owningKey)
+            return certOwnerAssert.serialize().bytes
         }
 
         @Throws(SwapIdentitiesException::class)
@@ -113,6 +113,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
  * the key represents the named entity), but protects against a certificate authority incorrectly claiming others'
  * keys.
  */
+@CordaSerializable
 data class CertificateOwnershipAssertion(val x500Name: CordaX500Name,
                                          val publicKey: PublicKey)
 
