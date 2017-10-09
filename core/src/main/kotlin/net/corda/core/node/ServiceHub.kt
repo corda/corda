@@ -7,10 +7,6 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.internal.toMultiMap
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -21,10 +17,23 @@ import java.sql.Connection
 import java.time.Clock
 
 /**
+ * Part of [ServiceHub].
+ */
+interface StateLoader {
+    /**
+     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    @Throws(TransactionResolutionException::class)
+    fun loadState(stateRef: StateRef): TransactionState<*>
+}
+
+/**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
  * forms ready for verification.
  */
-interface ServicesForResolution {
+interface ServicesForResolution : StateLoader {
     /**
      * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
      * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
@@ -37,14 +46,6 @@ interface ServicesForResolution {
 
     /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
     val cordappProvider: CordappProvider
-
-    /**
-     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if the [StateRef] points to a non-existent transaction.
-     */
-    @Throws(TransactionResolutionException::class)
-    fun loadState(stateRef: StateRef): TransactionState<*>
 }
 
 /**
@@ -153,19 +154,6 @@ interface ServiceHub : ServicesForResolution {
      */
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
         recordTransactions(true, txs)
-    }
-
-    /**
-     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
-     */
-    @Throws(TransactionResolutionException::class)
-    override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return if (stx.isNotaryChangeTransaction()) {
-            stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
-        } else stx.tx.outputs[stateRef.index]
     }
 
     /**

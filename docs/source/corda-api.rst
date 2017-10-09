@@ -1,7 +1,7 @@
-Corda modules
-=============
+Corda API
+=========
 
-This section describes the APIs that are available for the development of CorDapps:
+The following are the core APIs that are used in the development of CorDapps:
 
 .. toctree::
    :maxdepth: 1

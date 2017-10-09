@@ -1,8 +1,13 @@
 package net.corda.node.internal
 
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.StateLoader
+import net.corda.core.node.services.TransactionStorage
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.MessagingService
@@ -24,4 +29,14 @@ interface StartedNode<out N : AbstractNode> {
     val rpcOps: CordaRPCOps
     fun dispose() = internals.stop()
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(initiatedFlowClass)
+}
+
+class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : StateLoader {
+    @Throws(TransactionResolutionException::class)
+    override fun loadState(stateRef: StateRef): TransactionState<*> {
+        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
+        return if (stx.isNotaryChangeTransaction()) {
+            stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
+        } else stx.tx.outputs[stateRef.index]
+    }
 }
