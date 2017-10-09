@@ -38,9 +38,11 @@ class ReceiveMultipleFlowTests {
 
             val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
             runNetwork()
-            val result = flow.resultFuture.getOrThrow()
+            val data = flow.resultFuture.getOrThrow()
 
-            assertThat(result).isEqualTo(value1 * value2)
+            assertThat(data[0]).isEqualTo(value1)
+            assertThat(data[1]).isEqualTo(value2)
+            assertThat(data.fold(1.0) { a, b -> a * b }).isEqualTo(value1 * value2)
         }
     }
 
@@ -55,17 +57,17 @@ class ReceiveMultipleFlowTests {
     }
 
     @InitiatingFlow
-    class ParallelAlgorithmList(private val member1: Party, private val member2: Party) : FlowLogic<Double>() {
+    class ParallelAlgorithmList(private val member1: Party, private val member2: Party) : FlowLogic<List<Double>>() {
         @Suspendable
-        override fun call(): Double {
+        override fun call(): List<Double> {
             val session1 = initiateFlow(member1)
             val session2 = initiateFlow(member2)
             val data = receiveAll<Double>(session1, session2)
             return computeAnswer(data)
         }
 
-        private fun computeAnswer(data: List<UntrustworthyData<Double>>): Double {
-            return data.map { element -> element.unwrap { it } }.fold(1.0) { a, b -> a * b }
+        private fun computeAnswer(data: List<UntrustworthyData<Double>>): List<Double> {
+            return data.map { element -> element.unwrap { it } }
         }
     }
 

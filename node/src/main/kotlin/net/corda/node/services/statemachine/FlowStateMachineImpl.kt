@@ -313,8 +313,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val receivedMessages = ReceiveAll(requests).suspendAndExpectReceive(suspend)
         val result = LinkedHashMap<FlowSession, UntrustworthyData<Any>>()
         for ((sessionInternal, requestAndMessage) in receivedMessages) {
-            val message = requestAndMessage.second.confirmReceiveType(requestAndMessage.first)
-            result[sessionInternal.flowSession] = message.checkPayloadIs(requestAndMessage.first.userReceiveType as Class<out Any>)
+            val message = requestAndMessage.message.confirmReceiveType(requestAndMessage.request)
+            result[sessionInternal.flowSession] = message.checkPayloadIs(requestAndMessage.request.userReceiveType as Class<out Any>)
         }
         return result
     }

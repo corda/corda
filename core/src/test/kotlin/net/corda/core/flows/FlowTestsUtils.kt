@@ -42,9 +42,9 @@ inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> StartedNode<*>.registerI
 }
 
 /**
- * Allows to register a flow of type [Answer] against an initiating flow of type [INITIATING], returning a valure of type [RESPONSE].
+ * Allows to register a flow of type [Answer] against an initiating flow of type [I], returning a valure of type [R].
  */
-inline fun <INITIATING : FlowLogic<*>, reified RESPONSE : Any> StartedNode<*>.registerAnswer(initiatingFlowType: KClass<INITIATING>, value: RESPONSE) {
+inline fun <I : FlowLogic<*>, reified R : Any> StartedNode<*>.registerAnswer(initiatingFlowType: KClass<I>, value: R) {
     internals.internalRegisterFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> Answer(session, value) }, Answer::class.javaObjectType, true)
 }
 

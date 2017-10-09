@@ -47,12 +47,14 @@ class ReceiveAll(val requests: List<ReceiveRequest<SessionData>>) : WaitingReque
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 
-    fun isComplete(received: LinkedHashMap<FlowSessionInternal, Pair<ReceiveRequest<SessionData>, ReceivedSessionMessage<*>>>) = received.keys == requests.map { it.session }.toSet()
-    fun shouldResumeIfRelevant(message: ExistingSessionMessage, session: FlowSessionInternal) = requests.all { it.session.receivedMessages.map { it.message }.any { it is SessionData || it is SessionEnd } }
+    private fun isComplete(received: LinkedHashMap<FlowSessionInternal, RequestMessage>) = received.keys == requests.map { it.session }.toSet()
+    private fun shouldResumeIfRelevant() = requests.all { hasSuccessfulEndMessage(it) }
+
+    private fun hasSuccessfulEndMessage(it: ReceiveRequest<SessionData>) = it.session.receivedMessages.map { it.message }.any { it is SessionData || it is SessionEnd }
 
     @Suspendable
-    fun suspendAndExpectReceive(suspend: Suspend): Map<FlowSessionInternal, Pair<ReceiveRequest<SessionData>, ReceivedSessionMessage<*>>> {
-        val receivedMessages = LinkedHashMap<FlowSessionInternal, Pair<ReceiveRequest<SessionData>, ReceivedSessionMessage<*>>>()
+    fun suspendAndExpectReceive(suspend: Suspend): Map<FlowSessionInternal, RequestMessage> {
+        val receivedMessages = LinkedHashMap<FlowSessionInternal, RequestMessage>()
 
         poll(receivedMessages)
         return if (isComplete(receivedMessages)) {
@@ -74,10 +76,10 @@ class ReceiveAll(val requests: List<ReceiveRequest<SessionData>>) : WaitingReque
     }
 
     @Suspendable
-    private fun poll(receivedMessages: LinkedHashMap<FlowSessionInternal, Pair<ReceiveRequest<SessionData>, ReceivedSessionMessage<*>>>) {
-        return requests.map { it }.filter { it.session !in receivedMessages.keys }.forEach { request ->
+    private fun poll(receivedMessages: LinkedHashMap<FlowSessionInternal, RequestMessage>) {
+        return requests.filter { it.session !in receivedMessages.keys }.forEach { request ->
             poll(request)?.let {
-                receivedMessages[request.session] = request to it
+                receivedMessages[request.session] = RequestMessage(request, it)
             }
         }
     }
@@ -87,9 +89,11 @@ class ReceiveAll(val requests: List<ReceiveRequest<SessionData>>) : WaitingReque
         return request.session.receivedMessages.poll()
     }
 
-    override fun shouldResume(message: ExistingSessionMessage, session: FlowSessionInternal): Boolean = isRelevant(session) && shouldResumeIfRelevant(message, session)
+    override fun shouldResume(message: ExistingSessionMessage, session: FlowSessionInternal): Boolean = isRelevant(session) && shouldResumeIfRelevant()
 
     private fun isRelevant(session: FlowSessionInternal) = requests.any { it.session === session }
+
+    data class RequestMessage(val request: ReceiveRequest<SessionData>, val message: ReceivedSessionMessage<*>)
 }
 
 data class SendOnly(override val session: FlowSessionInternal, override val message: SessionMessage) : SendRequest {
