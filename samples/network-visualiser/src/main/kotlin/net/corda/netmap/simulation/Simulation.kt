@@ -11,18 +11,13 @@ import net.corda.irs.api.NodeInterestRates
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.ServiceType
-import net.corda.testing.DUMMY_MAP
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_REGULATOR
+import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.setTo
-import net.corda.testing.setCordappPackages
-import net.corda.testing.testNodeConfiguration
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.math.BigInteger
@@ -103,10 +98,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): SimulatedNode {
-            require(advertisedServices.containsType(SimpleNotaryService.type))
+            requireNotNull(config.notary)
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = DUMMY_NOTARY.name)
+                    myLegalName = DUMMY_NOTARY.name,
+                    notaryConfig = config.notary)
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot)
         }
     }
@@ -153,7 +149,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val mockNet = MockNetwork(networkSendManuallyPumped, runAsync)
     // This one must come first.
     val networkMap = mockNet.startNetworkMapNode(nodeFactory = NetworkMapNodeFactory)
-    val notary = mockNet.createNode(nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type))
+    val notary = mockNet.createNotaryNode(validating = false, nodeFactory = NotaryNodeFactory)
     val regulators = listOf(mockNet.createUnstartedNode(nodeFactory = RegulatorFactory))
     val ratesOracle = mockNet.createUnstartedNode(nodeFactory = RatesOracleFactory)
 

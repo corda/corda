@@ -9,9 +9,7 @@ import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockNetwork
 import org.junit.Ignore
@@ -292,11 +290,7 @@ class FlowStackSnapshotTest {
     @Test
     fun `flowStackSnapshot object is serializable`() {
         val mockNet = MockNetwork(threadPerNode = true)
-        val notaryService = ServiceInfo(ValidatingNotaryService.type)
-        val notaryNode = mockNet.createNode(
-                legalName = DUMMY_NOTARY.name,
-                notaryIdentity = notaryService to DUMMY_NOTARY_KEY,
-                advertisedServices = *arrayOf(notaryService))
+        mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
         val node = mockNet.createPartyNode()
         node.internals.registerInitiatedFlow(DummyFlow::class.java)
         node.services.startFlow(FlowStackSnapshotSerializationTestingFlow()).resultFuture.get()

@@ -152,36 +152,33 @@ object AllWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = true
 }
 
-// TODO: Need some concept of from which class loader
-class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
-    companion object {
-        val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
-    }
+sealed class AbstractMutableClassWhitelist(private val whitelist: MutableSet<String>,  private val delegate: ClassWhitelist) : MutableClassWhitelist {
 
     override fun hasListed(type: Class<*>): Boolean {
-        return (type.name in whitelist) || delegate.hasListed(type)
+        /**
+         * There are certain delegates like [net.corda.nodeapi.internal.serialization.AllButBlacklisted]
+         * which may throw when asked whether the type is listed.
+         * In such situations - it may be a good idea to ask [delegate] first before making a check against own [whitelist].
+         */
+        return delegate.hasListed(type) || (type.name in whitelist)
     }
 
     override fun add(entry: Class<*>) {
         whitelist += entry.name
+    }
+}
+
+// TODO: Need some concept of from which class loader
+class GlobalTransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(GlobalTransientClassWhiteList.whitelist, delegate) {
+    companion object {
+        private val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
     }
 }
 
 /**
- * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since implements [MutableClassWhitelist].
+ * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since it implements [MutableClassWhitelist].
  */
-class TransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
-    val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
-
-    override fun hasListed(type: Class<*>): Boolean {
-        return (type.name in whitelist) || delegate.hasListed(type)
-    }
-
-    override fun add(entry: Class<*>) {
-        whitelist += entry.name
-    }
-}
-
+class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(Collections.synchronizedSet(mutableSetOf()), delegate)
 
 /**
  * This class is not currently used, but can be installed to log a large number of missing entries from the whitelist

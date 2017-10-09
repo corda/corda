@@ -64,7 +64,7 @@ class StandaloneCordaRPClientTest {
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             webPort = port.andIncrement,
-            extraServices = listOf("corda.notary.validating"),
+            isNotary = true,
             users = listOf(user)
     )
 

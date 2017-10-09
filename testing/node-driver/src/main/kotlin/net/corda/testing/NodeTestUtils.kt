@@ -8,8 +8,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.VerifierType
-import net.corda.testing.node.MockCordappProvider
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
@@ -51,7 +51,8 @@ import java.nio.file.Path
 
 fun testNodeConfiguration(
         baseDirectory: Path,
-        myLegalName: CordaX500Name): NodeConfiguration {
+        myLegalName: CordaX500Name,
+        notaryConfig: NotaryConfig? = null): NodeConfiguration {
     abstract class MockableNodeConfiguration : NodeConfiguration // Otherwise Mockito is defeated by val getters.
     val nc = spy<MockableNodeConfiguration>()
     whenever(nc.baseDirectory).thenReturn(baseDirectory)
@@ -60,6 +61,7 @@ fun testNodeConfiguration(
     whenever(nc.keyStorePassword).thenReturn("cordacadevpass")
     whenever(nc.trustStorePassword).thenReturn("trustpass")
     whenever(nc.rpcUsers).thenReturn(emptyList())
+    whenever(nc.notary).thenReturn(notaryConfig)
     whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.organisation))
     whenever(nc.database).thenReturn(makeTestDatabaseProperties())
     whenever(nc.emailAddress).thenReturn("")
