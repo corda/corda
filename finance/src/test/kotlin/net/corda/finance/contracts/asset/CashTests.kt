@@ -603,7 +603,7 @@ class CashTests : TestDependencyInjectionBase() {
                 }
         database.transaction {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
-            assertEquals(vaultState.ref, wtx.inputs[0])
+            assertTrue(wtx.inputs[0] in vaultStatesUnconsumed.map { it.ref }.toSet())
             assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1), wtx.getOutput(0))
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
@@ -657,8 +657,7 @@ class CashTests : TestDependencyInjectionBase() {
         database.transaction {
             val vaultState0 = vaultStatesUnconsumed.elementAt(0)
             val vaultState1 = vaultStatesUnconsumed.elementAt(1)
-            assertEquals(vaultState0.ref, wtx.inputs[0])
-            assertEquals(vaultState1.ref, wtx.inputs[1])
+            assertEquals(setOf(vaultState0.ref, vaultState1.ref), wtx.inputs.toSet())
             assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.getOutput(0))
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
