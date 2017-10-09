@@ -17,7 +17,7 @@ echo
 
 # A removed line means that an API was either deleted or modified.
 removals=$(echo "$diffContents" | grep "^-\s")
-removalCount=`wc -l <<EOF
+removalCount=`grep -v "^$" <<EOF | wc -l
 $removals
 EOF
 `
@@ -30,7 +30,7 @@ fi
 
 # Adding new abstract methods could also break the API.
 newAbstracts=$(echo "$diffContents" | grep "^+\s" | grep "\(public\|protected\) abstract")
-abstractCount=`wc -l <<EOF
+abstractCount=`grep -v "^$" <<EOF | wc -l
 $newAbstracts
 EOF
 `
