@@ -6,6 +6,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
@@ -480,9 +481,9 @@ class CashTests : TestDependencyInjectionBase() {
     val THEIR_IDENTITY_1 = AnonymousParty(MINI_CORP_PUBKEY)
     val THEIR_IDENTITY_2 = AnonymousParty(CHARLIE_PUBKEY)
 
-    fun makeCash(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1) =
+    fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
             StateAndRef(
-                    TransactionState<Cash.State>(Cash.State(amount `issued by` corp.ref(depositRef), OUR_IDENTITY_1), Cash.PROGRAM_ID, DUMMY_NOTARY),
+                    TransactionState<Cash.State>(Cash.State(amount `issued by` issuer.ref(depositRef), OUR_IDENTITY_1), Cash.PROGRAM_ID, DUMMY_NOTARY),
                     StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 
@@ -496,10 +497,11 @@ class CashTests : TestDependencyInjectionBase() {
     /**
      * Generate an exit transaction, removing some amount of cash from the ledger.
      */
-    private fun makeExit(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1): WireTransaction {
+    private fun makeExit(serviceHub: ServiceHub, amount: Amount<Currency>, issuer: Party, depositRef: Byte = 1): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
-        Cash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), WALLET)
-        return tx.toWireTransaction(miniCorpServices)
+        val payChangeTo = serviceHub.keyManagementService.freshKeyAndCert(MINI_CORP_IDENTITY, false).party
+        Cash().generateExit(tx, Amount(amount.quantity, Issued(issuer.ref(depositRef), amount.token)), WALLET, payChangeTo)
+        return tx.toWireTransaction(serviceHub)
     }
 
     private fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
@@ -516,7 +518,7 @@ class CashTests : TestDependencyInjectionBase() {
     @Test
     fun generateSimpleExit() {
         initialiseTestSerialization()
-        val wtx = makeExit(100.DOLLARS, MEGA_CORP, 1)
+        val wtx = makeExit(miniCorpServices, 100.DOLLARS, MEGA_CORP, 1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(0, wtx.outputs.size)
 
@@ -532,10 +534,16 @@ class CashTests : TestDependencyInjectionBase() {
     @Test
     fun generatePartialExit() {
         initialiseTestSerialization()
-        val wtx = makeExit(50.DOLLARS, MEGA_CORP, 1)
-        assertEquals(WALLET[0].ref, wtx.inputs[0])
-        assertEquals(1, wtx.outputs.size)
-        assertEquals(WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount.splitEvenly(2).first()), wtx.getOutput(0))
+        val wtx = makeExit(miniCorpServices, 50.DOLLARS, MEGA_CORP, 1)
+        val actualInput = wtx.inputs.single()
+        // Filter the available inputs and confirm exactly one has been used
+        val expectedInputs = WALLET.filter { it.ref == actualInput }
+        assertEquals(1, expectedInputs.size)
+        val inputState = expectedInputs.single()
+        val actualChange = wtx.outputs.single().data as Cash.State
+        val expectedChangeAmount = (inputState.state.data as Cash.State).amount.quantity - 50.DOLLARS.quantity
+        val expectedChange = WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount.copy(quantity = expectedChangeAmount), owner = actualChange.owner)
+        assertEquals(expectedChange, wtx.getOutput(0))
     }
 
     /**
@@ -544,7 +552,7 @@ class CashTests : TestDependencyInjectionBase() {
     @Test
     fun generateAbsentExit() {
         initialiseTestSerialization()
-        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, MEGA_CORP, 1) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, MEGA_CORP, 1) }
     }
 
     /**
@@ -553,7 +561,7 @@ class CashTests : TestDependencyInjectionBase() {
     @Test
     fun generateInvalidReferenceExit() {
         initialiseTestSerialization()
-        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, MEGA_CORP, 2) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, MEGA_CORP, 2) }
     }
 
     /**
@@ -562,7 +570,7 @@ class CashTests : TestDependencyInjectionBase() {
     @Test
     fun generateInsufficientExit() {
         initialiseTestSerialization()
-        assertFailsWith<InsufficientBalanceException> { makeExit(1000.DOLLARS, MEGA_CORP, 1) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 1000.DOLLARS, MEGA_CORP, 1) }
     }
 
     /**
@@ -571,7 +579,7 @@ class CashTests : TestDependencyInjectionBase() {
     @Test
     fun generateOwnerWithNoStatesExit() {
         initialiseTestSerialization()
-        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, CHARLIE, 1) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, CHARLIE, 1) }
     }
 
     /**
