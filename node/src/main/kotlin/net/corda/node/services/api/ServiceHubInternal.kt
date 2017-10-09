@@ -25,7 +25,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.vault.VaultServiceInternal
 import net.corda.node.utilities.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache {

@@ -21,7 +21,6 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.vault.VaultServiceInternal
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.DUMMY_IDENTITY_1
 import net.corda.testing.MOCK_HOST_AND_PORT
