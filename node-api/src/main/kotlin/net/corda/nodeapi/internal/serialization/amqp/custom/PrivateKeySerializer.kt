@@ -10,10 +10,13 @@ import java.security.PrivateKey
 import java.util.*
 
 object PrivateKeySerializer : CustomSerializer.Implements<PrivateKey>(PrivateKey::class.java) {
+
+    private val allowedUseCases = EnumSet.of(Storage, Checkpoint)
+
     override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
 
     override fun writeDescribedObject(obj: PrivateKey, data: Data, type: Type, output: SerializationOutput) {
-        checkUseCase(EnumSet.of(Storage, Checkpoint))
+        checkUseCase(allowedUseCases)
         output.writeObject(obj.encoded, data, clazz)
     }
 
