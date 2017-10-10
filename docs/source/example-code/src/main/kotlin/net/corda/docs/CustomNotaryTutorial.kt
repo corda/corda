@@ -38,13 +38,11 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
             val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
             val notary = stx.notary
             checkNotary(notary)
-            var timeWindow: TimeWindow? = null
-            val transactionWithSignatures = if (stx.isNotaryChangeTransaction()) {
-                stx.resolveNotaryChangeTransaction(serviceHub)
-            } else {
-                timeWindow = stx.tx.timeWindow
-                stx
-            }
+            val timeWindow: TimeWindow? = if (stx.isNotaryChangeTransaction())
+                null
+            else
+                stx.tx.timeWindow
+            val transactionWithSignatures = stx.resolveTransactionWithSignatures(serviceHub)
             checkSignatures(transactionWithSignatures)
             return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
