@@ -103,7 +103,7 @@ class Node extends CordformNode {
     }
 
     protected void build() {
-        configureRpcUsers()
+        configureProperties()
         installCordaJar()
         if (config.hasPath("webAddress")) {
             installWebserverJar()
@@ -111,6 +111,7 @@ class Node extends CordformNode {
         installBuiltPlugin()
         installCordapps()
         installConfig()
+        appendOptionalConfig()
     }
 
     /**
@@ -122,11 +123,14 @@ class Node extends CordformNode {
         return config.getString("p2pAddress")
     }
 
-    /**
-     * Write the RPC users to the config
-     */
-    private void configureRpcUsers() {
+    private void configureProperties() {
         config = config.withValue("rpcUsers", ConfigValueFactory.fromIterable(rpcUsers))
+        if (notary) {
+            config = config.withValue("notary", ConfigValueFactory.fromMap(notary))
+        }
+        if (extraConfig) {
+            config = config.withFallback(ConfigFactory.parseMap(extraConfig))
+        }
     }
 
     /**
@@ -181,11 +185,6 @@ class Node extends CordformNode {
      * Installs the configuration file to this node's directory and detokenises it.
      */
     private void installConfig() {
-        // Adding required default values
-        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromIterable(advertisedServices*.toString()))
-        if (notaryClusterAddresses.size() > 0) {
-            config = config.withValue('notaryClusterAddresses', ConfigValueFactory.fromIterable(notaryClusterAddresses*.toString()))
-        }
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
 
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
@@ -196,6 +195,29 @@ class Node extends CordformNode {
         project.copy {
             from tmpConfFile
             into nodeDir
+        }
+    }
+
+    /**
+     * Appends installed config file with properties from an optional file.
+     */
+    private void appendOptionalConfig() {
+        final configFileProperty = "configFile"
+        File optionalConfig
+        if (project.findProperty(configFileProperty)) { //provided by -PconfigFile command line property when running Gradle task
+            optionalConfig = new File(project.findProperty(configFileProperty))
+        } else if (config.hasPath(configFileProperty)) {
+            optionalConfig = new File(config.getString(configFileProperty))
+        }
+        if (optionalConfig) {
+            if (!optionalConfig.exists()) {
+               println "$configFileProperty '$optionalConfig' not found"
+            } else {
+                def confFile = new File(project.buildDir.getPath() + "/../" + nodeDir, 'node.conf')
+                optionalConfig.withInputStream {
+                    input -> confFile << input
+                }
+            }
         }
     }
 

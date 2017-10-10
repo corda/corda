@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import org.junit.Test
@@ -13,7 +14,7 @@ interface I_ {
     val a: Int
 }
 
-class CompositeMembers : AmqpCarpenterBase() {
+class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
     @Test
     fun bothKnown() {
         val testA = 10
@@ -42,7 +43,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         var amqpSchemaB: CompositeType? = null
 
         for (type in obj.envelope.schema.types) {
-            when (type.name.split ("$").last()) {
+            when (type.name.split("$").last()) {
                 "A" -> amqpSchemaA = type as CompositeType
                 "B" -> amqpSchemaB = type as CompositeType
             }
@@ -88,7 +89,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         val b = B(A(testA), testB)
 
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
-        val amqpSchema = obj.envelope.schema.mangleNames(listOf (classTestName ("A")))
+        val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A")))
 
         assert(obj.obj is B)
 
@@ -116,7 +117,7 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         assertEquals(1, carpenterSchema.size)
 
-        val metaCarpenter = MetaCarpenter(carpenterSchema)
+        val metaCarpenter = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
 
         metaCarpenter.build()
 
@@ -151,7 +152,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         assertEquals(1, carpenterSchema.dependsOn.size)
         assert(mangleName(classTestName("A")) in carpenterSchema.dependsOn)
 
-        val metaCarpenter = TestMetaCarpenter(carpenterSchema)
+        val metaCarpenter = TestMetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
 
         assertEquals(0, metaCarpenter.objects.size)
 
@@ -251,7 +252,8 @@ class CompositeMembers : AmqpCarpenterBase() {
         assert(obj.obj is C)
 
         val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
-        TestMetaCarpenter(carpenterSchema.carpenterSchema(ClassLoader.getSystemClassLoader()))
+        TestMetaCarpenter(carpenterSchema.carpenterSchema(
+                ClassLoader.getSystemClassLoader()), ClassCarpenter(whitelist = AllWhitelist))
     }
 
     /*

@@ -22,7 +22,7 @@ public class TestUtils {
         // Copy resource jar to tmp dir
         tmpdir = Files.createTempDirectory("wlcl-tmp-test");
         Path copiedJar = tmpdir.resolve("tmp-resource.jar");
-        try(final InputStream in = TestUtils.class.getResourceAsStream(resourcePathToJar)) {
+        try (final InputStream in = TestUtils.class.getResourceAsStream(resourcePathToJar)) {
             Files.copy(in, copiedJar, StandardCopyOption.REPLACE_EXISTING);
         }
         final FileSystem fs = FileSystems.newFileSystem(copiedJar, null);
@@ -33,20 +33,20 @@ public class TestUtils {
     public static Path copySandboxJarToTmpDir(final String resourcePathToJar) throws IOException {
 
         Path sandboxJar = tmpdir.resolve("tmp-sandbox.jar");
-        try(final InputStream in = TestUtils.class.getResourceAsStream(resourcePathToJar)) {
+        try (final InputStream in = TestUtils.class.getResourceAsStream(resourcePathToJar)) {
             Files.copy(in, sandboxJar, StandardCopyOption.REPLACE_EXISTING);
         }
         final FileSystem sandboxFs = FileSystems.newFileSystem(sandboxJar, null);
         tmpFileSystems.add(sandboxFs);
         return sandboxFs.getRootDirectories().iterator().next();
     }
-    
+
     public static Path getJarFSRoot() {
         return jarFSDir;
     }
 
     public static void cleanupTmpJar() throws IOException {
-        for (FileSystem fs: tmpFileSystems) {
+        for (FileSystem fs : tmpFileSystems) {
             fs.close();
         }
         tmpFileSystems.clear();
@@ -92,15 +92,15 @@ public class TestUtils {
     // Helper for finding the correct offsets if they change
     public static void printBytes(byte[] data) {
         byte[] datum = new byte[1];
-        for (int i=0; i < data.length; i++) {
+        for (int i = 0; i < data.length; i++) {
             datum[0] = data[i];
-            System.out.println(i +" : "+ DatatypeConverter.printHexBinary(datum));
+            System.out.println(i + " : " + DatatypeConverter.printHexBinary(datum));
         }
     }
 
     public static int findOffset(byte[] classBytes, byte[] originalSeq) {
         int offset = 0;
-        for (int i=415; i < classBytes.length; i++) {
+        for (int i = 415; i < classBytes.length; i++) {
             if (classBytes[i] != originalSeq[offset]) {
                 offset = 0;
                 continue;
@@ -110,7 +110,7 @@ public class TestUtils {
             }
             offset++;
         }
-        
+
         return -1;
     }
 
@@ -119,7 +119,7 @@ public class TestUtils {
         return wlcl.instrumentWithCosts(basic, hashSet);
     }
 
-    
+
     public static final class MyClassloader extends ClassLoader {
 
         public Class<?> byPath(Path p) throws IOException {

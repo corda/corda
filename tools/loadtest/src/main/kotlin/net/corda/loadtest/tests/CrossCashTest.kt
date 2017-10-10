@@ -123,6 +123,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 
         generate = { (nodeVaults), parallelism ->
             val nodeMap = simpleNodes.associateBy { it.mainIdentity }
+            val notaryIdentity = simpleNodes[0].proxy.notaryIdentities().first()
             Generator.pickN(parallelism, simpleNodes).flatMap { nodes ->
                 Generator.sequence(
                         nodes.map { node ->
@@ -139,7 +140,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                                 }
                             }
                             val command = Generator.frequency(
-                                    listOf(1.0 to generateIssue(10000, USD, notary.info.notaryIdentity, possibleRecipients)) + moves + exits
+                                    listOf(1.0 to generateIssue(10000, USD, notaryIdentity, possibleRecipients)) + moves + exits
                             )
                             command.map { CrossCashCommand(it, nodeMap[node.mainIdentity]!!) }
                         }
@@ -276,7 +277,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                         minimumMatches.forEach { originator, consumedTxs ->
                             if (consumedTxs > 0) {
                                 newNodeDiffQueues!!
-                                for (i in 0..consumedTxs - 1) {
+                                for (i in 0 until consumedTxs) {
                                     val (issuer, quantity) = newNodeDiffQueues[originator]!!.removeAt(0)
                                     newNodeVault.put(issuer, (newNodeVault[issuer] ?: 0L) + quantity)
                                 }

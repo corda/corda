@@ -11,6 +11,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.serialization.amqp.hasAnnotationInHierarchy
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets
@@ -25,9 +26,22 @@ import java.util.*
 class CordaClassResolver(serializationContext: SerializationContext) : DefaultClassResolver() {
     val whitelist: ClassWhitelist = TransientClassWhiteList(serializationContext.whitelist)
 
+    /*
+     * These classes are assignment-compatible Java equivalents of Kotlin classes.
+     * The point is that we do not want to send Kotlin types "over the wire" via RPC.
+     */
+    private val javaAliases: Map<Class<*>, Class<*>> = mapOf(
+            listOf<Any>().javaClass to Collections.emptyList<Any>().javaClass,
+            setOf<Any>().javaClass to Collections.emptySet<Any>().javaClass,
+            mapOf<Any, Any>().javaClass to Collections.emptyMap<Any, Any>().javaClass
+    )
+
+    private fun typeForSerializationOf(type: Class<*>): Class<*> = javaAliases[type] ?: type
+
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
-        return super.getRegistration(type) ?: checkClass(type)
+        val targetType = typeForSerializationOf(type)
+        return super.getRegistration(targetType) ?: checkClass(targetType)
     }
 
     private var whitelistEnabled = true
@@ -49,8 +63,6 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         if (type.isArray) return checkClass(type.componentType)
         // Specialised enum entry, so just resolve the parent Enum type since cannot annotate the specialised entry.
         if (!type.isEnum && Enum::class.java.isAssignableFrom(type)) return checkClass(type.superclass)
-        // Kotlin lambdas require some special treatment
-        if (kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type)) return null
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         // If we use a whitelist with blacklisting capabilities, whitelist.hasListed(type) may throw an IllegalStateException if input class is blacklisted.
         // Thus, blacklisting precedes annotation checking.
@@ -61,9 +73,9 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
     }
 
     override fun registerImplicit(type: Class<*>): Registration {
-
+        val targetType = typeForSerializationOf(type)
         val objectInstance = try {
-            type.kotlin.objectInstance
+            targetType.kotlin.objectInstance
         } catch (t: Throwable) {
             null  // objectInstance will throw if the type is something like a lambda
         }
@@ -74,15 +86,19 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
             kryo.references = true
             val serializer = when {
                 objectInstance != null -> KotlinObjectSerializer(objectInstance)
-                kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(type) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
-                    FieldSerializer<Any>(kryo, type).apply { setIgnoreSyntheticFields(false) }
-                Throwable::class.java.isAssignableFrom(type) -> ThrowableSerializer(kryo, type)
-                else -> kryo.getDefaultSerializer(type)
+                kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(targetType) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
+                    FieldSerializer<Any>(kryo, targetType).apply { setIgnoreSyntheticFields(false) }
+                Throwable::class.java.isAssignableFrom(targetType) -> ThrowableSerializer(kryo, targetType)
+                else -> kryo.getDefaultSerializer(targetType)
             }
-            return register(Registration(type, serializer, NAME.toInt()))
+            return register(Registration(targetType, serializer, NAME.toInt()))
         } finally {
             kryo.references = references
         }
+    }
+
+    override fun writeName(output: Output, type: Class<*>, registration: Registration) {
+        super.writeName(output, registration.type ?: type, registration)
     }
 
     // Trivial Serializer which simply returns the given instance, which we already know is a Kotlin object
@@ -98,13 +114,7 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         return (type.classLoader !is AttachmentsClassLoader)
                 && !KryoSerializable::class.java.isAssignableFrom(type)
                 && !type.isAnnotationPresent(DefaultSerializer::class.java)
-                && (type.isAnnotationPresent(CordaSerializable::class.java) || hasInheritedAnnotation(type))
-    }
-
-    // Recursively check interfaces for our annotation.
-    private fun hasInheritedAnnotation(type: Class<*>): Boolean {
-        return type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasInheritedAnnotation(it) }
-                || (type.superclass != null && hasInheritedAnnotation(type.superclass))
+                && (type.isAnnotationPresent(CordaSerializable::class.java) || whitelist.hasAnnotationInHierarchy(type))
     }
 
     // Need to clear out class names from attachments.
@@ -128,10 +138,6 @@ interface MutableClassWhitelist : ClassWhitelist {
     fun add(entry: Class<*>)
 }
 
-object EmptyWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = false
-}
-
 class BuiltInExceptionsWhitelist : ClassWhitelist {
     companion object {
         private val packageName = "^(?:java|kotlin)(?:[.]|$)".toRegex()
@@ -144,36 +150,33 @@ object AllWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = true
 }
 
-// TODO: Need some concept of from which class loader
-class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
-    companion object {
-        val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
-    }
+sealed class AbstractMutableClassWhitelist(private val whitelist: MutableSet<String>,  private val delegate: ClassWhitelist) : MutableClassWhitelist {
 
     override fun hasListed(type: Class<*>): Boolean {
-        return (type.name in whitelist) || delegate.hasListed(type)
+        /**
+         * There are certain delegates like [net.corda.nodeapi.internal.serialization.AllButBlacklisted]
+         * which may throw when asked whether the type is listed.
+         * In such situations - it may be a good idea to ask [delegate] first before making a check against own [whitelist].
+         */
+        return delegate.hasListed(type) || (type.name in whitelist)
     }
 
     override fun add(entry: Class<*>) {
         whitelist += entry.name
+    }
+}
+
+// TODO: Need some concept of from which class loader
+class GlobalTransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(GlobalTransientClassWhiteList.whitelist, delegate) {
+    companion object {
+        private val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
     }
 }
 
 /**
- * A whitelist that can be customised via the [net.corda.core.node.CordaPluginRegistry], since implements [MutableClassWhitelist].
+ * A whitelist that can be customised via the [net.corda.core.node.SerializationWhitelist], since it implements [MutableClassWhitelist].
  */
-class TransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
-    val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
-
-    override fun hasListed(type: Class<*>): Boolean {
-        return (type.name in whitelist) || delegate.hasListed(type)
-    }
-
-    override fun add(entry: Class<*>) {
-        whitelist += entry.name
-    }
-}
-
+class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(Collections.synchronizedSet(mutableSetOf()), delegate)
 
 /**
  * This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
@@ -191,7 +194,7 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
             if (fileName != null && fileName.isNotEmpty()) {
                 try {
                     return PrintWriter(Files.newBufferedWriter(Paths.get(fileName), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE), true)
-                } catch(ioEx: Exception) {
+                } catch (ioEx: Exception) {
                     log.error("Could not open/create whitelist journal file for append: $fileName", ioEx)
                 }
             }

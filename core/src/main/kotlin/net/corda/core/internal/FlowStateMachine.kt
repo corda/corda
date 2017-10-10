@@ -30,25 +30,28 @@ interface FlowStateMachine<R> {
     fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
 
     @Suspendable
-    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>): Unit
+    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>)
 
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
 
-    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>): Unit
+    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>)
 
-    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>): Unit
+    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>)
 
     @Suspendable
     fun flowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot?
 
     @Suspendable
-    fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>): Unit
+    fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>)
 
     val serviceHub: ServiceHub
     val logger: Logger
     val id: StateMachineRunId
     val resultFuture: CordaFuture<R>
     val flowInitiator: FlowInitiator
-    val ourIdentity: PartyAndCertificate
+    val ourIdentityAndCert: PartyAndCertificate
+
+    @Suspendable
+    fun receiveAll(sessions: Map<FlowSession, Class<out Any>>, sessionFlow: FlowLogic<*>): Map<FlowSession, UntrustworthyData<Any>>
 }

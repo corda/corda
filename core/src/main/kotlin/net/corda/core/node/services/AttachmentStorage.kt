@@ -6,6 +6,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
 
+typealias AttachmentId = SecureHash
+
 /**
  * An attachment store records potentially large binary objects, identified by their hash.
  */
@@ -14,7 +16,7 @@ interface AttachmentStorage {
      * Returns a handle to a locally stored attachment, or null if it's not known. The handle can be used to open
      * a stream for the data, which will be a zip/jar file.
      */
-    fun openAttachment(id: SecureHash): Attachment?
+    fun openAttachment(id: AttachmentId): Attachment?
 
     /**
      * Inserts the given attachment into the store, does *not* close the input stream. This can be an intensive
@@ -28,6 +30,6 @@ interface AttachmentStorage {
      * @throws IOException if something went wrong.
      */
     @Throws(FileAlreadyExistsException::class, IOException::class)
-    fun importAttachment(jar: InputStream): SecureHash
+    fun importAttachment(jar: InputStream): AttachmentId
 }
 

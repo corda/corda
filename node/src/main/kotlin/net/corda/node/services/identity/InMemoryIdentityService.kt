@@ -30,6 +30,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     constructor(wellKnownIdentities: Iterable<PartyAndCertificate> = emptySet(),
                 confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
                 trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
+
     companion object {
         private val log = loggerFor<InMemoryIdentityService>()
     }
@@ -45,7 +46,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
-        keyToParties.putAll(identities.associateBy { it.owningKey } )
+        keyToParties.putAll(identities.associateBy { it.owningKey })
         principalToParties.putAll(identities.associateBy { it.name })
         confidentialIdentities.forEach { identity ->
             principalToParties.computeIfAbsent(identity.name) { identity }
@@ -75,14 +76,13 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[owningKey]
-    override fun certificateFromParty(party: Party): PartyAndCertificate = principalToParties[party.name] ?: throw IllegalArgumentException("Unknown identity ${party.name}")
 
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
-    override fun partyFromX500Name(name: CordaX500Name): Party? = principalToParties[name]?.party
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
+    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = principalToParties[name]?.party
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         // Expand the anonymous party to a full party (i.e. has a name) if possible
         val candidate = party as? Party ?: keyToParties[party.owningKey]?.party
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
@@ -95,9 +95,10 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
             null
         }
     }
-    override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
-    override fun requirePartyFromAnonymous(party: AbstractParty): Party {
-        return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+
+    override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
+    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
+        return wellKnownPartyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {

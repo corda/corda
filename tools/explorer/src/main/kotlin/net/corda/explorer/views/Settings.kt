@@ -12,6 +12,7 @@ import net.corda.client.jfx.model.objectProperty
 import net.corda.client.jfx.model.observableList
 import net.corda.client.jfx.utils.map
 import net.corda.explorer.model.CordaView
+import net.corda.explorer.model.IssuerModel
 import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.model.SettingsModel
 import java.util.*
@@ -22,7 +23,7 @@ class Settings : CordaView() {
     override val icon = FontAwesomeIcon.COGS
 
     // Inject Data.
-    private val currencies by observableList(ReportingCurrencyModel::supportedCurrencies)
+    private val currencies by observableList(IssuerModel::supportedCurrencies)
     private val reportingCurrencies by objectProperty(SettingsModel::reportingCurrencyProperty)
     private val rememberMe by objectProperty(SettingsModel::rememberMeProperty)
     private val fullscreen by objectProperty(SettingsModel::fullscreenProperty)

@@ -2,8 +2,8 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -30,11 +30,11 @@ data class FactorySchemaAndDescriptor(val schema: Schema, val typeDescriptor: An
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
-class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
+open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
-    val classCarpenter = ClassCarpenter(cl)
+    open val classCarpenter = ClassCarpenter(cl, whitelist)
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
@@ -61,26 +61,27 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
         val serializer = when {
-            // Declared class may not be set to Collection, but actual class could be a collection.
-            // In this case use of CollectionSerializer is perfectly appropriate.
+        // Declared class may not be set to Collection, but actual class could be a collection.
+        // In this case use of CollectionSerializer is perfectly appropriate.
             (Collection::class.java.isAssignableFrom(declaredClass) ||
                     (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) &&
                     !EnumSet::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                    val declaredTypeAmended= CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                    serializersByType.computeIfAbsent(declaredTypeAmended) {
-                        CollectionSerializer(declaredTypeAmended, this)
-                    }
+                val declaredTypeAmended = CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                serializersByType.computeIfAbsent(declaredTypeAmended) {
+                    CollectionSerializer(declaredTypeAmended, this)
+                }
             }
-            // Declared class may not be set to Map, but actual class could be a map.
-            // In this case use of MapSerializer is perfectly appropriate.
+        // Declared class may not be set to Map, but actual class could be a map.
+        // In this case use of MapSerializer is perfectly appropriate.
             (Map::class.java.isAssignableFrom(declaredClass) ||
-                (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
-                    val declaredTypeAmended= MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                    serializersByType.computeIfAbsent(declaredTypeAmended) {
-                        makeMapSerializer(declaredTypeAmended)
-                    }
+                    (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
+                val declaredTypeAmended = MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                serializersByType.computeIfAbsent(declaredTypeAmended) {
+                    makeMapSerializer(declaredTypeAmended)
+                }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
+                whitelist.requireWhitelisted(actualType)
                 EnumSerializer(actualType, actualClass ?: declaredClass, this)
             }
             else -> makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
@@ -99,12 +100,14 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: Type): Type? =
             when (declaredType) {
                 is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
-                // Nothing to infer, otherwise we'd have ParameterizedType
+            // Nothing to infer, otherwise we'd have ParameterizedType
                 is Class<*> -> actualClass
                 is GenericArrayType -> {
                     val declaredComponent = declaredType.genericComponentType
                     inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
                 }
+                is TypeVariable<*> -> actualClass
+                is WildcardType -> actualClass
                 else -> null
             }
 
@@ -239,10 +242,10 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
-                    whitelisted(clazz)
+                    whitelist.requireWhitelisted(clazz)
                     SingletonSerializer(clazz, clazz.kotlin.objectInstance!!, this)
                 } else {
-                    whitelisted(type)
+                    whitelist.requireWhitelisted(type)
                     ObjectSerializer(type, this)
                 }
             }
@@ -260,30 +263,11 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                     return customSerializer
                 } else {
                     // Make a subclass serializer for the subclass and return that...
-                    @Suppress("UNCHECKED_CAST")
-                    return CustomSerializer.SubClass(clazz, customSerializer as CustomSerializer<Any>)
+                    return CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
                 }
             }
         }
         return null
-    }
-
-    private fun whitelisted(type: Type) {
-        val clazz = type.asClass()!!
-        if (isNotWhitelisted(clazz)) {
-            throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
-        }
-    }
-
-    // Ignore SimpleFieldAccess as we add it to anything we build in the carpenter.
-    internal fun isNotWhitelisted(clazz: Class<*>): Boolean = clazz == SimpleFieldAccess::class.java ||
-            (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
-
-    // Recursively check the class, interfaces and superclasses for our annotation.
-    private fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
-        return type.isAnnotationPresent(CordaSerializable::class.java) ||
-                type.interfaces.any { hasAnnotationInHierarchy(it) }
-                || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
     }
 
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<Any> {

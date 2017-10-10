@@ -1,10 +1,7 @@
 package net.corda.services.messaging
 
 import net.corda.nodeapi.User
-import net.corda.testing.configureTestSSL
 import net.corda.testing.messaging.SimpleMQClient
-import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 
 /**
@@ -25,12 +22,5 @@ class MQSecurityAsRPCTest : MQSecurityTest() {
 
     override fun startAttacker(attacker: SimpleMQClient) {
         attacker.start(extraRPCUsers[0].username, extraRPCUsers[0].password, false)
-    }
-
-    @Test
-    fun `login to a ssl port as a RPC user`() {
-        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            loginToRPC(alice.internals.configuration.p2pAddress, extraRPCUsers[0], configureTestSSL())
-        }
     }
 }

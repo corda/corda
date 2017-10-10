@@ -14,7 +14,7 @@ import java.util.*
 class CashSelectionMySQLImpl : CashSelection {
 
     companion object {
-        val JDBC_DRIVER_NAME = "MySQL JDBC Driver"
+        const val JDBC_DRIVER_NAME = "MySQL JDBC Driver"
     }
 
     override fun isCompatible(metadata: DatabaseMetaData): Boolean {
@@ -29,4 +29,4 @@ class CashSelectionMySQLImpl : CashSelection {
                                                  withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
         TODO("MySQL cash selection not implemented")
     }
- }
+}

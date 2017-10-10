@@ -20,6 +20,7 @@ import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.NodeConfig
+import net.corda.demobench.model.NodeConfigWrapper
 import net.corda.demobench.model.NodeController
 import net.corda.demobench.model.NodeState
 import net.corda.demobench.pty.R3Pty
@@ -69,8 +70,8 @@ class NodeTerminalView : Fragment() {
     private lateinit var logo: ImageView
     private lateinit var swingTerminal: SwingNode
 
-    fun open(config: NodeConfig, onExit: (Int) -> Unit) {
-        nodeName.text = config.legalName.organisation
+    fun open(config: NodeConfigWrapper, onExit: (Int) -> Unit) {
+        nodeName.text = config.nodeConfig.myLegalName.organisation
 
         swingTerminal = SwingNode()
         swingTerminal.setOnMouseClicked {
@@ -85,13 +86,13 @@ class NodeTerminalView : Fragment() {
         root.isVisible = true
 
         SwingUtilities.invokeLater({
-            val r3pty = R3Pty(config.legalName, TerminalSettingsProvider(), Dimension(160, 80), onExit)
+            val r3pty = R3Pty(config.nodeConfig.myLegalName, TerminalSettingsProvider(), Dimension(160, 80), onExit)
             pty = r3pty
 
             if (nodeController.runCorda(r3pty, config)) {
                 swingTerminal.content = r3pty.terminal
 
-                configureDatabaseButton(config)
+                configureDatabaseButton(config.nodeConfig)
                 configureExplorerButton(config)
                 configureWebButton(config)
 
@@ -105,7 +106,7 @@ class NodeTerminalView : Fragment() {
                  * and close the RPC client if it has.
                  */
                 if (!r3pty.isConnected) {
-                    log.severe("Node '${config.legalName}' has failed to start.")
+                    log.severe("Node '${config.nodeConfig.myLegalName}' has failed to start.")
                     swingTerminal.content = null
                     rpc?.close()
                 }
@@ -119,7 +120,7 @@ class NodeTerminalView : Fragment() {
      * launched the explorer and only reenable it when
      * the explorer has exited.
      */
-    private fun configureExplorerButton(config: NodeConfig) {
+    private fun configureExplorerButton(config: NodeConfigWrapper) {
         launchExplorerButton.setOnAction {
             launchExplorerButton.isDisable = true
 
@@ -131,7 +132,7 @@ class NodeTerminalView : Fragment() {
 
     private fun configureDatabaseButton(config: NodeConfig) {
         viewDatabaseButton.setOnAction {
-            viewer.openBrowser(config.h2Port)
+            viewer.openBrowser(config.h2port)
         }
     }
 
@@ -144,7 +145,7 @@ class NodeTerminalView : Fragment() {
      * launched the web server and only reenable it when
      * the web server has exited.
      */
-    private fun configureWebButton(config: NodeConfig) {
+    private fun configureWebButton(config: NodeConfigWrapper) {
         launchWebButton.setOnAction {
             if (webURL != null) {
                 app.hostServices.showDocument(webURL.toString())
@@ -161,12 +162,12 @@ class NodeTerminalView : Fragment() {
             launchWebButton.text = ""
             launchWebButton.graphic = ProgressIndicator()
 
-            log.info("Starting web server for ${config.legalName}")
+            log.info("Starting web server for ${config.nodeConfig.myLegalName}")
             webServer.open(config).then {
                 Platform.runLater {
                     launchWebButton.graphic = null
                     it.match(success = {
-                        log.info("Web server for ${config.legalName} started on $it")
+                        log.info("Web server for ${config.nodeConfig.myLegalName} started on $it")
                         webURL = it
                         launchWebButton.text = "Reopen\nweb site"
                         app.hostServices.showDocument(it.toString())
@@ -178,13 +179,13 @@ class NodeTerminalView : Fragment() {
         }
     }
 
-    private fun launchRPC(config: NodeConfig) = NodeRPC(
-        config = config,
-        start = this::initialise,
-        invoke = this::pollCashBalances
+    private fun launchRPC(config: NodeConfigWrapper) = NodeRPC(
+            config = config,
+            start = this::initialise,
+            invoke = this::pollCashBalances
     )
 
-    private fun initialise(config: NodeConfig, ops: CordaRPCOps) {
+    private fun initialise(config: NodeConfigWrapper, ops: CordaRPCOps) {
         try {
             val (txInit, txNext) = ops.internalVerifiedTransactionsFeed()
             val (stateInit, stateNext) = ops.vaultTrackBy<ContractState>(paging = pageSpecification)
@@ -212,7 +213,7 @@ class NodeTerminalView : Fragment() {
         }
 
         config.state = NodeState.RUNNING
-        log.info("Node '${config.legalName}' is now ready.")
+        log.info("Node '${config.nodeConfig.myLegalName}' is now ready.")
 
         header.isDisable = false
     }
@@ -225,7 +226,7 @@ class NodeTerminalView : Fragment() {
             )
 
             Platform.runLater {
-                balance.value = if (cashBalances.isNullOrEmpty()) "0" else cashBalances
+                balance.value = if (cashBalances.isEmpty()) "0" else cashBalances
             }
         } catch (e: ClassNotFoundException) {
             // TODO: Remove this special case once Rick's serialisation work means we can deserialise states that weren't on our own classpath.
@@ -238,7 +239,10 @@ class NodeTerminalView : Fragment() {
         header.isDisable = true
         subscriptions.forEach {
             // Don't allow any exceptions here to halt tab destruction.
-            try { it.unsubscribe() } catch (e: Exception) {}
+            try {
+                it.unsubscribe()
+            } catch (e: Exception) {
+            }
         }
         webServer.close()
         explorer.close()

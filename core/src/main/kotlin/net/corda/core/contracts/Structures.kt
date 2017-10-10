@@ -4,6 +4,7 @@ package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
@@ -15,10 +16,12 @@ import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.time.Instant
 
+// DOCSTART 1
 /** Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments). */
 interface NamedByHash {
     val id: SecureHash
 }
+// DOCEND 1
 
 /**
  * The [Issued] data class holds the details of an on ledger digital asset.
@@ -183,7 +186,7 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) 
     constructor(data: T, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
-    override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"
+    override fun toString() = "${commandDataToString()} with pubkeys ${signers.map { it.toStringShort() }.joinToString()}"
 }
 
 /** A common move command for contract states which can change owner. */
@@ -195,9 +198,6 @@ interface MoveCommand : CommandData {
     // TODO: Replace Class here with a general contract constraints object
     val contract: Class<out Contract>?
 }
-
-/** Indicates that this transaction replaces the inputs contract state to another contract state */
-data class UpgradeCommand(val upgradedContractClass: ContractClassName) : CommandData
 
 // DOCSTART 6
 /** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key. */
@@ -271,7 +271,7 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
 
     init {
         require(bytes.size == 32) { "Privacy salt should be 32 bytes." }
-        require(!bytes.all { it == 0.toByte() }) { "Privacy salt should not be all zeros." }
+        require(bytes.any { it != 0.toByte() }) { "Privacy salt should not be all zeros." }
     }
 }
 

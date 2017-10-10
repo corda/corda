@@ -3,7 +3,6 @@ package net.corda.client.rpc
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
-import net.corda.nodeapi.PermissionException
 import net.corda.nodeapi.User
 import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.rpcDriver
@@ -80,7 +79,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
     }
 
     @Test
-    fun `check ALL is implemented the correct way round` () {
+    fun `check ALL is implemented the correct way round`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)

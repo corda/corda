@@ -1,7 +1,7 @@
 package net.corda.testing
 
 import net.corda.client.mock.Generator
-import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
@@ -63,7 +64,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
-            ops : I
+            ops: I
     ): CordaFuture<RpcServerHandle>
 
     /**
@@ -109,8 +110,8 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             customPort: NetworkHostAndPort? = null,
-            ops : I
-    ) : CordaFuture<RpcServerHandle>
+            ops: I
+    ): CordaFuture<RpcServerHandle>
 
     /**
      * Starts a Netty RPC client.
@@ -179,16 +180,19 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             brokerHandle: RpcBrokerHandle
     ): RpcServerHandle
 }
+
 inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startInVmRpcClient(
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
         configuration: RPCClientConfiguration = RPCClientConfiguration.default
 ) = startInVmRpcClient(I::class.java, username, password, configuration)
+
 inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRandomRpcClient(
         hostAndPort: NetworkHostAndPort,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password
 ) = startRandomRpcClient(I::class.java, hostAndPort, username, password)
+
 inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRpcClient(
         rpcAddress: NetworkHostAndPort,
         username: String = rpcTestUser.username,
@@ -199,7 +203,8 @@ inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRpcClient(
 interface RPCDriverInternalDSLInterface : DriverDSLInternalInterface, RPCDriverExposedDSLInterface
 
 data class RpcBrokerHandle(
-        val hostAndPort: NetworkHostAndPort?,/** null if this is an InVM broker */
+        val hostAndPort: NetworkHostAndPort?,
+        /** null if this is an InVM broker */
         val clientTransportConfiguration: TransportConfiguration,
         val serverControl: ActiveMQServerControl
 )
@@ -225,6 +230,7 @@ fun <A> rpcDriver(
         initialiseSerialization: Boolean = true,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         startNodesInProcess: Boolean = false,
+        extraCordappPackagesToScan: List<String> = emptyList(),
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -236,7 +242,8 @@ fun <A> rpcDriver(
                         useTestClock = useTestClock,
                         networkMapStartStrategy = networkMapStartStrategy,
                         isDebug = isDebug,
-                        startNodesInProcess = startNodesInProcess
+                        startNodesInProcess = startNodesInProcess,
+                        extraCordappPackagesToScan = extraCordappPackagesToScan
                 )
         ),
         coerce = { it },
@@ -250,6 +257,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
     override fun validateUser(user: String?, password: String?, certificates: Array<out X509Certificate>?): String? {
         return validate(user, password)
     }
+
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
         return validate(user, password)
     }
@@ -257,6 +265,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
     private fun isValid(user: String?, password: String?): Boolean {
         return rpcUser.username == user && rpcUser.password == password
     }
+
     private fun validate(user: String?, password: String?): String? {
         return if (isValid(user, password)) user else null
     }
@@ -300,6 +309,7 @@ data class RPCDriverDSL(
                     }
             )
         }
+
         fun createInVmRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long): Configuration {
             return ConfigurationImpl().apply {
                 acceptorConfigurations = setOf(TransportConfiguration(InVMAcceptorFactory::class.java.name))
@@ -307,6 +317,7 @@ data class RPCDriverDSL(
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
         }
+
         fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration {
             val connectionDirection = ConnectionDirection.Inbound(acceptorFactoryClassName = NettyAcceptorFactory::class.java.name)
             return ConfigurationImpl().apply {
@@ -318,6 +329,7 @@ data class RPCDriverDSL(
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
         }
+
         val inVmClientTransportConfiguration = TransportConfiguration(InVMConnectorFactory::class.java.name)
         fun createNettyClientTransportConfiguration(hostAndPort: NetworkHostAndPort): TransportConfiguration {
             return ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), hostAndPort, null)
@@ -496,21 +508,21 @@ class RandomRpcUser {
 
     companion object {
         private inline fun <reified T> HashMap<Class<*>, Generator<*>>.add(generator: Generator<T>) = this.putIfAbsent(T::class.java, generator)
-        val generatorStore = HashMap<Class<*>, Generator<*>>().apply {
+        private val generatorStore = HashMap<Class<*>, Generator<*>>().apply {
             add(Generator.string())
             add(Generator.int())
         }
+
         data class Call(val method: Method, val call: () -> Any?)
 
         @JvmStatic
         fun main(args: Array<String>) {
             require(args.size == 4)
-            @Suppress("UNCHECKED_CAST")
-            val rpcClass = Class.forName(args[0]) as Class<RPCOps>
+            val rpcClass: Class<RPCOps> = uncheckedCast(Class.forName(args[0]))
             val hostAndPort = NetworkHostAndPort.parse(args[1])
             val username = args[2]
             val password = args[3]
-            CordaRPCClient.initialiseSerialization()
+            KryoClientSerializationScheme.initialiseSerialization()
             val handle = RPCClient<RPCOps>(hostAndPort, null, serializationContext = KRYO_RPC_CLIENT_CONTEXT).start(rpcClass, username, password)
             val callGenerators = rpcClass.declaredMethods.map { method ->
                 Generator.sequence(method.parameters.map {

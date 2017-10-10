@@ -8,18 +8,14 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.node.services.ServiceInfo
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.issueInvalidState
-import net.corda.node.services.network.NetworkMapService
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.MEGA_CORP_KEY
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -33,29 +29,30 @@ class ValidatingNotaryServiceTests {
     lateinit var mockNet: MockNetwork
     lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var clientNode: StartedNode<MockNetwork.MockNode>
+    lateinit var notary: Party
 
     @Before
     fun setup() {
+        setCordappPackages("net.corda.testing.contracts")
         mockNet = MockNetwork()
-        notaryNode = mockNet.createNode(
-                legalName = DUMMY_NOTARY.name,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
-        )
-        clientNode = mockNet.createNode(notaryNode.network.myAddress)
+        notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        clientNode = mockNet.createNode()
         mockNet.runNetwork() // Clear network map registration messages
         notaryNode.internals.ensureRegistered()
+        notary = clientNode.services.getDefaultNotary()
     }
 
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        unsetCordappPackages()
     }
 
     @Test
     fun `should report error for invalid transaction dependency`() {
         val stx = run {
-            val inputState = issueInvalidState(clientNode, notaryNode.info.notaryIdentity)
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity)
+            val inputState = issueInvalidState(clientNode, notary)
+            val tx = TransactionBuilder(notary)
                     .addInputState(inputState)
                     .addCommand(dummyCommand(clientNode.info.chooseIdentity().owningKey))
             clientNode.services.signInitialTransaction(tx)
@@ -75,7 +72,7 @@ class ValidatingNotaryServiceTests {
             val inputState = issueState(clientNode)
 
             val command = Command(DummyContract.Commands.Move(), expectedMissingKey)
-            val tx = TransactionBuilder(notaryNode.info.notaryIdentity).withItems(inputState, command)
+            val tx = TransactionBuilder(notary).withItems(inputState, command)
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -98,9 +95,9 @@ class ValidatingNotaryServiceTests {
     }
 
     fun issueState(node: StartedNode<*>): StateAndRef<*> {
-        val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.chooseIdentity().ref(0))
+        val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.chooseIdentity().ref(0))
         val signedByNode = node.services.signInitialTransaction(tx)
-        val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
+        val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
         node.services.recordTransactions(stx)
         return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
     }

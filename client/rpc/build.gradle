@@ -1,15 +1,13 @@
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda client RPC modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 
@@ -92,6 +90,9 @@ task smokeTest(type: Test) {
 
 jar {
     baseName 'corda-rpc'
+    manifest {
+        attributes 'Automatic-Module-Name': 'net.corda.client.rpc'
+    }
 }
 
 publish {

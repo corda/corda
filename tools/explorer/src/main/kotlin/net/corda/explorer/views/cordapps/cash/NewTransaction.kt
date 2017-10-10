@@ -13,10 +13,7 @@ import javafx.scene.text.Font
 import javafx.scene.text.FontWeight
 import javafx.stage.Window
 import net.corda.client.jfx.model.*
-import net.corda.client.jfx.utils.ChosenList
-import net.corda.client.jfx.utils.isNotNull
-import net.corda.client.jfx.utils.map
-import net.corda.client.jfx.utils.unique
+import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Amount.Companion.sumOrNull
 import net.corda.core.contracts.withoutIssuer
@@ -31,10 +28,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CashTransaction
 import net.corda.explorer.model.IssuerModel
-import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.views.bigDecimalFormatter
 import net.corda.explorer.views.byteFormatter
 import net.corda.explorer.views.stringConverter
+import net.corda.explorer.views.toKnownParty
 import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashExitFlow.ExitRequest
@@ -42,6 +39,7 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
+import net.corda.testing.chooseIdentityAndCert
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 import java.math.BigDecimal
@@ -69,15 +67,15 @@ class NewTransaction : Fragment() {
     private val issueRef = SimpleObjectProperty<Byte>()
     // Inject data
     private val parties by observableList(NetworkIdentityModel::parties)
-    private val issuers by observableList(IssuerModel::issuers)
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
     private val notaries by observableList(NetworkIdentityModel::notaries)
     private val cash by observableList(ContractStateModel::cash)
     private val executeButton = ButtonType("Execute", ButtonBar.ButtonData.APPLY)
     private val currencyTypes by observableList(IssuerModel::currencyTypes)
-    private val supportedCurrencies by observableList(ReportingCurrencyModel::supportedCurrencies)
+    private val supportedCurrencies by observableList(IssuerModel::supportedCurrencies)
     private val transactionTypes by observableList(IssuerModel::transactionTypes)
+    private val issuers = cash.map { it.token.issuer }
 
     private val currencyItems = ChosenList(transactionTypeCB.valueProperty().map {
         when (it) {
@@ -154,7 +152,7 @@ class NewTransaction : Fragment() {
             val issueRef = if (issueRef.value != null) OpaqueBytes.of(issueRef.value) else defaultRef
             when (it) {
                 executeButton -> when (transactionTypeCB.value) {
-                    CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.party, notaries.first().notaryIdentity, anonymous)
+                    CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.party, notaries.first().value!!, anonymous)
                     CashTransaction.Pay -> PaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.party, anonymous = anonymous)
                     CashTransaction.Exit -> ExitRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
@@ -183,16 +181,14 @@ class NewTransaction : Fragment() {
         partyBLabel.textProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB?.let { "$it : " } })
         partyBChoiceBox.apply {
             visibleProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB }.isNotNull())
-            val services = parties.flatMap { it.advertisedServices.map { it.identity }}
-            // TODO It's a bit hacky and ugly now, because we lost main identity... and we will loose services.
-            items = FXCollections.observableList(parties.flatMap { it.legalIdentitiesAndCerts } - services).sorted()
+            items = FXCollections.observableList(parties.map { it.chooseIdentityAndCert() }).sorted()
             converter = stringConverter { it?.let { PartyNameFormatter.short.format(it.name) } ?: "" }
         }
         // Issuer
         issuerLabel.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
         // TODO This concept should burn (after services removal...)
         issuerChoiceBox.apply {
-            items = issuers.map { it.identity.party }.unique().sorted()
+            items = issuers.map { it.party.owningKey.toKnownParty().value }.filterNotNull().unique().sorted()
             converter = stringConverter { PartyNameFormatter.short.format(it.name) }
             visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Pay })
         }

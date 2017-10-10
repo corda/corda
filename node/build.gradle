@@ -11,9 +11,6 @@ description 'Corda node modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-
     compile {
         // We don't need these because we already include netty-all.
         exclude group: 'io.netty', module: 'netty-transport'
@@ -77,6 +74,7 @@ processSmokeTestResources {
 
 dependencies {
     compile project(':node-api')
+    compile project(":confidential-identities")
     compile project(':client:rpc')
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
@@ -110,11 +108,6 @@ dependencies {
     // Manifests: for reading stuff from the manifest file
     compile "com.jcabi:jcabi-manifests:1.1"
 
-    // GraphStream: For visualisation
-    testCompile "org.graphstream:gs-core:1.3"
-    testCompile("org.graphstream:gs-ui:1.3") {
-        exclude group: "bouncycastle"
-    }
     compile("com.intellij:forms_rt:7.0.3") {
         exclude group: "asm"
     }
@@ -164,7 +157,7 @@ dependencies {
     compile "io.netty:netty-all:$netty_version"
 
     // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
-    compile("com.github.corda.crash:crash.shell:9d242da2a10e686f33a3aefc69e4768824ad0716") {
+    compile("com.github.corda.crash:crash.shell:d5da86ba1b38e9c33af2a621dd15ba286307bec4") {
         exclude group: "org.slf4j", module: "slf4j-jdk14"
     }
 
@@ -194,7 +187,7 @@ task integrationTest(type: Test) {
 }
 
 task smokeTestJar(type: Jar) {
-    baseName = project.name + '-smoke-test'
+    classifier 'smokeTests'
     from sourceSets.smokeTest.output
 }
 

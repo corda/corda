@@ -15,7 +15,7 @@ import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import java.time.LocalDateTime
 import java.time.ZoneOffset.UTC
 
-val DUMMY_LINEAR_CONTRACT_PROGRAM_ID = "net.corda.testing.contracts.DummyLinearContract"
+const val DUMMY_LINEAR_CONTRACT_PROGRAM_ID = "net.corda.testing.contracts.DummyLinearContract"
 
 class DummyLinearContract : Contract {
     override fun verify(tx: LedgerTransaction) {

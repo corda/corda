@@ -1,12 +1,13 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
+class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
     @Test
     fun singleInteger() {
         @CordaSerializable
@@ -36,7 +37,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -67,7 +68,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -102,7 +103,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -137,7 +138,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -172,7 +173,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -183,7 +184,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         @CordaSerializable
         data class A(val a: Float)
 
-        val test: Float = 10.0F
+        val test = 10.0F
         val a = A(test)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
@@ -207,7 +208,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)

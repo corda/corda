@@ -48,97 +48,97 @@ import static java.util.stream.Collectors.toList;
  */
 public class SwapExampleX {
 
-  public static final LocalDate VALUATION_DATE = LocalDate.of(2016, 6, 6);
+    public static final LocalDate VALUATION_DATE = LocalDate.of(2016, 6, 6);
 
-  public static void main(String[] args) {
-    CurveGroupDefinition curveGroupDefinition = loadCurveGroup();
-    MarketData marketData = loadMarketData();
-    List<SwapTrade> trades = ImmutableList.of(createVanillaFixedVsLibor3mSwap(), createVanillaFixedVsLibor6mSwap());
-    CurveCalibrator calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD);
-    ImmutableRatesProvider ratesProvider = calibrator.calibrate(curveGroupDefinition, marketData, ReferenceData.standard());
-    MarketDataFxRateProvider fxRateProvider = MarketDataFxRateProvider.of(marketData);
-    ImmutableRatesProvider combinedRatesProvider = ImmutableRatesProvider.combined(fxRateProvider, ratesProvider);
+    public static void main(String[] args) {
+        CurveGroupDefinition curveGroupDefinition = loadCurveGroup();
+        MarketData marketData = loadMarketData();
+        List<SwapTrade> trades = ImmutableList.of(createVanillaFixedVsLibor3mSwap(), createVanillaFixedVsLibor6mSwap());
+        CurveCalibrator calibrator = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD);
+        ImmutableRatesProvider ratesProvider = calibrator.calibrate(curveGroupDefinition, marketData, ReferenceData.standard());
+        MarketDataFxRateProvider fxRateProvider = MarketDataFxRateProvider.of(marketData);
+        ImmutableRatesProvider combinedRatesProvider = ImmutableRatesProvider.combined(fxRateProvider, ratesProvider);
 
-    List<ResolvedSwapTrade> resolvedTrades = trades.stream().map(trade -> trade.resolve(ReferenceData.standard())).collect(toList());
-    DiscountingSwapProductPricer pricer = DiscountingSwapProductPricer.DEFAULT;
+        List<ResolvedSwapTrade> resolvedTrades = trades.stream().map(trade -> trade.resolve(ReferenceData.standard())).collect(toList());
+        DiscountingSwapProductPricer pricer = DiscountingSwapProductPricer.DEFAULT;
 
-    CurrencyParameterSensitivities totalSensitivities = CurrencyParameterSensitivities.empty();
-    MultiCurrencyAmount totalCurrencyExposure = MultiCurrencyAmount.empty();
+        CurrencyParameterSensitivities totalSensitivities = CurrencyParameterSensitivities.empty();
+        MultiCurrencyAmount totalCurrencyExposure = MultiCurrencyAmount.empty();
 
-    for (ResolvedSwapTrade resolvedTrade : resolvedTrades) {
-      ResolvedSwap swap = resolvedTrade.getProduct();
+        for (ResolvedSwapTrade resolvedTrade : resolvedTrades) {
+            ResolvedSwap swap = resolvedTrade.getProduct();
 
-      PointSensitivities pointSensitivities = pricer.presentValueSensitivity(swap, combinedRatesProvider).build();
-      CurrencyParameterSensitivities sensitivities = combinedRatesProvider.parameterSensitivity(pointSensitivities);
-      MultiCurrencyAmount currencyExposure = pricer.currencyExposure(swap, combinedRatesProvider);
+            PointSensitivities pointSensitivities = pricer.presentValueSensitivity(swap, combinedRatesProvider).build();
+            CurrencyParameterSensitivities sensitivities = combinedRatesProvider.parameterSensitivity(pointSensitivities);
+            MultiCurrencyAmount currencyExposure = pricer.currencyExposure(swap, combinedRatesProvider);
 
-      totalSensitivities = totalSensitivities.combinedWith(sensitivities);
-      totalCurrencyExposure = totalCurrencyExposure.plus(currencyExposure);
+            totalSensitivities = totalSensitivities.combinedWith(sensitivities);
+            totalCurrencyExposure = totalCurrencyExposure.plus(currencyExposure);
+        }
+        //PortfolioNormalizer normalizer = new PortfolioNormalizer(Currency.EUR, combinedRatesProvider);
+        //RwamBimmNotProductClassesCalculator calculatorTotal = new RwamBimmNotProductClassesCalculator(
+        //    fxRateProvider,
+        //    Currency.EUR,
+        //    IsdaConfiguration.INSTANCE);
+//
+        //Triple<Double, Double, Double> margin = BimmAnalysisUtils.computeMargin(
+        //    combinedRatesProvider,
+        //    normalizer,
+        //    calculatorTotal,
+        //    totalSensitivities,
+        //    totalCurrencyExposure);
+//
+        //System.out.println(margin);
     }
-    //PortfolioNormalizer normalizer = new PortfolioNormalizer(Currency.EUR, combinedRatesProvider);
-    //RwamBimmNotProductClassesCalculator calculatorTotal = new RwamBimmNotProductClassesCalculator(
-    //    fxRateProvider,
-    //    Currency.EUR,
-    //    IsdaConfiguration.INSTANCE);
-//
-    //Triple<Double, Double, Double> margin = BimmAnalysisUtils.computeMargin(
-    //    combinedRatesProvider,
-    //    normalizer,
-    //    calculatorTotal,
-    //    totalSensitivities,
-    //    totalCurrencyExposure);
-//
-    //System.out.println(margin);
-  }
 
-  //--------------------------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------------------------
 
-  /**
-   * Load the market quotes and FX rates from data files.
-   */
-  private static MarketData loadMarketData() {
-    Path dataDir = Paths.get("src/test/resources/data");
-    Path quotesFile = dataDir.resolve("BIMM-MARKET-QUOTES-20160606.csv");
-    Path fxFile = dataDir.resolve("BIMM-FX-RATES-20160606.csv");
+    /**
+     * Load the market quotes and FX rates from data files.
+     */
+    private static MarketData loadMarketData() {
+        Path dataDir = Paths.get("src/test/resources/data");
+        Path quotesFile = dataDir.resolve("BIMM-MARKET-QUOTES-20160606.csv");
+        Path fxFile = dataDir.resolve("BIMM-FX-RATES-20160606.csv");
 
-    Map<QuoteId, Double> quotes = QuotesCsvLoader.load(VALUATION_DATE, ImmutableList.of(ResourceLocator.ofPath(quotesFile)));
-    Map<FxRateId, FxRate> fxRates = FxRatesCsvLoader.load(VALUATION_DATE, ResourceLocator.ofPath(fxFile));
-    return ImmutableMarketData.builder(VALUATION_DATE).addValueMap(quotes).addValueMap(fxRates).build();
-  }
+        Map<QuoteId, Double> quotes = QuotesCsvLoader.load(VALUATION_DATE, ImmutableList.of(ResourceLocator.ofPath(quotesFile)));
+        Map<FxRateId, FxRate> fxRates = FxRatesCsvLoader.load(VALUATION_DATE, ResourceLocator.ofPath(fxFile));
+        return ImmutableMarketData.builder(VALUATION_DATE).addValueMap(quotes).addValueMap(fxRates).build();
+    }
 
-  /**
-   * Loads the curve group definition from data files.
-   *
-   * A curve group maps from curve name to index for forward curves and curve name to currency for discount curves.
-   */
-  private static CurveGroupDefinition loadCurveGroup() {
-    Path settingsDir = Paths.get("src/test/resources/settings");
-    Map<CurveGroupName, CurveGroupDefinition> curveGroups = RatesCalibrationCsvLoader.load(
-        ResourceLocator.ofPath(settingsDir.resolve("BIMM-groups-EUR.csv")),
-        ResourceLocator.ofPath(settingsDir.resolve("BIMM-settings-EUR.csv")),
-        ResourceLocator.ofPath(settingsDir.resolve("BIMM-nodes-EUR.csv")));
-    return curveGroups.get(CurveGroupName.of("BIMM"));
-  }
+    /**
+     * Loads the curve group definition from data files.
+     * <p>
+     * A curve group maps from curve name to index for forward curves and curve name to currency for discount curves.
+     */
+    private static CurveGroupDefinition loadCurveGroup() {
+        Path settingsDir = Paths.get("src/test/resources/settings");
+        Map<CurveGroupName, CurveGroupDefinition> curveGroups = RatesCalibrationCsvLoader.load(
+                ResourceLocator.ofPath(settingsDir.resolve("BIMM-groups-EUR.csv")),
+                ResourceLocator.ofPath(settingsDir.resolve("BIMM-settings-EUR.csv")),
+                ResourceLocator.ofPath(settingsDir.resolve("BIMM-nodes-EUR.csv")));
+        return curveGroups.get(CurveGroupName.of("BIMM"));
+    }
 
-  //--------------------------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------------------------
 
-  private static SwapTrade createVanillaFixedVsLibor3mSwap() {
-    return FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_3M.createTrade(
-            VALUATION_DATE,
-        Tenor.TENOR_4Y,
-        BuySell.BUY,
-        200_000_000,
-        0.015,
-        ReferenceData.standard());
-  }
+    private static SwapTrade createVanillaFixedVsLibor3mSwap() {
+        return FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_3M.createTrade(
+                VALUATION_DATE,
+                Tenor.TENOR_4Y,
+                BuySell.BUY,
+                200_000_000,
+                0.015,
+                ReferenceData.standard());
+    }
 
-  private static SwapTrade createVanillaFixedVsLibor6mSwap() {
-    return FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M.createTrade(
-            VALUATION_DATE,
-        Tenor.TENOR_10Y,
-        BuySell.SELL,
-        100_000_000,
-        0.013,
-        ReferenceData.standard());
-  }
+    private static SwapTrade createVanillaFixedVsLibor6mSwap() {
+        return FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M.createTrade(
+                VALUATION_DATE,
+                Tenor.TENOR_10Y,
+                BuySell.SELL,
+                100_000_000,
+                0.013,
+                ReferenceData.standard());
+    }
 }

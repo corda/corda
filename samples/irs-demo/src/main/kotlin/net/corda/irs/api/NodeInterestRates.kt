@@ -4,11 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.Party
+import net.corda.core.flows.*
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -46,17 +42,17 @@ import kotlin.collections.set
 object NodeInterestRates {
     // DOCSTART 2
     @InitiatedBy(RatesFixFlow.FixSignFlow::class)
-    class FixSignHandler(private val otherParty: Party) : FlowLogic<Unit>() {
+    class FixSignHandler(private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val request = receive<RatesFixFlow.SignRequest>(otherParty).unwrap { it }
+            val request = otherPartySession.receive<RatesFixFlow.SignRequest>().unwrap { it }
             val oracle = serviceHub.cordaService(Oracle::class.java)
-            send(otherParty, oracle.sign(request.ftx))
+            otherPartySession.send(oracle.sign(request.ftx))
         }
     }
 
     @InitiatedBy(RatesFixFlow.FixQueryFlow::class)
-    class FixQueryHandler(private val otherParty: Party) : FlowLogic<Unit>() {
+    class FixQueryHandler(private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
         object RECEIVED : ProgressTracker.Step("Received fix request")
         object SENDING : ProgressTracker.Step("Sending fix response")
 
@@ -64,12 +60,12 @@ object NodeInterestRates {
 
         @Suspendable
         override fun call() {
-            val request = receive<RatesFixFlow.QueryRequest>(otherParty).unwrap { it }
+            val request = otherPartySession.receive<RatesFixFlow.QueryRequest>().unwrap { it }
             progressTracker.currentStep = RECEIVED
             val oracle = serviceHub.cordaService(Oracle::class.java)
             val answers = oracle.query(request.queries)
             progressTracker.currentStep = SENDING
-            send(otherParty, answers)
+            otherPartySession.send(answers)
         }
     }
     // DOCEND 2
@@ -129,10 +125,8 @@ object NodeInterestRates {
         //      It will be fixed by adding partial signatures later.
         // DOCSTART 1
         fun sign(ftx: FilteredTransaction): TransactionSignature {
-            if (!ftx.verify()) {
-                throw MerkleTreeException("Rate Fix Oracle: Couldn't verify partial Merkle tree.")
-            }
-            // Performing validation of obtained FilteredLeaves.
+            ftx.verify()
+            // Performing validation of obtained filtered components.
             fun commandValidator(elem: Command<*>): Boolean {
                 require(services.myInfo.legalIdentities.first().owningKey in elem.signers && elem.value is Fix) {
                     "Oracle received unknown command (not in signers or not Fix)."
@@ -151,8 +145,7 @@ object NodeInterestRates {
                 }
             }
 
-            val leaves = ftx.filteredLeaves
-            require(leaves.checkWithFun(::check))
+            require(ftx.checkWithFun(::check))
 
             // It all checks out, so we can return a signature.
             //

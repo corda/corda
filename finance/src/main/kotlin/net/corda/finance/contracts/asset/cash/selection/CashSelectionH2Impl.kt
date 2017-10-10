@@ -25,7 +25,7 @@ import kotlin.concurrent.withLock
 class CashSelectionH2Impl : CashSelection {
 
     companion object {
-        val JDBC_DRIVER_NAME = "H2 JDBC Driver"
+        const val JDBC_DRIVER_NAME = "H2 JDBC Driver"
         val log = loggerFor<CashSelectionH2Impl>()
     }
 
@@ -54,11 +54,11 @@ class CashSelectionH2Impl : CashSelection {
      */
     @Suspendable
     override fun unconsumedCashStatesForSpending(services: ServiceHub,
-                                        amount: Amount<Currency>,
-                                        onlyFromIssuerParties: Set<AbstractParty>,
-                                        notary: Party?,
-                                        lockId: UUID,
-                                        withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
+                                                 amount: Amount<Currency>,
+                                                 onlyFromIssuerParties: Set<AbstractParty>,
+                                                 notary: Party?,
+                                                 lockId: UUID,
+                                                 withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
 
         val issuerKeysStr = onlyFromIssuerParties.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }.dropLast(1)
         val issuerRefsStr = withIssuerRefs.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }.dropLast(1)
@@ -77,7 +77,7 @@ class CashSelectionH2Impl : CashSelection {
             spendLock.withLock {
                 val statement = services.jdbcSession().createStatement()
                 try {
-                    statement.execute("CALL SET(@t, 0);")
+                    statement.execute("CALL SET(@t, CAST(0 AS BIGINT));")
 
                     // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
                     // the softLockReserve update will detect whether we try to lock states locked by others

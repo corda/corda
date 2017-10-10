@@ -9,15 +9,17 @@ import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.KryoException
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.MoreExecutors
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
@@ -79,7 +81,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                           val checkpointStorage: CheckpointStorage,
                           val executor: AffinityExecutor,
                           val database: CordaPersistence,
-                          private val unfinishedFibers: ReusableLatch = ReusableLatch()) {
+                          private val unfinishedFibers: ReusableLatch = ReusableLatch(),
+                          private val classloader: ClassLoader = javaClass.classLoader) {
 
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
 
@@ -150,10 +153,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
     fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, CordaFuture<T>>> {
-        @Suppress("UNCHECKED_CAST")
         return mutex.locked {
             stateMachines.keys.mapNotNull {
-                flowClass.castIfPossible(it.logic)?.let { it to (it.stateMachine as FlowStateMachineImpl<T>).resultFuture }
+                flowClass.castIfPossible(it.logic)?.let { it to uncheckedCast<FlowStateMachine<*>, FlowStateMachineImpl<T>>(it.stateMachine).resultFuture }
             }
         }
     }
@@ -344,8 +346,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     // commit but a counterparty flow has ended with an error (in which case our flow also has to end)
     private fun resumeOnMessage(message: ExistingSessionMessage, session: FlowSessionInternal): Boolean {
         val waitingForResponse = session.fiber.waitingForResponse
-        return (waitingForResponse as? ReceiveRequest<*>)?.session === session ||
-                waitingForResponse is WaitForLedgerCommit && message is ErrorSessionEnd
+        return waitingForResponse?.shouldResume(message, session) ?: false
     }
 
     private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
@@ -364,6 +365,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             }
             val session = FlowSessionInternal(
                     flow,
+                    flowSession,
                     random63BitValue(),
                     sender,
                     FlowSessionState.Initiated(sender, senderSessionId, FlowInfo(senderFlowVersion, sessionInit.appName)))
@@ -371,15 +373,21 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
             openSessions[session.ourSessionId] = session
-            val meIdentity = sessionInit.otherIdentity ?: serviceHub.myInfo.legalIdentitiesAndCerts.first()
-            val fiber = createFiber(flow, FlowInitiator.Peer(sender), meIdentity)
+            // TODO Perhaps the session-init will specificy which of our multiple identies to use, which we would have to
+            // double-check is actually ours. However, what if we want to control how our identities gets used?
+            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             flowSession.sessionFlow = flow
             flowSession.stateMachine = fiber
             fiber.openSessions[Pair(flow, sender)] = session
             updateCheckpoint(fiber)
             session to initiatedFlowFactory
         } catch (e: SessionRejectException) {
-            logger.warn("${e.logMessage}: $sessionInit")
+            // TODO: Handle this more gracefully
+            try {
+                logger.warn("${e.logMessage}: $sessionInit")
+            } catch (e: Throwable) {
+                logger.warn("Problematic session init message during logging", e)
+            }
             sendSessionReject(e.rejectMessage)
             return
         } catch (e: Exception) {
@@ -389,7 +397,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
 
         val (ourFlowVersion, appName) = when (initiatedFlowFactory) {
-            // The flow version for the core flows is the platform version
+        // The flow version for the core flows is the platform version
             is InitiatedFlowFactory.Core -> serviceHub.myInfo.platformVersion to "corda"
             is InitiatedFlowFactory.CorDapp -> initiatedFlowFactory.flowVersion to initiatedFlowFactory.appName
         }
@@ -402,7 +410,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun getInitiatedFlowFactory(sessionInit: SessionInit): InitiatedFlowFactory<*> {
         val initiatingFlowClass = try {
-            Class.forName(sessionInit.initiatingFlowClass).asSubclass(FlowLogic::class.java)
+            Class.forName(sessionInit.initiatingFlowClass, true, classloader).asSubclass(FlowLogic::class.java)
         } catch (e: ClassNotFoundException) {
             throw SessionRejectException("Don't know ${sessionInit.initiatingFlowClass}")
         } catch (e: ClassCastException) {
@@ -427,15 +435,23 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate): FlowStateMachineImpl<T> {
-        val id = StateMachineRunId.createRandom()
-        return FlowStateMachineImpl(id, logic, scheduler, flowInitiator, me).apply { initFiber(this) }
+    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T> {
+        val fsm = FlowStateMachineImpl(
+                StateMachineRunId.createRandom(),
+                logic,
+                scheduler,
+                flowInitiator,
+                ourIdentity ?: serviceHub.myInfo.legalIdentities[0])
+        initFiber(fsm)
+        return fsm
     }
 
     private fun initFiber(fiber: FlowStateMachineImpl<*>) {
         verifyFlowLogicIsSuspendable(fiber.logic)
         fiber.database = database
         fiber.serviceHub = serviceHub
+        fiber.ourIdentityAndCert = serviceHub.myInfo.legalIdentitiesAndCerts.find { it.party == fiber.ourIdentity }
+                ?: throw IllegalStateException("Identity specified by ${fiber.id} (${fiber.ourIdentity}) is not one of ours!")
         fiber.actionOnSuspend = { ioRequest ->
             updateCheckpoint(fiber)
             // We commit on the fibers transaction that was copied across ThreadLocals during suspend
@@ -514,11 +530,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      *
      * Note that you must be on the [executor] thread.
      */
-    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate?): FlowStateMachineImpl<T> {
+    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         val fiber = database.transaction {
-            val fiber = createFiber(logic, flowInitiator, me ?: serviceHub.myInfo.legalIdentitiesAndCerts.first())
+            val fiber = createFiber(logic, flowInitiator, ourIdentity)
             updateCheckpoint(fiber)
             fiber
         }
@@ -615,8 +631,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val serialized = try {
             message.serialize()
         } catch (e: Exception) {
-            when(e) {
-                // Handling Kryo and AMQP serialization problems. Unfortunately the two exception types do not share much of a common exception interface.
+            when (e) {
+            // Handling Kryo and AMQP serialization problems. Unfortunately the two exception types do not share much of a common exception interface.
                 is KryoException,
                 is NotSerializableException -> {
                     if (message !is ErrorSessionEnd || message.errorResponse == null) throw e
@@ -636,6 +652,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 }
 
-class SessionRejectException(val rejectMessage: String, val logMessage: String) : Exception() {
+class SessionRejectException(val rejectMessage: String, val logMessage: String) : CordaException(rejectMessage) {
     constructor(message: String) : this(message, message)
 }

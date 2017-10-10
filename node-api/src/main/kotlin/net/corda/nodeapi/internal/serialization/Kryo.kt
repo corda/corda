@@ -7,32 +7,26 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
-import net.corda.nodeapi.internal.AttachmentsClassLoader
-import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.transactions.CoreTransaction
-import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
+import net.corda.core.toFuture
+import net.corda.core.toObservable
+import net.corda.core.transactions.*
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import sun.security.ec.ECPublicKeyImpl
-import sun.security.util.DerValue
+import rx.Observable
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
@@ -241,42 +235,14 @@ fun Input.readBytesWithLength(): ByteArray {
 @ThreadSafe
 object WireTransactionSerializer : Serializer<WireTransaction>() {
     override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
-        kryo.writeClassAndObject(output, obj.inputs)
-        kryo.writeClassAndObject(output, obj.attachments)
-        kryo.writeClassAndObject(output, obj.outputs)
-        kryo.writeClassAndObject(output, obj.commands)
-        kryo.writeClassAndObject(output, obj.notary)
-        kryo.writeClassAndObject(output, obj.timeWindow)
+        kryo.writeClassAndObject(output, obj.componentGroups)
         kryo.writeClassAndObject(output, obj.privacySalt)
     }
 
-    private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
-        kryo.context[attachmentsClassLoaderEnabledPropertyName] as? Boolean ?: false || return null
-        val serializationContext = kryo.serializationContext() ?: return null // Some tests don't set one.
-        val missing = ArrayList<SecureHash>()
-        val attachments = ArrayList<Attachment>()
-        attachmentHashes.forEach { id ->
-            serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
-        }
-        missing.isNotEmpty() && throw MissingAttachmentsException(missing)
-        return AttachmentsClassLoader(attachments)
-    }
-
-    @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
-        val inputs = kryo.readClassAndObject(input) as List<StateRef>
-        val attachmentHashes = kryo.readClassAndObject(input) as List<SecureHash>
-
-        // If we're deserialising in the sandbox context, we use our special attachments classloader.
-        // Otherwise we just assume the code we need is on the classpath already.
-        kryo.useClassLoader(attachmentsClassLoader(kryo, attachmentHashes) ?: javaClass.classLoader) {
-            val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
-            val commands = kryo.readClassAndObject(input) as List<Command<*>>
-            val notary = kryo.readClassAndObject(input) as Party?
-            val timeWindow = kryo.readClassAndObject(input) as TimeWindow?
-            val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, timeWindow, privacySalt)
-        }
+        val componentGroups: List<ComponentGroup> = uncheckedCast(kryo.readClassAndObject(input))
+        val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
+        return WireTransaction(componentGroups, privacySalt)
     }
 }
 
@@ -288,9 +254,8 @@ object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransa
         kryo.writeClassAndObject(output, obj.newNotary)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
-        val inputs = kryo.readClassAndObject(input) as List<StateRef>
+        val inputs: List<StateRef> = uncheckedCast(kryo.readClassAndObject(input))
         val notary = kryo.readClassAndObject(input) as Party
         val newNotary = kryo.readClassAndObject(input) as Party
 
@@ -305,78 +270,24 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
         kryo.writeClassAndObject(output, obj.sigs)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<SignedTransaction>): SignedTransaction {
         return SignedTransaction(
-                kryo.readClassAndObject(input) as SerializedBytes<CoreTransaction>,
-                kryo.readClassAndObject(input) as List<TransactionSignature>
+                uncheckedCast<Any?, SerializedBytes<CoreTransaction>>(kryo.readClassAndObject(input)),
+                uncheckedCast<Any?, List<TransactionSignature>>(kryo.readClassAndObject(input))
         )
     }
 }
 
-/** For serialising an ed25519 private key */
-@ThreadSafe
-object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
-    override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
-        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
-        output.writeBytesWithLength(obj.seed)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
-        val seed = input.readBytesWithLength()
-        return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
-    }
-}
-
-/** For serialising an ed25519 public key */
-@ThreadSafe
-object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
-    override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
-        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
-        output.writeBytesWithLength(obj.abyte)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
-        val A = input.readBytesWithLength()
-        return EdDSAPublicKey(EdDSAPublicKeySpec(A, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
-    }
-}
-
-/** For serialising an ed25519 public key */
-@ThreadSafe
-object ECPublicKeyImplSerializer : Serializer<ECPublicKeyImpl>() {
-    override fun write(kryo: Kryo, output: Output, obj: ECPublicKeyImpl) {
-        output.writeBytesWithLength(obj.encoded)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<ECPublicKeyImpl>): ECPublicKeyImpl {
-        val A = input.readBytesWithLength()
-        val der = DerValue(A)
-        return ECPublicKeyImpl.parse(der) as ECPublicKeyImpl
-    }
-}
-
-// TODO Implement standardized serialization of CompositeKeys. See JIRA issue: CORDA-249.
-@ThreadSafe
-object CompositeKeySerializer : Serializer<CompositeKey>() {
-    override fun write(kryo: Kryo, output: Output, obj: CompositeKey) {
-        output.writeInt(obj.threshold)
-        output.writeInt(obj.children.size)
-        obj.children.forEach { kryo.writeClassAndObject(output, it) }
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
-        val threshold = input.readInt()
-        val children = readListOfLength<CompositeKey.NodeAndWeight>(kryo, input, minLen = 2)
-        val builder = CompositeKey.Builder()
-        children.forEach { builder.addKey(it.node, it.weight) }
-        return builder.build(threshold) as CompositeKey
+sealed class UseCaseSerializer<T>(private val allowedUseCases: EnumSet<SerializationContext.UseCase>) : Serializer<T>() {
+    protected fun checkUseCase() {
+        checkUseCase(allowedUseCases)
     }
 }
 
 @ThreadSafe
-object PrivateKeySerializer : Serializer<PrivateKey>() {
+object PrivateKeySerializer : UseCaseSerializer<PrivateKey>(EnumSet.of(Storage, Checkpoint)) {
     override fun write(kryo: Kryo, output: Output, obj: PrivateKey) {
+        checkUseCase()
         output.writeBytesWithLength(obj.encoded)
     }
 
@@ -410,8 +321,7 @@ inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 
     if (elemCount < minLen) throw KryoException("Cannot deserialize list, too little elements. Minimum required: $minLen, got: $elemCount")
     if (expectedLen != null && elemCount != expectedLen)
         throw KryoException("Cannot deserialize list, expected length: $expectedLen, got: $elemCount.")
-    val list = (1..elemCount).map { kryo.readClassAndObject(input) as T }
-    return list
+    return (1..elemCount).map { kryo.readClassAndObject(input) as T }
 }
 
 /**
@@ -456,6 +366,44 @@ open class CordaKryo(classResolver: ClassResolver) : Kryo(classResolver, MapRefe
     }
 }
 
+/**
+ * The Kryo used for the RPC wire protocol.
+ */
+// Every type in the wire protocol is listed here explicitly.
+// This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
+// because we can see everything we're using in one place.
+class RPCKryo(observableSerializer: Serializer<Observable<*>>, serializationContext: SerializationContext) : CordaKryo(CordaClassResolver(serializationContext)) {
+    init {
+        DefaultKryoCustomizer.customize(this)
+
+        // RPC specific classes
+        register(InputStream::class.java, InputStreamSerializer)
+        register(Observable::class.java, observableSerializer)
+        register(CordaFuture::class,
+                read = { kryo, input -> observableSerializer.read(kryo, input, Observable::class.java).toFuture() },
+                write = { kryo, output, obj -> observableSerializer.write(kryo, output, obj.toObservable()) }
+        )
+    }
+
+    override fun getRegistration(type: Class<*>): Registration {
+        if (Observable::class.java != type && Observable::class.java.isAssignableFrom(type)) {
+            return super.getRegistration(Observable::class.java)
+        }
+        if (InputStream::class.java != type && InputStream::class.java.isAssignableFrom(type)) {
+            return super.getRegistration(InputStream::class.java)
+        }
+        if (CordaFuture::class.java != type && CordaFuture::class.java.isAssignableFrom(type)) {
+            return super.getRegistration(CordaFuture::class.java)
+        }
+        type.requireExternal("RPC not allowed to deserialise internal classes")
+        return super.getRegistration(type)
+    }
+
+    private fun Class<*>.requireExternal(msg: String) {
+        require(!name.startsWith("net.corda.node.") && ".internal" !in name) { "$msg: $name" }
+    }
+}
+
 inline fun <T : Any> Kryo.register(
         type: KClass<T>,
         crossinline read: (Kryo, Input) -> T,
@@ -478,7 +426,7 @@ inline fun <reified T : Any> Kryo.noReferencesWithin() {
     register(T::class.java, NoReferencesSerializer(getSerializer(T::class.java)))
 }
 
-class NoReferencesSerializer<T>(val baseSerializer: Serializer<T>) : Serializer<T>() {
+class NoReferencesSerializer<T>(private val baseSerializer: Serializer<T>) : Serializer<T>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
         return kryo.withoutReferences { baseSerializer.read(kryo, input, type) }
@@ -513,7 +461,7 @@ object LoggerSerializer : Serializer<Logger>() {
 object ClassSerializer : Serializer<Class<*>>() {
     override fun read(kryo: Kryo, input: Input, type: Class<Class<*>>): Class<*> {
         val className = input.readString()
-        return Class.forName(className)
+        return Class.forName(className, true, kryo.classLoader)
     }
 
     override fun write(kryo: Kryo, output: Output, clazz: Class<*>) {
@@ -590,8 +538,7 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private val delegate: Serializer<Throwable> = ReflectionSerializerFactory.makeSerializer(kryo, FieldSerializer::class.java, type) as Serializer<Throwable>
+    private val delegate: Serializer<Throwable> = uncheckedCast(ReflectionSerializerFactory.makeSerializer(kryo, FieldSerializer::class.java, type))
 
     override fun write(kryo: Kryo, output: Output, throwable: Throwable) {
         delegate.write(kryo, output, throwable)
@@ -599,7 +546,7 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
 
     override fun read(kryo: Kryo, input: Input, type: Class<Throwable>): Throwable {
         val throwableRead = delegate.read(kryo, input, type)
-        if(throwableRead.suppressed.isEmpty()) {
+        if (throwableRead.suppressed.isEmpty()) {
             throwableRead.setSuppressedToSentinel()
         }
         return throwableRead

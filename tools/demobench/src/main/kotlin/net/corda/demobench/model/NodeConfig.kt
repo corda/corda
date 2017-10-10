@@ -1,85 +1,77 @@
 package net.corda.demobench.model
 
-import com.typesafe.config.*
+import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.copyToDirectory
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.User
-import java.io.File
-import java.nio.file.Files
+import net.corda.nodeapi.config.toConfig
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
-class NodeConfig(
-        baseDir: Path,
-        legalName: CordaX500Name,
-        p2pPort: Int,
-        val rpcPort: Int,
-        val webPort: Int,
-        val h2Port: Int,
-        val extraServices: MutableList<String> = mutableListOf(),
-        val users: List<User> = listOf(defaultUser),
-        var networkMap: NetworkMapConfig? = null
-) : NetworkMapConfig(legalName, p2pPort), HasPlugins {
-
+/**
+ * This is a subset of FullNodeConfiguration, containing only those configs which we need. The node uses reference.conf
+ * to fill in the defaults so we're not required to specify them here.
+ */
+data class NodeConfig(
+        val myLegalName: CordaX500Name,
+        val p2pAddress: NetworkHostAndPort,
+        val rpcAddress: NetworkHostAndPort,
+        /** This is not used by the node but by the webserver which looks at node.conf. */
+        val webAddress: NetworkHostAndPort,
+        val notary: NotaryService?,
+        val networkMapService: NetworkMapConfig?,
+        val h2port: Int,
+        val rpcUsers: List<User> = listOf(defaultUser),
+        /** This is an extra config used by the Cash app. */
+        val issuableCurrencies: List<String> = emptyList()
+) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
         val defaultUser = user("guest")
     }
 
-    val nearestCity: String = legalName.locality
-    val nodeDir: Path = baseDir.resolve(key)
-    override val pluginDir: Path = nodeDir.resolve("plugins")
-    val explorerDir: Path = baseDir.resolve("$key-explorer")
+    @Suppress("unused")
+    private val detectPublicIp = false
+    @Suppress("unused")
+    private val useTestClock = true
 
+    val isNetworkMap: Boolean get() = networkMapService == null
+
+    fun toText(): String = toConfig().root().render(renderOptions)
+}
+
+/**
+ * This is a mirror of NetworkMapInfo.
+ */
+data class NetworkMapConfig(val legalName: CordaX500Name, val address: NetworkHostAndPort)
+
+/**
+ * This is a subset of NotaryConfig. It implements [ExtraService] to avoid unnecessary copying.
+ */
+data class NotaryService(val validating: Boolean) : ExtraService {
+    override fun toString(): String = "${if (validating) "V" else "Non-v"}alidating Notary"
+}
+
+// TODO Think of a better name
+data class NodeConfigWrapper(val baseDir: Path, val nodeConfig: NodeConfig) : HasPlugins {
+    val key: String = nodeConfig.myLegalName.organisation.toKey()
+    val nodeDir: Path = baseDir / key
+    val explorerDir: Path = baseDir / "$key-explorer"
+    override val pluginDir: Path = nodeDir / "plugins"
     var state: NodeState = NodeState.STARTING
 
-    val isCashIssuer: Boolean = extraServices.any {
-        it.startsWith("corda.issuer.")
-    }
-
-    fun isNetworkMap(): Boolean = networkMap == null
-
-    /*
-     * The configuration object depends upon the networkMap,
-     * which is mutable.
-     */
-    fun toFileConfig(): Config = ConfigFactory.empty()
-            .withValue("myLegalName", valueFor(legalName.toString()))
-            .withValue("p2pAddress", addressValueFor(p2pPort))
-            .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
-            .withFallback(optional("networkMapService", networkMap, { c, n ->
-                c.withValue("address", addressValueFor(n.p2pPort))
-                    .withValue("legalName", valueFor(n.legalName.toString()))
-            }))
-            .withValue("webAddress", addressValueFor(webPort))
-            .withValue("rpcAddress", addressValueFor(rpcPort))
-            .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
-            .withValue("h2port", valueFor(h2Port))
-            .withValue("useTestClock", valueFor(true))
-            .withValue("detectPublicIp", valueFor(false))
-
-    fun toText(): String = toFileConfig().root().render(renderOptions)
-
-    fun moveTo(baseDir: Path) = NodeConfig(
-        baseDir, legalName, p2pPort, rpcPort, webPort, h2Port, extraServices, users, networkMap
-    )
-
-    fun install(plugins: Collection<Path>) {
-        if (plugins.isNotEmpty() && pluginDir.toFile().forceDirectory()) {
-            plugins.forEach {
-                Files.copy(it, pluginDir.resolve(it.fileName.toString()), StandardCopyOption.REPLACE_EXISTING)
-            }
+    fun install(cordapps: Collection<Path>) {
+        if (cordapps.isEmpty()) return
+        pluginDir.createDirectories()
+        for (cordapp in cordapps) {
+            cordapp.copyToDirectory(pluginDir, StandardCopyOption.REPLACE_EXISTING)
         }
     }
-
 }
 
-private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)
+fun user(name: String) = User(name, "letmein", setOf("ALL"))
 
-private fun addressValueFor(port: Int) = valueFor("localhost:$port")
-
-private inline fun <T> optional(path: String, obj: T?, body: (Config, T) -> Config): Config {
-    val config = ConfigFactory.empty()
-    return if (obj == null) config else body(config, obj).atPath(path)
-}
-
-fun File.forceDirectory(): Boolean = this.isDirectory || this.mkdirs()
+fun String.toKey() = filter { !it.isWhitespace() }.toLowerCase()

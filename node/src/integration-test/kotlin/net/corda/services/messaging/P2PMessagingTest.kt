@@ -5,10 +5,10 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.elapsedTime
+import net.corda.core.internal.randomOrNull
 import net.corda.core.internal.times
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -17,8 +17,6 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
@@ -31,8 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(organisation = "DistributedService", locality = "London", country = "GB")
-        val SERVICE_2_NAME = CordaX500Name(organisation = "Service 2", locality = "London", country = "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
     }
 
     @Test
@@ -48,45 +45,6 @@ class P2PMessagingTest : NodeBasedTest() {
         startNodes().getOrThrow(timeout = startUpDuration * 3)
     }
 
-    // https://github.com/corda/corda/issues/71
-    @Test
-    fun `communicating with a service running on the network map node`() {
-        startNetworkMapNode(advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        networkMapNode.respondWith("Hello")
-        val alice = startNode(ALICE.name).getOrThrow()
-        val serviceAddress = alice.services.networkMapCache.run {
-            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
-        }
-        val received = alice.receiveFrom(serviceAddress).getOrThrow(10.seconds)
-        assertThat(received).isEqualTo("Hello")
-    }
-
-    // TODO Use a dummy distributed service
-    @Test
-    fun `communicating with a distributed service which the network map node is part of`() {
-        ServiceIdentityGenerator.generateToDisk(
-                listOf(DUMMY_MAP.name, SERVICE_2_NAME).map { baseDirectory(it) },
-                RaftValidatingNotaryService.type.id,
-                DISTRIBUTED_SERVICE_NAME)
-
-        val notaryClusterAddress = freeLocalHostAndPort()
-        startNetworkMapNode(
-                DUMMY_MAP.name,
-                advertisedServices = setOf(ServiceInfo(RaftValidatingNotaryService.type, DUMMY_MAP.name.copy(commonName = "DistributedService"))),
-                configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
-        val (serviceNode2, alice) = listOf(
-                startNode(
-                        SERVICE_2_NAME,
-                        advertisedServices = setOf(ServiceInfo(RaftValidatingNotaryService.type, SERVICE_2_NAME.copy(commonName = "DistributedService"))),
-                        configOverrides = mapOf(
-                                "notaryNodeAddress" to freeLocalHostAndPort().toString(),
-                                "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
-                startNode(ALICE.name)
-        ).transpose().getOrThrow()
-
-        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), SERVICE_2_NAME.copy(commonName = "DistributedService"), alice)
-    }
-
     @Ignore
     @Test
     fun `communicating with a distributed service which we're part of`() {
@@ -99,7 +57,8 @@ class P2PMessagingTest : NodeBasedTest() {
         val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
         val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
-            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+            val notaryParty = notaryIdentities.randomOrNull()!!
+            alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
         }
 
         val dummyTopic = "dummy.topic"
@@ -130,7 +89,8 @@ class P2PMessagingTest : NodeBasedTest() {
         val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
         val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
-            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+            val notaryParty = notaryIdentities.randomOrNull()!!
+            alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
         }
 
         val dummyTopic = "dummy.topic"
@@ -235,7 +195,7 @@ class P2PMessagingTest : NodeBasedTest() {
 
     private fun StartedNode<*>.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
         val request = TestRequest(replyTo = network.myAddress)
-        return network.sendRequest<Any>(javaClass.name, request, target)
+        return network.sendRequest(javaClass.name, request, target)
     }
 
     @CordaSerializable

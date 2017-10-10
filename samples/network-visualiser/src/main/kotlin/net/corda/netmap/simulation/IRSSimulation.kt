@@ -6,10 +6,12 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import net.corda.client.jackson.JacksonSupport
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.queryBy
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -95,7 +97,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val swaps =
                 node1.database.transaction {
-                    node1.services.vaultQueryService.queryBy<InterestRateSwap.State>().states
+                    node1.services.vaultService.queryBy<InterestRateSwap.State>().states
                 }
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.single()
 
@@ -138,21 +140,25 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         node1.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
         node2.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
 
+        val notaryId = node1.rpcOps.notaryIdentities().first()
+
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
                             val payload: AutoOffer) : FlowLogic<SignedTransaction>() {
             @Suspendable
-            override fun call(): SignedTransaction = subFlow(Instigator(otherParty, payload))
+            override fun call(): SignedTransaction {
+                val session = initiateFlow(otherParty)
+                return subFlow(Instigator(session, payload))
+            }
         }
 
         @InitiatedBy(StartDealFlow::class)
-        class AcceptDealFlow(otherParty: Party) : Acceptor(otherParty)
+        class AcceptDealFlow(otherSession: FlowSession) : Acceptor(otherSession)
 
         val acceptDealFlows: Observable<AcceptDealFlow> = node2.internals.registerInitiatedFlow(AcceptDealFlow::class.java)
 
-        @Suppress("UNCHECKED_CAST")
         val acceptorTxFuture = acceptDealFlows.toFuture().toCompletableFuture().thenCompose {
-            (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture.toCompletableFuture()
+            uncheckedCast<FlowStateMachine<*>, FlowStateMachine<SignedTransaction>>(it.stateMachine).resultFuture.toCompletableFuture()
         }
 
         showProgressFor(listOf(node1, node2))
@@ -160,7 +166,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val instigator = StartDealFlow(
                 node2.info.chooseIdentity(),
-                AutoOffer(notary.info.notaryIdentity, irs))
+                AutoOffer(notaryId, irs)) // TODO Pass notary as parameter to Simulation.
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
         return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose { instigatorTxFuture.toCompletableFuture() }

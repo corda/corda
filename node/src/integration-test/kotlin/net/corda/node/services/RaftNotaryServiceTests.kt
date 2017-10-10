@@ -12,22 +12,30 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.contracts.DUMMY_PROGRAM_ID
+import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.dummyCommand
-import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
-import org.junit.Ignore
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class RaftNotaryServiceTests : NodeBasedTest() {
-    private val notaryName = CordaX500Name(organisation = "RAFT Notary Service", locality = "London", country = "GB")
+    private val notaryName = CordaX500Name(RaftValidatingNotaryService.id, "RAFT Notary Service", "London", "GB")
 
-    @Ignore
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.testing.contracts")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
+    }
+
     @Test
     fun `detect double spend`() {
         val (bankA) = listOf(
@@ -49,7 +57,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
         val secondSpendBuilder = TransactionBuilder(notaryParty).withItems(inputState).run {
             val dummyState = DummyContract.SingleOwnerState(0, bankA.info.chooseIdentity())
-            addOutputState(dummyState, DUMMY_PROGRAM_ID)
+            addOutputState(dummyState, DummyContract.PROGRAM_ID)
             addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
             this
         }

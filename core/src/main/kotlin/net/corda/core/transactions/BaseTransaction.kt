@@ -2,8 +2,9 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.indexOfOrThrow
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.indexOfOrThrow
+import net.corda.core.internal.uncheckedCast
 import java.util.function.Predicate
 
 /**
@@ -33,15 +34,13 @@ abstract class BaseTransaction : NamedByHash {
     }
 
     private fun checkNoDuplicateInputs() {
-        val duplicates = inputs.groupBy { it }.filter { it.value.size > 1 }.keys
-        check(duplicates.isEmpty()) { "Duplicate input states detected" }
+        check(inputs.size == inputs.toSet().size) { "Duplicate input states detected" }
     }
 
     /**
      * Returns a [StateAndRef] for the given output index.
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> outRef(index: Int): StateAndRef<T> = StateAndRef(outputs[index] as TransactionState<T>, StateRef(id, index))
+    fun <T : ContractState> outRef(index: Int): StateAndRef<T> = StateAndRef(uncheckedCast(outputs[index]), StateRef(id, index))
 
     /**
      * Returns a [StateAndRef] for the requested output state, or throws [IllegalArgumentException] if not found.
@@ -111,8 +110,7 @@ abstract class BaseTransaction : NamedByHash {
      */
     fun <T : ContractState> outRefsOfType(clazz: Class<T>): List<StateAndRef<T>> {
         return outputs.mapIndexedNotNull { index, state ->
-            @Suppress("UNCHECKED_CAST")
-            clazz.castIfPossible(state.data)?.let { StateAndRef(state as TransactionState<T>, StateRef(id, index)) }
+            clazz.castIfPossible(state.data)?.let { StateAndRef<T>(uncheckedCast(state), StateRef(id, index)) }
         }
     }
 

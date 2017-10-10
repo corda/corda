@@ -5,6 +5,7 @@ import net.corda.core.transactions.LedgerTransaction
 
 /**
  * Provides verification service. The implementation may be a simple in-memory verify() call or perhaps an IPC/RPC.
+ * @suppress
  */
 interface TransactionVerifierService {
     /**

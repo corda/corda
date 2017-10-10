@@ -8,8 +8,8 @@ import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.ScreenCoordinate
 import net.corda.core.utilities.ProgressTracker
+import net.corda.finance.utils.ScreenCoordinate
 import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
@@ -86,7 +86,7 @@ class VisualiserViewModel {
         // top right: 33.0469,64.3209
         try {
             return node.place.coordinate.project(view.mapImage.fitWidth, view.mapImage.fitHeight, 64.3209, 29.8406, -23.2031, 33.0469)
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             throw Exception("Cannot project ${node.started!!.info.chooseIdentity()}", e)
         }
     }

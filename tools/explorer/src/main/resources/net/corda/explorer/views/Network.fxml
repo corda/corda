@@ -19,7 +19,7 @@
                     <Insets bottom="25" left="5" right="5" top="5"/>
                 </StackPane.margin>
                 <TitledPane styleClass="networkTile" text="My Identity">
-                    <BorderPane fx:id="myIdentityPane" minHeight="150"/>
+                    <BorderPane fx:id="myIdentityPane"/>
                 </TitledPane>
                 <TitledPane styleClass="networkTile" text="Notaries">
                     <BorderPane minHeight="150">

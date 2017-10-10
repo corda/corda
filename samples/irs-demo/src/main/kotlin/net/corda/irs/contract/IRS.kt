@@ -18,7 +18,7 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import java.util.*
 
-val IRS_PROGRAM_ID = "net.corda.irs.contract.InterestRateSwap"
+const val IRS_PROGRAM_ID = "net.corda.irs.contract.InterestRateSwap"
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
 @CordaSerializable
@@ -141,11 +141,12 @@ class FloatingRatePaymentEvent(date: LocalDate,
         val CSVHeader = RatePaymentEvent.CSVHeader + ",FixingDate"
     }
 
-    override val flow: Amount<Currency> get() {
-        // TODO: Should an uncalculated amount return a zero ? null ? etc.
-        val v = rate.ratioUnit?.value ?: return Amount(0, notional.token)
-        return Amount(dayCountFactor.times(BigDecimal(notional.quantity)).times(v).toLong(), notional.token)
-    }
+    override val flow: Amount<Currency>
+        get() {
+            // TODO: Should an uncalculated amount return a zero ? null ? etc.
+            val v = rate.ratioUnit?.value ?: return Amount(0, notional.token)
+            return Amount(dayCountFactor.times(BigDecimal(notional.quantity)).times(v).toLong(), notional.token)
+        }
 
     override fun toString(): String = "FloatingPaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate (fix on $fixingDate): $flow"
 
@@ -609,6 +610,7 @@ class InterestRateSwap : Contract {
         override val participants: List<AbstractParty>
             get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
+        // DOCSTART 1
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null
 
@@ -616,6 +618,7 @@ class InterestRateSwap : Contract {
             val instant = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay).fromTime!!
             return ScheduledActivity(flowLogicRefFactory.create(FixingFlow.FixingRoleDecider::class.java, thisStateRef), instant)
         }
+        // DOCEND 1
 
         override fun generateAgreement(notary: Party): TransactionBuilder {
             return InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, oracle, notary)

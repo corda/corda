@@ -1,12 +1,12 @@
 package net.corda.core.node
 
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -17,38 +17,73 @@ import java.sql.Connection
 import java.time.Clock
 
 /**
- * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
- * forms ready for verification.
- *
- * @see ServiceHub
+ * Part of [ServiceHub].
  */
-interface ServicesForResolution {
-    val identityService: IdentityService
-
-    /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
-    val attachments: AttachmentStorage
-
+interface StateLoader {
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
-     * @throws TransactionResolutionException if the [StateRef] points to a non-existent transaction.
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
      */
     @Throws(TransactionResolutionException::class)
     fun loadState(stateRef: StateRef): TransactionState<*>
 }
 
 /**
- * A service hub simply vends references to the other services a node has. Some of those services may be missing or
- * mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
- * functionality and you don't want to hard-code which types in the interface.
+ * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
+ * forms ready for verification.
+ */
+interface ServicesForResolution : StateLoader {
+    /**
+     * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
+     * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
+     * identities back to the well known identity (i.e. the identity in the network map) of a party.
+     */
+    val identityService: IdentityService
+
+    /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
+    val attachments: AttachmentStorage
+
+    /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
+    val cordappProvider: CordappProvider
+}
+
+/**
+ * A service hub is the starting point for most operations you can do inside the node. You are provided with one
+ * when a class annotated with [CordaService] is constructed, and you have access to one inside flows. Most RPCs
+ * simply forward to the services found here after some access checking.
  *
- * Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid their internal
- * state from being serialized in checkpoints.
+ * The APIs are organised roughly by category, with a few very important top level APIs available on the ServiceHub
+ * itself. Inside a flow, it's safe to keep a reference to services found here on the stack: checkpointing will do the
+ * right thing (it won't try to serialise the internals of the service).
+ *
+ * In unit test environments, some of those services may be missing or mocked out.
  */
 interface ServiceHub : ServicesForResolution {
+    // NOTE: Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid
+    // their internal state from being serialized in checkpoints.
+
+    /**
+     * The vault service lets you observe, soft lock and add notes to states that involve you or are relevant to your
+     * node in some way. Additionally you may query and track states that correspond to various criteria.
+     */
     val vaultService: VaultService
-    val vaultQueryService: VaultQueryService
+
+    /**
+     * The key management service is responsible for storing and using private keys to sign things. An
+     * implementation of this may, for example, call out to a hardware security module that enforces various
+     * auditing and frequency-of-use requirements.
+     *
+     * You don't normally need to use this directly. If you have a [TransactionBuilder] and wish to sign it to
+     * get a [SignedTransaction], look at [signInitialTransaction].
+     */
     val keyManagementService: KeyManagementService
+    /**
+     * The [ContractUpgradeService] is responsible for securely upgrading contract state objects according to
+     * a specified and mutually agreed (amongst participants) contract version.
+     *
+     * @see ContractUpgradeFlow to understand the workflow associated with contract upgrades.
+     */
     val contractUpgradeService: ContractUpgradeService
 
     /**
@@ -58,9 +93,27 @@ interface ServiceHub : ServicesForResolution {
      */
     val validatedTransactions: TransactionStorage
 
+    /**
+     * A network map contains lists of nodes on the network along with information about their identity keys, services
+     * they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
+     * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
+     * with a specified network map service, which it fetches data from and then subscribes to updates of.
+     */
     val networkMapCache: NetworkMapCache
+
+    /**
+     * INTERNAL. DO NOT USE.
+     * @suppress
+     */
     val transactionVerifierService: TransactionVerifierService
+
+    /**
+     * A [Clock] representing the node's current time. This should be used in preference to directly accessing the
+     * clock so the current time can be controlled during unit testing.
+     */
     val clock: Clock
+
+    /** The [NodeInfo] object corresponding to our own entry in the network map. */
     val myInfo: NodeInfo
 
     /**
@@ -104,19 +157,6 @@ interface ServiceHub : ServicesForResolution {
     }
 
     /**
-     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
-     */
-    @Throws(TransactionResolutionException::class)
-    override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return if (stx.isNotaryChangeTransaction()) {
-            stx.resolveNotaryChangeTransaction(this).outputs[stateRef.index]
-        } else stx.tx.outputs[stateRef.index]
-    }
-
-    /**
      * Converts the given [StateRef] into a [StateAndRef] object.
      *
      * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
@@ -124,30 +164,14 @@ interface ServiceHub : ServicesForResolution {
     @Throws(TransactionResolutionException::class)
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return if (stx.isNotaryChangeTransaction()) {
-            stx.resolveNotaryChangeTransaction(this).outRef<T>(stateRef.index)
-        } else {
-            stx.tx.outRef<T>(stateRef.index)
-        }
+        return stx.resolveBaseTransaction(this).outRef<T>(stateRef.index)
     }
 
     private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey
 
-    /**
-     * Helper property to shorten code for fetching the the [PublicKey] portion of the
-     * Node's Notary signing identity. It is required that the Node hosts a notary service,
-     * otherwise an [IllegalArgumentException] will be thrown.
-     * Typical use is during signing in flows and for unit test signing.
-     * When this [PublicKey] is passed into the signing methods below, or on the KeyManagementService
-     * the matching [java.security.PrivateKey] will be looked up internally and used to sign.
-     * If the key is actually a [net.corda.core.crypto.CompositeKey], the first leaf key hosted on this node
-     * will be used to create the signature.
-     */
-    val notaryIdentityKey: PublicKey get() = this.myInfo.notaryIdentity.owningKey
-
     // Helper method to construct an initial partially signed transaction from a [TransactionBuilder].
     private fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey, signatureMetadata: SignatureMetadata): SignedTransaction {
-        return builder.toSignedTransaction(keyManagementService, publicKey, signatureMetadata)
+        return builder.toSignedTransaction(keyManagementService, publicKey, signatureMetadata, this)
     }
 
     /**
@@ -274,9 +298,12 @@ interface ServiceHub : ServicesForResolution {
     /**
      * Exposes a JDBC connection (session) object using the currently configured database.
      * Applications can use this to execute arbitrary SQL queries (native, direct, prepared, callable)
-     * against its Node database tables (including custom contract tables defined by extending [Queryable]).
+     * against its Node database tables (including custom contract tables defined by extending
+     * [net.corda.core.schemas.QueryableState]).
+     *
      * When used within a flow, this session automatically forms part of the enclosing flow transaction boundary,
      * and thus queryable data will include everything committed as of the last checkpoint.
+     *
      * @throws IllegalStateException if called outside of a transaction.
      * @return A new [Connection]
      */

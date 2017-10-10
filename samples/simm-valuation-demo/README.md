@@ -19,7 +19,3 @@ This demo was built in partnership with OpenGamma and used their SIMM library. H
 | Could not find net.corda.(...):(...):0.6-SNAPSHOT | The corda libraries have not been installed into your local maven directory. View the instructions for doing this in the core corda repository |
 | Execution failed for task ':simm-valuation-demo:buildWeb' : A problem occurred starting process 'command 'ng'' | You need to have `node packet manager` installed in order to build out some of the web resources. This is not a necessary step as we include pre-built web resources but if you do modify the web source, you will need to rebuild this area |
 
-## Rebuild the web resources
-
-* Get Node.js v6.11.2 which at time of writing is the LTS release
-* ../../gradlew installWeb

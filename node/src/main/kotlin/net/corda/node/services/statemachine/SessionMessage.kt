@@ -3,7 +3,6 @@ package net.corda.node.services.statemachine
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.castIfPossible
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
@@ -26,9 +25,7 @@ data class SessionInit(val initiatorSessionId: Long,
                        val initiatingFlowClass: String,
                        val flowVersion: Int,
                        val appName: String,
-                       val firstPayload: Any?,
-                       // Left as a placeholder for support of multiple identities on a node. For now we choose the first one as a special one.
-                       val otherIdentity: PartyAndCertificate? = null) : SessionMessage
+                       val firstPayload: Any?) : SessionMessage
 
 data class SessionConfirm(override val initiatorSessionId: Long,
                           val initiatedSessionId: Long,

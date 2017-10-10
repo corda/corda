@@ -4,18 +4,17 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.tee
-import net.corda.core.node.ServiceHub
+import net.corda.core.internal.*
+import net.corda.core.node.StateLoader
+import net.corda.core.node.services.*
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.vault.IQueryCriteriaParser
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
-import net.corda.core.schemas.PersistentState
+import net.corda.core.messaging.DataFeed
+import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -25,16 +24,20 @@ import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
+import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
+import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.time.Clock
 import java.time.Instant
 import java.util.*
-import javax.persistence.criteria.Predicate
+import javax.persistence.Tuple
 
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
@@ -46,7 +49,7 @@ import javax.persistence.criteria.Predicate
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val clock: Clock, private val keyManagementService: KeyManagementService, private val stateLoader: StateLoader, private val hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultServiceInternal {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -77,7 +80,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = services.clock.instant())
+                        recordedTime = clock.instant())
                 state.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(state)
             }
@@ -85,11 +88,11 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
                     stateStatus = Vault.StateStatus.CONSUMED
-                    consumedTime = services.clock.instant()
+                    consumedTime = clock.instant()
                     // remove lock (if held)
                     if (lockId != null) {
                         lockId = null
-                        lockUpdateTime = services.clock.instant()
+                        lockUpdateTime = clock.instant()
                         log.trace("Releasing soft lock on consumed state: $stateRef")
                     }
                     session.save(state)
@@ -105,16 +108,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }
 
-    override val updatesPublisher: PublishSubject<Vault.Update<ContractState>>
-        get() = mutex.locked { _updatesPublisher }
-
-    /**
-     * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
-     * This is required because the batches get aggregated into single updates, and we want to be able to
-     * indicate whether an update consists entirely of regular or notary change transactions, which may require
-     * different processing logic.
-     */
-    fun notifyAll(txns: Iterable<CoreTransaction>) {
+    override fun notifyAll(txns: Iterable<CoreTransaction>) {
         // It'd be easier to just group by type, but then we'd lose ordering.
         val regularTxns = mutableListOf<WireTransaction>()
         val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
@@ -142,12 +136,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList())
     }
 
-    /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
-
     private fun notifyRegular(txns: Iterable<WireTransaction>) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
-            val myKeys = services.keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val ourNewStates = tx.outputs.
                     filter { isRelevant(it.data, myKeys.toSet()) }.
                     map { tx.outRef<ContractState>(it.data) }
@@ -173,8 +164,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
             // input positions
-            val ltx = tx.resolve(services, emptyList())
-            val myKeys = services.keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val ltx = tx.resolve(stateLoader, emptyList())
+            val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
                     filter { (_, output) -> isRelevant(output.data, myKeys.toSet()) }.
@@ -248,7 +239,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
 
     @Throws(StatesNotAvailableException::class)
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
-        val softLockTimestamp = services.clock.instant()
+        val softLockTimestamp = clock.instant()
         try {
             val session = DatabaseTransactionManager.current().session
             val criteriaBuilder = session.criteriaBuilder
@@ -256,7 +247,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             val vaultStates = criteriaUpdate.from(VaultSchemaV1.VaultStates::class.java)
             val stateStatusPredication = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
             val lockIdPredicate = criteriaBuilder.or(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name).isNull,
-                                  criteriaBuilder.equal(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString()))
+                    criteriaBuilder.equal(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString()))
             val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
             val compositeKey = vaultStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
             val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
@@ -294,7 +285,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     }
 
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
-        val softLockTimestamp = services.clock.instant()
+        val softLockTimestamp = clock.instant()
         val session = DatabaseTransactionManager.current().session
         val criteriaBuilder = session.criteriaBuilder
         if (stateRefs == null) {
@@ -339,7 +330,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
     override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
                                                                                   eligibleStatesQuery: QueryCriteria,
                                                                                   amount: Amount<U>,
-                                                                                  contractType: Class<out T>): List<StateAndRef<T>> {
+                                                                                  contractStateType: Class<out T>): List<StateAndRef<T>> {
         if (amount.quantity == 0L) {
             return emptyList()
         }
@@ -348,9 +339,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
         val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
-                contractStateTypes = setOf(contractType),
+                contractStateTypes = setOf(contractStateType),
                 softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
-        val results = services.vaultQueryService.queryBy(contractType, enrichedCriteria.and(eligibleStatesQuery), sorter)
+        val results = queryBy(contractStateType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
         var claimedAmount = 0L
         val claimedStates = mutableListOf<StateAndRef<T>>()
@@ -371,8 +362,6 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         return claimedStates
     }
 
-
-
     @VisibleForTesting
     internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
         val keysToCheck = when (state) {
@@ -380,5 +369,169 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
             else -> state.participants.map { it.owningKey }
         }
         return keysToCheck.any { it in myKeys }
+    }
+
+    private var sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
+    private var criteriaBuilder = sessionFactory.criteriaBuilder
+
+    /**
+     * Maintain a list of contract state interfaces to concrete types stored in the vault
+     * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
+     */
+    private val contractStateTypeMappings = bootstrapContractStateTypes()
+
+    init {
+        rawUpdates.subscribe { update ->
+            update.produced.forEach {
+                val concreteType = it.state.data.javaClass
+                log.trace { "State update of type: $concreteType" }
+                val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
+                if (!seen) {
+                    val contractInterfaces = deriveContractInterfaces(concreteType)
+                    contractInterfaces.map {
+                        val contractInterface = contractStateTypeMappings.getOrPut(it.name, { mutableSetOf() })
+                        contractInterface.add(concreteType.name)
+                    }
+                }
+            }
+        }
+    }
+
+    @Throws(VaultQueryException::class)
+    override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
+        log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
+
+        // refresh to include any schemas registered after initial VQ service initialisation
+        sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
+        criteriaBuilder = sessionFactory.criteriaBuilder
+
+        // calculate total results where a page specification has been defined
+        var totalStates = -1L
+        if (!paging.isDefault) {
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
+            val results = queryBy(contractStateType, criteria.and(countCriteria))
+            totalStates = results.otherResults[0] as Long
+        }
+
+        val session = getSession()
+
+        session.use {
+            val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
+            val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+
+            // TODO: revisit (use single instance of parser for all queries)
+            val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
+
+            try {
+                // parse criteria and build where predicates
+                criteriaParser.parse(criteria, sorting)
+
+                // prepare query for execution
+                val query = session.createQuery(criteriaQuery)
+
+                // pagination checks
+                if (!paging.isDefault) {
+                    // pagination
+                    if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
+                    if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
+                }
+
+                query.firstResult = (paging.pageNumber - 1) * paging.pageSize
+                query.maxResults = paging.pageSize + 1  // detection too many results
+
+                // execution
+                val results = query.resultList
+
+                // final pagination check (fail-fast on too many results when no pagination specified)
+                if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
+                    throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
+
+                val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
+                val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
+                val otherResults: MutableList<Any> = mutableListOf()
+
+                results.asSequence()
+                        .forEachIndexed { index, result ->
+                            if (result[0] is VaultSchemaV1.VaultStates) {
+                                if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
+                                    return@forEachIndexed
+                                val vaultState = result[0] as VaultSchemaV1.VaultStates
+                                val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
+                                val state = vaultState.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
+                                statesMeta.add(Vault.StateMetadata(stateRef,
+                                        vaultState.contractStateClassName,
+                                        vaultState.recordedTime,
+                                        vaultState.consumedTime,
+                                        vaultState.stateStatus,
+                                        vaultState.notary,
+                                        vaultState.lockId,
+                                        vaultState.lockUpdateTime))
+                                statesAndRefs.add(StateAndRef(state, stateRef))
+                            } else {
+                                // TODO: improve typing of returned other results
+                                log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
+                                otherResults.addAll(result.toArray().asList())
+                            }
+                        }
+
+                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
+            } catch (e: java.lang.Exception) {
+                log.error(e.message)
+                throw e.cause ?: e
+            }
+        }
+    }
+
+    @Throws(VaultQueryException::class)
+    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return mutex.locked {
+            val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
+            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
+            DataFeed(snapshotResults, updates)
+        }
+    }
+
+    private fun getSession(): Session {
+        return sessionFactory.withOptions().
+                connection(DatabaseTransactionManager.current().connection).
+                openSession()
+    }
+
+    /**
+     * Derive list from existing vault states and then incrementally update using vault observables
+     */
+    private fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
+        val criteria = criteriaBuilder.createQuery(String::class.java)
+        val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
+        criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
+        val session = getSession()
+        session.use {
+            val query = session.createQuery(criteria)
+            val results = query.resultList
+            val distinctTypes = results.map { it }
+
+            val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
+            distinctTypes.forEach { type ->
+                val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
+                val contractInterfaces = deriveContractInterfaces(concreteType)
+                contractInterfaces.map {
+                    val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
+                    contractInterface.add(concreteType.name)
+                }
+            }
+            return contractInterfaceToConcreteTypes
+        }
+    }
+
+    private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
+        val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
+        clazz.interfaces.forEach {
+            if (it != ContractState::class.java) {
+                myInterfaces.add(uncheckedCast(it))
+                myInterfaces.addAll(deriveContractInterfaces(uncheckedCast(it)))
+            }
+        }
+        return myInterfaces
     }
 }

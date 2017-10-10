@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
@@ -32,17 +33,18 @@ class FlowVersioningTest : NodeBasedTest() {
         @Suspendable
         override fun call(): Pair<Int, Int> {
             // Execute receive() outside of the Pair constructor to avoid Kotlin/Quasar instrumentation bug.
-            val alicePlatformVersionAccordingToBob = receive<Int>(initiatedParty).unwrap { it }
+            val session = initiateFlow(initiatedParty)
+            val alicePlatformVersionAccordingToBob = session.receive<Int>().unwrap { it }
             return Pair(
                     alicePlatformVersionAccordingToBob,
-                    getFlowInfo(initiatedParty).flowVersion
+                    session.getCounterpartyFlowInfo().flowVersion
             )
         }
     }
 
-    private class PretendInitiatedCoreFlow(val initiatingParty: Party) : FlowLogic<Unit>() {
+    private class PretendInitiatedCoreFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() = send(initiatingParty, getFlowInfo(initiatingParty).flowVersion)
+        override fun call() = otherSideSession.send(otherSideSession.getCounterpartyFlowInfo().flowVersion)
     }
 
 }

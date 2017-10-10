@@ -2,7 +2,6 @@ package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
-import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -25,26 +24,28 @@ import java.util.*
  * @param notary the notary to set on the output states.
  */
 @StartableByRPC
-class CashIssueFlow(val amount: Amount<Currency>,
-                    val issuerBankPartyRef: OpaqueBytes,
-                    val notary: Party,
+class CashIssueFlow(private val amount: Amount<Currency>,
+                    private val issuerBankPartyRef: OpaqueBytes,
+                    private val notary: Party,
                     progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>,
                 issuerBankPartyRef: OpaqueBytes,
                 notary: Party) : this(amount, issuerBankPartyRef, notary, tracker())
+
     constructor(request: IssueRequest) : this(request.amount, request.issueRef, request.notary, tracker())
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary)
-        val issuer = ourIdentity.party.ref(issuerBankPartyRef)
-        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity.party, notary)
+        val issuer = ourIdentity.ref(issuerBankPartyRef)
+        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity, notary)
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = FINALISING_TX
-        subFlow(FinalityFlow(tx))
-        return Result(tx, ourIdentity.party)
+        // There is no one to send the tx to as we're the only participants
+        val notarised = finaliseTx(tx, emptySet(), "Unable to notarise issue")
+        return Result(notarised, ourIdentity)
     }
 
     @CordaSerializable

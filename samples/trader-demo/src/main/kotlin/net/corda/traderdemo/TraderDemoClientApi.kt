@@ -18,7 +18,6 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.vault.VaultSchemaV1
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -28,30 +27,30 @@ import java.util.*
  * Interface for communicating with nodes running the trader demo.
  */
 class TraderDemoClientApi(val rpc: CordaRPCOps) {
-    val cashCount: Long get() {
-        val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-        val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
-        return rpc.vaultQueryBy<Cash.State>(countCriteria).otherResults.single() as Long
-    }
+    val cashCount: Long
+        get() {
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
+            return rpc.vaultQueryBy<Cash.State>(countCriteria).otherResults.single() as Long
+        }
 
     val dollarCashBalance: Amount<Currency> get() = rpc.getCashBalance(USD)
 
-    val commercialPaperCount: Long get() {
-        val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-        val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
-        return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
-    }
+    val commercialPaperCount: Long
+        get() {
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
+            return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Long
+        }
 
     fun runIssuer(amount: Amount<Currency>, buyerName: CordaX500Name, sellerName: CordaX500Name) {
         val ref = OpaqueBytes.of(1)
-        val buyer = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
-        val seller = rpc.partyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
-        val notaryLegalIdentity = rpc.partyFromX500Name(DUMMY_NOTARY.name)
-                ?: throw IllegalStateException("Unable to locate ${DUMMY_NOTARY.name} in Network Map Service")
-        val notaryNode = rpc.nodeIdentityFromParty(notaryLegalIdentity)
-                ?: throw IllegalStateException("Unable to locate notary node in network map cache")
+        val buyer = rpc.wellKnownPartyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
+        val seller = rpc.wellKnownPartyFromX500Name(sellerName) ?: throw IllegalStateException("Don't know $sellerName")
+        val notaryIdentity = rpc.notaryIdentities().first()
+
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
-        rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryNode.notaryIdentity).returnValue.getOrThrow()
+        rpc.startFlow(::CashIssueFlow, amount, OpaqueBytes.of(1), notaryIdentity).returnValue.getOrThrow()
         // Pay random amounts of currency up to the requested amount
         amounts.forEach { pennies ->
             // TODO This can't be done in parallel, perhaps due to soft-locking issues?
@@ -71,12 +70,12 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         }
 
         // The line below blocks and waits for the future to resolve.
-        rpc.startFlow(::CommercialPaperIssueFlow, amount, ref, seller, notaryNode.notaryIdentity).returnValue.getOrThrow()
+        rpc.startFlow(::CommercialPaperIssueFlow, amount, ref, seller, notaryIdentity).returnValue.getOrThrow()
         println("Commercial paper issued to seller")
     }
 
     fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, buyerName: CordaX500Name) {
-        val otherParty = rpc.partyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
+        val otherParty = rpc.wellKnownPartyFromX500Name(buyerName) ?: throw IllegalStateException("Don't know $buyerName")
         // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
         //
         // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an

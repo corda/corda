@@ -2,6 +2,8 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel target="1.8">
+      <module name="api-scanner_main" target="1.8" />
+      <module name="api-scanner_test" target="1.8" />
       <module name="attachment-demo_integrationTest" target="1.8" />
       <module name="attachment-demo_main" target="1.8" />
       <module name="attachment-demo_test" target="1.8" />
@@ -12,11 +14,15 @@
       <module name="buildSrc_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
+      <module name="confidential-identities_main" target="1.8" />
+      <module name="confidential-identities_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
+      <module name="cordapp_main" target="1.8" />
+      <module name="cordapp_test" target="1.8" />
       <module name="cordform-common_main" target="1.8" />
       <module name="cordform-common_test" target="1.8" />
       <module name="cordformation_main" target="1.8" />
@@ -37,8 +43,11 @@
       <module name="explorer-capsule_test" target="1.6" />
       <module name="explorer_main" target="1.8" />
       <module name="explorer_test" target="1.8" />
+      <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
+      <module name="gradle-plugins-cordform-common_main" target="1.8" />
+      <module name="gradle-plugins-cordform-common_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
       <module name="irs-demo_integrationTest" target="1.8" />
@@ -91,6 +100,7 @@
       <module name="smoke-test-utils_test" target="1.8" />
       <module name="test-common_main" target="1.8" />
       <module name="test-common_test" target="1.8" />
+      <module name="test-utils_integrationTest" target="1.8" />
       <module name="test-utils_main" target="1.8" />
       <module name="test-utils_test" target="1.8" />
       <module name="testing-node-driver_integrationTest" target="1.8" />

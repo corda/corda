@@ -1,14 +1,15 @@
 package net.corda.node.services.api
 
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -24,7 +25,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache {
@@ -62,9 +62,9 @@ interface NetworkMapCacheInternal : NetworkMapCache {
 }
 
 @CordaSerializable
-sealed class NetworkCacheError : Exception() {
+sealed class NetworkCacheException : CordaException("Network Cache Error") {
     /** Indicates a failure to deregister, because of a rejected request from the remote node */
-    class DeregistrationFailed : NetworkCacheError()
+    class DeregistrationFailed : NetworkCacheException()
 }
 
 interface ServiceHubInternal : ServiceHub {
@@ -72,6 +72,7 @@ interface ServiceHubInternal : ServiceHub {
         private val log = loggerFor<ServiceHubInternal>()
     }
 
+    override val vaultService: VaultServiceInternal
     /**
      * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
@@ -103,7 +104,7 @@ interface ServiceHubInternal : ServiceHub {
 
         if (notifyVault) {
             val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
-            (vaultService as NodeVaultService).notifyAll(toNotify)
+            vaultService.notifyAll(toNotify)
         }
     }
 
@@ -118,7 +119,7 @@ interface ServiceHubInternal : ServiceHub {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate? = null): FlowStateMachineImpl<T>
+    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -131,12 +132,10 @@ interface ServiceHubInternal : ServiceHub {
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
-            me: PartyAndCertificate? = null,
             vararg args: Any?): FlowStateMachineImpl<T> {
         val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
-        @Suppress("UNCHECKED_CAST")
-        val logic = FlowLogicRefFactoryImpl.toFlowLogic(logicRef) as FlowLogic<T>
-        return startFlow(logic, flowInitiator, me)
+        val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
+        return startFlow(logic, flowInitiator, ourIdentity = null)
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?

@@ -1,6 +1,6 @@
 package net.corda.testing
 
-import net.corda.client.rpc.serialization.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
@@ -17,37 +17,37 @@ inline fun <T> withTestSerialization(block: () -> T): T {
 }
 
 fun initialiseTestSerialization() {
+    // Stop the CordaRPCClient from trying to setup the defaults as we're about to do it now
+    KryoClientSerializationScheme.isInitialised.set(true)
     // Check that everything is configured for testing with mutable delegating instances.
     try {
-        check(SerializationDefaults.SERIALIZATION_FACTORY is TestSerializationFactory) {
-            "Found non-test serialization configuration: ${SerializationDefaults.SERIALIZATION_FACTORY}"
-        }
-    } catch(e: IllegalStateException) {
+        check(SerializationDefaults.SERIALIZATION_FACTORY is TestSerializationFactory)
+    } catch (e: IllegalStateException) {
         SerializationDefaults.SERIALIZATION_FACTORY = TestSerializationFactory()
     }
     try {
         check(SerializationDefaults.P2P_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.P2P_CONTEXT = TestSerializationContext()
     }
     try {
         check(SerializationDefaults.RPC_SERVER_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.RPC_SERVER_CONTEXT = TestSerializationContext()
     }
     try {
         check(SerializationDefaults.RPC_CLIENT_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.RPC_CLIENT_CONTEXT = TestSerializationContext()
     }
     try {
         check(SerializationDefaults.STORAGE_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.STORAGE_CONTEXT = TestSerializationContext()
     }
     try {
         check(SerializationDefaults.CHECKPOINT_CONTEXT is TestSerializationContext)
-    } catch(e: IllegalStateException) {
+    } catch (e: IllegalStateException) {
         SerializationDefaults.CHECKPOINT_CONTEXT = TestSerializationContext()
     }
 
@@ -68,18 +68,17 @@ fun initialiseTestSerialization() {
         registerScheme(AMQPServerSerializationScheme())
     }
 
-    val AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
-    // TODO: Remove these "if" conditions once we fully switched to AMQP
-    (SerializationDefaults.P2P_CONTEXT as TestSerializationContext).delegate = if (java.lang.Boolean.getBoolean(AMQP_ENABLE_PROP_NAME)) {
-        AMQP_P2P_CONTEXT
-    } else {
-        KRYO_P2P_CONTEXT
-    }
+    (SerializationDefaults.P2P_CONTEXT as TestSerializationContext).delegate = if (isAmqpEnabled()) AMQP_P2P_CONTEXT else KRYO_P2P_CONTEXT
     (SerializationDefaults.RPC_SERVER_CONTEXT as TestSerializationContext).delegate = KRYO_RPC_SERVER_CONTEXT
     (SerializationDefaults.RPC_CLIENT_CONTEXT as TestSerializationContext).delegate = KRYO_RPC_CLIENT_CONTEXT
-    (SerializationDefaults.STORAGE_CONTEXT as TestSerializationContext).delegate = KRYO_STORAGE_CONTEXT
+    (SerializationDefaults.STORAGE_CONTEXT as TestSerializationContext).delegate = if (isAmqpEnabled()) AMQP_STORAGE_CONTEXT else KRYO_STORAGE_CONTEXT
     (SerializationDefaults.CHECKPOINT_CONTEXT as TestSerializationContext).delegate = KRYO_CHECKPOINT_CONTEXT
 }
+
+private const val AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
+
+// TODO: Remove usages of this function when we fully switched to AMQP
+private fun isAmqpEnabled(): Boolean = java.lang.Boolean.getBoolean(AMQP_ENABLE_PROP_NAME)
 
 fun resetTestSerialization() {
     (SerializationDefaults.SERIALIZATION_FACTORY as TestSerializationFactory).delegate = null

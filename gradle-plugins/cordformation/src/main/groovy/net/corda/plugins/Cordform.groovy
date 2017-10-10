@@ -3,6 +3,7 @@ package net.corda.plugins
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
+import net.corda.cordform.CordformNode
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.bouncycastle.asn1.x500.X500Name
 import org.gradle.api.DefaultTask
@@ -61,8 +62,8 @@ class Cordform extends DefaultTask {
      * @return A node instance.
      */
     private Node getNodeByName(String name) {
-        for(Node node : nodes) {
-            if(node.name == name) {
+        for (Node node : nodes) {
+            if (node.name == name) {
                 return node
             }
         }
@@ -109,10 +110,14 @@ class Cordform extends DefaultTask {
      */
     @TaskAction
     void build() {
-        String networkMapNodeName
+        String networkMapNodeName = initializeConfigurationAndGetNetworkMapNodeName()
+        installRunScript()
+        finalizeConfiguration(networkMapNodeName)
+    }
+
+    private initializeConfigurationAndGetNetworkMapNodeName() {
         if (null != definitionClass) {
             def cd = loadCordformDefinition()
-            networkMapNodeName = cd.networkMapNodeName.toString()
             cd.nodeConfigurers.each { nc ->
                 node { Node it ->
                     nc.accept it
@@ -124,21 +129,55 @@ class Cordform extends DefaultTask {
                     project.projectDir.toPath().resolve(getNodeByName(nodeName).nodeDir.toPath())
                 }
             }
+            return cd.networkMapNodeName.toString()
         } else {
-            networkMapNodeName = this.networkMapNodeName
             nodes.each {
                 it.rootDir directory
             }
+            return this.networkMapNodeName
         }
-        installRunScript()
-        def networkMapNode = getNodeByName(networkMapNodeName)
-        if (networkMapNode == null)
-            throw new IllegalStateException("The networkMap property refers to a node that isn't configured ($networkMapNodeName)")
-        nodes.each {
-            if(it != networkMapNode) {
-                it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
+    }
+
+    private finalizeConfiguration(String networkMapNodeName) {
+        Node networkMapNode = getNodeByName(networkMapNodeName)
+        if (networkMapNode == null) {
+            nodes.each {
+                it.build()
             }
-            it.build()
+            generateNodeInfos()
+            logger.info("Starting without networkMapNode, this an experimental feature")
+        } else {
+            nodes.each {
+                if (it != networkMapNode) {
+                    it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
+                }
+                it.build()
+            }
+        }
+    }
+
+    Path fullNodePath(Node node) {
+        return project.projectDir.toPath().resolve(node.nodeDir.toPath())
+    }
+
+    private generateNodeInfos() {
+        nodes.each { Node node ->
+            def process = new ProcessBuilder("java", "-jar", Node.NODEJAR_NAME, "--just-generate-node-info")
+                    .directory(fullNodePath(node).toFile())
+                    .redirectErrorStream(true)
+                    .start()
+                    .waitFor()
+        }
+        for (source in nodes) {
+            for (destination in nodes) {
+                if (source.nodeDir != destination.nodeDir) {
+                    project.copy {
+                        from fullNodePath(source).toString()
+                        include 'nodeInfo-*'
+                        into fullNodePath(destination).resolve(Node.NODE_INFO_DIRECTORY).toString()
+                    }
+                }
+            }
         }
     }
 }

@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
 import net.corda.core.serialization.deserialize
 import java.io.ByteArrayOutputStream
 import java.security.*
@@ -12,6 +11,7 @@ import java.security.spec.AlgorithmParameterSpec
 class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
     companion object {
         const val SIGNATURE_ALGORITHM = "COMPOSITESIG"
+        @JvmStatic
         fun getService(provider: Provider) = Provider.Service(provider, "Signature", SIGNATURE_ALGORITHM, CompositeSignature::class.java.name, emptyList(), emptyMap())
     }
 

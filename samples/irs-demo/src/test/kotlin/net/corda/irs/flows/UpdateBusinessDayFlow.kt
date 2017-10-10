@@ -6,6 +6,8 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.flows.*
+import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -21,10 +23,10 @@ object UpdateBusinessDayFlow {
     data class UpdateBusinessDayMessage(val date: LocalDate)
 
     @InitiatedBy(Broadcast::class)
-    private class UpdateBusinessDayHandler(val otherParty: Party) : FlowLogic<Unit>() {
+    private class UpdateBusinessDayHandler(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val message = receive<UpdateBusinessDayMessage>(otherParty).unwrap { it }
+            val message = otherPartySession.receive<UpdateBusinessDayMessage>().unwrap { it }
             (serviceHub.clock as TestClock).updateDate(message.date)
         }
     }
@@ -54,14 +56,16 @@ object UpdateBusinessDayFlow {
          * the notary or counterparty still use the old clock, so the time-window on the transaction does not validate.
          */
         private fun getRecipients(): Iterable<Party> {
-            val notaryNodes = serviceHub.networkMapCache.notaryNodes.map { it.legalIdentitiesAndCerts.first().party } // TODO Will break on distributed nodes, but it will change after services removal.
-            val partyNodes = (serviceHub.networkMapCache.partyNodes.map { it.legalIdentitiesAndCerts.first().party } - notaryNodes).sortedBy { it.name.toString() }
-            return notaryNodes + partyNodes
+            val notaryParties = serviceHub.networkMapCache.notaryIdentities
+            val peerParties = serviceHub.networkMapCache.allNodes.filter {
+                it.legalIdentities.all { !serviceHub.networkMapCache.isNotary(it) }
+            }.map { it.legalIdentities[0] }.sortedBy { it.name.toString() }
+            return notaryParties + peerParties
         }
 
         @Suspendable
         private fun doNextRecipient(recipient: Party) {
-            send(recipient, UpdateBusinessDayMessage(date))
+            initiateFlow(recipient).send(UpdateBusinessDayMessage(date))
         }
     }
 }

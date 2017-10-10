@@ -96,13 +96,7 @@
                                 Holiday Dates
                             </div>
                             <div class="content">
-                                <table class="ui celled small table">
-                                    <tbody>
-                                    <tr class="center aligned" ng-repeat="date in deal.fixedLeg.paymentCalendar.holidayDates">
-                                        <td>{{date}}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                <span>{{deal.fixedLeg.paymentCalendar}}</span>
                             </div>
                         </div>
                     </td>
@@ -162,13 +156,9 @@
                                 Holiday Dates
                             </div>
                             <div class="content">
-                                <table class="ui celled small table">
-                                    <tbody>
-                                    <tr class="center aligned" ng-repeat="date in deal.floatingLeg.paymentCalendar.holidayDates">
-                                        <td>{{date}}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                <span>
+                                    {{deal.floatingLeg.paymentCalendar}}
+                                </span>
                             </div>
                         </div>
                     </td>
@@ -189,13 +179,9 @@
                                 Holiday Dates
                             </div>
                             <div class="content">
-                                <table class="ui celled small table">
-                                    <tbody>
-                                    <tr class="center aligned" ng-repeat="date in deal.floatingLeg.fixingCalendar.holidayDates">
-                                        <td>{{date}}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                <span>
+                                    {{deal.floatingLeg.fixingCalendar}}
+                                </span>
                             </div>
                         </div>
                     </td>

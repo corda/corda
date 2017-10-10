@@ -32,8 +32,7 @@ import java.util.*
 // TODO: Need to think about expiry of commodities, how to require payment of storage costs, etc.
 class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, CommodityContract.State>() {
     companion object {
-        // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-        val COMMODITY_PROGRAM_ID = "net.corda.finance.contracts.asset.CommodityContract"
+        const val PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.CommodityContract"
     }
 
     /** A state representing a commodity claim against some party */
@@ -45,6 +44,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     ) : FungibleAsset<Commodity> {
         constructor(deposit: PartyAndReference, amount: Amount<Commodity>, owner: AbstractParty)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
+
         override val exitKeys: Set<PublicKey> = Collections.singleton(owner.owningKey)
         override val participants = listOf(owner)
 
@@ -92,7 +92,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
             val party = issuer.party
 
             requireThat {
-                "there are no zero sized outputs" using ( outputs.none { it.amount.quantity == 0L } )
+                "there are no zero sized outputs" using (outputs.none { it.amount.quantity == 0L })
             }
 
             val issueCommand = tx.commands.select<Commands.Issue>().firstOrNull()
@@ -108,7 +108,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
                 val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, commodity))
 
                 requireThat {
-                    "there are no zero sized inputs" using ( inputs.none { it.amount.quantity == 0L } )
+                    "there are no zero sized inputs" using (inputs.none { it.amount.quantity == 0L })
                     "for reference ${issuer.reference} at issuer ${party.nameOrNull()} the amounts balance" using
                             (inputAmount == outputAmount + amountExitingLedger)
                 }
@@ -139,7 +139,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         val outputAmount = outputs.sumCommodities()
         val commodityCommands = tx.commands.select<CommodityContract.Commands>()
         requireThat {
-            "output deposits are owned by a command signer" using (issuer.party in issueCommand.signingParties)
+            "output deposits are ownedBy a command signer" using (issuer.party in issueCommand.signingParties)
             "output values sum to more than the inputs" using (outputAmount > inputAmount)
             "there is only a single issue command" using (commodityCommands.count() == 1)
         }
@@ -158,7 +158,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Commodity>>, owner: AbstractParty, notary: Party)
-            = generateIssue(tx, TransactionState(State(amount, owner), COMMODITY_PROGRAM_ID, notary), Commands.Issue())
+            = generateIssue(tx, TransactionState(State(amount, owner), PROGRAM_ID, notary), Commands.Issue())
 
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Commodity>>, owner: AbstractParty)

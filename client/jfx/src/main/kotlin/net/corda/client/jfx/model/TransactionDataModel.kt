@@ -54,7 +54,7 @@ data class PartiallyResolvedTransaction(
 class TransactionDataModel {
     private val transactions by observable(NodeMonitorModel::transactions)
     private val collectedTransactions = transactions.recordInSequence()
-    private val transactionMap = collectedTransactions.associateBy(SignedTransaction::id)
+    private val transactionMap = transactions.recordAsAssociation(SignedTransaction::id)
 
     val partiallyResolvedTransactions = collectedTransactions.map {
         PartiallyResolvedTransaction.fromSignedTransaction(it, transactionMap)

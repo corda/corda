@@ -2,10 +2,14 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58
 import net.corda.core.utilities.toSHA256Bytes
 import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.security.*
 
 /**
@@ -31,6 +35,7 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey) = DigitalSigna
  */
 @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray) = private.sign(bytesToSign, public)
+
 fun KeyPair.sign(bytesToSign: OpaqueBytes) = sign(bytesToSign.bytes)
 /**
  * Helper function for signing a [SignableData] object.
@@ -68,18 +73,18 @@ fun PublicKey.verify(content: ByteArray, signature: DigitalSignature) = Crypto.d
  * @return whether the signature is correct for this key.
  */
 @Throws(IllegalStateException::class, SignatureException::class, IllegalArgumentException::class)
-fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature) : Boolean {
+fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature): Boolean {
     if (this is CompositeKey)
         throw IllegalStateException("Verification of CompositeKey signatures currently not supported.") // TODO CompositeSignature verification.
     return Crypto.isValid(this, signature.bytes, content)
 }
 
 /** Render a public key to its hash (in Base58) of its serialised form using the DL prefix. */
-fun PublicKey.toStringShort(): String  = "DL" + this.toSHA256Bytes().toBase58()
+fun PublicKey.toStringShort(): String = "DL" + this.toSHA256Bytes().toBase58()
 
 val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: setOf(this)
 
-fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean  = isFulfilledBy(setOf(otherKey))
+fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean = isFulfilledBy(setOf(otherKey))
 fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
 
 /** Checks whether any of the given [keys] matches a leaf on the [CompositeKey] tree or a single [PublicKey]. */
@@ -184,3 +189,27 @@ fun random63BitValue(): Long {
         }
     }
 }
+
+/**
+ * Compute the hash of each serialised component so as to be used as Merkle tree leaf. The resultant output (leaf) is
+ * calculated using the SHA256d algorithm, thus SHA256(SHA256(nonce || serializedComponent)), where nonce is computed
+ * from [computeNonce].
+ */
+fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
+        componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
+
+/** Return the SHA256(SHA256(nonce || serializedComponent)). */
+fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
+
+/** Serialise the object and return the hash of the serialized bytes. */
+fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationDefaults.P2P_CONTEXT.withoutReferences()).bytes.sha256()
+
+/**
+ * Method to compute a nonce based on privacySalt, component group index and component internal index.
+ * SHA256d (double SHA256) is used to prevent length extension attacks.
+ * @param privacySalt a [PrivacySalt].
+ * @param groupIndex the fixed index (ordinal) of this component group.
+ * @param internalIndex the internal index of this object in its corresponding components list.
+ * @return SHA256(SHA256(privacySalt || groupIndex || internalIndex))
+ */
+fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())

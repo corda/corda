@@ -1,14 +1,12 @@
 package net.corda.core.node.services
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.randomOrNull
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceEntry
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
@@ -31,19 +29,17 @@ interface NetworkMapCache {
         data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
 
-    /** A list of all nodes the cache is aware of */
-    val partyNodes: List<NodeInfo>
-    /** A list of nodes that advertise a network map service */
-    val networkMapNodes: List<NodeInfo>
-    /** A list of nodes that advertise a notary service */
-    val notaryNodes: List<NodeInfo> get() = getNodesWithService(ServiceType.notary)
+    // DOCSTART 1
     /**
-     * A list of nodes that advertise a regulatory service. Identifying the correct regulator for a trade is outside
-     * the scope of the network map service, and this is intended solely as a sanity check on configuration stored
-     * elsewhere.
+     * A list of notary services available on the network.
+     *
+     * Note that the identities are sorted based on legal name, and the ordering might change once new notaries are introduced.
      */
-    val regulatorNodes: List<NodeInfo> get() = getNodesWithService(ServiceType.regulator)
-    /** Tracks changes to the network map cache */
+    // TODO this list will be taken from NetworkParameters distributed by NetworkMap.
+    val notaryIdentities: List<Party>
+    // DOCEND 1
+
+    /** Tracks changes to the network map cache. */
     val changed: Observable<MapChange>
     /** Future to track completion of the NetworkMapService registration. */
     val nodeReady: CordaFuture<Void?>
@@ -54,30 +50,12 @@ interface NetworkMapCache {
      */
     fun track(): DataFeed<List<NodeInfo>, MapChange>
 
-    /** Get the collection of nodes which advertise a specific service. */
-    fun getNodesWithService(serviceType: ServiceType): List<NodeInfo> {
-        return partyNodes.filter { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }
-    }
-
-    // TODO It will be removed with services + part of these functions will get merged into database backed NetworkMapCache
-    fun getPeersWithService(serviceType: ServiceType): List<ServiceEntry> {
-        return partyNodes.fold(ArrayList<ServiceEntry>()) {
-            acc, elem -> acc.addAll(elem.advertisedServices.filter { it.info.type.isSubTypeOf(serviceType)})
-            acc
-        }
-    }
-
-    /**
-     * Get a recommended node that advertises a service, and is suitable for the specified contract and parties.
-     * Implementations might understand, for example, the correct regulator to use for specific contracts/parties,
-     * or the appropriate oracle for a contract.
-     */
-    fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = getNodesWithService(type).firstOrNull()
-
     /**
      * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable; if the party
      * is anonymised and the well known party cannot be resolved, it is impossible ot identify the node and therefore this
      * returns null.
+     * Notice that when there are more than one node for a given party (in case of distributed services) first service node
+     * found will be returned. See also: [getNodesByLegalIdentityKey].
      *
      * @param party party to retrieve node information for.
      * @return the node for the identity, or null if the node could not be found. This does not necessarily mean there is
@@ -85,84 +63,62 @@ interface NetworkMapCache {
      */
     fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 
-    /** Look up the node info for a legal name. */
-    fun getNodeByLegalName(principal: CordaX500Name): NodeInfo?
+    /**
+     * Look up the node info for a legal name.
+     * Notice that when there are more than one node for a given name (in case of distributed services) first service node
+     * found will be returned.
+     */
+    fun getNodeByLegalName(name: CordaX500Name): NodeInfo?
 
     /** Look up the node info for a host and port. */
     fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo?
 
-    fun getPeerByLegalName(principal: CordaX500Name): Party? = getNodeByLegalName(principal)?.let {
-        it.legalIdentitiesAndCerts.singleOrNull { it.name == principal }?.party
-    }
+    /**
+     * Look up a well known identity (including certificate path) of a legal name. This should be used in preference
+     * to well known identity lookup in the identity service where possible, as the network map is the authoritative
+     * source of well known identities.
+     */
+    fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate?
 
     /**
-     * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
-     * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
-     * the identity of the *whole group*.
+     * Look up the well known identity of a legal name. This should be used in preference
+     * to well known identity lookup in the identity service where possible, as the network map is the authoritative
+     * source of well known identities.
      */
-    /** Look up the node infos for a specific peer key. */
+    fun getPeerByLegalName(name: CordaX500Name): Party? = getPeerCertificateByLegalName(name)?.party
+
+    /** Return all [NodeInfo]s the node currently is aware of (including ourselves). */
+    val allNodes: List<NodeInfo>
+
+    /**
+     * Look up the node information entries for a specific identity key.
+     * Note that normally there will be only one node for a key, but for clusters of nodes or distributed services there
+     * can be multiple nodes.
+     */
     fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo>
 
-    /** Look up all nodes advertising the service owned by [publicKey] */
-    fun getNodesByAdvertisedServiceIdentityKey(publicKey: PublicKey): List<NodeInfo> {
-        return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == publicKey } }
-    }
+    /**
+     * Look up the node information entries for a legal name.
+     * Note that normally there will be only one node for a legal name, but for clusters of nodes or distributed services there
+     * can be multiple nodes.
+     */
+    fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo>
 
     /** Returns information about the party, which may be a specific node or a service */
     fun getPartyInfo(party: Party): PartyInfo?
 
-    /** Gets a notary identity by the given name. */
-    fun getNotary(principal: CordaX500Name): Party? {
-        val notaryNode = notaryNodes.filter {
-            it.advertisedServices.any { it.info.type.isSubTypeOf(ServiceType.notary) && it.info.name == principal }
-        }.randomOrNull()
-        return notaryNode?.notaryIdentity
-    }
+    // DOCSTART 2
+    /** Look up a well known identity of notary by legal name. */
+    fun getNotary(name: CordaX500Name): Party? = notaryIdentities.firstOrNull { it.name == name }
+    // DOCEND 2
 
-    /**
-     * Returns a notary identity advertised by any of the nodes on the network (chosen at random)
-     * @param type Limits the result to notaries of the specified type (optional)
-     */
-    fun getAnyNotary(type: ServiceType? = null): Party? {
-        val nodes = if (type == null) {
-            notaryNodes
-        } else {
-            require(type != ServiceType.notary && type.isSubTypeOf(ServiceType.notary)) {
-                "The provided type must be a specific notary sub-type"
-            }
-            notaryNodes.filter { it.advertisedServices.any { it.info.type == type } }
-        }
-        return nodes.randomOrNull()?.notaryIdentity
-    }
+    /** Checks whether a given party is an advertised notary identity. */
+    fun isNotary(party: Party): Boolean = party in notaryIdentities
 
-    /**
-     * Returns a service identity advertised by one of the nodes on the network
-     * @param type Specifies the type of the service
-     */
-    fun getAnyServiceOfType(type: ServiceType): Party? {
-        for (node in partyNodes) {
-            val serviceIdentities = node.serviceIdentities(type)
-            if (serviceIdentities.isNotEmpty()) {
-                return serviceIdentities.randomOrNull()
-            }
-        }
-        return null;
-    }
+    /** Checks whether a given party is an validating notary identity. */
+    // TODO This implementation will change after introducing of NetworkParameters.
+    fun isValidatingNotary(party: Party): Boolean = isNotary(party) && "validating" in party.name.commonName!!
 
-    /** Checks whether a given party is an advertised notary identity */
-    fun isNotary(party: Party): Boolean = notaryNodes.any { it.notaryIdentity == party }
-
-    /** Checks whether a given party is an advertised validating notary identity */
-    fun isValidatingNotary(party: Party): Boolean {
-        val notary = notaryNodes.firstOrNull { it.notaryIdentity == party }
-                ?: throw IllegalArgumentException("No notary found with identity $party. This is most likely caused " +
-                "by using the notary node's legal identity instead of its advertised notary identity. " +
-                "Your options are: ${notaryNodes.map { "\"${it.notaryIdentity.name}\"" }.joinToString()}.")
-        return notary.advertisedServices.any { it.info.type.isValidatingNotary() }
-    }
-
-    /**
-     * Clear all network map data from local node cache.
-     */
+    /** Clear all network map data from local node cache. */
     fun clearNetworkMapCache()
 }

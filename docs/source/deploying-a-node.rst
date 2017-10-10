@@ -20,7 +20,7 @@ notary/network map node:
         networkMap "O=Controller,OU=corda,L=London,C=UK"
         node {
             name "O=Controller,OU=corda,L=London,C=UK"
-            advertisedServices = ["corda.notary.validating"]
+            notary = [validating : true]
             p2pPort 10002
             rpcPort 10003
             webPort 10004
@@ -28,7 +28,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeA,O=NodeA,L=London,C=UK"
-            advertisedServices = []
             p2pPort 10005
             rpcPort 10006
             webPort 10007
@@ -37,7 +36,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeB,O=NodeB,L=New York,C=US"
-            advertisedServices = []
             p2pPort 10008
             rpcPort 10009
             webPort 10010
@@ -46,7 +44,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeC,O=NodeC,L=Paris,C=FR"
-            advertisedServices = []
             p2pPort 10011
             rpcPort 10012
             webPort 10013
@@ -60,6 +57,14 @@ one node as running the network map service, by putting their name in the ``netw
 ``Controller`` is set as the network map service.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
+
+If your CorDapp is written in Java, you should also add the following Gradle snippet so that you can pass named arguments to your flows via the Corda shell:
+
+.. sourcecode:: groovy
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-parameters"
+    }
 
 Any CorDapps defined in the project's source folders are also automatically registered with all the nodes defined in
 ``deployNodes``, even if the CorDapps are not listed in each node's ``cordapps`` entry.

@@ -1,13 +1,14 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
-class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
+class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun twoInts() {
@@ -46,7 +47,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         assertNotEquals(null, aSchema)
 
-        val pinochio = ClassCarpenter().build(aSchema!!)
+        val pinochio = ClassCarpenter(whitelist = AllWhitelist).build(aSchema!!)
         val p = pinochio.constructors[0].newInstance(testA, testB)
 
         assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
@@ -90,7 +91,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         assertNotEquals(null, aSchema)
 
-        val pinochio = ClassCarpenter().build(aSchema!!)
+        val pinochio = ClassCarpenter(whitelist = AllWhitelist).build(aSchema!!)
         val p = pinochio.constructors[0].newInstance(testA, testB)
 
         assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)

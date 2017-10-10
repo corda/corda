@@ -1,20 +1,21 @@
 Running the demos
 =================
 
+.. contents::
+
 The `Corda repository <https://github.com/corda/corda>`_ contains a number of demo programs demonstrating
 Corda's functionality:
 
-1. The Trader Demo, which shows a delivery-vs-payment atomic swap of commercial paper for cash
-2. The IRS Demo, which shows two nodes establishing an interest rate swap and performing fixings with a
+1. The :ref:`trader-demo`, which shows a delivery-vs-payment atomic swap of commercial paper for cash
+2. The :ref:`irs-demo`, which shows two nodes establishing an interest rate swap and performing fixings with a
    rates oracle
-3. The Attachment Demo, which demonstrates uploading attachments to nodes
-4. The SIMM Valuation Demo, which shows two nodes agreeing on a portfolio and valuing the initial margin
-   using the Standard Initial Margin Model
-5. The Notary Demo, which shows three different types of notaries and a single node getting multiple transactions notarised.
-6. The Bank of Corda Demo, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
+3. The :ref:`attachment-demo`, which demonstrates uploading attachments to nodes
+4. The :ref:`notary-demo`, which shows three different types of notaries and a single node getting multiple transactions
+   notarised
+5. The :ref:`bank-of-corda-demo`, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
    applications request issuance of some cash on behalf of a node called Big Corporation
 
-If any of the demos don't work, please raise an issue on GitHub.
+If any of the demos don't work, please raise an issue on `GitHub <https://github.com/corda/corda/issues>`_.
 
 .. note:: If you are running the demos from the command line in Linux (but not macOS), you may have to install xterm.
 
@@ -66,10 +67,10 @@ To run from the command line in Unix:
 
 To run from the command line in Windows:
 
-1. Run ``gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\build``
-2. Run ``gradlew samples:irs-demo:installDist``
-3. Move to the ``samples\irs-demo\build`` directory
-4. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
+1. Run ``gradlew.bat samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\build``
+2. Run ``gradlew.bat samples:irs-demo:installDist``
+3. Run ``cd samples\irs-demo\build`` to change current working directory
+4. Run ``nodes\runnodes`` to open up several 6 terminals, 2 for each node. First terminal is a web-server associated with every node and second one is Corda interactive shell for the node.
 
 This demo also has a web app. To use this, run nodes and then navigate to
 http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see each node's view of the ledger.
@@ -79,6 +80,8 @@ use the time controls at the top left of the home page to run the fixings. Click
 
 .. note:: The IRS web UI currently has a bug when changing the clock time where it may show no numbers or apply fixings inconsistently.
           The issues will be addressed in a future milestone release. Meanwhile, you can take a look at a simpler oracle example https://github.com/corda/oracle-example
+
+.. _attachment-demo:
 
 Attachment demo
 ---------------
@@ -140,19 +143,18 @@ To run from the command line in Windows:
 To run the BFT SMaRt notary demo, use ``nodesBFT`` instead of ``nodesRaft`` in the path (you will see messages from notary nodes
 trying to communicate each other sometime with connection errors, that's normal). For a single notary node, use ``nodesSingle``.
 
-Notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
+Distributed notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
 You can ascertain that the commit log is synchronised across the cluster by accessing and comparing each of the nodes' backing stores
 by using the H2 web console:
 
 - Firstly, download `H2 web console <http://www.h2database.com/html/download.html>`_ (download the "platform-independent zip"),
-  and start it using a script in the extracted folder: ``h2/bin/h2.sh`` (or ``h2\bin\h2`` for Windows)
+  and start it using a script in the extracted folder: ``sh h2/bin/h2.sh`` (or ``h2\bin\h2`` for Windows)
 
 - If you are uncertain as to which version of h2 to install or if you have connectivity issues, refer to ``build.gradle``
-  located in the ``node`` directory and locate the compile step for ``com.h2database``. Use a client of the same
-  major version - even if still in beta.
+  located in the corda directory and locate ``h2_version``. Use a client of the same major version - even if still in beta.
 
 - The H2 web console should start up in a web browser tab. To connect we first need to obtain a JDBC connection string.
-  Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a node is running,
+  Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a **notary** node is running,
   look for the following string:
 
   ``Database connection url is              : jdbc:h2:tcp://10.18.0.150:56736/node``
@@ -160,8 +162,10 @@ by using the H2 web console:
   You can use the string on the right to connect to the h2 database: just paste it into the `JDBC URL` field and click *Connect*.
   You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL
 
-- The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table. Note that the raw data is not human-readable,
-  but we're only interested in the row count for this demo
+- The committed states are stored in the ``NOTARY_COMMITTED_STATES`` table (for Raft) or ``NODE_BFT_SMART_NOTARY_COMMITTED_STATES`` (for BFT).
+  Note that in the Raft case the raw data is not human-readable, but we're only interested in the row count for this demo
+
+.. _bank-of-corda-demo:
 
 Bank Of Corda demo
 ------------------
@@ -194,11 +198,6 @@ To run from the command line in Windows:
 .. note:: To verify that the Bank of Corda node is alive and running, navigate to the following URL:
           http://localhost:10007/api/bank/date
 
-.. note:: The Bank of Corda node explicitly advertises with a node service type as follows:
-          ``advertisedServices = ["corda.issuer.USD"]``
-          This allows for 3rd party applications to perform actions based on Node Type.
-          For example, the Explorer tool only allows nodes of this type to issue and exit cash.
-
 In the window you run the command you should see (in case of Web, RPC is simmilar):
 
 - Requesting Cash via Web ...
@@ -230,14 +229,11 @@ This app is a demonstration of how Corda can be used for the real world requirem
 agreement; featuring the integration of complex and industry proven third party libraries into Corda nodes.
 
 SIMM is an acronym for "Standard Initial Margin Model". It is effectively the calculation of a "margin" that is paid
-by one party to another when they agree a trade on certain types of transaction. This margin is
-paid such that, in the event of one of the counterparties suffering a credit event
-(a financial term and a polite way to say defaulting, not paying the debts that are due, or potentially even bankruptcy),
-then the party that is owed any sum already has some of the amount that it should have been paid. This payment to the
-receiving party is a preventative measure in order to reduce the risk of a potentially catastrophic default domino
-effect that caused the `Great Financial Crisis <https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%932008>`_,
-as it means that they can be assured that if they need to pay another party, they will have a proportion of the funds
-that they have been relying on.
+by one party to another when they agree a trade on certain types of transaction.
+
+The SIMM was introduced to standardise the calculation of how much margin counterparties charge each other on their
+bilateral transactions. Before SIMM, each counterparty computed margins according to its own model and it was made it very
+ difficult to agree the exact margin with the counterparty that faces the same trade on the other side.
 
 To enact this, in September 2016, the ISDA committee - with full backing from various governing bodies -
 `issued a ruling on what is known as the ISDA SIMM ™ model <http://www2.isda.org/news/isda-simm-deployed-today-new-industry-standard-for-calculating-initial-margin-widely-adopted-by-market-participants>`_,
@@ -261,7 +257,7 @@ What happens in the demo (notionally)
 *************************************
 
 Preliminaries
-    - Ensure that there are a number of live trades with another party financial products that are covered under the
+    - Ensure that there are a number of live trades with another party based on financial products that are covered under the
       ISDA SIMM agreement (if none, then use the demo to enter some simple trades as described below).
 
 Initial Margin Agreement Process
@@ -277,6 +273,8 @@ Initial Margin Agreement Process
 Demo execution (step by step)
 *****************************
 
+**Setting up the Corda infrastructure**
+
 To run from the command line in Unix:
 
 1. Deploy the nodes using ``./gradlew samples:simm-valuation-demo:deployNodes``
@@ -287,14 +285,149 @@ To run from the command line in Windows:
 1. Deploy the nodes using ``gradlew samples:simm-valuation-demo:deployNodes``
 2. Run the nodes using ``samples\simm-valuation-demo\build\nodes\runnodes``
 
-Then, for both Unix and Windows:
+**Getting Bank A's details**
 
-3. Browse to http://localhost:10005/web/simmvaluationdemo
-4. Select the counterparty (i.e. Bank B)
-5. Enter at least 3 trades - via the "Create New Trade" tab
-6. On the "Agree Valuations" tab, click the "Start Calculations" button
+From the command line run
 
-Additionally, you can confirm that these trades are not visible from `Bank C's node <http://localhost:10009/web/simmvaluationdemo/>`_
-and are visible to `Bank B <http://localhost:10007/web/simmvaluationdemo/>`_.
+.. sourcecode:: bash
 
-Please note that any URL path information after `simmvaluationdemo` should not be bookmarked or navigated to directly, as it is only provided for aesthetic purposes.
+  curl http://localhost:10005/api/simmvaluationdemo/whoami
+
+The response should be something like
+
+.. sourcecode:: none
+
+    {
+        "self" : {
+            "id" : "8Kqd4oWdx4KQGHGQW3FwXHQpjiv7cHaSsaAWMwRrK25bBJj792Z4rag7EtA",
+            "text" : "C=GB,L=London,O=Bank A"
+        },
+        "counterparties" : [
+            {
+                "id" : "8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM",
+                "text" : "C=JP,L=Tokyo,O=Bank C"
+            },
+            {
+                "id" : "8Kqd4oWdx4KQGHGTBm34eCM2nrpcWKeM1ZG3DUYat3JTFUQTwB3Lv2WbPM8",
+                "text" : "C=US,L=New York,O=Bank B"
+            }
+        ]
+    }
+
+Now, if we ask the same question of Bank C we will see that it's id matches the id for Bank C as a counter
+party to Bank A and Bank A will appear as a counter party
+
+.. sourcecode:: bash
+
+  curl -i -H "Content-Type: application/json" -X GET http://localhost:10011/api/simmvaluationdemo/whoami
+
+**Creating a trade with Bank C**
+
+In what follows, we assume we are Bank A (which is listening on port 10005)
+
+Notice the id field in the output of the ``whoami`` command. We are going to use the id assocatied
+with Bank C, one of our counter parties, to create a trade. The general command for this is:
+
+.. sourcecode:: bash
+
+  curl -i -H "Content-Type: application/json" -X PUT -d <<<JSON representation of the trade>>>  http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades
+
+where the representation of the trade is
+
+.. sourcecode:: none
+
+  {
+      "id"          : "trade1",
+      "description" : "desc",
+      "tradeDate"   : [ 2016, 6, 6 ],
+      "convention"  : "EUR_FIXED_1Y_EURIBOR_3M",
+      "startDate"   : [ 2016, 6, 6 ],
+      "endDate"     : [ 2020, 1, 2 ],
+      "buySell"     : "BUY",
+      "notional"    : "1000",
+      "fixedRate"   : "0.1"
+  }
+
+Continuing our example, the specific command we would run is
+
+.. sourcecode:: bash
+
+    curl -i -H "Content-Type: application/json" \
+        -X PUT \
+        -d '{"id":"trade1","description" : "desc","tradeDate" : [ 2016, 6, 6 ],  "convention" : "EUR_FIXED_1Y_EURIBOR_3M",  "startDate" : [ 2016, 6, 6 ],  "endDate" : [ 2020, 1, 2 ],  "buySell" : "BUY",  "notional" : "1000",  "fixedRate" : "0.1"}' \
+        http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/trades
+
+With an expected response of
+
+.. sourcecode:: none
+
+  HTTP/1.1 202 Accepted
+  Date: Thu, 28 Sep 2017 17:19:39 GMT
+  Content-Type: text/plain
+      Access-Control-Allow-Origin: *
+  Content-Length: 2
+  Server: Jetty(9.3.9.v20160517)
+
+**Verifying trade completion**
+
+With the trade completed and stored by both parties, the complete list of trades with our couterparty can be seen with the following command
+
+.. sourcecode:: bash
+
+  curl -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades
+
+The command for our example, using Bank A, would thus be
+
+.. sourcecode:: bash
+
+  curl -X GET http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/trades
+
+whilst a specific trade can be seen with
+
+.. sourcecode:: bash
+
+ curl  -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/trades/<<<trade id>>>
+
+If we look at the trade we created above, we assigned it the id "trade1", the complete command in this case would be
+
+.. sourcecode:: bash
+
+ curl  -X GET http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/trades/trade1
+
+**Generating a valuation**
+
+.. sourcecode:: bash
+
+    curl -i -H "Content-Type: application/json" \
+        -X POST \
+        -d <<<JSON representation>>>
+        http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations/calculate
+
+Again, the specific command to continue our example would be
+
+.. sourcecode:: bash
+
+    curl -i -H "Content-Type: application/json" \
+        -X POST \
+        -d '{"valuationDate":[2016,6,6]}' \
+        http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzLumUmZyyokeSGJDY1n5M6neUfAj2sjbf65wYwQM/portfolio/valuations/calculate
+
+**Viewing a valuation**
+
+In the same way we can ask for specific instances of trades with a counter party, we can request details of valuations
+
+.. sourcecode:: bash
+
+  curl -i -H "Content-Type: application/json" -X GET http://localhost:10005/api/simmvaluationdemo/<<<counter party id>>>/portfolio/valuations
+
+The specific command for out Bank A example is
+
+.. sourcecode:: bash
+
+  curl -i -H "Content-Type: application/json" \
+    -X GET http://localhost:10005/api/simmvaluationdemo/8Kqd4oWdx4KQGHGL1DzULumUmZyyokeSGJDY1n5M6neUfAj2sjbf65YwQM/portfolio/valuations
+
+
+
+
+

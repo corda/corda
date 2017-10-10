@@ -1,86 +1,104 @@
 package net.corda.client.rpc
 
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
-import net.corda.client.rpc.serialization.KryoClientSerializationScheme
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.config.SSLConfiguration
-import net.corda.nodeapi.internal.serialization.AMQPClientSerializationScheme
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import java.time.Duration
 
-/** @see RPCClient.RPCConnection */
-class CordaRPCConnection internal constructor(
-        connection: RPCClient.RPCConnection<CordaRPCOps>
-) : RPCClient.RPCConnection<CordaRPCOps> by connection
+/**
+ * This class is essentially just a wrapper for an RPCConnection<CordaRPCOps> and can be treated identically.
+ *
+ * @see RPCConnection
+ */
+class CordaRPCConnection internal constructor(connection: RPCConnection<CordaRPCOps>) : RPCConnection<CordaRPCOps> by connection
 
-/** @see RPCClientConfiguration */
-data class CordaRPCClientConfiguration(
-        val connectionMaxRetryInterval: Duration
-) {
+/**
+ * Can be used to configure the RPC client connection.
+ *
+ * @property connectionMaxRetryInterval How much time to wait between connection retries if the server goes down. This
+ *           time will be reached via exponential backoff.
+ */
+data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration) {
     internal fun toRpcClientConfiguration(): RPCClientConfiguration {
         return RPCClientConfiguration.default.copy(
                 connectionMaxRetryInterval = connectionMaxRetryInterval
         )
     }
+
     companion object {
-        @JvmStatic
-        val default = CordaRPCClientConfiguration(
-                connectionMaxRetryInterval = RPCClientConfiguration.default.connectionMaxRetryInterval
-        )
+        /**
+         * Returns the default configuration we recommend you use.
+         */
+        @JvmField
+        val DEFAULT = CordaRPCClientConfiguration(connectionMaxRetryInterval = RPCClientConfiguration.default.connectionMaxRetryInterval)
     }
 }
 
-/** @see RPCClient */
-class CordaRPCClient(
+/**
+ * An RPC client connects to the specified server and allows you to make calls to the server that perform various
+ * useful tasks. Please see the Client RPC section of docs.corda.net to learn more about how this API works. A brief
+ * description is provided here.
+ *
+ * Calling [start] returns an [RPCConnection] containing a proxy that lets you invoke RPCs on the server. Calls on
+ * it block, and if the server throws an exception then it will be rethrown on the client. Proxies are thread safe and
+ * may be used to invoke multiple RPCs in parallel.
+ *
+ * RPC sends and receives are logged on the net.corda.rpc logger.
+ *
+ * The [CordaRPCOps] defines what client RPCs are available. If an RPC returns an [rx.Observable] anywhere in the object
+ * graph returned then the server-side observable is transparently forwarded to the client side here.
+ * *You are expected to use it*. The server will begin sending messages immediately that will be buffered on the
+ * client, you are expected to drain by subscribing to the returned observer. You can opt-out of this by simply
+ * calling the [net.corda.client.rpc.notUsed] method on it.
+ *
+ * You don't have to explicitly close the observable if you actually subscribe to it: it will close itself and free up
+ * the server-side resources either when the client or JVM itself is shutdown, or when there are no more subscribers to
+ * it. Once all the subscribers to a returned observable are unsubscribed or the observable completes successfully or
+ * with an error, the observable is closed and you can't then re-subscribe again: you'll have to re-request a fresh
+ * observable with another RPC.
+ *
+ * @param hostAndPort The network address to connect to.
+ * @param configuration An optional configuration used to tweak client behaviour.
+ */
+class CordaRPCClient @JvmOverloads constructor(
         hostAndPort: NetworkHostAndPort,
-        sslConfiguration: SSLConfiguration? = null,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default,
-        initialiseSerialization: Boolean = true
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
 ) {
     init {
-        // Init serialization.  It's plausible there are multiple clients in a single JVM, so be tolerant of
-        // others having registered first.
         // TODO: allow clients to have serialization factory etc injected and align with RPC protocol version?
-        if (initialiseSerialization) {
-            initialiseSerialization()
-        }
+        KryoClientSerializationScheme.initialiseSerialization()
     }
 
     private val rpcClient = RPCClient<CordaRPCOps>(
-            tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration),
+            tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = null),
             configuration.toRpcClientConfiguration(),
             KRYO_RPC_CLIENT_CONTEXT
     )
 
+    /**
+     * Logs in to the target server and returns an active connection. The returned connection is a [java.io.Closeable]
+     * and can be used with a try-with-resources statement. If you don't use that, you should use the
+     * [RPCConnection.notifyServerAndClose] or [RPCConnection.forceClose] methods to dispose of the connection object
+     * when done.
+     *
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
+     */
     fun start(username: String, password: String): CordaRPCConnection {
         return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password))
     }
 
+    /**
+     * A helper for Kotlin users that simply closes the connection after the block has executed. Be careful not to
+     * over-use this, as setting up and closing connections takes time.
+     */
     inline fun <A> use(username: String, password: String, block: (CordaRPCConnection) -> A): A {
         return start(username, password).use(block)
-    }
-
-    companion object {
-        fun initialiseSerialization() {
-            try {
-                SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                    registerScheme(KryoClientSerializationScheme())
-                    registerScheme(AMQPClientSerializationScheme())
-                }
-                SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
-                SerializationDefaults.RPC_CLIENT_CONTEXT = KRYO_RPC_CLIENT_CONTEXT
-            } catch(e: IllegalStateException) {
-                // Check that it's registered as we expect
-                check(SerializationDefaults.SERIALIZATION_FACTORY is SerializationFactoryImpl) { "RPC client encountered conflicting configuration of serialization subsystem." }
-                check((SerializationDefaults.SERIALIZATION_FACTORY as SerializationFactoryImpl).alreadyRegisteredSchemes.any { it is KryoClientSerializationScheme }) { "RPC client encountered conflicting configuration of serialization subsystem." }
-            }
-        }
     }
 }

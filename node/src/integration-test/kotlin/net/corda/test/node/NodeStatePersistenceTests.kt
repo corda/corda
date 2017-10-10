@@ -8,7 +8,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -19,7 +18,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
@@ -38,8 +36,7 @@ class NodeStatePersistenceTests {
         val user = User("mark", "dadada", setOf(FlowPermissions.startFlowPermission<SendMessageFlow>()))
         val message = Message("Hello world!")
         driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
-
-            startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+            startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()
             var nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
             val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
             nodeHandle.rpcClientToNode().start(user.username, user.password).use {
@@ -136,21 +133,21 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val notary = serviceHub.networkMapCache.getAnyNotary()
+        val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
         progressTracker.currentStep = GENERATING_TRANSACTION
 
-        val messageState = MessageState(message = message, by = serviceHub.myInfo.chooseIdentity())
+        val messageState = MessageState(message = message, by = ourIdentity)
         val txCommand = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
         val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
 
         progressTracker.currentStep = VERIFYING_TRANSACTION
-        txBuilder.toWireTransaction().toLedgerTransaction(serviceHub).verify()
+        txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
 
         progressTracker.currentStep = SIGNING_TRANSACTION
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         progressTracker.currentStep = FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker())).single()
+        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
     }
 }

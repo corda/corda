@@ -1,5 +1,3 @@
-import org.apache.tools.ant.filters.FixCrLfFilter
-
 buildscript {
     ext.strata_version = '1.1.2'
 }
@@ -9,6 +7,7 @@ apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
@@ -62,77 +61,45 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+
     directory "./build/nodes"
     networkMap "O=Notary Service,L=Zurich,C=CH"
     node {
         name "O=Notary Service,L=Zurich,C=CH"
-        advertisedServices = ["corda.notary.validating"]
+        notary = [validating : true]
         p2pPort 10002
         cordapps = ["net.corda:finance:$corda_release_version"]
     }
     node {
         name "O=Bank A,L=London,C=GB"
-        advertisedServices = []
         p2pPort 10004
         webPort 10005
+        rpcPort 10006
         cordapps = ["net.corda:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
     }
     node {
         name "O=Bank B,L=New York,C=US"
-        advertisedServices = []
-        p2pPort 10006
-        webPort 10007
+        p2pPort 10007
+        webPort 10008
+        rpcPort 10009
         cordapps = ["net.corda:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
     }
     node {
         name "O=Bank C,L=Tokyo,C=JP"
-        advertisedServices = []
-        p2pPort 10008
-        webPort 10009
+        p2pPort 10010
+        webPort 10011
+        rpcPort 10012
         cordapps = ["net.corda:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
     }
 }
 
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-task npmInstall(type: Exec) {
-    workingDir 'src/main/web'
-    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-        commandLine 'cmd', '/c', 'npm', 'install'
-    } else {
-        commandLine 'npm', 'install'
-    }
-
-    outputs.upToDateWhen { file('src/main/web/node_modules').exists() }
-}
-
-task cleanWeb() {
-    doLast {
-        delete 'src/main/resources/simmvaluationweb'
-        delete 'src/main/web/dist'
-    }
-}
-
-task buildWeb(type: Exec, dependsOn: [cleanWeb, npmInstall]) {
-    workingDir 'src/main/web'
-    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-        commandLine 'cmd', '/c', 'ng', 'build'
-    } else {
-        commandLine 'node_modules/angular-cli/bin/ng', 'build'
-    }
-}
-
-task installWeb(type: Copy, dependsOn: [buildWeb]) {
-    from 'src/main/web/dist'
-    into 'src/main/resources/simmvaluationweb'
-    ['**/*.js', '**/*.js.map', '**/*.ts'].each {
-        filesMatching(it) {
-            filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.LF, fixlast: false)
-        }
-    }
 }
 
 publishing {
@@ -144,5 +111,13 @@ publishing {
             artifact sourceJar
             artifact javadocJar
         }
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.simmvaluation'
+        )
     }
 }

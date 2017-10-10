@@ -25,7 +25,8 @@ class TestClock(private var delegateClock: Clock = Clock.systemUTC()) : MutableC
     /**
      * Advance this [Clock] by the specified [Duration] for testing purposes.
      */
-    @Synchronized fun advanceBy(duration: Duration) {
+    @Synchronized
+    fun advanceBy(duration: Duration) {
         delegateClock = offset(delegateClock, duration)
         notifyMutationObservers()
     }
@@ -35,7 +36,8 @@ class TestClock(private var delegateClock: Clock = Clock.systemUTC()) : MutableC
      *
      * This will only be approximate due to the time ticking away, but will be some time shortly after the requested [Instant].
      */
-    @Synchronized fun setTo(newInstant: Instant) = advanceBy(instant() until newInstant)
+    @Synchronized
+    fun setTo(newInstant: Instant) = advanceBy(instant() until newInstant)
 
     @Synchronized override fun instant(): Instant {
         return delegateClock.instant()

@@ -1,7 +1,6 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
@@ -10,23 +9,31 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.testing.BOC
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.driver.poll
 import net.corda.testing.node.NodeBasedTest
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.Executors
 
 class TraderDemoTest : NodeBasedTest() {
+
+    @Before
+    fun setup() {
+        setCordappPackages("net.corda.finance.contracts.asset", "net.corda.finance.contracts")
+    }
+
+    @After
+    fun tearDown() {
+        unsetCordappPackages()
+    }
+
     @Test
     fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlowPermission<SellerFlow>()))
@@ -34,7 +41,7 @@ class TraderDemoTest : NodeBasedTest() {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
-        val notaryFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, validating = false)
         val nodeAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser))
         val nodeBFuture = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser))
         val bankNodeFuture = startNode(BOC.name, rpcUsers = listOf(bankUser))
@@ -45,11 +52,11 @@ class TraderDemoTest : NodeBasedTest() {
         nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1, CommercialPaperSchemaV1))
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-            val client = CordaRPCClient(it.internals.configuration.rpcAddress!!, initialiseSerialization = false)
+            val client = CordaRPCClient(it.internals.configuration.rpcAddress!!)
             client.start(demoUser.username, demoUser.password).proxy
         }
         val nodeBankRpc = let {
-            val client = CordaRPCClient(bankNode.internals.configuration.rpcAddress!!, initialiseSerialization = false)
+            val client = CordaRPCClient(bankNode.internals.configuration.rpcAddress!!)
             client.start(bankUser.username, bankUser.password).proxy
         }
 

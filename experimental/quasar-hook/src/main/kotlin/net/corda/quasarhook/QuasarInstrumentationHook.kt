@@ -32,7 +32,7 @@ fun recordUsedInstrumentedCallStack() {
     val throwable = Throwable()
     var index = 0
     while (true) {
-        require (index < throwable.stackTrace.size) { "Can't find getStack call" }
+        require(index < throwable.stackTrace.size) { "Can't find getStack call" }
         val stackElement = throwable.stackTrace[index]
         if (stackElement.className == "co.paralleluniverse.fibers.Stack" && stackElement.methodName == "getStack") {
             break
@@ -129,7 +129,7 @@ class QuasarInstrumentationHookAgent {
                 // The separator append is a hack, it causes a package with an empty name to be added to the exclude tree,
                 // which practically causes that level of the tree to be always expanded in the output globs.
                 val expand = arguments.expand?.let { PackageTree.fromStrings(it.map { "$it${arguments.separator}" }, arguments.separator) }
-                val truncatedTree = truncate?.let { scannedTree.truncate(it)} ?: scannedTree
+                val truncatedTree = truncate?.let { scannedTree.truncate(it) } ?: scannedTree
                 val expandedTree = expand?.let { alwaysExcludedTree.merge(it) } ?: alwaysExcludedTree
                 val globs = truncatedTree.toGlobs(expandedTree)
                 globs.forEach {
@@ -152,7 +152,7 @@ object QuasarInstrumentationHook : ClassFileTransformer {
     val instrumentMap = mapOf<String, (CtClass) -> Unit>(
             "co/paralleluniverse/fibers/Stack" to { clazz ->
                 // This is called on each suspend, we hook into it to get the stack trace of actually used Suspendables
-                val getStackMethod = clazz.methods.single { it.name ==  "getStack" }
+                val getStackMethod = clazz.methods.single { it.name == "getStack" }
                 getStackMethod.insertBefore(
                         "$hookClassName.${::recordUsedInstrumentedCallStack.name}();"
                 )
@@ -194,7 +194,7 @@ object QuasarInstrumentationHook : ClassFileTransformer {
             throwable.printStackTrace(System.out)
             classfileBuffer
         }
-   }
+    }
 }
 
 data class Glob(val parts: List<String>, val isFull: Boolean) {
@@ -271,6 +271,7 @@ data class PackageTree(val branches: Map<String, PackageTree>) {
                 val exclude: PackageTree,
                 val globSoFar: List<String>
         )
+
         val toExpandList = LinkedList(listOf(State(this, excludeTree, emptyList())))
         val globs = ArrayList<Glob>()
         while (true) {

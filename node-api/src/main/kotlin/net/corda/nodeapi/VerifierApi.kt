@@ -8,11 +8,11 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.reader.MessageUtil
 
 object VerifierApi {
-    val VERIFIER_USERNAME = "SystemUsers/Verifier"
-    val VERIFICATION_REQUESTS_QUEUE_NAME = "verifier.requests"
-    val VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX = "verifier.responses"
-    private val VERIFICATION_ID_FIELD_NAME = "id"
-    private val RESULT_EXCEPTION_FIELD_NAME = "result-exception"
+    const val VERIFIER_USERNAME = "SystemUsers/Verifier"
+    const val VERIFICATION_REQUESTS_QUEUE_NAME = "verifier.requests"
+    const val VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX = "verifier.responses"
+    private const val VERIFICATION_ID_FIELD_NAME = "id"
+    private const val RESULT_EXCEPTION_FIELD_NAME = "result-exception"
 
     data class VerificationRequest(
             val verificationId: Long,

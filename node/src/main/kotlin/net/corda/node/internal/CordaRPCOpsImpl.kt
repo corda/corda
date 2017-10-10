@@ -10,7 +10,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -55,9 +54,9 @@ class CordaRPCOpsImpl(
     override fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
-                                                  contractType: Class<out T>): Vault.Page<T> {
+                                                  contractStateType: Class<out T>): Vault.Page<T> {
         return database.transaction {
-            services.vaultQueryService._queryBy(criteria, paging, sorting, contractType)
+            services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
         }
     }
 
@@ -65,9 +64,9 @@ class CordaRPCOpsImpl(
     override fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
-                                                  contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+                                                  contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return database.transaction {
-            services.vaultQueryService._trackBy(criteria, paging, sorting, contractType)
+            services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
         }
     }
 
@@ -115,6 +114,10 @@ class CordaRPCOpsImpl(
         return services.myInfo
     }
 
+    override fun notaryIdentities(): List<Party> {
+        return services.networkMapCache.notaryIdentities
+    }
+
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
         return database.transaction {
             services.vaultService.addNoteToTransaction(txnId, txnNote)
@@ -143,11 +146,11 @@ class CordaRPCOpsImpl(
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
-        val me = services.myInfo.legalIdentitiesAndCerts.first() // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
         val rpcContext = getRpcContext()
         rpcContext.requirePermission(startFlowPermission(logicType))
         val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
-        return services.invokeFlowAsync(logicType, currentUser, me, *args)
+        // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
+        return services.invokeFlowAsync(logicType, currentUser, *args)
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
@@ -173,15 +176,11 @@ class CordaRPCOpsImpl(
 
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
 
-    override fun waitUntilNetworkReady(): CordaFuture<Void?> {
-        return database.transaction {
-            services.networkMapCache.nodeReady
-        }
-    }
+    override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady
 
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         return database.transaction {
-            services.identityService.partyFromAnonymous(party)
+            services.identityService.wellKnownPartyFromAnonymous(party)
         }
     }
 
@@ -191,11 +190,13 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun partyFromX500Name(x500Name: CordaX500Name): Party? {
+    override fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party? {
         return database.transaction {
-            services.identityService.partyFromX500Name(x500Name)
+            services.identityService.wellKnownPartyFromX500Name(x500Name)
         }
     }
+
+    override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? = services.networkMapCache.getNotary(x500Name)
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
@@ -203,7 +204,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun nodeIdentityFromParty(party: AbstractParty): NodeInfo? {
+    override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
         return database.transaction {
             services.networkMapCache.getNodeByLegalIdentity(party)
         }

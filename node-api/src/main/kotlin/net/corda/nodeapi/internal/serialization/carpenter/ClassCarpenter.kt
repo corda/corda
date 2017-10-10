@@ -1,14 +1,13 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
-
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
-
 import java.util.*
 
 /**
@@ -16,6 +15,7 @@ import java.util.*
  * as if `this.class.getMethod("get" + name.capitalize()).invoke(this)` had been called. It is intended as a more
  * convenient alternative to reflection.
  */
+@CordaSerializable
 interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
@@ -79,7 +79,8 @@ private val jlClass get() = Type.getInternalName(Class::class.java)
  *
  * Equals/hashCode methods are not yet supported.
  */
-class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader) {
+class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader,
+                     val whitelist: ClassWhitelist) {
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.
@@ -132,7 +133,10 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
                 visit(TARGET_VERSION, ACC_PUBLIC + ACC_FINAL + ACC_SUPER + ACC_ENUM, schema.jvmName,
                         "L$jlEnum<L${schema.jvmName};>;", jlEnum, null)
 
-                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+                if (schema.flags.cordaSerializable()) {
+                    visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+                }
+
                 generateFields(schema)
                 generateStaticEnumConstructor(schema)
                 generateEnumConstructor()
@@ -149,8 +153,10 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             cw.apply {
                 visit(TARGET_VERSION, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null,
                         jlObject, interfaces)
-                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
+                if (schema.flags.cordaSerializable()) {
+                    visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+                }
                 generateAbstractGetters(schema)
             }.visitEnd()
         }
@@ -161,20 +167,25 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             val superName = schema.superclass?.jvmName ?: jlObject
             val interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
 
-            if (SimpleFieldAccess::class.java !in schema.interfaces) {
+            if (SimpleFieldAccess::class.java !in schema.interfaces
+                    && schema.flags.cordaSerializable()
+                    && schema.flags.simpleFieldAccess()) {
                 interfaces.add(SimpleFieldAccess::class.java.name.jvm)
             }
 
             cw.apply {
                 visit(TARGET_VERSION, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName,
                         interfaces.toTypedArray())
-                visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
 
+                if (schema.flags.cordaSerializable()) {
+                    visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+                }
                 generateFields(schema)
                 generateClassConstructor(schema)
                 generateGetters(schema)
-                if (schema.superclass == null)
+                if (schema.superclass == null) {
                     generateGetMethod()   // From SimplePropertyAccess
+                }
                 generateToString(schema)
             }.visitEnd()
         }
@@ -235,10 +246,9 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     private fun ClassWriter.generateGetters(schema: Schema) {
-        @Suppress("UNCHECKED_CAST")
-        for ((name, type) in (schema.fields as Map<String, ClassField>)) {
+        for ((name, type) in schema.fields) {
             visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null).apply {
-                type.addNullabilityAnnotation(this)
+                (type as ClassField).addNullabilityAnnotation(this)
                 visitCode()
                 visitVarInsn(ALOAD, 0)  // Load 'this'
                 visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
@@ -256,8 +266,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     private fun ClassWriter.generateAbstractGetters(schema: Schema) {
-        @Suppress("UNCHECKED_CAST")
-        for ((name, field) in (schema.fields as Map<String, ClassField>)) {
+        for ((name, field) in schema.fields) {
             val opcodes = ACC_ABSTRACT + ACC_PUBLIC
             // abstract method doesn't have any implementation so just end
             visitMethod(opcodes, "get" + name.capitalize(), "()${field.descriptor}", null, null).visitEnd()
@@ -361,9 +370,8 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
             // Assign the fields from parameters.
             var slot = 1 + superclassFields.size
-            @Suppress("UNCHECKED_CAST")
-            for ((name, field) in (schema.fields as Map<String, ClassField>)) {
-                field.nullTest(this, slot)
+            for ((name, field) in schema.fields) {
+                (field as ClassField).nullTest(this, slot)
 
                 visitVarInsn(ALOAD, 0)  // Load 'this' onto the stack
                 slot += load(slot, field)  // Load the contents of the parameter onto the stack.
@@ -389,11 +397,21 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
         }
     }
 
+    /**
+     * If a sub element isn't whitelist we will not build a class containing that type as a member. Since, by
+     * default, classes created by the [ClassCarpenter] are annotated as [CordaSerializable] we will always
+     * be able to carpent classes generated from our AMQP library as, at a base level, we will either be able to
+     * create the lowest level in the meta hierarchy because either all members are jvm primitives or
+     * whitelisted classes
+     */
     private fun validateSchema(schema: Schema) {
         if (schema.name in _loaded) throw DuplicateNameException()
         fun isJavaName(n: String) = n.isNotBlank() && isJavaIdentifierStart(n.first()) && n.all(::isJavaIdentifierPart)
         require(isJavaName(schema.name.split(".").last())) { "Not a valid Java name: ${schema.name}" }
-        schema.fields.keys.forEach { require(isJavaName(it)) { "Not a valid Java name: $it" } }
+        schema.fields.forEach {
+            require(isJavaName(it.key)) { "Not a valid Java name: $it" }
+        }
+
         // Now check each interface we've been asked to implement, as the JVM will unfortunately only catch the
         // fact that we didn't implement the interface we said we would at the moment the missing method is
         // actually called, which is a bit too dynamic for my tastes.

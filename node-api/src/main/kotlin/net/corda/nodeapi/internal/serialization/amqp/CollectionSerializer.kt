@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NonEmptySet
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -34,12 +35,10 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         }
 
         fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
-            if(supportedTypes.containsKey(declaredClass)) {
+            if (supportedTypes.containsKey(declaredClass)) {
                 // Simple case - it is already known to be a collection.
-                @Suppress("UNCHECKED_CAST")
-                return deriveParametrizedType(declaredType, declaredClass as Class<out Collection<*>>)
-            }
-            else if (actualClass != null && Collection::class.java.isAssignableFrom(actualClass)) {
+                return deriveParametrizedType(declaredType, uncheckedCast(declaredClass))
+            } else if (actualClass != null && Collection::class.java.isAssignableFrom(actualClass)) {
                 // Declared class is not collection, but [actualClass] is - represent it accordingly.
                 val collectionClass = findMostSuitableCollectionType(actualClass)
                 return deriveParametrizedType(declaredType, collectionClass)
@@ -49,11 +48,11 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         }
 
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Collection<*>>): ParameterizedType =
-            (declaredType as? ParameterizedType) ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType))
+                (declaredType as? ParameterizedType) ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType))
 
 
         private fun findMostSuitableCollectionType(actualClass: Class<*>): Class<out Collection<*>> =
-            supportedTypes.keys.findLast { it.isAssignableFrom(actualClass) }!!
+                supportedTypes.keys.findLast { it.isAssignableFrom(actualClass) }!!
 
     }
 
@@ -61,13 +60,13 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
 
     private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())
 
-    override fun writeClassInfo(output: SerializationOutput) {
+    override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
         if (output.writeTypeNotations(typeNotation)) {
             output.requireSerializer(declaredType.actualTypeArguments[0])
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             withList {
@@ -78,8 +77,8 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
         // TODO: Can we verify the entries in the list?
-        return concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schema, declaredType.actualTypeArguments[0]) })
+        concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schema, declaredType.actualTypeArguments[0]) })
     }
 }

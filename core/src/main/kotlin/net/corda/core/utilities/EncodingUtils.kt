@@ -66,5 +66,6 @@ fun String.hexToBase64(): String = hexToByteArray().toBase64()
 // TODO: follow the crypto-conditions ASN.1 spec, some changes are needed to be compatible with the condition
 //       structure, e.g. mapping a PublicKey to a condition with the specific feature (ED25519).
 fun parsePublicKeyBase58(base58String: String): PublicKey = base58String.base58ToByteArray().deserialize<PublicKey>()
+
 fun PublicKey.toBase58String(): String = this.serialize().bytes.toBase58()
 fun PublicKey.toSHA256Bytes(): ByteArray = this.serialize().bytes.sha256().bytes // TODO: decide on the format of hashed key (encoded Vs serialised).

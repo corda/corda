@@ -7,7 +7,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -18,7 +18,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashExitFlowTests {
-    private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+    private lateinit var mockNet: MockNetwork
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
     private lateinit var bankOfCordaNode: StartedNode<MockNode>
@@ -28,13 +28,15 @@ class CashExitFlowTests {
 
     @Before
     fun start() {
-        val nodes = mockNet.createSomeNodes(1)
-        notaryNode = nodes.notaryNode
-        bankOfCordaNode = nodes.partyNodes[0]
-        notary = notaryNode.info.notaryIdentity
+        setCordappPackages("net.corda.finance.contracts.asset")
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+        notaryNode = mockNet.createNotaryNode()
+        bankOfCordaNode = mockNet.createPartyNode(BOC.name)
+        notary = notaryNode.services.getDefaultNotary()
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         mockNet.runNetwork()
+        notary = bankOfCordaNode.services.getDefaultNotary()
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
@@ -43,6 +45,7 @@ class CashExitFlowTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        unsetCordappPackages()
     }
 
     @Test

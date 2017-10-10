@@ -7,6 +7,7 @@ import net.corda.core.crypto.NullKeys.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
+import net.corda.core.identity.PartyAndCertificate;
 import net.corda.core.node.ServiceHub;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -31,7 +32,7 @@ import static net.corda.core.contracts.ContractsDSL.requireThat;
  */
 @SuppressWarnings("unused")
 public class JavaCommercialPaper implements Contract {
-    static final String JCP_PROGRAM_ID = "net.corda.finance.contracts.JavaCommercialPaper";
+    public static final String JCP_PROGRAM_ID = "net.corda.finance.contracts.JavaCommercialPaper";
 
     @SuppressWarnings("unused")
     public static class State implements OwnableState, ICommercialPaperState {
@@ -100,9 +101,7 @@ public class JavaCommercialPaper implements Contract {
             if (issuance != null ? !issuance.equals(state.issuance) : state.issuance != null) return false;
             if (owner != null ? !owner.equals(state.owner) : state.owner != null) return false;
             if (faceValue != null ? !faceValue.equals(state.faceValue) : state.faceValue != null) return false;
-            if (maturityDate != null ? !maturityDate.equals(state.maturityDate) : state.maturityDate != null)
-                return false;
-            return true;
+            return maturityDate != null ? maturityDate.equals(state.maturityDate) : state.maturityDate == null;
         }
 
         @Override
@@ -239,8 +238,11 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @Suspendable
-    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, ServiceHub services) throws InsufficientBalanceException {
-        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), Collections.emptySet());
+    public void generateRedeem(final TransactionBuilder tx,
+                               final StateAndRef<State> paper,
+                               final ServiceHub services,
+                               final PartyAndCertificate ourIdentity) throws InsufficientBalanceException {
+        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), ourIdentity, paper.getState().getData().getOwner(), Collections.emptySet());
         tx.addInputState(paper);
         tx.addCommand(new Command<>(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
     }

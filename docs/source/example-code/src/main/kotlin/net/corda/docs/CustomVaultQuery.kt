@@ -2,10 +2,7 @@ package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -20,7 +17,6 @@ import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.testing.chooseIdentity
 import java.util.*
 
 // DOCSTART CustomVaultQuery
@@ -86,12 +82,12 @@ object TopupIssuerFlow {
         @Throws(CashException::class)
         override fun call(): List<AbstractCashFlow.Result> {
             val topupRequest = TopupRequest(issueToParty, issueToPartyRef, notaryParty)
-            return sendAndReceive<List<AbstractCashFlow.Result>>(issuerBankParty, topupRequest).unwrap { it }
+            return initiateFlow(issuerBankParty).sendAndReceive<List<AbstractCashFlow.Result>>(topupRequest).unwrap { it }
         }
     }
 
     @InitiatedBy(TopupIssuanceRequester::class)
-    class TopupIssuer(val otherParty: Party) : FlowLogic<List<SignedTransaction>>() {
+    class TopupIssuer(val otherPartySession: FlowSession) : FlowLogic<List<SignedTransaction>>() {
         companion object {
             object AWAITING_REQUEST : ProgressTracker.Step("Awaiting issuance request")
             object ISSUING : ProgressTracker.Step("Issuing asset")
@@ -108,7 +104,7 @@ object TopupIssuerFlow {
         @Throws(CashException::class)
         override fun call(): List<SignedTransaction> {
             progressTracker.currentStep = AWAITING_REQUEST
-            val topupRequest = receive<TopupRequest>(otherParty).unwrap {
+            val topupRequest = otherPartySession.receive<TopupRequest>().unwrap {
                 it
             }
 
@@ -123,7 +119,7 @@ object TopupIssuerFlow {
                 return@map txn.stx
             }
 
-            send(otherParty, txns)
+            otherPartySession.send(txns)
             return txns
         }
         // DOCEND TopupIssuer
@@ -133,14 +129,15 @@ object TopupIssuerFlow {
                                 issueTo: Party,
                                 issuerPartyRef: OpaqueBytes): AbstractCashFlow.Result {
             // TODO: pass notary in as request parameter
-            val notaryParty = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
+            val notaryParty = serviceHub.networkMapCache.notaryIdentities.firstOrNull()
+                    ?: throw IllegalArgumentException("Couldn't find any notary in NetworkMapCache")
             // invoke Cash subflow to issue Asset
             progressTracker.currentStep = ISSUING
             val issueCashFlow = CashIssueFlow(amount, issuerPartyRef, notaryParty)
             val issueTx = subFlow(issueCashFlow)
             // NOTE: issueCashFlow performs a Broadcast (which stores a local copy of the txn to the ledger)
             // short-circuit when issuing to self
-            if (issueTo == serviceHub.myInfo.chooseIdentity())
+            if (serviceHub.myInfo.isLegalIdentity(issueTo))
                 return issueTx
             // now invoke Cash subflow to Move issued assetType to issue requester
             progressTracker.currentStep = TRANSFERRING

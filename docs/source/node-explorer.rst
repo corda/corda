@@ -73,8 +73,13 @@ Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and 
 Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.
 Please note you are not allowed to login to the notary.
 
+.. note:: When you start the nodes in Windows using the command prompt, they might not be killed when you close the
+          window or terminate the task. If that happens you need to manually terminate the Java processes running the nodes.
+
 .. note:: Alternatively, you may start the demo nodes from within IntelliJ using either of the run configurations
           ``Explorer - demo nodes`` or ``Explorer - demo nodes (simulation)``
+
+.. note:: It is also possible to start the Explorer GUI from IntelliJ via ``Explorer - GUI`` run configuration, provided that the optional TornadoFX plugin has been installed first.
 
 .. note:: Use the Explorer in conjunction with the Trader Demo and Bank of Corda samples to use other *Issuer* nodes.
 

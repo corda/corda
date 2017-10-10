@@ -30,7 +30,7 @@ General node configuration file for hosting the IRSDemo services.
 .. literalinclude:: example-code/src/main/resources/example-node.conf
     :language: javascript
 
-NetworkMapService plus Simple Notary configuration file.
+Simple Notary configuration file.
 
 .. parsed-literal::
 
@@ -40,7 +40,9 @@ NetworkMapService plus Simple Notary configuration file.
     p2pAddress : "localhost:12345"
     rpcAddress : "localhost:12346"
     webAddress : "localhost:12347"
-    extraAdvertisedServiceIds : ["corda.notary.simple"]
+    notary : {
+        validating : false
+    }
     useHTTPS : false
     devMode : true
     // Certificate signing service will be hosted by R3 in the near future.
@@ -92,19 +94,25 @@ path to the node's base directory.
     .. note:: The driver will not automatically create a webserver instance, but the Cordformation will. If this field
               is present the web server will start.
 
-:extraAdvertisedServiceIds: A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available
-    when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar
-    files in the plugins folder. Optionally, a custom advertised service name can be provided by appending it to the service
-    type id: ``"corda.notary.validating|Notary A"``
+:notary: Optional config object which if present configures the node to run as a notary. If part of a Raft or BFT SMaRt
+    cluster then specify ``raft`` or ``bftSMaRt`` respectively as described below. If a single node notary then omit both.
 
-:notaryNodeAddress: The host and port to which to bind the embedded Raft server. Required only when running a distributed
-    notary service. A group of Corda nodes can run a distributed notary service by each running an embedded Raft server and
-    joining them to the same cluster to replicate the committed state log. Note that the Raft cluster uses a separate transport
-    layer for communication that does not integrate with ArtemisMQ messaging services.
+        :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
-:notaryClusterAddresses: List of Raft cluster member addresses used to join the cluster. At least one of the specified
-    members must be active and be able to communicate with the cluster leader for joining. If empty, a new cluster will be
-    bootstrapped. Required only when running a distributed notary service.
+        :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
+
+                :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
+                    separate transport layer for communication that does not integrate with ArtemisMQ messaging services.
+
+                :clusterAddresses: List of Raft cluster member addresses used to join the cluster. At least one of the specified
+                    members must be active and be able to communicate with the cluster leader for joining. If empty, a new
+                    cluster will be bootstrapped.
+
+        :bftSMaRt: If part of a distributed BFT SMaRt cluster specify this config object, with the following settings:
+
+                :replicaId:
+
+                :clusterAddresses:
 
 :networkMapService: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise this is
     a config object with the details of the network map service:

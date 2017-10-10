@@ -25,7 +25,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -68,13 +67,14 @@ fun main(args: Array<String>) {
             val host = NetworkHostAndPort("localhost", 10009)
             println("Connecting to the recipient node ($host)")
             CordaRPCClient(host).start("demo", "demo").use {
-                recipient(it.proxy)
+                recipient(it.proxy, 10010)
             }
         }
     }
 }
 
 /** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
+// DOCSTART 2
 fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
     val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(numOfClearBytes, 0)
     val executor = Executors.newScheduledThreadPool(2)
@@ -88,12 +88,13 @@ fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
 private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256, executor: ScheduledExecutorService) {
 
     // Get the identity key of the other side (the recipient).
-    val notaryFuture: CordaFuture<Party> = poll(executor, DUMMY_NOTARY.name.toString()) { rpc.partyFromX500Name(DUMMY_NOTARY.name) }
-    val otherSideFuture: CordaFuture<Party> = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }
+    val notaryFuture: CordaFuture<Party> = poll(executor, DUMMY_NOTARY.name.toString()) { rpc.wellKnownPartyFromX500Name(DUMMY_NOTARY.name) }
+    val otherSideFuture: CordaFuture<Party> = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.wellKnownPartyFromX500Name(DUMMY_BANK_B.name) }
 
     // Make sure we have the file in storage
     if (!rpc.attachmentExists(hash)) {
         inputStream.use {
+            val avail = inputStream.available()
             val id = rpc.uploadAttachment(it)
             require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
@@ -105,9 +106,12 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
     val stx = flowHandle.returnValue.getOrThrow()
     println("Sent ${stx.id}")
 }
+// DOCEND 2
 
 @StartableByRPC
-class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
+class AttachmentDemoFlow(private val otherSide: Party,
+                         private val notary: Party,
+                         private val attachId: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
 
     object SIGNING : ProgressTracker.Step("Signing transaction")
 
@@ -117,20 +121,21 @@ class AttachmentDemoFlow(val otherSide: Party, val notary: Party, val hash: Secu
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
-                .addOutputState(AttachmentContract.State(hash), ATTACHMENT_PROGRAM_ID)
-                .addCommand(AttachmentContract.Command, serviceHub.myInfo.chooseIdentity().owningKey)
-                .addAttachment(hash)
+                .addOutputState(AttachmentContract.State(attachId), ATTACHMENT_PROGRAM_ID)
+                .addCommand(AttachmentContract.Command, ourIdentity.owningKey)
+                .addAttachment(attachId)
 
         progressTracker.currentStep = SIGNING
 
         // Send the transaction to the other recipient
         val stx = serviceHub.signInitialTransaction(ptx)
 
-        return subFlow(FinalityFlow(stx, setOf(otherSide))).single()
+        return subFlow(FinalityFlow(stx, setOf(otherSide)))
     }
 }
 
-fun recipient(rpc: CordaRPCOps) {
+// DOCSTART 1
+fun recipient(rpc: CordaRPCOps, webPort: Int) {
     println("Waiting to receive transaction ...")
     val stx = rpc.internalVerifiedTransactionsFeed().updates.toBlocking().first()
     val wtx = stx.tx
@@ -140,11 +145,10 @@ fun recipient(rpc: CordaRPCOps) {
             require(rpc.attachmentExists(state.hash))
 
             // Download the attachment via the Web endpoint.
-            val connection = URL("http://localhost:10010/attachments/${state.hash}").openConnection() as HttpURLConnection
+            val connection = URL("http://localhost:$webPort/attachments/${state.hash}").openConnection() as HttpURLConnection
             try {
                 require(connection.responseCode == SC_OK) { "HTTP status code was ${connection.responseCode}" }
                 require(connection.contentType == APPLICATION_OCTET_STREAM) { "Content-Type header was ${connection.contentType}" }
-                require(connection.contentLength > 1024) { "Attachment contains only ${connection.contentLength} bytes" }
                 require(connection.getHeaderField(CONTENT_DISPOSITION) == "attachment; filename=\"${state.hash}.zip\"") {
                     "Content-Disposition header was ${connection.getHeaderField(CONTENT_DISPOSITION)}"
                 }
@@ -169,6 +173,7 @@ fun recipient(rpc: CordaRPCOps) {
         println("Error: no attachments found in ${wtx.id}")
     }
 }
+// DOCEND 1
 
 private fun printHelp(parser: OptionParser) {
     println("""
@@ -184,8 +189,8 @@ val ATTACHMENT_PROGRAM_ID = "net.corda.attachmentdemo.AttachmentContract"
 class AttachmentContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val state = tx.outputsOfType<AttachmentContract.State>().single()
-        val attachment = tx.attachments.single()
-        require(state.hash == attachment.id)
+        // we check that at least one has the matching hash, the other will be the contract
+        require(tx.attachments.any { it.id == state.hash })
     }
 
     object Command : TypeOnlyCommandData()

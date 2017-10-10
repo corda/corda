@@ -3,7 +3,6 @@ package net.corda.docs
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultTrackBy
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -12,7 +11,6 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -23,7 +21,8 @@ class IntegrationTestingTutorial {
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
-        driver {
+        driver(startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlowPermission<CashIssueFlow>(),
                     startFlowPermission<CashPaymentFlow>()
@@ -31,10 +30,10 @@ class IntegrationTestingTutorial {
             val bobUser = User("bobUser", "testPassword2", permissions = setOf(
                     startFlowPermission<CashPaymentFlow>()
             ))
-            val (alice, bob, notary) = listOf(
+            val (alice, bob) = listOf(
                     startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
                     startNode(providedName = BOB.name, rpcUsers = listOf(bobUser)),
-                    startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+                    startNotaryNode(DUMMY_NOTARY.name)
             ).transpose().getOrThrow()
             // END 1
 
@@ -56,11 +55,12 @@ class IntegrationTestingTutorial {
 
             // START 4
             val issueRef = OpaqueBytes.of(0)
+            val notaryParty = aliceProxy.notaryIdentities().first()
             (1..10).map { i ->
                 aliceProxy.startFlow(::CashIssueFlow,
                         i.DOLLARS,
                         issueRef,
-                        notary.nodeInfo.notaryIdentity
+                        notaryParty
                 ).returnValue
             }.transpose().getOrThrow()
             // We wait for all of the issuances to run before we start making payments
@@ -102,7 +102,7 @@ class IntegrationTestingTutorial {
                         }
                 )
             }
+            // END 5
         }
     }
 }
-// END 5

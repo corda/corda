@@ -11,7 +11,7 @@ import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.identity.Party
-import net.corda.core.node.ServiceEntry
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -50,7 +50,7 @@ class InMemoryMessagingNetwork(
         private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
     companion object {
-        val MESSAGES_LOG_NAME = "messages"
+        const val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
     }
 
@@ -106,10 +106,10 @@ class InMemoryMessagingNetwork(
     @Synchronized
     fun createNode(manuallyPumped: Boolean,
                    executor: AffinityExecutor,
-                   advertisedServices: List<ServiceEntry>,
+                   notaryService: PartyAndCertificate?,
                    database: CordaPersistence): Pair<PeerHandle, MessagingServiceBuilder<InMemoryMessaging>> {
         check(counter >= 0) { "In memory network stopped: please recreate." }
-        val builder = createNodeWithID(manuallyPumped, counter, executor, advertisedServices, database = database) as Builder
+        val builder = createNodeWithID(manuallyPumped, counter, executor, notaryService, database = database) as Builder
         counter++
         val id = builder.id
         return Pair(id, builder)
@@ -127,14 +127,14 @@ class InMemoryMessagingNetwork(
             manuallyPumped: Boolean,
             id: Int,
             executor: AffinityExecutor,
-            advertisedServices: List<ServiceEntry>,
+            notaryService: PartyAndCertificate?,
             description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"),
             database: CordaPersistence)
             : MessagingServiceBuilder<InMemoryMessaging> {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
-        advertisedServices.forEach { if(it.identity.owningKey !is CompositeKey) peersMapping[it.identity.name] = peerHandle }
-        val serviceHandles = advertisedServices.map { ServiceHandle(it.identity.party) }
+        notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
+        val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) } ?: emptyList() //TODO only notary can be distributed?
         return Builder(manuallyPumped, peerHandle, serviceHandles, executor, database = database)
     }
 
@@ -143,7 +143,8 @@ class InMemoryMessagingNetwork(
     }
 
     /** This can be set to an object which can inject artificial latency between sender/recipient pairs. */
-    @Volatile var latencyCalculator: LatencyCalculator? = null
+    @Volatile
+    var latencyCalculator: LatencyCalculator? = null
     private val timer = Timer()
 
     @Synchronized
@@ -327,7 +328,7 @@ class InMemoryMessagingNetwork(
                 while (!Thread.currentThread().isInterrupted) {
                     try {
                         pumpReceiveInternal(true)
-                    } catch(e: InterruptedException) {
+                    } catch (e: InterruptedException) {
                         break
                     }
                 }
@@ -452,7 +453,7 @@ class InMemoryMessagingNetwork(
                         for (handler in deliverTo) {
                             try {
                                 handler.callback(transfer.toReceivedMessage(), handler)
-                            } catch(e: Exception) {
+                            } catch (e: Exception) {
                                 log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                             }
                         }

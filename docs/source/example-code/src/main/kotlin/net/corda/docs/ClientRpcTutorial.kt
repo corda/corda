@@ -4,19 +4,17 @@ import net.corda.core.contracts.Amount
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationCustomization
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
@@ -48,14 +46,15 @@ fun main(args: Array<String>) {
             startFlowPermission<CashPaymentFlow>(),
             startFlowPermission<CashExitFlow>()))
 
-    driver(driverDirectory = baseDirectory) {
-        startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+    driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance")) {
+        startNotaryNode(DUMMY_NOTARY.name)
         val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()
         // END 1
 
         // START 2
         val client = node.rpcClientToNode()
         val proxy = client.start("user", "password").proxy
+        proxy.waitUntilNetworkReady().getOrThrow()
 
         thread {
             generateTransactions(proxy)
@@ -98,10 +97,9 @@ fun main(args: Array<String>) {
             }
         }
         waitForAllNodesToFinish()
+        // END 5
     }
-
 }
-// END 5
 
 // START 6
 fun generateTransactions(proxy: CordaRPCOps) {
@@ -111,8 +109,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
         sum + state.state.data.amount.quantity
     }
     val issueRef = OpaqueBytes.of(0)
-    val parties = proxy.networkMapSnapshot()
-    val notary = parties.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
+    val notary = proxy.notaryIdentities().first()
     val me = proxy.nodeInfo().legalIdentities.first()
     while (true) {
         Thread.sleep(1000)
@@ -142,12 +139,8 @@ data class ExampleRPCValue(val foo: String)
 @CordaSerializable
 data class ExampleRPCValue2(val bar: Int)
 
-class ExampleRPCCordaPluginRegistry : CordaPluginRegistry() {
-    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
-        // Add classes like this.
-        custom.addToWhitelist(ExampleRPCValue::class.java)
-        // You should return true, otherwise your plugin will be ignored for registering classes with Kryo.
-        return true
-    }
+class ExampleRPCSerializationWhitelist : SerializationWhitelist {
+    // Add classes like this.
+    override val whitelist = listOf(ExampleRPCValue::class.java)
 }
 // END 7

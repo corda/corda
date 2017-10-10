@@ -61,10 +61,6 @@ data class MultilateralNetState<P : Any>(
         override val template: Obligation.Terms<P>
 ) : NetState<P>
 
-
-// Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-val OBLIGATION_PROGRAM_ID = "net.corda.finance.contracts.asset.Obligation"
-
 /**
  * An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
  * [Cash] contract) at a specified future point in time. Settlement transactions may split and merge contracts across
@@ -74,6 +70,10 @@ val OBLIGATION_PROGRAM_ID = "net.corda.finance.contracts.asset.Obligation"
  * @param P the product the obligation is for payment of.
  */
 class Obligation<P : Any> : Contract {
+    companion object {
+        const val PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.Obligation"
+    }
+
     /**
      * Represents where in its lifecycle a contract state is, which in turn controls the commands that can be applied
      * to the state. Most states will not leave the [NORMAL] lifecycle. Note that settled (as an end lifecycle) is
@@ -192,7 +192,7 @@ class Obligation<P : Any> : Contract {
          */
         data class Move(override val contract: Class<out Contract>? = null) : MoveCommand
 
-                /**
+        /**
          * Allows new obligation states to be issued into existence.
          */
         class Issue : TypeOnlyCommandData()
@@ -200,7 +200,8 @@ class Obligation<P : Any> : Contract {
         /**
          * A command stating that the obligor is settling some or all of the amount owed by transferring a suitable
          * state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.
-         * @see [MoveCommand].
+         *
+         * @see MoveCommand
          */
         data class Settle<P : Any>(val amount: Amount<Issued<Terms<P>>>) : CommandData
 
@@ -453,7 +454,7 @@ class Obligation<P : Any> : Contract {
 
                 requireThat {
                     "there is a time-window from the authority" using (timeWindow != null)
-                    "the due date has passed" using (timeWindow!!.fromTime?.isAfter(deadline) ?: false)
+                    "the due date has passed" using (timeWindow!!.fromTime?.isAfter(deadline) == true)
                     "input state lifecycle is correct" using (input.lifecycle == expectedInputLifecycle)
                     "output state corresponds exactly to input state, with lifecycle changed" using (expectedOutput == actualOutput)
                 }
@@ -489,7 +490,7 @@ class Obligation<P : Any> : Contract {
         tx.withItems(*inputs)
         val out = states.reduce(State<P>::net)
         if (out.quantity > 0L)
-            tx.addOutputState(out, OBLIGATION_PROGRAM_ID)
+            tx.addOutputState(out, PROGRAM_ID)
         tx.addCommand(Commands.Net(NetType.PAYMENT), signer.owningKey)
     }
 
@@ -532,7 +533,7 @@ class Obligation<P : Any> : Contract {
                           beneficiary: AbstractParty,
                           notary: Party) {
         val issuanceDef = Terms(NonEmptySet.of(acceptableContract), NonEmptySet.of(amount.token), dueBefore)
-        OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, amount.quantity, beneficiary), OBLIGATION_PROGRAM_ID, notary), Commands.Issue())
+        OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, amount.quantity, beneficiary), PROGRAM_ID, notary), Commands.Issue())
     }
 
     /**
@@ -552,7 +553,7 @@ class Obligation<P : Any> : Contract {
                       pennies: Long,
                       beneficiary: AbstractParty,
                       notary: Party)
-            = OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, pennies, beneficiary), OBLIGATION_PROGRAM_ID, notary), Commands.Issue())
+            = OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, pennies, beneficiary), PROGRAM_ID, notary), Commands.Issue())
 
     fun generatePaymentNetting(tx: TransactionBuilder,
                                issued: Issued<Obligation.Terms<P>>,
@@ -585,7 +586,7 @@ class Obligation<P : Any> : Contract {
                                 netState.template, entry.value.quantity, entry.key.second)
                     }
                     // Add the new states to the TX
-                    .forEach { tx.addOutputState(it, OBLIGATION_PROGRAM_ID, notary) }
+                    .forEach { tx.addOutputState(it, PROGRAM_ID, notary) }
             tx.addCommand(Commands.Net(NetType.PAYMENT), signers.map { it.owningKey })
         }
 
@@ -616,7 +617,7 @@ class Obligation<P : Any> : Contract {
             stateAndRefs.forEach { stateAndRef ->
                 val outState = stateAndRef.state.data.copy(lifecycle = lifecycle)
                 tx.addInputState(stateAndRef)
-                tx.addOutputState(outState, OBLIGATION_PROGRAM_ID, notary)
+                tx.addOutputState(outState, PROGRAM_ID, notary)
                 partiesUsed.add(stateAndRef.state.data.beneficiary)
             }
             tx.addCommand(Commands.SetLifecycle(lifecycle), partiesUsed.map { it.owningKey }.distinct())
@@ -669,13 +670,13 @@ class Obligation<P : Any> : Contract {
                 val assetState = ref.state.data
                 val amount = Amount(assetState.amount.quantity, assetState.amount.token.product)
                 if (obligationRemaining >= amount) {
-                    tx.addOutputState(assetState.withNewOwnerAndAmount(assetState.amount, obligationOwner), OBLIGATION_PROGRAM_ID, notary)
+                    tx.addOutputState(assetState.withNewOwnerAndAmount(assetState.amount, obligationOwner), PROGRAM_ID, notary)
                     obligationRemaining -= amount
                 } else {
                     val change = Amount(obligationRemaining.quantity, assetState.amount.token)
                     // Split the state in two, sending the change back to the previous beneficiary
-                    tx.addOutputState(assetState.withNewOwnerAndAmount(change, obligationOwner), OBLIGATION_PROGRAM_ID, notary)
-                    tx.addOutputState(assetState.withNewOwnerAndAmount(assetState.amount - change, assetState.owner), OBLIGATION_PROGRAM_ID, notary)
+                    tx.addOutputState(assetState.withNewOwnerAndAmount(change, obligationOwner), PROGRAM_ID, notary)
+                    tx.addOutputState(assetState.withNewOwnerAndAmount(assetState.amount - change, assetState.owner), PROGRAM_ID, notary)
                     obligationRemaining -= Amount(0L, obligationRemaining.token)
                 }
                 assetSigners.add(assetState.owner)
@@ -684,7 +685,7 @@ class Obligation<P : Any> : Contract {
 
         // If we haven't cleared the full obligation, add the remainder as an output
         if (obligationRemaining.quantity > 0L) {
-            tx.addOutputState(State(Lifecycle.NORMAL, obligationIssuer, template, obligationRemaining.quantity, obligationOwner), OBLIGATION_PROGRAM_ID, notary)
+            tx.addOutputState(State(Lifecycle.NORMAL, obligationIssuer, template, obligationRemaining.quantity, obligationOwner), PROGRAM_ID, notary)
         } else {
             // Destroy all of the states
         }
@@ -785,9 +786,11 @@ infix fun <T : Any> Obligation.State<T>.between(parties: Pair<AbstractParty, Abs
 infix fun <T : Any> Obligation.State<T>.`owned by`(owner: AbstractParty) = copy(beneficiary = owner)
 infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy(obligor = party)
 // For Java users:
-@Suppress("unused") fun <T : Any> Obligation.State<T>.ownedBy(owner: AbstractParty) = copy(beneficiary = owner)
+@Suppress("unused")
+fun <T : Any> Obligation.State<T>.ownedBy(owner: AbstractParty) = copy(beneficiary = owner)
 
-@Suppress("unused") fun <T : Any> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
+@Suppress("unused")
+fun <T : Any> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
 
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }

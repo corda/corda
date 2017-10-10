@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase64
@@ -18,9 +19,9 @@ import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterFiel
 import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSchema
 
 // TODO: get an assigned number as per AMQP spec
-val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
+const val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
 
-val DESCRIPTOR_DOMAIN: String = "net.corda"
+const val DESCRIPTOR_DOMAIN: String = "net.corda"
 
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
 val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
@@ -94,8 +95,7 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
 
         override fun newInstance(described: Any?): Schema {
             val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
-            @Suppress("UNCHECKED_CAST")
-            return Schema(list[0] as List<TypeNotation>)
+            return Schema(uncheckedCast(list[0]))
         }
     }
 
@@ -162,8 +162,7 @@ data class Field(val name: String, val type: String, val requires: List<String>,
 
         override fun newInstance(described: Any?): Field {
             val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
-            @Suppress("UNCHECKED_CAST")
-            return Field(list[0] as String, list[1] as String, list[2] as List<String>, list[3] as? String, list[4] as? String, list[5] as Boolean, list[6] as Boolean)
+            return Field(list[0] as String, list[1] as String, uncheckedCast(list[2]), list[3] as? String, list[4] as? String, list[5] as Boolean, list[6] as Boolean)
         }
     }
 
@@ -223,8 +222,7 @@ data class CompositeType(override val name: String, override val label: String?,
 
         override fun newInstance(described: Any?): CompositeType {
             val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
-            @Suppress("UNCHECKED_CAST")
-            return CompositeType(list[0] as String, list[1] as? String, list[2] as List<String>, list[3] as Descriptor, list[4] as List<Field>)
+            return CompositeType(list[0] as String, list[1] as? String, uncheckedCast(list[2]), list[3] as Descriptor, uncheckedCast(list[4]))
         }
     }
 
@@ -273,8 +271,7 @@ data class RestrictedType(override val name: String,
 
         override fun newInstance(described: Any?): RestrictedType {
             val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
-            @Suppress("UNCHECKED_CAST")
-            return RestrictedType(list[0] as String, list[1] as? String, list[2] as List<String>, list[3] as String, list[4] as Descriptor, list[5] as List<Choice>)
+            return RestrictedType(list[0] as String, list[1] as? String, uncheckedCast(list[2]), list[3] as String, list[4] as Descriptor, uncheckedCast(list[5]))
         }
     }
 

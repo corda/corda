@@ -24,7 +24,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(createSchemaService: () -> SchemaService, private val databaseProperties: Properties, private val createIdentityScervice: () -> IdentityService) {
+class HibernateConfiguration(val schemaService: SchemaService, private val databaseProperties: Properties, private val createIdentityService: () -> IdentityService) {
     companion object {
         val logger = loggerFor<HibernateConfiguration>()
     }
@@ -32,8 +32,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
     private val sessionFactories = ConcurrentHashMap<Set<MappedSchema>, SessionFactory>()
 
-    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?:"")
-    var schemaService = createSchemaService()
+    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?: "")
 
     init {
         logger.info("Init HibernateConfiguration for schemas: ${schemaService.schemaOptions.keys}")
@@ -62,7 +61,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase","true") == "true") "update" else "validate")
+                .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase", "true") == "true") "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())
 
@@ -71,7 +70,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, databaseProperties.getProperty("serverNameTablePrefix",""))
+        val sessionFactory = buildSessionFactory(config, metadataSources, databaseProperties.getProperty("serverNameTablePrefix", ""))
         logger.info("Created session factory for schemas: $schemas")
         return sessionFactory
     }
@@ -86,7 +85,7 @@ class HibernateConfiguration(createSchemaService: () -> SchemaService, private v
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityScervice))
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityService))
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)

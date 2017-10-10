@@ -2,8 +2,10 @@ package net.corda.client.rpc
 
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.messaging.*
-import net.corda.core.node.services.ServiceInfo
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
@@ -17,11 +19,12 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
+import net.corda.testing.setCordappPackages
+import net.corda.testing.unsetCordappPackages
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -46,14 +49,16 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Before
     fun setUp() {
-        node = startNode(ALICE.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
+        setCordappPackages("net.corda.finance.contracts")
+        node = startNotaryNode(ALICE.name, rpcUsers = listOf(rpcUser)).getOrThrow()
         node.internals.registerCustomSchemas(setOf(CashSchemaV1))
-        client = CordaRPCClient(node.internals.configuration.rpcAddress!!, initialiseSerialization = false)
+        client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }
 
     @After
     fun done() {
         connection?.close()
+        unsetCordappPackages()
     }
 
     @Test
@@ -105,7 +110,6 @@ class CordaRPCClientTest : NodeBasedTest() {
         login(rpcUser.username, rpcUser.password)
         connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.chooseIdentity()).use {
             assertFalse(it is FlowProgressHandle<*>)
-            assertTrue(it is FlowHandle<*>)
         }
     }
 

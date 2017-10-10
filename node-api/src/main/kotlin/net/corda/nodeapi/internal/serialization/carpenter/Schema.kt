@@ -1,8 +1,12 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
-import kotlin.collections.LinkedHashMap
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes.*
+import java.util.*
+
+enum class SchemaFlags {
+    SimpleFieldAccess, CordaSerializable
+}
 
 /**
  * A Schema is the representation of an object the Carpenter can contsruct
@@ -19,6 +23,8 @@ abstract class Schema(
         val interfaces: List<Class<*>> = emptyList(),
         updater: (String, Field) -> Unit) {
     private fun Map<String, Field>.descriptors() = LinkedHashMap(this.mapValues { it.value.descriptor })
+
+    var flags: EnumMap<SchemaFlags, Boolean> = EnumMap(SchemaFlags::class.java)
 
     init {
         fields.forEach { updater(it.key, it.value) }
@@ -41,6 +47,18 @@ abstract class Schema(
 
     val asArray: String
         get() = "[L$jvmName;"
+
+    fun unsetCordaSerializable() {
+        flags.replace(SchemaFlags.CordaSerializable, false)
+    }
+}
+
+fun EnumMap<SchemaFlags, Boolean>.cordaSerializable(): Boolean {
+    return this.getOrDefault(SchemaFlags.CordaSerializable, true) == true
+}
+
+fun EnumMap<SchemaFlags, Boolean>.simpleFieldAccess(): Boolean {
+    return this.getOrDefault(SchemaFlags.SimpleFieldAccess, true) == true
 }
 
 /**
@@ -51,7 +69,7 @@ class ClassSchema(
         fields: Map<String, Field>,
         superclass: Schema? = null,
         interfaces: List<Class<*>> = emptyList()
-) : Schema(name, fields, superclass, interfaces, { name, field -> field.name = name }) {
+) : Schema(name, fields, superclass, interfaces, { newName, field -> field.name = newName }) {
     override fun generateFields(cw: ClassWriter) {
         cw.apply { fields.forEach { it.value.generateField(this) } }
     }
@@ -66,7 +84,7 @@ class InterfaceSchema(
         fields: Map<String, Field>,
         superclass: Schema? = null,
         interfaces: List<Class<*>> = emptyList()
-) : Schema(name, fields, superclass, interfaces, { name, field -> field.name = name }) {
+) : Schema(name, fields, superclass, interfaces, { newName, field -> field.name = newName }) {
     override fun generateFields(cw: ClassWriter) {
         cw.apply { fields.forEach { it.value.generateField(this) } }
     }

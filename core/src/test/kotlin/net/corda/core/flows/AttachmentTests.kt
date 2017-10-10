@@ -8,14 +8,14 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -43,7 +43,7 @@ class AttachmentTests {
         mockNet.stopNodes()
     }
 
-    fun fakeAttachment(): ByteArray {
+    private fun fakeAttachment(): ByteArray {
         val bs = ByteArrayOutputStream()
         val js = JarOutputStream(bs)
         js.putNextEntry(ZipEntry("file1.txt"))
@@ -55,90 +55,89 @@ class AttachmentTests {
 
     @Test
     fun `download and store`() {
-        val nodes = mockNet.createSomeNodes(2)
-        val n0 = nodes.partyNodes[0]
-        val n1 = nodes.partyNodes[1]
+        mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
+        val bobNode = mockNet.createPartyNode(BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.internals.ensureRegistered()
+        aliceNode.internals.ensureRegistered()
 
-        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         // Insert an attachment into node zero's store directly.
-        val id = n0.database.transaction {
-            n0.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+        val id = aliceNode.database.transaction {
+            aliceNode.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
         }
 
         // Get node one to run a flow to fetch it and insert it.
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity())
+        val bobFlow = bobNode.startAttachmentFlow(setOf(id), aliceNode.info.chooseIdentity())
         mockNet.runNetwork()
-        assertEquals(0, f1.resultFuture.getOrThrow().fromDisk.size)
+        assertEquals(0, bobFlow.resultFuture.getOrThrow().fromDisk.size)
 
         // Verify it was inserted into node one's store.
-        val attachment = n1.database.transaction {
-            n1.attachments.openAttachment(id)!!
+        val attachment = bobNode.database.transaction {
+            bobNode.attachments.openAttachment(id)!!
         }
 
         assertEquals(id, attachment.open().readBytes().sha256())
 
         // Shut down node zero and ensure node one can still resolve the attachment.
-        n0.dispose()
+        aliceNode.dispose()
 
-        val response: FetchDataFlow.Result<Attachment> = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity()).resultFuture.getOrThrow()
+        val response: FetchDataFlow.Result<Attachment> = bobNode.startAttachmentFlow(setOf(id), aliceNode.info.chooseIdentity()).resultFuture.getOrThrow()
         assertEquals(attachment, response.fromDisk[0])
     }
 
     @Test
     fun `missing`() {
-        val nodes = mockNet.createSomeNodes(2)
-        val n0 = nodes.partyNodes[0]
-        val n1 = nodes.partyNodes[1]
+        mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
+        val bobNode = mockNet.createPartyNode(BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.internals.ensureRegistered()
+        aliceNode.internals.ensureRegistered()
 
-        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(hash), n0.info.chooseIdentity())
+        val bobFlow = bobNode.startAttachmentFlow(setOf(hash), aliceNode.info.chooseIdentity())
         mockNet.runNetwork()
-        val e = assertFailsWith<FetchDataFlow.HashNotFound> { f1.resultFuture.getOrThrow() }
+        val e = assertFailsWith<FetchDataFlow.HashNotFound> { bobFlow.resultFuture.getOrThrow() }
         assertEquals(hash, e.requested)
     }
 
     @Test
     fun `malicious response`() {
         // Make a node that doesn't do sanity checking at load time.
-        val n0 = mockNet.createNode(nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
+        val aliceNode = mockNet.createNotaryNode(legalName = ALICE.name, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                advertisedServices: Set<ServiceInfo>, id: Int,
-                                overrideServices: Map<ServiceInfo, KeyPair>?,
+                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }
-        }, advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
-        val n1 = mockNet.createNode(n0.network.myAddress)
+        }, validating = false)
+        val bobNode = mockNet.createNode(legalName = BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        n0.internals.ensureRegistered()
+        aliceNode.internals.ensureRegistered()
 
-        n0.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        n1.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
-        val id = n0.database.transaction {
-            n0.attachments.importAttachment(ByteArrayInputStream(attachment))
+        val id = aliceNode.database.transaction {
+            aliceNode.attachments.importAttachment(ByteArrayInputStream(attachment))
         }
 
         // Corrupt its store.
@@ -146,15 +145,15 @@ class AttachmentTests {
         System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
 
         val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment)
-        n0.database.transaction {
+        aliceNode.database.transaction {
             DatabaseTransactionManager.current().session.update(corruptAttachment)
         }
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         mockNet.runNetwork()
-        val f1 = n1.startAttachmentFlow(setOf(id), n0.info.chooseIdentity())
+        val bobFlow = bobNode.startAttachmentFlow(setOf(id), aliceNode.info.chooseIdentity())
         mockNet.runNetwork()
-        assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { f1.resultFuture.getOrThrow() }
+        assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { bobFlow.resultFuture.getOrThrow() }
     }
 
     private fun StartedNode<*>.startAttachmentFlow(hashes: Set<SecureHash>, otherSide: Party) = services.startFlow(InitiatingFetchAttachmentsFlow(otherSide, hashes))
@@ -162,12 +161,15 @@ class AttachmentTests {
     @InitiatingFlow
     private class InitiatingFetchAttachmentsFlow(val otherSide: Party, val hashes: Set<SecureHash>) : FlowLogic<FetchDataFlow.Result<Attachment>>() {
         @Suspendable
-        override fun call(): FetchDataFlow.Result<Attachment> = subFlow(FetchAttachmentsFlow(hashes, otherSide))
+        override fun call(): FetchDataFlow.Result<Attachment> {
+            val session = initiateFlow(otherSide)
+            return subFlow(FetchAttachmentsFlow(hashes, session))
+        }
     }
 
     @InitiatedBy(InitiatingFetchAttachmentsFlow::class)
-    private class FetchAttachmentsResponse(val otherSide: Party) : FlowLogic<Void?>() {
+    private class FetchAttachmentsResponse(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(TestDataVendingFlow(otherSide))
+        override fun call() = subFlow(TestDataVendingFlow(otherSideSession))
     }
 }

@@ -1,4 +1,4 @@
-@file:Suppress("UNUSED_PARAMETER", "UNCHECKED_CAST")
+@file:Suppress("UNUSED_PARAMETER")
 @file:JvmName("CoreTestUtils")
 
 package net.corda.testing
@@ -11,9 +11,13 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.CertificateAndKeyPair
@@ -74,7 +78,7 @@ val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BigCorporation", locality = "London", country = "GB"), BIG_CORP_PUBKEY)
+val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US"), BIG_CORP_PUBKEY)
 val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
@@ -113,8 +117,8 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  * to the Node, some other process else could allocate the returned ports.
  */
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
-    val freePort =  freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort .. freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
+    val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
+    return (freePort..freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
 }
 
 @JvmOverloads
@@ -142,16 +146,18 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey, trustR
     return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 }
 
-inline fun <reified T : Any> kryoSpecific(reason: String, function: () -> Unit) = if(!AMQP_ENABLED) {
+@Suppress("unused")
+inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
     function()
 } else {
-    loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason" )
+    loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason")
 }
 
-inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) = if(AMQP_ENABLED) {
+@Suppress("unused")
+inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit) = if (AMQP_ENABLED) {
     function()
 } else {
-    loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason" )
+    loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
 }
 
 /**
@@ -159,4 +165,22 @@ inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) 
  * TODO: Should be removed after multiple identities are introduced.
  */
 fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
-fun NodeInfo.chooseIdentity(): Party = legalIdentitiesAndCerts.first().party
+
+fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
+/** Returns the identity of the first notary found on the network */
+fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
+
+/**
+ * Set the package to scan for cordapps - this overrides the default behaviour of scanning the cordapps directory
+ * @param packageNames A package name that you wish to scan for cordapps
+ */
+fun setCordappPackages(vararg packageNames: String) {
+    CordappLoader.testPackages = packageNames.toList()
+}
+
+/**
+ * Unsets the default overriding behaviour of [setCordappPackages]
+ */
+fun unsetCordappPackages() {
+    CordappLoader.testPackages = emptyList()
+}

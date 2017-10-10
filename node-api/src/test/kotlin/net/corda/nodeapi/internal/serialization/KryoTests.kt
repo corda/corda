@@ -25,9 +25,8 @@ import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import java.util.Collections
+import kotlin.test.*
 
 class KryoTests : TestDependencyInjectionBase() {
     private lateinit var factory: SerializationFactory
@@ -44,7 +43,7 @@ class KryoTests : TestDependencyInjectionBase() {
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P)
+                SerializationContext.UseCase.Storage)
     }
 
     @Test
@@ -114,6 +113,27 @@ class KryoTests : TestDependencyInjectionBase() {
     }
 
     @Test
+    fun `check Kotlin EmptyList can be serialised`() {
+        val deserialisedList: List<Int> = emptyList<Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedList.size)
+        assertEquals<Any>(Collections.emptyList<Int>().javaClass, deserialisedList.javaClass)
+    }
+
+    @Test
+    fun `check Kotlin EmptySet can be serialised`() {
+        val deserialisedSet: Set<Int> = emptySet<Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedSet.size)
+        assertEquals<Any>(Collections.emptySet<Int>().javaClass, deserialisedSet.javaClass)
+    }
+
+    @Test
+    fun `check Kotlin EmptyMap can be serialised`() {
+        val deserialisedMap: Map<Int, Int> = emptyMap<Int, Int>().serialize(factory, context).deserialize(factory, context)
+        assertEquals(0, deserialisedMap.size)
+        assertEquals<Any>(Collections.emptyMap<Int, Int>().javaClass, deserialisedMap.javaClass)
+    }
+
+    @Test
     fun `InputStream serialisation`() {
         val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
         val readRubbishStream: InputStream = rubbish.inputStream().serialize(factory, context).deserialize(factory, context)
@@ -168,10 +188,10 @@ class KryoTests : TestDependencyInjectionBase() {
     @Test
     fun `serialize - deserialize PrivacySalt`() {
         val expected = PrivacySalt(byteArrayOf(
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-            11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-            31, 32
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                31, 32
         ))
         val serializedBytes = expected.serialize(factory, context)
         val actual = serializedBytes.deserialize(factory, context)
@@ -247,7 +267,7 @@ class KryoTests : TestDependencyInjectionBase() {
         assertEquals(exception.message, exception2.message)
 
         assertEquals(1, exception2.suppressed.size)
-        assertNotNull({ exception2.suppressed.find { it.message == toBeSuppressedOnSenderSide.message  }})
+        assertNotNull({ exception2.suppressed.find { it.message == toBeSuppressedOnSenderSide.message } })
 
         val toBeSuppressedOnReceiverSide = IllegalStateException("bazz2")
         exception2.addSuppressed(toBeSuppressedOnReceiverSide)

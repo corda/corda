@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import net.corda.core.CordaException
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.isFulfilledBy
@@ -12,7 +13,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -20,7 +20,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AbstractNodeService
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessageHandlerRegistration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ServiceRequestMessage
@@ -63,17 +63,15 @@ interface NetworkMapService {
 
     companion object {
         val DEFAULT_EXPIRATION_PERIOD: Period = Period.ofWeeks(4)
-        val FETCH_TOPIC = "platform.network_map.fetch"
-        val QUERY_TOPIC = "platform.network_map.query"
-        val REGISTER_TOPIC = "platform.network_map.register"
-        val SUBSCRIPTION_TOPIC = "platform.network_map.subscribe"
+        const val FETCH_TOPIC = "platform.network_map.fetch"
+        const val QUERY_TOPIC = "platform.network_map.query"
+        const val REGISTER_TOPIC = "platform.network_map.register"
+        const val SUBSCRIPTION_TOPIC = "platform.network_map.subscribe"
         // Base topic used when pushing out updates to the network map. Consumed, for example, by the map cache.
         // When subscribing to these updates, remember they must be acknowledged
-        val PUSH_TOPIC = "platform.network_map.push"
+        const val PUSH_TOPIC = "platform.network_map.push"
         // Base topic for messages acknowledging pushed updates
-        val PUSH_ACK_TOPIC = "platform.network_map.push_ack"
-
-        val type = ServiceType.networkMap
+        const val PUSH_ACK_TOPIC = "platform.network_map.push_ack"
     }
 
     data class FetchMapRequest(val subscribe: Boolean,
@@ -117,8 +115,8 @@ interface NetworkMapService {
 object NullNetworkMapService : NetworkMapService
 
 @ThreadSafe
-class InMemoryNetworkMapService(services: ServiceHubInternal, minimumPlatformVersion: Int)
-    : AbstractNetworkMapService(services, minimumPlatformVersion) {
+class InMemoryNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal, minimumPlatformVersion: Int)
+    : AbstractNetworkMapService(network, networkMapCache, minimumPlatformVersion) {
 
     override val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
@@ -135,8 +133,9 @@ class InMemoryNetworkMapService(services: ServiceHubInternal, minimumPlatformVer
  * subscriber clean up and is simpler to persist than the previous implementation based on a set of missing messages acks.
  */
 @ThreadSafe
-abstract class AbstractNetworkMapService(services: ServiceHubInternal,
-                                         val minimumPlatformVersion: Int) : NetworkMapService, AbstractNodeService(services) {
+abstract class AbstractNetworkMapService(network: MessagingService,
+                                         private val networkMapCache: NetworkMapCacheInternal,
+                                         private val minimumPlatformVersion: Int) : NetworkMapService, AbstractNodeService(network) {
     companion object {
         /**
          * Maximum credible size for a registration request. Generally requests are around 2000-6000 bytes, so this gives a
@@ -161,14 +160,6 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
     val maxUnacknowledgedUpdates = 10
 
     private val handlers = ArrayList<MessageHandlerRegistration>()
-
-    init {
-        require(minimumPlatformVersion >= 1) { "minimumPlatformVersion cannot be less than 1" }
-        require(minimumPlatformVersion <= services.myInfo.platformVersion) {
-            "minimumPlatformVersion cannot be greater than the node's own version"
-        }
-    }
-
     protected fun setup() {
         // Register message handlers
         handlers += addMessageHandler(FETCH_TOPIC) { req: FetchMapRequest -> processFetchAllRequest(req) }
@@ -190,7 +181,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
     }
 
     private fun addSubscriber(subscriber: MessageRecipients) {
-        if (subscriber !is SingleMessageRecipient) throw NodeMapError.InvalidSubscriber()
+        if (subscriber !is SingleMessageRecipient) throw NodeMapException.InvalidSubscriber()
         subscribers.locked {
             if (!containsKey(subscriber)) {
                 put(subscriber, LastAcknowledgeInfo(mapVersion))
@@ -199,12 +190,12 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
     }
 
     private fun removeSubscriber(subscriber: MessageRecipients) {
-        if (subscriber !is SingleMessageRecipient) throw NodeMapError.InvalidSubscriber()
+        if (subscriber !is SingleMessageRecipient) throw NodeMapException.InvalidSubscriber()
         subscribers.locked { remove(subscriber) }
     }
 
-    private fun processAcknowledge(request: UpdateAcknowledge): Unit {
-        if (request.replyTo !is SingleMessageRecipient) throw NodeMapError.InvalidSubscriber()
+    private fun processAcknowledge(request: UpdateAcknowledge) {
+        if (request.replyTo !is SingleMessageRecipient) throw NodeMapException.InvalidSubscriber()
         subscribers.locked {
             val lastVersionAcked = this[request.replyTo]?.mapVersion
             if ((lastVersionAcked ?: 0) < request.mapVersion) {
@@ -283,11 +274,11 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         when (change.type) {
             ADD -> {
                 logger.info("Added node ${node.addresses} to network map")
-                services.networkMapCache.addNode(change.node)
+                networkMapCache.addNode(change.node)
             }
             REMOVE -> {
                 logger.info("Removed node ${node.addresses} from network map")
-                services.networkMapCache.removeNode(change.node)
+                networkMapCache.removeNode(change.node)
             }
         }
 
@@ -361,13 +352,13 @@ class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalS
 }
 
 @CordaSerializable
-sealed class NodeMapError : Exception() {
+sealed class NodeMapException : CordaException("Network Map Protocol Error") {
 
     /** Thrown if the signature on the node info does not match the public key for the identity */
-    class InvalidSignature : NodeMapError()
+    class InvalidSignature : NodeMapException()
 
     /** Thrown if the replyTo of a subscription change message is not a single message recipient */
-    class InvalidSubscriber : NodeMapError()
+    class InvalidSubscriber : NodeMapException()
 }
 
 @CordaSerializable

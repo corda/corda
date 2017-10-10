@@ -7,7 +7,6 @@ import net.corda.core.internal.AbstractAttachment
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.InputStream
 import java.util.HashMap
 import java.util.jar.JarInputStream
@@ -33,9 +32,9 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
             s.toByteArray()
         }
         val sha256 = bytes.sha256()
-        if (files.containsKey(sha256))
-            throw FileAlreadyExistsException(File("!! MOCK FILE NAME"))
-        files[sha256] = bytes
+        if (!files.containsKey(sha256)) {
+            files[sha256] = bytes
+        }
         return sha256
     }
 }

@@ -44,12 +44,12 @@ object X509Utilities {
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
     // Aliases for private keys and certificates.
-    val CORDA_ROOT_CA = "cordarootca"
-    val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
-    val CORDA_CLIENT_TLS = "cordaclienttls"
-    val CORDA_CLIENT_CA = "cordaclientca"
+    const val CORDA_ROOT_CA = "cordarootca"
+    const val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
+    const val CORDA_CLIENT_TLS = "cordaclienttls"
+    const val CORDA_CLIENT_CA = "cordaclientca"
 
-    val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
+    const val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
 
     private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
     /**
@@ -115,7 +115,7 @@ object X509Utilities {
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
                           nameConstraints: NameConstraints? = null): X509CertificateHolder
-    = createCertificate(certificateType, issuerCertificate, issuerKeyPair, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
+            = createCertificate(certificateType, issuerCertificate, issuerKeyPair, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
 
     /**
      * Create a X509 v3 certificate for use as a CA or for TLS. This does not require a [CordaX500Name] because the
@@ -267,9 +267,9 @@ object X509Utilities {
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
     internal fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
-                          subject: X500Name, subjectPublicKey: PublicKey,
-                          validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+                                   subject: X500Name, subjectPublicKey: PublicKey,
+                                   validityWindow: Pair<Date, Date>,
+                                   nameConstraints: NameConstraints? = null): X509CertificateHolder {
 
         val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
         val provider = Crypto.findProvider(signatureScheme.providerName)

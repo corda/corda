@@ -22,16 +22,18 @@ import java.util.*
  * Flow for the Bank of Corda node to issue some commercial paper to the seller's node, to sell to the buyer.
  */
 @StartableByRPC
-class CommercialPaperIssueFlow(val amount: Amount<Currency>,
-                               val issueRef: OpaqueBytes,
-                               val recipient: Party,
-                               val notary: Party,
+class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
+                               private val issueRef: OpaqueBytes,
+                               private val recipient: Party,
+                               private val notary: Party,
                                override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes, recipient: Party, notary: Party) : this(amount, issueRef, recipient, notary, tracker())
 
     companion object {
         val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
+
         object ISSUING : ProgressTracker.Step("Issuing and timestamping some commercial paper")
+
         fun tracker() = ProgressTracker(ISSUING)
     }
 
@@ -40,7 +42,7 @@ class CommercialPaperIssueFlow(val amount: Amount<Currency>,
         progressTracker.currentStep = ISSUING
 
         val issuance: SignedTransaction = run {
-            val tx = CommercialPaper().generateIssue(ourIdentity.party.ref(issueRef), amount `issued by` ourIdentity.party.ref(issueRef),
+            val tx = CommercialPaper().generateIssue(ourIdentity.ref(issueRef), amount `issued by` ourIdentity.ref(issueRef),
                     Instant.now() + 10.days, notary)
 
             // TODO: Consider moving these two steps below into generateIssue.
@@ -54,7 +56,7 @@ class CommercialPaperIssueFlow(val amount: Amount<Currency>,
             // Sign it as ourselves.
             val stx = serviceHub.signInitialTransaction(tx)
 
-            subFlow(FinalityFlow(stx)).single()
+            subFlow(FinalityFlow(stx))
         }
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
@@ -62,10 +64,9 @@ class CommercialPaperIssueFlow(val amount: Amount<Currency>,
             val builder = TransactionBuilder(notary)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), recipient)
             val stx = serviceHub.signInitialTransaction(builder)
-            subFlow(FinalityFlow(stx)).single()
+            subFlow(FinalityFlow(stx))
         }
 
         return move
     }
-
 }

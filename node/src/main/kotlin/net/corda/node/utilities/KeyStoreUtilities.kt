@@ -1,3 +1,5 @@
+@file:JvmName("KeyStoreUtilities")
+
 package net.corda.node.utilities
 
 import net.corda.core.crypto.Crypto
@@ -14,7 +16,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
-val KEYSTORE_TYPE = "JKS"
+const val KEYSTORE_TYPE = "JKS"
 
 /**
  * Helper method to either open an existing keystore for modification, or create a new blank keystore.
@@ -145,7 +147,7 @@ fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): Certi
  */
 fun KeyStore.getX509Certificate(alias: String): X509Certificate {
     val certificate = getCertificate(alias) ?: throw IllegalArgumentException("No certificate under alias \"$alias\".")
-    return certificate as? X509Certificate  ?: throw IllegalArgumentException("Certificate under alias \"$alias\" is not an X.509 certificate.")
+    return certificate as? X509Certificate ?: throw IllegalArgumentException("Certificate under alias \"$alias\" is not an X.509 certificate.")
 }
 
 /**

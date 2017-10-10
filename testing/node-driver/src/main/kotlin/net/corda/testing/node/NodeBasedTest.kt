@@ -5,20 +5,15 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.configOf
-import net.corda.node.services.config.plus
-import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.config.toConfig
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
@@ -37,7 +32,9 @@ import kotlin.concurrent.thread
  */
 // TODO Some of the logic here duplicates what's in the driver
 abstract class NodeBasedTest : TestDependencyInjectionBase() {
-    val WHITESPACE = "\\s++".toRegex()
+    companion object {
+        private val WHITESPACE = "\\s++".toRegex()
+    }
 
     @Rule
     @JvmField
@@ -85,11 +82,10 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
      */
     fun startNetworkMapNode(legalName: CordaX500Name = DUMMY_MAP.name,
                             platformVersion: Int = 1,
-                            advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
         check(_networkMapNode == null || _networkMapNode!!.info.legalIdentitiesAndCerts.first().name == legalName)
-        return startNodeInternal(legalName, platformVersion, advertisedServices + ServiceInfo(NetworkMapService.type), rpcUsers, configOverrides).apply {
+        return startNodeInternal(legalName, platformVersion, rpcUsers, configOverrides).apply {
             _networkMapNode = this
         }
     }
@@ -97,7 +93,6 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = 1,
-                  advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap(),
                   noNetworkMap: Boolean = false,
@@ -121,39 +116,50 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val node = startNodeInternal(
                 legalName,
                 platformVersion,
-                advertisedServices,
                 rpcUsers,
                 networkMapConf + configOverrides,
                 noNetworkMap)
         return if (waitForConnection) node.internals.nodeReadyFuture.map { node } else doneFuture(node)
     }
 
-    fun startNotaryCluster(notaryName: CordaX500Name,
-                           clusterSize: Int,
-                           serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<StartedNode<Node>>> {
+    // TODO This method has been added temporarily, to be deleted once the set of notaries is defined at the network level.
+    fun startNotaryNode(name: CordaX500Name,
+                        rpcUsers: List<User> = emptyList(),
+                        validating: Boolean = true): CordaFuture<StartedNode<Node>> {
+        return startNode(name, rpcUsers = rpcUsers, configOverrides = mapOf("notary" to mapOf("validating" to validating)))
+    }
+
+    fun startNotaryCluster(notaryName: CordaX500Name, clusterSize: Int): CordaFuture<List<StartedNode<Node>>> {
+        fun notaryConfig(nodeAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): Map<String, Any> {
+            val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
+            val config = NotaryConfig(validating = true, raft = RaftConfig(nodeAddress = nodeAddress, clusterAddresses = clusterAddresses))
+            return mapOf("notary" to config.toConfig().root().unwrapped())
+        }
+
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { baseDirectory(notaryName.copy(organisation = "${notaryName.organisation}-$it")) },
-                serviceType.id,
                 notaryName)
 
-        val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
+        val nodeAddresses = getFreeLocalPorts("localhost", clusterSize)
 
-        val masterNode = CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country)
         val masterNodeFuture = startNode(
-                masterNode,
-                advertisedServices = setOf(ServiceInfo(serviceType, masterNode.copy(commonName = serviceType.id))),
-                configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0],
-                        "database" to mapOf("serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else "")))
+                CordaX500Name(organisation = "${notaryName.organisation}-0", locality = notaryName.locality, country = notaryName.country),
+                configOverrides = notaryConfig(nodeAddresses[0]) + mapOf(
+                        "database" to mapOf(
+                                "serverNameTablePrefix" to if (clusterSize > 1) "${notaryName.organisation}0".replace(Regex("[^0-9A-Za-z]+"), "") else ""
+                        )
+                )
+        )
 
         val remainingNodesFutures = (1 until clusterSize).map {
-            val nodeName = CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country)
             startNode(
-                    nodeName,
-                    advertisedServices = setOf(ServiceInfo(serviceType, nodeName.copy(commonName = serviceType.id))),
-                    configOverrides = mapOf(
-                            "notaryNodeAddress" to nodeAddresses[it],
-                            "notaryClusterAddresses" to listOf(nodeAddresses[0]),
-                            "database" to mapOf("serverNameTablePrefix" to "${notaryName.organisation}$it".replace(Regex("[^0-9A-Za-z]+"), ""))))
+                    CordaX500Name(organisation = "${notaryName.organisation}-$it", locality = notaryName.locality, country = notaryName.country),
+                    configOverrides = notaryConfig(nodeAddresses[it], nodeAddresses[0]) + mapOf(
+                            "database" to mapOf(
+                                    "serverNameTablePrefix" to "${notaryName.organisation}$it".replace(Regex("[^0-9A-Za-z]+"), "")
+                            )
+                    )
+            )
         }
 
         return remainingNodesFutures.transpose().flatMap { remainingNodes ->
@@ -165,7 +171,6 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
 
     private fun startNodeInternal(legalName: CordaX500Name,
                                   platformVersion: Int,
-                                  advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>,
                                   noNetworkMap: Boolean = false): StartedNode<Node> {
@@ -179,14 +184,15 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
                         "rpcAddress" to localPort[1].toString(),
-                        "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                         "rpcUsers" to rpcUsers.map { it.toMap() },
                         "noNetworkMap" to noNetworkMap
                 ) + configOverrides
         )
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
-        val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
+        val node = Node(
+                parsedConfig,
+                MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
                 initialiseSerialization = false).start()
         nodes += node
         thread(name = legalName.organisation) {

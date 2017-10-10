@@ -8,9 +8,10 @@ import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes, but has to be serializable
 
-val DUMMY_PROGRAM_ID = "net.corda.testing.contracts.DummyContract"
-
 data class DummyContract(val blank: Any? = null) : Contract {
+
+    val PROGRAM_ID = "net.corda.testing.contracts.DummyContract"
+
     interface State : ContractState {
         val magicNumber: Int
     }
@@ -42,19 +43,24 @@ data class DummyContract(val blank: Any? = null) : Contract {
     }
 
     companion object {
+        const val PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContract"
+
         @JvmStatic
         fun generateInitial(magicNumber: Int, notary: Party, owner: PartyAndReference, vararg otherOwners: PartyAndReference): TransactionBuilder {
             val owners = listOf(owner) + otherOwners
             return if (owners.size == 1) {
                 val state = SingleOwnerState(magicNumber, owners.first().party)
-                TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), Command(Commands.Create(), owners.first().party.owningKey))
+                TransactionBuilder(notary).withItems(StateAndContract(state, PROGRAM_ID), Command(Commands.Create(), owners.first().party.owningKey))
             } else {
                 val state = MultiOwnerState(magicNumber, owners.map { it.party })
-                TransactionBuilder(notary).withItems(StateAndContract(state, DUMMY_PROGRAM_ID), Command(Commands.Create(), owners.map { it.party.owningKey }))
+                TransactionBuilder(notary).withItems(StateAndContract(state, PROGRAM_ID), Command(Commands.Create(), owners.map { it.party.owningKey }))
             }
         }
 
+        @JvmStatic
         fun move(prior: StateAndRef<SingleOwnerState>, newOwner: AbstractParty) = move(listOf(prior), newOwner)
+
+        @JvmStatic
         fun move(priors: List<StateAndRef<SingleOwnerState>>, newOwner: AbstractParty): TransactionBuilder {
             require(priors.isNotEmpty())
             val priorState = priors[0].state.data
@@ -62,7 +68,7 @@ data class DummyContract(val blank: Any? = null) : Contract {
             return TransactionBuilder(notary = priors[0].state.notary).withItems(
                     /* INPUTS  */ *priors.toTypedArray(),
                     /* COMMAND */ Command(cmd, priorState.owner.owningKey),
-                    /* OUTPUT  */ StateAndContract(state, DUMMY_PROGRAM_ID)
+                    /* OUTPUT  */ StateAndContract(state, PROGRAM_ID)
             )
         }
     }

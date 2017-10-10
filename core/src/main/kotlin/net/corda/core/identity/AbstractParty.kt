@@ -13,6 +13,7 @@ import java.security.PublicKey
 abstract class AbstractParty(val owningKey: PublicKey) {
     /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */
     override fun equals(other: Any?): Boolean = other === this || other is AbstractParty && other.owningKey == owningKey
+
     override fun hashCode(): Int = owningKey.hashCode()
     abstract fun nameOrNull(): CordaX500Name?
 

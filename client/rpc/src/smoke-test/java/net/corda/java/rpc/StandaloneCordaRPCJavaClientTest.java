@@ -6,7 +6,6 @@ import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.FlowHandle;
-import net.corda.core.node.NodeInfo;
 import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
@@ -41,7 +40,6 @@ public class StandaloneCordaRPCJavaClientTest {
     private NodeProcess notary;
     private CordaRPCOps rpcProxy;
     private CordaRPCConnection connection;
-    private NodeInfo notaryNode;
     private Party notaryNodeIdentity;
 
     private NodeConfig notaryConfig = new NodeConfig(
@@ -49,8 +47,8 @@ public class StandaloneCordaRPCJavaClientTest {
             port.getAndIncrement(),
             port.getAndIncrement(),
             port.getAndIncrement(),
-            Collections.singletonList("corda.notary.validating"),
-            Arrays.asList(rpcUser),
+            true,
+            Collections.singletonList(rpcUser),
             null
     );
 
@@ -61,7 +59,6 @@ public class StandaloneCordaRPCJavaClientTest {
         notary = factory.create(notaryConfig);
         connection = notary.connect();
         rpcProxy = connection.getProxy();
-        notaryNode = fetchNotaryIdentity();
         notaryNodeIdentity = rpcProxy.nodeInfo().getLegalIdentities().get(0);
     }
 
@@ -70,7 +67,7 @@ public class StandaloneCordaRPCJavaClientTest {
         try {
             connection.close();
         } finally {
-            if(notary != null) {
+            if (notary != null) {
                 notary.close();
             }
         }
@@ -96,11 +93,6 @@ public class StandaloneCordaRPCJavaClientTest {
         } catch (IOException e) {
             fail("Failed to walk files");
         }
-    }
-
-    private NodeInfo fetchNotaryIdentity() {
-        List<NodeInfo> nodeDataSnapshot = rpcProxy.networkMapSnapshot();
-        return nodeDataSnapshot.get(0);
     }
 
     @Test

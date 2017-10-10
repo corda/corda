@@ -3,12 +3,9 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.SchedulableFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -28,7 +25,7 @@ object FixingFlow {
      * who does what in the flow.
      */
     @InitiatedBy(FixingRoleDecider::class)
-    class Fixer(override val otherParty: Party) : TwoPartyDealFlow.Secondary<FixingSession>() {
+    class Fixer(override val otherSideSession: FlowSession) : TwoPartyDealFlow.Secondary<FixingSession>() {
 
         private lateinit var txState: TransactionState<*>
         private lateinit var deal: FixableDealState
@@ -49,7 +46,6 @@ object FixingFlow {
 
         @Suspendable
         override fun assembleSharedTX(handshake: TwoPartyDealFlow.Handshake<FixingSession>): Triple<TransactionBuilder, List<PublicKey>, List<TransactionSignature>> {
-            @Suppress("UNCHECKED_CAST")
             val fixOf = deal.nextFixingOf()!!
 
             // TODO Do we need/want to substitute in new public keys for the Parties?
@@ -91,18 +87,15 @@ object FixingFlow {
      * is just the "side" of the flow run by the party with the floating leg as a way of deciding who
      * does what in the flow.
      */
-    class Floater(override val otherParty: Party,
+    class Floater(override val otherSideSession: FlowSession,
                   override val payload: FixingSession,
                   override val progressTracker: ProgressTracker = TwoPartyDealFlow.Primary.tracker()) : TwoPartyDealFlow.Primary() {
-        @Suppress("UNCHECKED_CAST")
         private val dealToFix: StateAndRef<FixableDealState> by transient {
-            val state = serviceHub.loadState(payload.ref) as TransactionState<FixableDealState>
+            val state: TransactionState<FixableDealState> = uncheckedCast(serviceHub.loadState(payload.ref))
             StateAndRef(state, payload.ref)
         }
 
-        override val notaryNode: NodeInfo get() {
-            return serviceHub.networkMapCache.notaryNodes.single { it.notaryIdentity == dealToFix.state.notary }
-        }
+        override val notaryParty: Party get() = dealToFix.state.notary
 
         @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
             // Add some constraints here.
@@ -141,9 +134,10 @@ object FixingFlow {
             val myKey = ourIdentity.owningKey
             if (parties[0].owningKey == myKey) {
                 val fixing = FixingSession(ref, fixableDeal.oracle)
-                val counterparty = serviceHub.identityService.partyFromAnonymous(parties[1]) ?: throw IllegalStateException("Cannot resolve floater party")
+                val counterparty = serviceHub.identityService.wellKnownPartyFromAnonymous(parties[1]) ?: throw IllegalStateException("Cannot resolve floater party")
                 // Start the Floater which will then kick-off the Fixer
-                subFlow(Floater(counterparty, fixing))
+                val session = initiateFlow(counterparty)
+                subFlow(Floater(session, fixing))
             }
         }
     }

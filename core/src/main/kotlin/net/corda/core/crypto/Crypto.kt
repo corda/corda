@@ -1,10 +1,8 @@
 package net.corda.core.crypto
 
+import net.corda.core.internal.X509EdDSAEngine
 import net.corda.core.serialization.serialize
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
+import net.i2p.crypto.eddsa.*
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
@@ -41,6 +39,8 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.*
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -200,6 +200,8 @@ object Crypto {
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
         putAll(EdDSASecurityProvider())
+        // Override the normal EdDSA engine with one which can handle X509 keys.
+        put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", X509EdDSAEngine::class.qualifiedName)
         addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID.algorithm, KeyInfoConverter(EDDSA_ED25519_SHA512))
     }
 
@@ -772,9 +774,10 @@ object Crypto {
         // it forms, by itself, the new private key, which in turn is used to compute the new public key.
         val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
         // This is unlikely to happen, but we should check for point at infinity.
-        if (pointQ.isInfinity)
+        if (pointQ.isInfinity) {
             // Instead of throwing an exception, we retry with SHA256(seed).
             return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
+        }
         val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
         val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)
 
@@ -847,6 +850,7 @@ object Crypto {
         override fun generatePublic(keyInfo: SubjectPublicKeyInfo?): PublicKey? {
             return keyInfo?.let { decodePublicKey(signatureScheme, it.encoded) }
         }
+
         override fun generatePrivate(keyInfo: PrivateKeyInfo?): PrivateKey? {
             return keyInfo?.let { decodePrivateKey(signatureScheme, it.encoded) }
         }
@@ -939,7 +943,16 @@ object Crypto {
      * is inappropriate for a supported key factory to produce a private key.
      */
     @JvmStatic
-    fun toSupportedPublicKey(key: PublicKey): PublicKey = decodePublicKey(key.encoded)
+    fun toSupportedPublicKey(key: PublicKey): PublicKey {
+        return when (key) {
+            is BCECPublicKey -> key
+            is BCRSAPublicKey -> key
+            is BCSphincs256PublicKey -> key
+            is EdDSAPublicKey -> key
+            is CompositeKey -> key
+            else -> decodePublicKey(key.encoded)
+        }
+    }
 
     /**
      * Convert a private key to a supported implementation. This can be used to convert a SUN's EC key to an BC key.
@@ -950,5 +963,13 @@ object Crypto {
      * is inappropriate for a supported key factory to produce a private key.
      */
     @JvmStatic
-    fun toSupportedPrivateKey(key: PrivateKey): PrivateKey = decodePrivateKey(key.encoded)
+    fun toSupportedPrivateKey(key: PrivateKey): PrivateKey {
+        return when (key) {
+            is BCECPrivateKey -> key
+            is BCRSAPrivateKey -> key
+            is BCSphincs256PrivateKey -> key
+            is EdDSAPrivateKey -> key
+            else -> decodePrivateKey(key.encoded)
+        }
+    }
 }

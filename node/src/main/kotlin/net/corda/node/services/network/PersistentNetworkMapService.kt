@@ -7,7 +7,8 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.utilities.*
 import net.corda.nodeapi.ArtemisMessagingComponent
 import java.io.ByteArrayInputStream
@@ -23,8 +24,8 @@ import java.util.*
  * This class needs database transactions to be in-flight during method calls and init, otherwise it will throw
  * exceptions.
  */
-class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformVersion: Int)
-    : AbstractNetworkMapService(services, minimumPlatformVersion) {
+class PersistentNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal, minimumPlatformVersion: Int)
+    : AbstractNetworkMapService(network, networkMapCache, minimumPlatformVersion) {
 
     // Only the node_party_path column is needed to reconstruct a PartyAndCertificate but we have the others for human readability
     @Entity

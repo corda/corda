@@ -24,9 +24,3 @@ as ``ValidatingNotaryFlow``, ``NonValidatingNotaryFlow``, or implement your own 
    :language: kotlin
    :start-after: START 2
    :end-before: END 2
-
-To ensure the custom notary is installed and advertised by the node, specify it in the configuration file:
-
-.. parsed-literal::
-
-    extraAdvertisedServiceIds : ["corda.notary.validating.mycustom"]

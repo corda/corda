@@ -1,3 +1,5 @@
+@file:JvmName("SerializationAPI")
+
 package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
@@ -115,6 +117,7 @@ interface SerializationContext {
      * The use case we are serializing or deserializing for.  See [UseCase].
      */
     val useCase: UseCase
+
     /**
      * Helper method to return a new context based on this context with the property added.
      */
@@ -195,7 +198,6 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = Serializa
  * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
  * to get the original object back.
  */
-@Suppress("unused") // Type parameter is just for documentation purposes.
 class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }

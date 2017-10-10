@@ -8,11 +8,13 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.LazyPool
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
@@ -25,7 +27,7 @@ import java.util.concurrent.ExecutionException
 
 val attachmentsClassLoaderEnabledPropertyName = "attachments.class.loader.enabled"
 
-object NotSupportedSeralizationScheme : SerializationScheme {
+object NotSupportedSerializationScheme : SerializationScheme {
     private fun doThrow(): Nothing = throw UnsupportedOperationException("Serialization scheme not supported.")
 
     override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean = doThrow()
@@ -50,7 +52,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
      * We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
      */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
-        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean ?: false || return this
+        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
         val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContextImpl ?: return this // Some tests don't set one.
         try {
             return withClassLoader(cache.get(attachmentHashes) {
@@ -60,7 +62,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
                     serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
                 }
                 missing.isNotEmpty() && throw MissingAttachmentsException(missing)
-                AttachmentsClassLoader(attachments)
+                AttachmentsClassLoader(attachments, parent = deserializationClassLoader)
             })
         } catch (e: ExecutionException) {
             // Caught from within the cache get, so unwrap.
@@ -105,7 +107,7 @@ open class SerializationFactoryImpl : SerializationFactory() {
             registeredSchemes
                     .filter { scheme -> scheme.canDeserializeVersion(it.first, it.second) }
                     .forEach { return@computeIfAbsent it }
-            NotSupportedSeralizationScheme
+            NotSupportedSerializationScheme
         }
     }
 
@@ -140,8 +142,8 @@ open class SerializationFactoryImpl : SerializationFactory() {
 private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
     override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
         val message = "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
-                    "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
-                    "confined to a private method or the reference is nulled out."
+                "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
+                "confined to a private method or the reference is nulled out."
         throw UnsupportedOperationException(message)
     }
 
@@ -167,6 +169,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                             field.set(this, classResolver)
                             DefaultKryoCustomizer.customize(this)
                             addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+                            register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
                             classLoader = it.second
                         }
                     }.build()
@@ -202,11 +205,10 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
         Input(byteSequence.bytes, byteSequence.offset + headerSize, byteSequence.size - headerSize).use { input ->
             return pool.run { kryo ->
                 withContext(kryo, context) {
-                    @Suppress("UNCHECKED_CAST")
                     if (context.objectReferencesEnabled) {
-                        kryo.readClassAndObject(input) as T
+                        uncheckedCast(kryo.readClassAndObject(input))
                     } else {
-                        kryo.withoutReferences { kryo.readClassAndObject(input) as T }
+                        kryo.withoutReferences { uncheckedCast<Any?, T>(kryo.readClassAndObject(input)) }
                     }
                 }
             }

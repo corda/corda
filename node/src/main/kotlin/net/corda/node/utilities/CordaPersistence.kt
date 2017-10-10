@@ -23,15 +23,15 @@ import java.util.concurrent.CopyOnWriteArrayList
 const val NODE_DATABASE_PREFIX = "node_"
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
-class CordaPersistence(var dataSource: HikariDataSource, private var createSchemaService: () -> SchemaService,
-                       private val createIdentityService: ()-> IdentityService, databaseProperties: Properties): Closeable {
+class CordaPersistence(var dataSource: HikariDataSource, private val schemaService: SchemaService,
+                       private val createIdentityService: () -> IdentityService, databaseProperties: Properties) : Closeable {
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
-   val hibernateConfig: HibernateConfiguration by lazy {
+    val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(createSchemaService, databaseProperties, createIdentityService)
+            HibernateConfiguration(schemaService, databaseProperties, createIdentityService)
         }
-   }
+    }
 
     val entityManagerFactory: SessionFactory by lazy {
         transaction {
@@ -40,8 +40,8 @@ class CordaPersistence(var dataSource: HikariDataSource, private var createSchem
     }
 
     companion object {
-        fun connect(dataSource: HikariDataSource, createSchemaService: () -> SchemaService, createIdentityService: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
-            return CordaPersistence(dataSource, createSchemaService, createIdentityService, databaseProperties).apply {
+        fun connect(dataSource: HikariDataSource, schemaService: SchemaService, createIdentityService: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
+            return CordaPersistence(dataSource, schemaService, createIdentityService, databaseProperties).apply {
                 DatabaseTransactionManager(this)
             }
         }
@@ -70,8 +70,7 @@ class CordaPersistence(var dataSource: HikariDataSource, private var createSchem
 
         return if (outer != null) {
             outer.statement()
-        }
-        else {
+        } else {
             inTopLevelTransaction(transactionIsolation, repetitionAttempts, statement)
         }
     }
@@ -84,19 +83,16 @@ class CordaPersistence(var dataSource: HikariDataSource, private var createSchem
                 val answer = transaction.statement()
                 transaction.commit()
                 return answer
-            }
-            catch (e: SQLException) {
+            } catch (e: SQLException) {
                 transaction.rollback()
                 repetitions++
                 if (repetitions >= repetitionAttempts) {
                     throw e
                 }
-            }
-            catch (e: Throwable) {
+            } catch (e: Throwable) {
                 transaction.rollback()
                 throw e
-            }
-            finally {
+            } finally {
                 transaction.close()
             }
         }
@@ -107,10 +103,10 @@ class CordaPersistence(var dataSource: HikariDataSource, private var createSchem
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, createSchemaService: () -> SchemaService = { NodeSchemaService() }, createIdentityService: () -> IdentityService): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, schemaService: SchemaService = NodeSchemaService(), createIdentityService: () -> IdentityService): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence.connect(dataSource, createSchemaService, createIdentityService, databaseProperties ?: Properties())
+    val persistence = CordaPersistence.connect(dataSource, schemaService, createIdentityService, databaseProperties ?: Properties())
 
     // Check not in read-only mode.
     persistence.transaction {
@@ -170,7 +166,7 @@ private class DatabaseTransactionWrappingSubscriber<U>(val db: CordaPersistence?
 }
 
 // A subscriber that wraps another but does not pass on observations to it.
-private class NoOpSubscriber<U>(t: Subscriber<in U>): Subscriber<U>(t) {
+private class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
     override fun onCompleted() {
     }
 

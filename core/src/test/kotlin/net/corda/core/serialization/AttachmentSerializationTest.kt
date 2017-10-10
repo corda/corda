@@ -4,21 +4,20 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.TestDataVendingFlow
-import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -46,6 +45,7 @@ private fun Attachment.extractContent() = ByteArrayOutputStream().apply { extrac
 private fun StartedNode<*>.saveAttachment(content: String) = database.transaction {
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }
+
 private fun StartedNode<*>.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
     updateAttachment(attachmentId, createAttachmentData(content))
 }
@@ -70,8 +70,8 @@ class AttachmentSerializationTest {
     @Before
     fun setUp() {
         mockNet = MockNetwork()
-        server = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        client = mockNet.createNode(server.network.myAddress)
+        server = mockNet.createNode()
+        client = mockNet.createNode()
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
         mockNet.runNetwork()
         server.internals.ensureRegistered()
@@ -82,14 +82,14 @@ class AttachmentSerializationTest {
         mockNet.stopNodes()
     }
 
-    private class ServerLogic(private val client: Party, private val sendData: Boolean) : FlowLogic<Unit>() {
+    private class ServerLogic(private val clientSession: FlowSession, private val sendData: Boolean) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             if (sendData) {
-                subFlow(TestDataVendingFlow(client))
+                subFlow(TestDataVendingFlow(clientSession))
             }
-            receive<String>(client).unwrap { assertEquals("ping one", it) }
-            sendAndReceive<String>(client, "pong").unwrap { assertEquals("ping two", it) }
+            clientSession.receive<String>().unwrap { assertEquals("ping one", it) }
+            clientSession.sendAndReceive<String>("pong").unwrap { assertEquals("ping two", it) }
         }
     }
 
@@ -100,9 +100,9 @@ class AttachmentSerializationTest {
         internal val server = server.info.chooseIdentity()
 
         @Suspendable
-        internal fun communicate() {
-            sendAndReceive<String>(server, "ping one").unwrap { assertEquals("pong", it) }
-            send(server, "ping two")
+        internal fun communicate(serverSession: FlowSession) {
+            serverSession.sendAndReceive<String>("ping one").unwrap { assertEquals("pong", it) }
+            serverSession.send("ping two")
         }
 
         @Suspendable
@@ -121,7 +121,8 @@ class AttachmentSerializationTest {
         @Suspendable
         override fun getAttachmentContent(): String {
             val customAttachment = CustomAttachment(attachmentId, customContent)
-            communicate()
+            val session = initiateFlow(server)
+            communicate(session)
             return customAttachment.customContent
         }
     }
@@ -130,7 +131,8 @@ class AttachmentSerializationTest {
         @Suspendable
         override fun getAttachmentContent(): String {
             val localAttachment = serviceHub.attachments.openAttachment(attachmentId)!!
-            communicate()
+            val session = initiateFlow(server)
+            communicate(session)
             return localAttachment.extractContent()
         }
     }
@@ -138,9 +140,10 @@ class AttachmentSerializationTest {
     private class FetchAttachmentLogic(server: StartedNode<*>, private val attachmentId: SecureHash) : ClientLogic(server) {
         @Suspendable
         override fun getAttachmentContent(): String {
-            val (downloadedAttachment) = subFlow(FetchAttachmentsFlow(setOf(attachmentId), server)).downloaded
-            send(server, FetchDataFlow.Request.End)
-            communicate()
+            val serverSession = initiateFlow(server)
+            val (downloadedAttachment) = subFlow(FetchAttachmentsFlow(setOf(attachmentId), serverSession)).downloaded
+            serverSession.send(FetchDataFlow.Request.End)
+            communicate(serverSession)
             return downloadedAttachment.extractContent()
         }
     }
@@ -148,7 +151,7 @@ class AttachmentSerializationTest {
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int, sendData: Boolean = false) {
         server.internals.internalRegisterFlowFactory(
                 ClientLogic::class.java,
-                InitiatedFlowFactory.Core { ServerLogic(it.counterparty, sendData) },
+                InitiatedFlowFactory.Core { ServerLogic(it, sendData) },
                 ServerLogic::class.java,
                 track = false)
         client.services.startFlow(clientLogic)
@@ -157,11 +160,10 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
-        client = mockNet.createNode(server.network.myAddress, client.internals.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
+        client = mockNet.createNode(client.internals.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
-                                entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
+                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
                 }
             }

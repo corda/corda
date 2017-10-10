@@ -27,9 +27,9 @@ abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTra
     }
 
     @Suspendable
-    protected fun finaliseTx(participants: Set<Party>, tx: SignedTransaction, message: String) {
+    protected fun finaliseTx(tx: SignedTransaction, extraParticipants: Set<Party>, message: String): SignedTransaction {
         try {
-            subFlow(FinalityFlow(tx, participants))
+            return subFlow(FinalityFlow(tx, extraParticipants))
         } catch (e: NotaryException) {
             throw CashException(message, e)
         }

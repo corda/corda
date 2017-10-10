@@ -6,9 +6,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
-    runtime.exclude module: 'isolated'
-
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }

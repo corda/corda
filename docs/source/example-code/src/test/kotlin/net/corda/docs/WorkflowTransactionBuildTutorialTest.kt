@@ -4,18 +4,16 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.setCordappPackages
+import net.corda.testing.unsetCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -23,32 +21,29 @@ import kotlin.test.assertEquals
 
 class WorkflowTransactionBuildTutorialTest {
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var nodeA: StartedNode<MockNetwork.MockNode>
     lateinit var nodeB: StartedNode<MockNetwork.MockNode>
 
     // Helper method to locate the latest Vault version of a LinearState
     private inline fun <reified T : LinearState> ServiceHub.latest(ref: UniqueIdentifier): StateAndRef<T> {
-        val linearHeads = vaultQueryService.queryBy<T>(QueryCriteria.LinearStateQueryCriteria(uuid = listOf(ref.id)))
+        val linearHeads = vaultService.queryBy<T>(QueryCriteria.LinearStateQueryCriteria(uuid = listOf(ref.id)))
         return linearHeads.states.single()
     }
 
     @Before
     fun setup() {
+        setCordappPackages("net.corda.docs")
         mockNet = MockNetwork(threadPerNode = true)
-        val notaryService = ServiceInfo(ValidatingNotaryService.type)
-        notaryNode = mockNet.createNode(
-                legalName = DUMMY_NOTARY.name,
-                overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
-        nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
-        nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
+        mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        nodeA = mockNet.createPartyNode()
+        nodeB = mockNet.createPartyNode()
         nodeA.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)
     }
 
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+        unsetCordappPackages()
     }
 
     @Test

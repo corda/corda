@@ -5,8 +5,9 @@ import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.RaftConfig
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.ALICE
@@ -15,13 +16,14 @@ import net.corda.testing.internal.demorun.*
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 
-internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name(commonName ="Notary Service $it", organisationUnit = "corda", organisation = "R3 Ltd", locality = "Zurich", state = null, country = "CH") }
+internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }
 
 private val notaryNames = createNotaryNames(3)
 
+// This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
+// NOT use this as a design to copy.
 object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0].toString()) {
-    private val clusterName = CordaX500Name(organisation = "Raft", locality = "Zurich", country = "CH")
-    private val advertisedService = ServiceInfo(RaftValidatingNotaryService.type, clusterName)
+    private val clusterName = CordaX500Name(RaftValidatingNotaryService.id, "Raft", "Zurich", "CH")
 
     init {
         node {
@@ -35,32 +37,27 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
             p2pPort(10005)
             rpcPort(10006)
         }
-        fun notaryNode(index: Int, configure: CordformNode.() -> Unit) = node {
+        fun notaryNode(index: Int, nodePort: Int, clusterPort: Int? = null, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[index])
-            advertisedServices(advertisedService)
+            val clusterAddresses = if (clusterPort != null ) listOf(NetworkHostAndPort("localhost", clusterPort)) else emptyList()
+            notary(NotaryConfig(validating = true, raft = RaftConfig(NetworkHostAndPort("localhost", nodePort), clusterAddresses)))
             configure()
         }
-        notaryNode(0) {
-            notaryNodePort(10008)
+        notaryNode(0, 10008) {
             p2pPort(10009)
             rpcPort(10010)
         }
-        val clusterAddress = NetworkHostAndPort("localhost", 10008) // Otherwise each notary forms its own cluster.
-        notaryNode(1) {
-            notaryNodePort(10012)
+        notaryNode(1, 10012, 10008) {
             p2pPort(10013)
             rpcPort(10014)
-            notaryClusterAddresses(clusterAddress)
         }
-        notaryNode(2) {
-            notaryNodePort(10016)
+        notaryNode(2, 10016, 10008) {
             p2pPort(10017)
             rpcPort(10018)
-            notaryClusterAddresses(clusterAddress)
         }
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map(CordaX500Name::toString).map(context::baseDirectory), advertisedService.type.id, clusterName)
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it.toString()) }, clusterName)
     }
 }
