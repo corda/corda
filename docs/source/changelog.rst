@@ -36,6 +36,11 @@ UNRELEASED
 * Cordformation node building DSL can have an additional parameter `configFile` with the path to a properties file
   to be appended to node.conf.
 
+* ``FlowLogic`` now has a static method called ``sleep`` which can be used in certain circumstances to help with resolving
+  contention over states in flows.  This should be used in place of any other sleep primitive since these are not compatible
+  with flows and their use will be prevented at some point in the future.  This helps resolve a bug in ``Cash`` coin selection.
+  A new static property `currentTopLevel` returns the top most `FlowLogic` instance, or null if not in a flow.
+
 * ``CordaService`` annotated classes should be upgraded to take a constructor parameter of type ``AppServiceHub`` which
   allows services to start flows marked with the ``StartableByService`` annotation. For backwards compatability
   service classes with only ``ServiceHub`` constructors will still work.
