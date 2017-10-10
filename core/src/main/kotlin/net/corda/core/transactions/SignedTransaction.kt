@@ -186,7 +186,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     fun resolveBaseTransaction(services: StateLoader): BaseTransaction {
         return when (transaction) {
             is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(services)
-            is TraversableTransaction -> this.tx
+            is WireTransaction -> this.tx
+            is FilteredTransaction -> throw IllegalStateException("Persistence of filtered transactions is not supported.")
             else -> throw IllegalStateException("Unknown transaction type ${transaction::class.qualifiedName}")
         }
     }
@@ -198,7 +199,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     fun resolveTransactionWithSignatures(services: ServiceHub): TransactionWithSignatures {
         return when (transaction) {
             is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(services)
-            is TraversableTransaction -> this
+            is WireTransaction -> this
+            is FilteredTransaction -> throw IllegalStateException("Persistence of filtered transactions is not supported.")
             else -> throw IllegalStateException("Unknown transaction type ${transaction::class.qualifiedName}")
         }
     }
