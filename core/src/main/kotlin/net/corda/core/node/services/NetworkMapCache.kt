@@ -12,7 +12,22 @@ import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
 import java.security.PublicKey
 
-interface NodeLookup {
+/**
+ * A network map contains lists of nodes on the network along with information about their identity keys, services
+ * they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
+ * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
+ * with a specified network map service, which it fetches data from and then subscribes to updates of.
+ */
+interface NetworkMapCache : NetworkMapCacheLite {
+    @CordaSerializable
+    sealed class MapChange {
+        abstract val node: NodeInfo
+
+        data class Added(override val node: NodeInfo) : MapChange()
+        data class Removed(override val node: NodeInfo) : MapChange()
+        data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
+    }
+
     /**
      * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable; if the party
      * is anonymised and the well known party cannot be resolved, it is impossible ot identify the node and therefore this
@@ -27,23 +42,8 @@ interface NodeLookup {
     fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 }
 
-/**
- * A network map contains lists of nodes on the network along with information about their identity keys, services
- * they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
- * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
- * with a specified network map service, which it fetches data from and then subscribes to updates of.
- */
-interface NetworkMapCache {
-
-    @CordaSerializable
-    sealed class MapChange {
-        abstract val node: NodeInfo
-
-        data class Added(override val node: NodeInfo) : MapChange()
-        data class Removed(override val node: NodeInfo) : MapChange()
-        data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
-    }
-
+/** Subset of [NetworkMapCache] that doesn't depend on an [IdentityService]. */
+interface NetworkMapCacheLite {
     // DOCSTART 1
     /**
      * A list of notary services available on the network.
@@ -55,7 +55,7 @@ interface NetworkMapCache {
     // DOCEND 1
 
     /** Tracks changes to the network map cache. */
-    val changed: Observable<MapChange>
+    val changed: Observable<NetworkMapCache.MapChange>
     /** Future to track completion of the NetworkMapService registration. */
     val nodeReady: CordaFuture<Void?>
 
@@ -63,7 +63,7 @@ interface NetworkMapCache {
      * Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */
-    fun track(): DataFeed<List<NodeInfo>, MapChange>
+    fun track(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
 
     /**
      * Look up the node info for a legal name.

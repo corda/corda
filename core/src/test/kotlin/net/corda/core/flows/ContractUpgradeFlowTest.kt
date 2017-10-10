@@ -16,6 +16,7 @@ import net.corda.finance.USD
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
@@ -120,7 +121,7 @@ class ContractUpgradeFlowTest {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = node.rpcOps
+                        ops = CordaRPCOpsImpl(node.services, node.smm, node.database)
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password

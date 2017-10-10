@@ -1,6 +1,7 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.concurrent.doneFuture
@@ -12,6 +13,7 @@ import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -56,7 +58,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
-    lateinit var networkMapCache: PersistentNetworkMapCache
+    lateinit var networkMapCache: NetworkMapCacheImpl
 
     val rpcOps = object : RPCOps {
         override val protocolVersion: Int get() = throw UnsupportedOperationException()
@@ -72,7 +74,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
-        networkMapCache = PersistentNetworkMapCache(database, config)
+        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config), mock())
     }
 
     @After

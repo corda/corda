@@ -14,6 +14,7 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
@@ -41,7 +42,7 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
     val executor = ServiceAffinityExecutor(config.myLegalName.organisation, 1)
     // TODO: We should have a dummy service hub rather than change behaviour in tests
     val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port,
-            MockNetworkMapCache(database, config), userService)
+            NetworkMapCacheImpl(MockNetworkMapCache(database, config), identityService), userService)
     val networkMapRegistrationFuture = openFuture<Unit>()
     val network = database.transaction {
         NodeMessagingClient(

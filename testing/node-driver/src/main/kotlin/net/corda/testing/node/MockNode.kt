@@ -18,7 +18,6 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -186,15 +185,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     database)
                     .start()
                     .getOrThrow()
-        }
-
-        override fun makeIdentityService(trustRoot: X509Certificate,
-                                         clientCa: CertificateAndKeyPair?,
-                                         legalIdentity: PartyAndCertificate): IdentityService {
-            val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate, clientCa?.certificate?.cert)
-                    .filterNotNull()
-                    .toTypedArray()
-            return PersistentIdentityService(info.legalIdentitiesAndCerts, trustRoot = trustRoot, caCertificates = *caCertificates)
         }
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {

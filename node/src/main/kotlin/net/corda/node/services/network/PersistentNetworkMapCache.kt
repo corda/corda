@@ -13,9 +13,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.node.services.NodeLookup
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.schemas.NodeInfoSchemaV1
@@ -27,6 +25,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase58String
 import net.corda.node.services.api.NetworkCacheException
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.api.NetworkMapCacheLiteInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.createMessage
@@ -43,10 +42,10 @@ import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashMap
 
-class NodeLookupImpl(private val identityService: IdentityService, private val networkMapCache: NetworkMapCache) : NodeLookup {
+class NetworkMapCacheImpl(networkMapCacheLite: NetworkMapCacheLiteInternal, private val identityService: IdentityService) : NetworkMapCacheLiteInternal by networkMapCacheLite, NetworkMapCacheInternal {
     init {
-        networkMapCache.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
-        networkMapCache.changed.subscribe { mapChange ->
+        networkMapCacheLite.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
+        networkMapCacheLite.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
                 mapChange.node.legalIdentitiesAndCerts.forEach {
@@ -59,7 +58,7 @@ class NodeLookupImpl(private val identityService: IdentityService, private val n
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
         val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
         return wellKnownParty?.let {
-            networkMapCache.getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+            getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
         }
     }
 }
@@ -68,7 +67,7 @@ class NodeLookupImpl(private val identityService: IdentityService, private val n
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheLiteInternal {
     companion object {
         val logger = loggerFor<PersistentNetworkMapCache>()
     }

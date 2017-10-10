@@ -55,11 +55,11 @@ class NetworkMapCacheTest {
     fun `getNodeByLegalIdentity`() {
         val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val notaryLookup = notaryNode.nodeLookup
+        val notaryCache: NetworkMapCache = notaryNode.services.networkMapCache
         val expected = aliceNode.info
 
         mockNet.runNetwork()
-        val actual = notaryNode.database.transaction { notaryLookup.getNodeByLegalIdentity(aliceNode.info.chooseIdentity()) }
+        val actual = notaryNode.database.transaction { notaryCache.getNodeByLegalIdentity(aliceNode.info.chooseIdentity()) }
         assertEquals(expected, actual)
 
         // TODO: Should have a test case with anonymous lookup
@@ -83,14 +83,13 @@ class NetworkMapCacheTest {
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val notaryLegalIdentity = notaryNode.info.chooseIdentity()
         val alice = aliceNode.info.chooseIdentity()
-        val notaryLookup = notaryNode.nodeLookup
-        val notaryCache = notaryNode.services.networkMapCache as PersistentNetworkMapCache
+        val notaryCache = notaryNode.services.networkMapCache
         mockNet.runNetwork()
         notaryNode.database.transaction {
-            assertThat(notaryLookup.getNodeByLegalIdentity(alice) != null)
+            assertThat(notaryCache.getNodeByLegalIdentity(alice) != null)
             notaryCache.removeNode(aliceNode.info)
-            assertThat(notaryLookup.getNodeByLegalIdentity(alice) == null)
-            assertThat(notaryLookup.getNodeByLegalIdentity(notaryLegalIdentity) != null)
+            assertThat(notaryCache.getNodeByLegalIdentity(alice) == null)
+            assertThat(notaryCache.getNodeByLegalIdentity(notaryLegalIdentity) != null)
             assertThat(notaryCache.getNodeByLegalName(alice.name) == null)
         }
     }

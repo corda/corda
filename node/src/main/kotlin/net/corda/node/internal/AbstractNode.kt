@@ -118,8 +118,7 @@ abstract class AbstractNode(config: NodeConfiguration,
             override val inNodeNetworkMapService: NetworkMapService,
             override val network: MessagingService,
             override val database: CordaPersistence,
-            override val rpcOps: CordaRPCOps,
-            override val nodeLookup: NodeLookup) : StartedNode<N>
+            override val rpcOps: CordaRPCOps) : StartedNode<N>
 
     // TODO: Persist this, as well as whether the node is registered.
     /**
@@ -141,6 +140,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
     protected lateinit var legalIdentity: PartyAndCertificate
+    private lateinit var allIdentities: List<PartyAndCertificate>
     protected lateinit var info: NodeInfo
     protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
@@ -173,8 +173,8 @@ abstract class AbstractNode(config: NodeConfiguration,
     @Volatile private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(nodeLookup: NodeLookup): CordaRPCOps {
-        return CordaRPCOpsImpl(services, smm, database, nodeLookup)
+    open fun makeRPCOps(): CordaRPCOps {
+        return CordaRPCOpsImpl(services, smm, database)
     }
 
     private fun saveOwnNodeInfo() {
@@ -228,8 +228,8 @@ abstract class AbstractNode(config: NodeConfiguration,
             }
 
             makeVaultObservers()
-            val nodeLookup = NodeLookupImpl(_services.identityService, _services.networkMapCache)
-            val rpcOps = makeRPCOps(nodeLookup)
+
+            val rpcOps = makeRPCOps()
             startMessagingService(rpcOps)
             installCoreFlows()
 
@@ -240,7 +240,7 @@ abstract class AbstractNode(config: NodeConfiguration,
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
 
             runOnStop += network::stop
-            StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, inNodeNetworkMapService, network, database, rpcOps, nodeLookup)
+            StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, inNodeNetworkMapService, network, database, rpcOps)
         }
         // If we successfully  loaded network data from database, we set this future to Unit.
         _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
@@ -460,8 +460,12 @@ abstract class AbstractNode(config: NodeConfiguration,
         attachments = NodeAttachmentService(services.monitoringService.metrics)
         cordappProvider.start(attachments)
         legalIdentity = obtainIdentity(notaryConfig = null)
+        // TODO  We keep only notary identity as additional legalIdentity if we run it on a node . Multiple identities need more design thinking.
+        myNotaryIdentity = getNotaryIdentity()
+        allIdentities = listOf(legalIdentity, myNotaryIdentity).filterNotNull()
         network = makeMessagingService(legalIdentity)
-        info = makeInfo(legalIdentity)
+        val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
+        info = NodeInfo(addresses, allIdentities, versionInfo.platformVersion, platformClock.instant().toEpochMilli())
         val networkMapCache = services.networkMapCache
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock, services.schedulerService,
@@ -491,15 +495,6 @@ abstract class AbstractNode(config: NodeConfiguration,
         VaultSoftLockManager(services.vaultService, smm)
         ScheduledActivityObserver(services)
         HibernateObserver(services.vaultService.rawUpdates, services.database.hibernateConfig)
-    }
-
-    private fun makeInfo(legalIdentity: PartyAndCertificate): NodeInfo {
-        // TODO  We keep only notary identity as additional legalIdentity if we run it on a node . Multiple identities need more design thinking.
-        myNotaryIdentity = getNotaryIdentity()
-        val allIdentitiesList = mutableListOf(legalIdentity)
-        myNotaryIdentity?.let { allIdentitiesList.add(it) }
-        val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, allIdentitiesList, versionInfo.platformVersion, platformClock.instant().toEpochMilli())
     }
 
     /**
@@ -662,7 +657,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate, clientCa?.certificate?.cert)
                 .filterNotNull()
                 .toTypedArray()
-        return PersistentIdentityService(info.legalIdentitiesAndCerts, trustRoot = trustRoot, caCertificates = *caCertificates)
+        return PersistentIdentityService(allIdentities, trustRoot = trustRoot, caCertificates = *caCertificates)
     }
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
@@ -755,7 +750,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         override val auditService = DummyAuditService()
         override val monitoringService = MonitoringService(MetricRegistry())
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val networkMapCache by lazy { PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration) }
+        override val networkMapCache by lazy { NetworkMapCacheImpl(PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration), identityService) }
         override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader, this@AbstractNode.database.hibernateConfig) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 

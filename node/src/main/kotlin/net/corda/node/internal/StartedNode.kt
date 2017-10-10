@@ -6,7 +6,6 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NodeLookup
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.TransactionStorage
 import net.corda.node.services.api.CheckpointStorage
@@ -28,7 +27,6 @@ interface StartedNode<out N : AbstractNode> {
     val network: MessagingService
     val database: CordaPersistence
     val rpcOps: CordaRPCOps
-    val nodeLookup: NodeLookup
     fun dispose() = internals.stop()
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(initiatedFlowClass)
 }

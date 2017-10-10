@@ -17,6 +17,7 @@ import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
@@ -65,7 +66,7 @@ open class MockServiceHubInternal(
     override val networkService: MessagingService
         get() = network ?: throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCacheInternal
-        get() = mapCache ?: MockNetworkMapCache(database, configuration)
+        get() = mapCache ?: NetworkMapCacheImpl(MockNetworkMapCache(database, configuration), identityService)
     override val schedulerService: SchedulerService
         get() = scheduler ?: throw UnsupportedOperationException()
     override val clock: Clock
