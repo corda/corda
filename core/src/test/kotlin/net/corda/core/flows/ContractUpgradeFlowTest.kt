@@ -41,13 +41,20 @@ class ContractUpgradeFlowTest {
     private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
     private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
     private lateinit var notary: Party
+    private lateinit var alice: Party
+    private lateinit var bob: Party
 
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
-        aliceNode = mockNet.createPartyNode(ALICE.name)
-        bobNode = mockNet.createPartyNode(BOB.name)
+        aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        bobNode = mockNet.createPartyNode(BOB_NAME)
         notary = mockNet.defaultNotaryIdentity
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+
+        // Process registration
+        mockNet.runNetwork()
     }
 
     @After
@@ -58,11 +65,11 @@ class ContractUpgradeFlowTest {
     @Test
     fun `2 parties contract upgrade`() {
         // Create dummy contract.
-        val twoPartyDummyContract = DummyContract.generateInitial(0, notary, aliceNode.info.chooseIdentity().ref(1), bobNode.info.chooseIdentity().ref(1))
+        val twoPartyDummyContract = DummyContract.generateInitial(0, notary, alice.ref(1), bob.ref(1))
         val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)
         val stx = bobNode.services.addSignature(signedByA)
 
-        aliceNode.services.startFlow(FinalityFlow(stx, setOf(bobNode.info.chooseIdentity())))
+        aliceNode.services.startFlow(FinalityFlow(stx, setOf(bob)))
         mockNet.runNetwork()
 
         val atx = aliceNode.database.transaction { aliceNode.services.validatedTransactions.getTransaction(stx.id) }
@@ -128,7 +135,7 @@ class ContractUpgradeFlowTest {
     fun `2 parties contract upgrade using RPC`() {
         rpcDriver(initialiseSerialization = false) {
             // Create dummy contract.
-            val twoPartyDummyContract = DummyContract.generateInitial(0, notary, aliceNode.info.chooseIdentity().ref(1), bobNode.info.chooseIdentity().ref(1))
+            val twoPartyDummyContract = DummyContract.generateInitial(0, notary, alice.ref(1), bob.ref(1))
             val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)
             val stx = bobNode.services.addSignature(signedByA)
 
@@ -140,7 +147,7 @@ class ContractUpgradeFlowTest {
             ))
             val rpcA = startProxy(aliceNode, user)
             val rpcB = startProxy(bobNode, user)
-            val handle = rpcA.startFlow(::FinalityInvoker, stx, setOf(bobNode.info.chooseIdentity()))
+            val handle = rpcA.startFlow(::FinalityInvoker, stx, setOf(bob))
             mockNet.runNetwork()
             handle.returnValue.getOrThrow()
 
@@ -202,7 +209,7 @@ class ContractUpgradeFlowTest {
     @Test
     fun `upgrade Cash to v2`() {
         // Create some cash.
-        val chosenIdentity = aliceNode.info.chooseIdentity()
+        val chosenIdentity = alice
         val result = aliceNode.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), notary)).resultFuture
         mockNet.runNetwork()
         val stx = result.getOrThrow().stx

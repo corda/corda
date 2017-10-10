@@ -61,13 +61,14 @@ class LedgerTransactionQueryTests {
 
     private fun makeDummyTransaction(): LedgerTransaction {
         val tx = TransactionBuilder(notary = DUMMY_NOTARY)
+        val identity = services.myInfo.legalIdentitiesAndCerts.single().party
         for (i in 0..4) {
             tx.addInputState(makeDummyStateAndRef(i))
             tx.addInputState(makeDummyStateAndRef(i.toString()))
             tx.addOutputState(makeDummyState(i), DummyContract.PROGRAM_ID)
             tx.addOutputState(makeDummyState(i.toString()), DummyContract.PROGRAM_ID)
-            tx.addCommand(Commands.Cmd1(i), listOf(services.myInfo.chooseIdentity().owningKey))
-            tx.addCommand(Commands.Cmd2(i), listOf(services.myInfo.chooseIdentity().owningKey))
+            tx.addCommand(Commands.Cmd1(i), listOf(identity.owningKey))
+            tx.addCommand(Commands.Cmd2(i), listOf(identity.owningKey))
         }
         return tx.toLedgerTransaction(services)
     }
