@@ -5,7 +5,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
 import net.corda.demobench.model.HasPlugins
 import net.corda.demobench.model.JVMConfig
-import net.corda.demobench.model.NodeConfig
+import net.corda.demobench.model.NodeConfigWrapper
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
@@ -24,16 +24,14 @@ class PluginController : Controller() {
      * Install any built-in plugins that this node requires.
      */
     @Throws(IOException::class)
-    fun populate(config: NodeConfig) {
-        if (!config.pluginDir.exists()) {
-            config.pluginDir.createDirectories()
-        }
+    fun populate(config: NodeConfigWrapper) {
+        config.pluginDir.createDirectories()
         if (finance.exists()) {
             finance.copyToDirectory(config.pluginDir, StandardCopyOption.REPLACE_EXISTING)
             log.info("Installed 'Finance' plugin")
         }
         // Nodes cannot issue cash unless they contain the "Bank of Corda" plugin.
-        if (config.isCashIssuer && bankOfCorda.exists()) {
+        if (config.nodeConfig.issuableCurrencies.isNotEmpty() && bankOfCorda.exists()) {
             bankOfCorda.copyToDirectory(config.pluginDir, StandardCopyOption.REPLACE_EXISTING)
             log.info("Installed 'Bank of Corda' plugin")
         }

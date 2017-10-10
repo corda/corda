@@ -123,7 +123,9 @@ class Node extends CordformNode {
         if (notary) {
             config = config.withValue("notary", ConfigValueFactory.fromMap(notary))
         }
-        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromIterable(advertisedServices*.toString()))
+        if (extraConfig) {
+            config = config.withFallback(ConfigFactory.parseMap(extraConfig))
+        }
     }
 
     /**

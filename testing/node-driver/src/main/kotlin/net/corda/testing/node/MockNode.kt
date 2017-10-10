@@ -115,15 +115,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
          * but can be overriden to cause nodes to have stable or colliding identity/service keys.
          */
         fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                   advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                   entropyRoot: BigInteger): N
+                   id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): N
     }
 
     object DefaultFactory : Factory<MockNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNode {
-            return MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot)
+                            id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNode {
+            return MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot)
         }
     }
 
@@ -159,11 +157,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     open class MockNode(config: NodeConfiguration,
                         val mockNet: MockNetwork,
                         override val networkMapAddress: SingleMessageRecipient?,
-                        advertisedServices: Set<ServiceInfo>,
                         val id: Int,
                         internal val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
-            AbstractNode(config, advertisedServices, TestClock(), MOCK_VERSION_INFO, mockNet.busyLatch) {
+            AbstractNode(config, TestClock(), MOCK_VERSION_INFO, mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
@@ -303,7 +300,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                 nodeFactory = nodeFactory ?: defaultFactory,
                 legalName = MOCK_NET_MAP.name,
                 notaryIdentity = null,
-                advertisedServices = arrayOf(),
                 entropyRoot = BigInteger.valueOf(random63BitValue()),
                 configOverrides = {},
                 start = true
@@ -315,18 +311,16 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun createUnstartedNode(forcedID: Int? = null,
                             legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                            vararg advertisedServices: ServiceInfo,
                             configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
-        return createUnstartedNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
+        return createUnstartedNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, configOverrides = configOverrides)
     }
 
     fun <N : MockNode> createUnstartedNode(forcedID: Int? = null, nodeFactory: Factory<N>,
                                            legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                                            entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                                           vararg advertisedServices: ServiceInfo,
                                            configOverrides: (NodeConfiguration) -> Any? = {}): N {
         val networkMapAddress = networkMapNode.network.myAddress
-        return createNodeImpl(networkMapAddress, forcedID, nodeFactory, false, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides)
+        return createNodeImpl(networkMapAddress, forcedID, nodeFactory, false, legalName, notaryIdentity, entropyRoot, configOverrides)
     }
 
     /**
@@ -340,25 +334,22 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun createNode(forcedID: Int? = null,
                    legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   vararg advertisedServices: ServiceInfo,
                    configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<MockNode> {
-        return createNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, *advertisedServices, configOverrides = configOverrides)
+        return createNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, configOverrides = configOverrides)
     }
 
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
     fun <N : MockNode> createNode(forcedID: Int? = null, nodeFactory: Factory<N>,
                                   legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
                                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                                  vararg advertisedServices: ServiceInfo,
                                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
         val networkMapAddress = networkMapNode.network.myAddress
-        return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, notaryIdentity, entropyRoot, advertisedServices, configOverrides).started)!!
+        return uncheckedCast(createNodeImpl(networkMapAddress, forcedID, nodeFactory, true, legalName, notaryIdentity, entropyRoot, configOverrides).started)!!
     }
 
     private fun <N : MockNode> createNodeImpl(networkMapAddress: SingleMessageRecipient?, forcedID: Int?, nodeFactory: Factory<N>,
                                               start: Boolean, legalName: CordaX500Name?, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                                               entropyRoot: BigInteger,
-                                              advertisedServices: Array<out ServiceInfo>,
                                               configOverrides: (NodeConfiguration) -> Any?): N {
         val id = forcedID ?: nextNodeId++
         val config = testNodeConfiguration(
@@ -367,7 +358,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
             configOverrides(it)
         }
-        return nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, notaryIdentity, entropyRoot).apply {
+        return nodeFactory.create(config, this, networkMapAddress, id, notaryIdentity, entropyRoot).apply {
             if (start) {
                 start()
                 if (threadPerNode && networkMapAddress != null) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
@@ -425,7 +416,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return when (msgRecipient) {
             is SingleMessageRecipient -> nodes.single { it.started!!.network.myAddress == msgRecipient }
             is InMemoryMessagingNetwork.ServiceHandle -> {
-                nodes.firstOrNull { it.advertisedServices.any { it.name == msgRecipient.party.name } }
+                nodes.firstOrNull { it.started!!.info.isLegalIdentity(msgRecipient.party) }
                         ?: throw IllegalArgumentException("Couldn't find node advertising service with owning party name: ${msgRecipient.party.name} ")
             }
             else -> throw IllegalArgumentException("Method not implemented for different type of message recipients")

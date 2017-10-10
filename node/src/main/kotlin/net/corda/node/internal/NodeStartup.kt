@@ -12,7 +12,6 @@ import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -86,13 +85,10 @@ open class NodeStartup(val args: Array<String>) {
 
     open protected fun preNetworkRegistration(conf: FullNodeConfiguration) = Unit
 
-    open protected fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, services: Set<ServiceInfo>): Node {
-        return Node(conf, services, versionInfo)
-    }
+    open protected fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
     open protected fun startNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
-        val advertisedServices = conf.calculateServices()
-        val node = createNode(conf, versionInfo, advertisedServices)
+        val node = createNode(conf, versionInfo)
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
             node.generateNodeInfo()

@@ -24,11 +24,6 @@ public class CordformNode implements NodeDefinition {
     }
 
     /**
-     * A list of advertised services ID strings.
-     */
-    public List<String> advertisedServices = emptyList();
-
-    /**
      * Set the RPC users for this node. This configuration block allows arbitrary configuration.
      * The recommended current structure is:
      * [[['username': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
@@ -43,6 +38,8 @@ public class CordformNode implements NodeDefinition {
      * net.corda.node.services.config.NotaryConfig
      */
     public Map<String, Object> notary = null;
+
+    public Map<String, Object> extraConfig = null;
 
     protected Config config = ConfigFactory.empty();
 

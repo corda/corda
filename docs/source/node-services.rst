@@ -295,12 +295,8 @@ NotaryService (SimpleNotaryService, ValidatingNotaryService, RaftValidatingNotar
 
 The ``NotaryService`` is an abstract base class for the various concrete 
 implementations of the Notary server flow. By default, a node does 
-not run any ``NotaryService`` server component. However, the appropriate 
-implementation service is automatically started if the relevant 
-``ServiceType`` id is included in the node's 
-``extraAdvertisedServiceIds`` configuration property. The node will then 
-advertise itself as a Notary via the ``NetworkMapService`` and may then 
-participate in controlling state uniqueness when contacted by nodes 
+not run any ``NotaryService`` server component. For that you need to specify the ``notary`` config.
+The node may then participate in controlling state uniqueness when contacted by nodes
 using the ``NotaryFlow.Client`` ``subFlow``. The 
 ``SimpleNotaryService`` only offers protection against double spend, but 
 does no further verification. The ``ValidatingNotaryService`` checks 
