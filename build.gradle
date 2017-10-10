@@ -59,6 +59,7 @@ buildscript {
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
+        classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
         classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
@@ -180,21 +181,21 @@ repositories {
 
 // Required for building out the fat JAR.
 dependencies {
-    cordaCompile project(':node')
+    compile project(':node')
     compile "com.google.guava:guava:$guava_version"
 
     // Set to corda compile to ensure it exists now deploy nodes no longer relies on build
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
-    cordaRuntime project(':client:jfx')
-    cordaRuntime project(':client:mock')
-    cordaRuntime project(':client:rpc')
-    cordaRuntime project(':core')
-    cordaRuntime project(':confidential-identities')
-    cordaRuntime project(':finance')
-    cordaRuntime project(':webserver')
+    runtime project(':client:jfx')
+    runtime project(':client:mock')
+    runtime project(':client:rpc')
+    runtime project(':core')
+    runtime project(':confidential-identities')
+    runtime project(':finance')
+    runtime project(':webserver')
     testCompile project(':test-utils')
 }
 

@@ -1,3 +1,5 @@
+@file:JvmName("InternalUtils")
+
 package net.corda.core.internal
 
 import net.corda.core.crypto.SecureHash

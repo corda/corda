@@ -1,3 +1,5 @@
+@file:JvmName("SerializationAPI")
+
 package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
