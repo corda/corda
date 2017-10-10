@@ -9,7 +9,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
@@ -26,6 +25,7 @@ import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -271,12 +271,11 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         override fun create(config: NodeConfiguration,
                             network: MockNetwork,
                             networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>,
                             id: Int,
                             notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger,
                             customSchemas: Set<MappedSchema>): MockNode {
-            return object : MockNode(config, network, null, advertisedServices, id, notaryIdentity, entropyRoot, customSchemas) {
+            return object : MockNode(config, network, null, id, notaryIdentity, entropyRoot, customSchemas) {
                 override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = NullNetworkMapService
             }
         }

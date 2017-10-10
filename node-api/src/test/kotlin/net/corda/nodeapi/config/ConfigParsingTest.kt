@@ -181,6 +181,11 @@ class ConfigParsingTest {
         assertThat(OldData("old").toConfig()).isEqualTo(config("newValue" to "old"))
     }
 
+    @Test
+    fun `static field`() {
+        assertThat(DataWithCompanion(3).toConfig()).isEqualTo(config("value" to 3))
+    }
+
     private inline fun <reified S : SingleData<V>, reified L : ListData<V>, V : Any> testPropertyType(
             value1: V,
             value2: V,
@@ -259,6 +264,12 @@ class ConfigParsingTest {
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)
+    data class DataWithCompanion(val value: Int) {
+        companion object {
+            @Suppress("unused")
+            val companionValue = 2
+        }
+    }
 
     enum class TestEnum { Value1, Value2 }
 }

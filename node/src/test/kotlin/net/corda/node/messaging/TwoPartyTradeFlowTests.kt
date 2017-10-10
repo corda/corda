@@ -32,7 +32,6 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.ownedBy
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
@@ -223,8 +222,6 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
-            val networkMapAddress = notaryNode.network.myAddress
-
             mockNet.runNetwork() // Clear network map registration messages
             val notary = aliceNode.services.getDefaultNotary()
 
@@ -276,10 +273,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             // that Bob was waiting on before the reboot occurred.
             bobNode = mockNet.createNode(bobAddr.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
                 override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                    advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                    entropyRoot: BigInteger,
-                                    customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, bobAddr.id, notaryIdentity, entropyRoot, customSchemas)
+                                    id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger, customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
+                    return MockNetwork.MockNode(config, network, networkMapAddr, bobAddr.id, notaryIdentity, entropyRoot, customSchemas)
                 }
             }, BOB.name)
 
@@ -314,19 +309,15 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
-    private fun makeNodeWithTracking(
-            networkMapAddress: SingleMessageRecipient?,
-            name: CordaX500Name): StartedNode<MockNetwork.MockNode> {
+    private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<MockNetwork.MockNode> {
         // Create a node in the mock network ...
         return mockNet.createNode(nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration,
                                 network: MockNetwork,
                                 networkMapAddr: SingleMessageRecipient?,
-                                advertisedServices: Set<ServiceInfo>, id: Int,
-                                notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                entropyRoot: BigInteger,
-                                customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot, customSchemas) {
+                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
+                                entropyRoot: BigInteger, customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot, customSchemas) {
                     // That constructs a recording tx storage
                     override fun makeTransactionStorage(): WritableTransactionStorage {
                         return RecordingTransactionStorage(database, super.makeTransactionStorage())
@@ -341,9 +332,9 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         mockNet = MockNetwork(false)
 
         val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = makeNodeWithTracking(notaryNode.network.myAddress, ALICE.name)
-        val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
-        val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
+        val aliceNode = makeNodeWithTracking(ALICE.name)
+        val bobNode = makeNodeWithTracking(BOB.name)
+        val bankNode = makeNodeWithTracking(BOC.name)
         val issuer = bankNode.info.chooseIdentity().ref(1, 2, 3)
         mockNet.runNetwork()
         notaryNode.internals.ensureRegistered()
@@ -446,9 +437,9 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         mockNet = MockNetwork(false)
 
         val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = makeNodeWithTracking(notaryNode.network.myAddress, ALICE.name)
-        val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
-        val bankNode = makeNodeWithTracking(notaryNode.network.myAddress, BOC.name)
+        val aliceNode = makeNodeWithTracking(ALICE.name)
+        val bobNode = makeNodeWithTracking(BOB.name)
+        val bankNode = makeNodeWithTracking(BOC.name)
         val issuer = bankNode.info.chooseIdentity().ref(1, 2, 3)
 
         mockNet.runNetwork()

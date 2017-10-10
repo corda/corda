@@ -119,11 +119,9 @@ class AttachmentTests {
         // Make a node that doesn't do sanity checking at load time.
         val aliceNode = mockNet.createNotaryNode(legalName = ALICE.name, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                advertisedServices: Set<ServiceInfo>, id: Int,
-                                notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                entropyRoot: BigInteger,
-                                customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot, customSchemas) {
+                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
+                                entropyRoot: BigInteger, customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot, customSchemas) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }
