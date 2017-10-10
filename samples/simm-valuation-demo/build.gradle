@@ -64,7 +64,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
 
     directory "./build/nodes"
-    networkMap "O=Notary Service,L=Zurich,C=CH"
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]

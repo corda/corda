@@ -17,7 +17,7 @@ if:
 
 We will deploy the CorDapp on 4 test nodes:
 
-* **Controller**, which hosts the network map service and a validating notary service
+* **Controller**, which hosts a validating notary service
 * **PartyA**
 * **PartyB**
 * **PartyC**
@@ -276,7 +276,7 @@ IntelliJ
 
   The node driver defined in ``/src/test/kotlin/com/example/Main.kt`` allows you to specify how many nodes you would like
   to run and the configuration settings for each node. For the example CorDapp, the driver starts up four nodes
-  and adds an RPC user for all but the "Controller" node (which serves as the notary and network map service):
+  and adds an RPC user for all but the "Controller" node (which serves as the notary):
 
   .. sourcecode:: kotlin
 
@@ -489,9 +489,6 @@ You must now edit the configuration file for each node, including the controller
 and make the following changes:
 
 * Change the Artemis messaging address to the machine's IP address (e.g. ``p2pAddress="10.18.0.166:10006"``)
-* Change the network map service's address to the IP address of the machine where the controller node is running
-  (e.g. ``networkMapService { address="10.18.0.166:10002" legalName="O=Controller,L=London,C=GB" ``). The controller
-  will not have the ``networkMapService`` configuration entry
 
 After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
 
