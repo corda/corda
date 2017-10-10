@@ -9,8 +9,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
-import net.corda.finance.DOLLARS
-import net.corda.finance.`issued by`
+import net.corda.ptflows.DOLLARS
+import net.corda.ptflows.`issued by`
 import net.corda.ptflows.contracts.asset.*
 import net.corda.testing.*
 import net.corda.ptflows.contracts.asset.fillWithSomeTestCash
