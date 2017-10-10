@@ -1,0 +1,268 @@
+package net.corda.nodeapi.internal.serialization.amqp
+
+import java.util.*
+import net.corda.core.serialization.CordaSerializationTransformEnumDefault
+import net.corda.core.serialization.CordaSerializationTransformRename
+import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.codec.DescribedTypeConstructor
+import java.io.NotSerializableException
+
+// NOTE: We are effectively going to replicate the annotations, we need to do this because
+// we can't instantiate instances of those annotation classes and this code needs to
+// work at the de-serialising end
+/**
+ * Base class for representations of specific types of transforms as applied to a type within the
+ * Corda serialisation framework
+ */
+sealed class Transform : DescribedType {
+    companion object : DescribedTypeConstructor<Transform> {
+        val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_ELEMENT.amqpDescriptor
+
+        /**
+         * @param obj: a serialized instance of a described type, should be one of the
+         * descendants of this class
+         */
+        private fun checkDescribed(obj: Any?): Any? {
+            val describedType = obj as DescribedType
+
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+
+            return describedType.described
+        }
+
+        /**
+         * From an encoded descendant return an instance of the specific type. Transforms are encoded into
+         * the schema as a list of class name and parameters.Using the class name (list element 0)
+         * create the appropriate class instance
+         *
+         * @param obj: a serialized instance of a described type, should be one of the
+         * descendants of this class
+         */
+        override fun newInstance(obj: Any?): Transform {
+            val described = Transform.checkDescribed(obj) as List<*>
+            return when (described[0]) {
+                EnumDefaultSchemeTransform.typeName -> EnumDefaultSchemeTransform.newInstance(described)
+                RenameSchemaTransform.typeName -> RenameSchemaTransform.newInstance(described)
+                else -> throw NotSerializableException("Unexpected transform type ${described[0]}")
+            }
+        }
+
+        override fun getTypeClass(): Class<*> = Transform::class.java
+    }
+
+    override fun getDescriptor(): Any = DESCRIPTOR
+
+    /**
+     * Return a string representation of a transform in terms of key / value pairs, used
+     * by the serializer to encode arbitrary transforms
+     */
+    abstract fun params(): String
+
+    abstract val name: String
+}
+
+/**
+ * Transform to be used on an Enumerated Type whenever a new element is added
+ *
+ * @property old The value the [new] instance should default to when not available
+ * @property new the value (as a String) that has been added
+ */
+class EnumDefaultSchemeTransform(val old: String, val new: String) : Transform() {
+    companion object : DescribedTypeConstructor<EnumDefaultSchemeTransform> {
+        /**
+         * Value encoded into the schema that identifies a transform as this type
+         */
+        val typeName = "EnumDefault"
+
+        override fun newInstance(obj: Any?): EnumDefaultSchemeTransform {
+            val described = obj as List<*>
+            val old = described[1] as? String ?: throw IllegalStateException("Was expecting \"old\" as a String")
+            val new = described[2] as? String ?: throw IllegalStateException("Was expecting \"new\" as a String")
+            return EnumDefaultSchemeTransform(old, new)
+        }
+
+        override fun getTypeClass(): Class<*> = EnumDefaultSchemeTransform::class.java
+    }
+
+    @Suppress("UNUSED")
+    constructor (annotation: CordaSerializationTransformEnumDefault) : this(annotation.old, annotation.new)
+
+    override fun getDescribed(): Any = listOf(name, old, new)
+    override fun params() = "old=${old.esc()} new=${new.esc()}"
+
+    override fun equals(other: Any?): Boolean {
+        val o = other as? EnumDefaultSchemeTransform ?: return super.equals(other)
+        return o.new == new && o.old == old
+    }
+
+    override val name: String get() = typeName
+}
+
+/**
+ * Transform applied to either a class or enum where a property is renamed
+ *
+ * @property from the name at time of change of the property
+ * @property to the new name of the property
+ */
+class RenameSchemaTransform(val from: String, val to: String) : Transform() {
+    companion object : DescribedTypeConstructor<RenameSchemaTransform> {
+        /**
+         * Value encoded into the schema that identifies a transform as this type
+         */
+        val typeName = "Rename"
+
+        override fun newInstance(obj: Any?): RenameSchemaTransform {
+            val described = obj as List<*>
+            val from = described[1] as? String ?: throw IllegalStateException("Was expecting \"from\" as a String")
+            val to = described[2] as? String ?: throw IllegalStateException("Was expecting \"to\" as a String")
+            return RenameSchemaTransform(from, to)
+        }
+
+        override fun getTypeClass(): Class<*> = RenameSchemaTransform::class.java
+    }
+
+    @Suppress("UNUSED")
+    constructor (annotation: CordaSerializationTransformRename) : this(annotation.from, annotation.to)
+
+    override fun getDescribed(): Any = listOf(name, from, to)
+
+    override fun params() = "from=${from.esc()} to=${to.esc()}"
+
+    override fun equals(other: Any?): Boolean {
+        val o = other as? RenameSchemaTransform ?: return super.equals(other)
+        return o.from == from && o.to == to
+    }
+
+    override val name: String get() = typeName
+}
+
+
+/**
+ * @property types is a list of serialised types that have transforms, each list element is a
+ */
+data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, MutableList<Transform>>>) : DescribedType {
+    companion object : DescribedTypeConstructor<TransformsSchema> {
+        val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_SCHEMA.amqpDescriptor
+
+        /**
+         * Prepare a schema for encoding, takes all of the types being transmitted and inspects each
+         * one for any transform annotations. If there are any build up a set that can be
+         * encoded into the AMQP [Envelope]
+         *
+         * @param schema should be a [Schema] generated for a serialised data structure
+         * @param sf should be provided by the same serialization context that generated the schema
+         */
+        fun build(schema: Schema, sf: SerializerFactory): TransformsSchema {
+            val rtn = mutableMapOf<String, EnumMap<TransformTypes, MutableList<Transform>>>()
+
+            schema.types.forEach { type ->
+                val clazz = try {
+                    sf.classloader.loadClass(type.name)
+                } catch (e: ClassNotFoundException) {
+                    return@forEach
+                }
+
+                supportedTransforms.forEach { transform ->
+                    clazz.getAnnotation(transform.type)?.let { list ->
+                        transform.getAnnotations(list).forEach {
+                            val t = transform.enum.build(it)
+
+                            val m = rtn.computeIfAbsent(type.name) {
+                                EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
+                            }
+
+                            // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
+                            // ignore them it feels like a good thing to alert the user to since this is
+                            // more than likely a typo in their code so best make it an actual error
+                            if (m.computeIfAbsent(transform.enum) { mutableListOf() }.filter { it == t }.isNotEmpty()) {
+                                throw NotSerializableException(
+                                        "Repeated unique transformation annotation of type ${t.name}")
+                            }
+
+                            m[transform.enum]!!.add(t)
+                        }
+                    }
+                }
+            }
+
+            return TransformsSchema(rtn)
+        }
+
+        override fun getTypeClass(): Class<*> = TransformsSchema::class.java
+
+        /**
+         * Constructs an instance of the object from the serialised form of an instance
+         * of this object
+         */
+        override fun newInstance(described: Any?): TransformsSchema {
+            val rtn = mutableMapOf<String, EnumMap<TransformTypes, MutableList<Transform>>>()
+
+            val describedType = described as? DescribedType ?: return TransformsSchema(rtn)
+
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+
+            val map = describedType.described as? Map<*, *> ?:
+                    throw NotSerializableException("Transform schema must be encoded as a map")
+
+
+            map.forEach { type ->
+                val fingerprint = type.key as? String ?:
+                        throw NotSerializableException("Fingerprint must be encoded as a string")
+
+                rtn[fingerprint] = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
+
+                (type.value as Map<*, *>).forEach { transformType, transforms ->
+                    val transform = TransformTypes.newInstance(transformType)
+
+                    rtn[fingerprint]!![transform] = mutableListOf()
+                    (transforms as List<*>).forEach {
+                        rtn[fingerprint]!![TransformTypes.newInstance(transformType)]?.add(Transform.newInstance(it)) ?:
+                                throw NotSerializableException("De-serialization error with transform for class "
+                                        + "${type.key} ${transform.name}")
+                    }
+                }
+            }
+
+            return TransformsSchema(rtn)
+        }
+    }
+
+    override fun getDescriptor(): Any = DESCRIPTOR
+
+    override fun getDescribed(): Any = types
+
+    override fun toString(): String {
+        data class Indent(val indent: String) {
+            @Suppress("UNUSED") constructor(i: Indent) : this("  ${i.indent}")
+            override fun toString() = indent
+        }
+
+        val sb = StringBuilder("")
+        val indent = Indent("")
+
+        sb.appendln("$indent<type-transforms>")
+        types.forEach { type ->
+            val indent = Indent(indent)
+            sb.appendln("$indent<type name=${type.key.esc()}>")
+            type.value.forEach { transform ->
+                val indent = Indent(indent)
+                sb.appendln("$indent<transforms type=${transform.key.name.esc()}>")
+                transform.value.forEach {
+                    val indent = Indent(indent)
+                    sb.appendln("$indent<transform ${it.params()} />")
+                }
+                sb.appendln("$indent</transforms>")
+            }
+            sb.appendln("$indent</type>")
+        }
+        sb.appendln("$indent</type-transforms>")
+
+        return sb.toString()
+    }
+}
+
+private fun String.esc() = "\"$this\""
