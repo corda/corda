@@ -19,78 +19,20 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
-import net.corda.finance.contracts.asset.cash.selection.CashSelectionH2Impl
+import net.corda.finance.contracts.asset.cash.selection.CashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
 import java.math.BigInteger
 import java.security.PublicKey
-import java.sql.DatabaseMetaData
 import java.util.*
-import java.util.concurrent.atomic.AtomicReference
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Cash
 //
-
-/**
- * Pluggable interface to allow for different cash selection provider implementations
- * Default implementation [CashSelectionH2Impl] uses H2 database and a custom function within H2 to perform aggregation.
- * Custom implementations must implement this interface and declare their implementation in
- * META-INF/services/net.corda.contracts.asset.CashSelection
- */
-interface CashSelection {
-    companion object {
-        val instance = AtomicReference<CashSelection>()
-
-        fun getInstance(metadata: () -> java.sql.DatabaseMetaData): CashSelection {
-            return instance.get() ?: {
-                val _metadata = metadata()
-                val cashSelectionAlgos = ServiceLoader.load(CashSelection::class.java).toList()
-                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
-                cashSelectionAlgo?.let {
-                    instance.set(cashSelectionAlgo)
-                    cashSelectionAlgo
-                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                        "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection")
-            }.invoke()
-        }
-    }
-
-    /**
-     * Upon dynamically loading configured Cash Selection algorithms declared in META-INF/services
-     * this method determines whether the loaded implementation is compatible and usable with the currently
-     * loaded JDBC driver.
-     * Note: the first loaded implementation to pass this check will be used at run-time.
-     */
-    fun isCompatible(metadata: DatabaseMetaData): Boolean
-
-    /**
-     * Query to gather Cash states that are available
-     * @param services The service hub to allow access to the database session
-     * @param amount The amount of currency desired (ignoring issues, but specifying the currency)
-     * @param onlyFromIssuerParties If empty the operation ignores the specifics of the issuer,
-     * otherwise the set of eligible states wil be filtered to only include those from these issuers.
-     * @param notary If null the notary source is ignored, if specified then only states marked
-     * with this notary are included.
-     * @param lockId The FlowLogic.runId.uuid of the flow, which is used to soft reserve the states.
-     * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
-     * @param withIssuerRefs If not empty the specific set of issuer references to match against.
-     * @return The matching states that were found. If sufficient funds were found these will be locked,
-     * otherwise what is available is returned unlocked for informational purposes.
-     */
-    @Suspendable
-    fun unconsumedCashStatesForSpending(services: ServiceHub,
-                                        amount: Amount<Currency>,
-                                        onlyFromIssuerParties: Set<AbstractParty> = emptySet(),
-                                        notary: Party? = null,
-                                        lockId: UUID,
-                                        withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<Cash.State>>
-}
 
 /**
  * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
