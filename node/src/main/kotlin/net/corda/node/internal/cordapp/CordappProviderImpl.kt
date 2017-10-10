@@ -10,10 +10,6 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SingletonSerializeAsToken
 
-interface CordappProviderInternal : CordappProvider {
-    val cordapps: List<Cordapp>
-}
-
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
