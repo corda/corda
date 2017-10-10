@@ -95,10 +95,7 @@ class Node extends CordformNode {
             if (o.length > 0) {
                 dirName = o.getAt(0).getFirst().getValue().toString()
             }
-        } catch(IllegalArgumentException ignore) {
-            // Can't parse as an X500 name, use the full string
-            dirName = name
-        }
+        } catch(IllegalArgumentException ignore) {}
         nodeDir = new File(rootDir.toFile(), dirName.replaceAll("\\s",""))
     }
 
