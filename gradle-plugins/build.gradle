@@ -10,6 +10,7 @@ buildscript {
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
+    ext.kotlin_version = constants.getProperty("kotlinVersion")
 
     repositories {
         mavenLocal()
@@ -19,6 +20,7 @@ buildscript {
     dependencies {
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -39,7 +41,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['cordformation', 'quasar-utils', 'cordform-common', 'api-scanner']
+    publications = ['cordformation', 'quasar-utils', 'cordform-common', 'api-scanner', 'cordapp']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'

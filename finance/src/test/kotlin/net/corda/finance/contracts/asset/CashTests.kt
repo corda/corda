@@ -105,7 +105,7 @@ class CashTests : TestDependencyInjectionBase() {
             }
             tweak {
                 output(Cash.PROGRAM_ID) { outState }
-                output(Cash.PROGRAM_ID) { outState `issued by` MINI_CORP }
+                output(Cash.PROGRAM_ID) { outState issuedBy MINI_CORP }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "at least one cash input"
             }
@@ -309,7 +309,7 @@ class CashTests : TestDependencyInjectionBase() {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID) { inState }
-            output(Cash.PROGRAM_ID) { outState `issued by` MINI_CORP }
+            output(Cash.PROGRAM_ID) { outState issuedBy MINI_CORP }
             command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
@@ -348,7 +348,7 @@ class CashTests : TestDependencyInjectionBase() {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID) { inState }
-            input(Cash.PROGRAM_ID) { inState `issued by` MINI_CORP }
+            input(Cash.PROGRAM_ID) { inState issuedBy MINI_CORP }
             output(Cash.PROGRAM_ID) { outState }
             command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
@@ -396,9 +396,9 @@ class CashTests : TestDependencyInjectionBase() {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID) { issuerInState }
-            input(Cash.PROGRAM_ID) { issuerInState.copy(owner = MINI_CORP) `issued by` MINI_CORP }
+            input(Cash.PROGRAM_ID) { issuerInState.copy(owner = MINI_CORP) issuedBy MINI_CORP }
 
-            output(Cash.PROGRAM_ID) { issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) `issued by` MINI_CORP }
+            output(Cash.PROGRAM_ID) { issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) issuedBy MINI_CORP }
             output(Cash.PROGRAM_ID) { issuerInState.copy(owner = MINI_CORP, amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
 
             command(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY) { Cash.Commands.Move() }
@@ -432,7 +432,7 @@ class CashTests : TestDependencyInjectionBase() {
             attachment(Cash.PROGRAM_ID)
             // Gather 2000 dollars from two different issuers.
             input(Cash.PROGRAM_ID) { inState }
-            input(Cash.PROGRAM_ID) { inState `issued by` MINI_CORP }
+            input(Cash.PROGRAM_ID) { inState issuedBy MINI_CORP }
             command(ALICE_PUBKEY) { Cash.Commands.Move() }
 
             // Can't merge them together.
@@ -449,7 +449,7 @@ class CashTests : TestDependencyInjectionBase() {
 
             // This works.
             output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
-            output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP }
+            output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) issuedBy MINI_CORP }
             this.verifies()
         }
     }
@@ -460,10 +460,10 @@ class CashTests : TestDependencyInjectionBase() {
         transaction {
             attachment(Cash.PROGRAM_ID)
             val pounds = Cash.State(658.POUNDS `issued by` MINI_CORP.ref(3, 4, 5), AnonymousParty(BOB_PUBKEY))
-            input(Cash.PROGRAM_ID) { inState `owned by` AnonymousParty(ALICE_PUBKEY) }
+            input(Cash.PROGRAM_ID) { inState ownedBy AnonymousParty(ALICE_PUBKEY) }
             input(Cash.PROGRAM_ID) { pounds }
-            output(Cash.PROGRAM_ID) { inState `owned by` AnonymousParty(BOB_PUBKEY) }
-            output(Cash.PROGRAM_ID) { pounds `owned by` AnonymousParty(ALICE_PUBKEY) }
+            output(Cash.PROGRAM_ID) { inState ownedBy AnonymousParty(BOB_PUBKEY) }
+            output(Cash.PROGRAM_ID) { pounds ownedBy AnonymousParty(ALICE_PUBKEY) }
             command(ALICE_PUBKEY, BOB_PUBKEY) { Cash.Commands.Move() }
 
             this.verifies()
@@ -718,8 +718,8 @@ class CashTests : TestDependencyInjectionBase() {
                 Cash.State(1000.POUNDS `issued by` MINI_CORP.ref(3), MEGA_CORP).amount.token)
 
         // States cannot be aggregated if the reference differs
-        assertNotEquals(fiveThousandDollarsFromMega.amount.token, (fiveThousandDollarsFromMega `with deposit` defaultIssuer).amount.token)
-        assertNotEquals((fiveThousandDollarsFromMega `with deposit` defaultIssuer).amount.token, fiveThousandDollarsFromMega.amount.token)
+        assertNotEquals(fiveThousandDollarsFromMega.amount.token, (fiveThousandDollarsFromMega withDeposit defaultIssuer).amount.token)
+        assertNotEquals((fiveThousandDollarsFromMega withDeposit defaultIssuer).amount.token, fiveThousandDollarsFromMega.amount.token)
     }
 
     @Test

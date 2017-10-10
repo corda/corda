@@ -27,13 +27,13 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase58String
 import net.corda.node.services.api.NetworkCacheException
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.*
-import net.corda.nodeapi.config.NodeSSLConfiguration
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -68,7 +68,7 @@ class NodeLookupImpl(private val identityService: IdentityService, private val n
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeSSLConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<PersistentNetworkMapCache>()
     }
@@ -104,7 +104,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
                     .sortedBy { it.name.toString() }
         }
 
-    private val nodeInfoSerializer = NodeInfoWatcher(configuration.baseDirectory)
+    private val nodeInfoSerializer = NodeInfoWatcher(configuration.baseDirectory,
+            configuration.additionalNodeInfoPollingFrequencyMsec)
 
     init {
         loadFromFiles()
