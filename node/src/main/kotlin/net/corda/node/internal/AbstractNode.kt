@@ -70,7 +70,6 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
-import net.corda.nodeapi.internal.ServiceInfo
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -101,7 +100,6 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode(config: NodeConfiguration,
-                            val advertisedServices: Set<ServiceInfo>,
                             val platformClock: Clock,
                             protected val versionInfo: VersionInfo,
                             @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {

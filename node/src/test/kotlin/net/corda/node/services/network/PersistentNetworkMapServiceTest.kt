@@ -2,12 +2,11 @@ package net.corda.node.services.network
 
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import java.math.BigInteger
 import java.security.KeyPair
 
@@ -32,11 +31,10 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
         override fun create(config: NodeConfiguration,
                             network: MockNetwork,
                             networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>,
                             id: Int,
                             notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNode {
-            return object : MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot) {
+            return object : MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
                 override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = SwizzleNetworkMapService(network, networkMapCache)
             }
         }

@@ -7,7 +7,6 @@ import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
-import net.corda.nodeapi.internal.ServiceInfo
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -82,7 +81,6 @@ data class FullNodeConfiguration(
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         val messagingServerAddress: NetworkHostAndPort?,
-        val extraAdvertisedServiceIds: List<String>,
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
@@ -102,13 +100,6 @@ data class FullNodeConfiguration(
         }
         require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
         require(minimumPlatformVersion >= 1) { "minimumPlatformVersion cannot be less than 1" }
-    }
-
-    fun calculateServices(): Set<ServiceInfo> {
-        return extraAdvertisedServiceIds
-                .filter(String::isNotBlank)
-                .map { ServiceInfo.parse(it) }
-                .toSet()
     }
 }
 
