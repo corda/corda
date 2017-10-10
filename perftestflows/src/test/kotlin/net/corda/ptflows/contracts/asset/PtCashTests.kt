@@ -1,4 +1,4 @@
-package net.corda.ptflows.contract.asset
+package net.corda.ptflows.contracts.asset
 
 
 import net.corda.core.contracts.*
@@ -22,7 +22,6 @@ import net.corda.ptflows.utils.sumCashOrNull
 import net.corda.ptflows.utils.sumCashOrZero
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
-import net.corda.ptflows.contracts.asset.*
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
