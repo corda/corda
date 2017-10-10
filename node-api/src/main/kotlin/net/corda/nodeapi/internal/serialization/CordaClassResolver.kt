@@ -59,10 +59,11 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         if (!whitelistEnabled) return null
         // If array, recurse on element type
         if (type.isArray) return checkClass(type.componentType)
-        // Allow primitives, abstracts and interfaces
-        if (type.isPrimitive || type == Any::class.java || isAbstract(type.modifiers) || type == String::class.java) return null
         // Specialised enum entry, so just resolve the parent Enum type since cannot annotate the specialised entry.
         if (!type.isEnum && Enum::class.java.isAssignableFrom(type)) return checkClass(type.superclass)
+        // Allow primitives, abstracts and interfaces. Note that we can also create abstract Enum types,
+        // but we don't want to whitelist those here.
+        if (type.isPrimitive || type == Any::class.java || type == String::class.java || (!type.isEnum && isAbstract(type.modifiers))) return null
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         // If we use a whitelist with blacklisting capabilities, whitelist.hasListed(type) may throw an IllegalStateException if input class is blacklisted.
         // Thus, blacklisting precedes annotation checking.
