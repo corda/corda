@@ -21,10 +21,10 @@ import kotlin.streams.toList
  * - Serialize and de-serialize a [NodeInfo] to disk and reading it back.
  * - Poll a directory for new serialized [NodeInfo]
  *
- * @param path the base path of a node.
+ * @property path the base path of a node.
  * @param pollFrequencyMsec how often to poll the filesystem in milliseconds. Any value smaller than 5 seconds will
  *        be treated as 5 seconds.
- * @param scheduler a [Scheduler] for the rx [Observable] returned by [nodeInfoUpdates], this is mainly useful for
+ * @property scheduler a [Scheduler] for the rx [Observable] returned by [nodeInfoUpdates], this is mainly useful for
  *        testing. It defaults to the io scheduler which is the appropriate value for production uses.
  */
 class NodeInfoWatcher(private val nodePath: Path,
@@ -32,9 +32,14 @@ class NodeInfoWatcher(private val nodePath: Path,
                       private val scheduler: Scheduler = Schedulers.io()) {
 
     private val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
-    private val pollFrequencyMsec: Long
+    /**
+     * How often to poll the filesystem, in milliseconds.
+     */
+    val pollFrequencyMsec: Long
 
     companion object {
+        const val MIN_POLL_INTERVAL = 5L
+        val POLL_INTERVAL_UNIT = TimeUnit.SECONDS
         private val logger = loggerFor<NodeInfoWatcher>()
 
         /**
@@ -61,7 +66,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     }
 
     init {
-        this.pollFrequencyMsec = maxOf(pollFrequencyMsec, 5.seconds.toMillis())
+        this.pollFrequencyMsec = maxOf(pollFrequencyMsec, POLL_INTERVAL_UNIT.toMillis(MIN_POLL_INTERVAL))
     }
 
     /**

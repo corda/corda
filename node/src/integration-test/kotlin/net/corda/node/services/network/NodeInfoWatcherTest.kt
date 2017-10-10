@@ -84,6 +84,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
             advanceTime()
 
             val readNodes = testSubscriber.onNextEvents.distinct()
+            advanceTime()
             assertEquals(0, readNodes.size)
         } finally {
             subscription.unsubscribe()
@@ -125,7 +126,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
             advanceTime()
 
             // We need the WatchService to report a change and that might not happen immediately.
-            testSubscriber.awaitValueCount(1, 5, TimeUnit.SECONDS)
+            testSubscriber.awaitValueCount(1, nodeInfoWatcher.pollFrequencyMsec, TimeUnit.MILLISECONDS)
             // The same folder can be reported more than once, so take unique values.
             val readNodes = testSubscriber.onNextEvents.distinct()
             assertEquals(nodeInfo, readNodes.first())
@@ -135,7 +136,7 @@ class NodeInfoWatcherTest : NodeBasedTest() {
     }
 
     private fun advanceTime() {
-        scheduler.advanceTimeBy(1, TimeUnit.MINUTES)
+        scheduler.advanceTimeBy(nodeInfoWatcher.pollFrequencyMsec * 12, TimeUnit.MILLISECONDS)
     }
 
     // Write a nodeInfo under the right path.
