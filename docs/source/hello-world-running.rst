@@ -25,7 +25,6 @@ Let's take a look at the nodes we're going to deploy. Open the project's ``build
 
         task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             directory "./build/nodes"
-            networkMap "O=Controller,L=London,C=GB"
             node {
                 name "O=Controller,L=London,C=GB"
                 notary = [validating : true]
@@ -82,6 +81,7 @@ the three node folders. Each node folder has the following structure:
         |____corda-webserver.jar           // The node's webserver
         |____dependencies
         |____node.conf                     // The node's configuration file
+        |____additional-node-infos/        // Directory containing all the other nodes' addresses and identities
         |____plugins
           |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
 
