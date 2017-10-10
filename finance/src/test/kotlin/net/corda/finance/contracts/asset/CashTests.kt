@@ -481,7 +481,7 @@ class CashTests : TestDependencyInjectionBase() {
     val THEIR_IDENTITY_1 = AnonymousParty(MINI_CORP_PUBKEY)
     val THEIR_IDENTITY_2 = AnonymousParty(CHARLIE_PUBKEY)
 
-    fun makeCash(amount: Amount<Currency>, corp: AbstractParty, depositRef: Byte = 1) =
+    fun makeCash(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1) =
             StateAndRef(
                     TransactionState<Cash.State>(Cash.State(amount `issued by` corp.ref(depositRef), OUR_IDENTITY_1), CASH_PROGRAM_ID, DUMMY_NOTARY),
                     StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
