@@ -2,6 +2,7 @@ package net.corda.node.services.config
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.nodeapi.User
@@ -33,6 +34,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val messageRedeliveryDelaySeconds: Int
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
+    val additionalNodeInfoPollingFrequencyMsec: Long
 }
 
 data class NotaryConfig(val validating: Boolean, val raft: RaftConfig? = null, val bftSMaRt: BFTSMaRtConfiguration? = null) {
@@ -86,7 +88,8 @@ data class FullNodeConfiguration(
         override val devMode: Boolean = false,
         val useTestClock: Boolean = false,
         val detectPublicIp: Boolean = true,
-        override val activeMQServer: ActiveMqServerConfiguration
+        override val activeMQServer: ActiveMqServerConfiguration,
+        override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
 ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 

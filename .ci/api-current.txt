@@ -465,6 +465,7 @@ public interface net.corda.core.cordapp.Cordapp
   @org.jetbrains.annotations.NotNull public abstract List getRpcFlows()
   @org.jetbrains.annotations.NotNull public abstract List getSchedulableFlows()
   @org.jetbrains.annotations.NotNull public abstract List getSerializationWhitelists()
+  @org.jetbrains.annotations.NotNull public abstract List getServiceFlows()
   @org.jetbrains.annotations.NotNull public abstract List getServices()
 ##
 public final class net.corda.core.cordapp.CordappContext extends java.lang.Object
@@ -1353,6 +1354,7 @@ public interface net.corda.core.messaging.CordaRPCOps extends net.corda.core.mes
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.NodeInfo nodeInfo()
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.NodeInfo nodeInfoFromParty(net.corda.core.identity.AbstractParty)
   @org.jetbrains.annotations.NotNull public abstract List notaryIdentities()
+  @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party notaryPartyFromX500Name(net.corda.core.identity.CordaX500Name)
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream openAttachment(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public abstract Set partiesFromName(String, boolean)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party partyFromKey(java.security.PublicKey)
@@ -1485,6 +1487,10 @@ public static final class net.corda.core.messaging.StateMachineUpdate$Removed ex
   public int hashCode()
   public String toString()
 ##
+public interface net.corda.core.node.AppServiceHub extends net.corda.core.node.ServiceHub
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.FlowHandle startFlow(net.corda.core.flows.FlowLogic)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.FlowProgressHandle startTrackedFlow(net.corda.core.flows.FlowLogic)
+##
 public final class net.corda.core.node.NodeInfo extends java.lang.Object
   public <init>(List, List, int, long)
   @org.jetbrains.annotations.NotNull public final List component1()
@@ -1579,10 +1585,12 @@ public interface net.corda.core.node.services.NetworkMapCache
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.NodeInfo getNodeByLegalName(net.corda.core.identity.CordaX500Name)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.concurrent.CordaFuture getNodeReady()
   @org.jetbrains.annotations.NotNull public abstract List getNodesByLegalIdentityKey(java.security.PublicKey)
+  @org.jetbrains.annotations.NotNull public abstract List getNodesByLegalName(net.corda.core.identity.CordaX500Name)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party getNotary(net.corda.core.identity.CordaX500Name)
   @org.jetbrains.annotations.NotNull public abstract List getNotaryIdentities()
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.services.PartyInfo getPartyInfo(net.corda.core.identity.Party)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party getPeerByLegalName(net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.PartyAndCertificate getPeerCertificateByLegalName(net.corda.core.identity.CordaX500Name)
   public abstract boolean isNotary(net.corda.core.identity.Party)
   public abstract boolean isValidatingNotary(net.corda.core.identity.Party)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed track()

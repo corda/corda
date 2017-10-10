@@ -1,6 +1,7 @@
 apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.quasar-utils'
 
 repositories {
@@ -30,9 +31,9 @@ sourceSets {
 compileTestJava.dependsOn tasks.getByPath(':node:capsule:buildCordaJAR')
 
 dependencies {
-    cordaCompile project(':core')
-    cordaCompile project(':client:jfx')
-    cordaCompile project(':node-driver')
+    compile project(':core')
+    compile project(':client:jfx')
+    compile project(':node-driver')
     testCompile project(':verifier')
     testCompile project(':test-utils')
 
@@ -42,11 +43,11 @@ dependencies {
         exclude group: "junit"
     }
 
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // Corda Plugins: dependent flows and services
-    cordapp project(':finance')
+    compile project(':finance')
 }
 
 mainClassName = "net.corda.docs.ClientRpcTutorialKt"

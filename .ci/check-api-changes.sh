@@ -11,9 +11,37 @@ if [ ! -f $apiCurrent ]; then
 fi
 
 diffContents=`diff -u $apiCurrent $APIHOME/../build/api/api-corda-*.txt`
-echo "Diff contents: " 
+echo "Diff contents:" 
 echo "$diffContents"
-removals=`echo "$diffContents" | grep "^-\s" | wc -l`
-echo "Number of API removals/changes: "$removals
-echo "Exiting with exit code" $removals
-exit $removals
+echo
+
+# A removed line means that an API was either deleted or modified.
+removals=$(echo "$diffContents" | grep "^-\s")
+removalCount=`grep -v "^$" <<EOF | wc -l
+$removals
+EOF
+`
+
+echo "Number of API removals/changes: "$removalCount
+if [ $removalCount -gt 0 ]; then
+    echo "$removals"
+    echo
+fi
+
+# Adding new abstract methods could also break the API.
+newAbstracts=$(echo "$diffContents" | grep "^+\s" | grep "\(public\|protected\) abstract")
+abstractCount=`grep -v "^$" <<EOF | wc -l
+$newAbstracts
+EOF
+`
+
+echo "Number of new abstract APIs: "$abstractCount
+if [ $abstractCount -gt 0 ]; then
+    echo "$newAbstracts"
+    echo
+fi
+
+badChanges=$(($removalCount + $abstractCount))
+
+echo "Exiting with exit code" $badChanges
+exit $badChanges
