@@ -106,14 +106,18 @@ class CordaClassResolverTests {
 
     @Test
     fun `Annotation on enum works for specialised entries`() {
-        // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
-        @Suppress("UNSUPPORTED_FEATURE")
         CordaClassResolver(emptyWhitelistContext).getRegistration(Foo.Bar::class.java)
     }
 
     @Test
     fun `Annotation on array element works`() {
         val values = arrayOf(Element())
+        CordaClassResolver(emptyWhitelistContext).getRegistration(values.javaClass)
+    }
+
+    @Test(expected = KryoException::class)
+    fun `Unannotated array elements do not work`() {
+        val values = arrayOf(NotSerializable())
         CordaClassResolver(emptyWhitelistContext).getRegistration(values.javaClass)
     }
 

@@ -57,10 +57,10 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
     private fun checkClass(type: Class<*>): Registration? {
         // If call path has disabled whitelisting (see [CordaKryo.register]), just return without checking.
         if (!whitelistEnabled) return null
-        // Allow primitives, abstracts and interfaces
-        if (type.isPrimitive || type == Any::class.java || isAbstract(type.modifiers) || type == String::class.java) return null
         // If array, recurse on element type
         if (type.isArray) return checkClass(type.componentType)
+        // Allow primitives, abstracts and interfaces
+        if (type.isPrimitive || type == Any::class.java || isAbstract(type.modifiers) || type == String::class.java) return null
         // Specialised enum entry, so just resolve the parent Enum type since cannot annotate the specialised entry.
         if (!type.isEnum && Enum::class.java.isAssignableFrom(type)) return checkClass(type.superclass)
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
