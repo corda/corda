@@ -300,7 +300,7 @@ artifactory {
 
         defaults {
             // Root project applies the plugin (for this block) but does not need to be published
-            if(project.name != rootProject.extensions.publish.name()) {
+            if(project != rootProject) {
                 publications(project.extensions.publish.name())
             }
         }
