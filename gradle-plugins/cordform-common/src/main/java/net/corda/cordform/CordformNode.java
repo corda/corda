@@ -79,22 +79,6 @@ public class CordformNode implements NodeDefinition {
     }
 
     /**
-     * Set the port which to bind the Copycat (Raft) node to.
-     *
-     * @param notaryPort The Raft port.
-     */
-    public void notaryNodePort(Integer notaryPort) {
-        config = config.withValue("notaryNodeAddress", ConfigValueFactory.fromAnyRef(DEFAULT_HOST + ':' + notaryPort));
-    }
-
-    /**
-     * @param id The (0-based) BFT replica ID.
-     */
-    public void bftReplicaId(Integer id) {
-        config = config.withValue("bftSMaRt", ConfigValueFactory.fromMap(Collections.singletonMap("replicaId", id)));
-    }
-
-    /**
      * Set the path to a file with optional properties, which are appended to the generated node.conf file.
      *
      * @param configFile The file path.
@@ -102,5 +86,4 @@ public class CordformNode implements NodeDefinition {
     public void configFile(String configFile) {
         config = config.withValue("configFile", ConfigValueFactory.fromAnyRef(configFile));
     }
-
 }
