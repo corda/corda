@@ -1,5 +1,6 @@
 package net.corda.plugins
 
+import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import org.apache.tools.ant.filters.FixCrLfFilter
