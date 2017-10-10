@@ -18,7 +18,7 @@ class CashSelectionH2Test {
         try {
             val notaryNode = mockNet.createNotaryNode()
             val bankA = mockNet.createNode(configOverrides = { existingConfig ->
-                // Tweak connections to be minimal to make this easier (1 result in hung node during start up).
+                // Tweak connections to be minimal to make this easier (1 results in a hung node during start up, so use 2 connections).
                 existingConfig.dataSourceProperties.setProperty("maximumPoolSize", "2")
                 existingConfig
             })
