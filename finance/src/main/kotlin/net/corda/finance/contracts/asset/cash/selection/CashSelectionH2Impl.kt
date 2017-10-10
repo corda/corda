@@ -190,7 +190,7 @@ class CashSelectionH2Impl : CashSelection() {
                     " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
                 (if (issuerRefsStr != null)
                     " AND ccs.issuer_ref IN ($issuerRefsStr)" else "")
-
+        log.debug(selectJoin)
         return statement.executeQuery(selectJoin)
     }
 }
