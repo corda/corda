@@ -5,18 +5,17 @@ import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.demobench.model.NodeConfig
+import net.corda.demobench.model.NodeConfigWrapper
 import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
 
-class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invoke: (CordaRPCOps) -> Unit) : AutoCloseable {
-
+class NodeRPC(config: NodeConfigWrapper, start: (NodeConfigWrapper, CordaRPCOps) -> Unit, invoke: (CordaRPCOps) -> Unit) : AutoCloseable {
     private companion object {
         val log = loggerFor<NodeRPC>()
         val oneSecond = SECONDS.toMillis(1)
     }
 
-    private val rpcClient = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
+    private val rpcClient = CordaRPCClient(NetworkHostAndPort("localhost", config.nodeConfig.rpcAddress.port))
     private var rpcConnection: CordaRPCConnection? = null
     private val timer = Timer()
 
@@ -24,7 +23,7 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
         val setupTask = object : TimerTask() {
             override fun run() {
                 try {
-                    val user = config.users.elementAt(0)
+                    val user = config.nodeConfig.rpcUsers[0]
                     val connection = rpcClient.start(user.username, user.password)
                     rpcConnection = connection
                     val ops = connection.proxy
@@ -42,7 +41,7 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
                         }
                     }, 0, oneSecond)
                 } catch (e: Exception) {
-                    log.warn("Node '{}' not ready yet (Error: {})", config.legalName, e.message)
+                    log.warn("Node '{}' not ready yet (Error: {})", config.nodeConfig.myLegalName, e.message)
                 }
             }
         }

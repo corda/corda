@@ -31,7 +31,6 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.config.toConfig
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -79,7 +78,6 @@ interface DriverDSLExposedInterface : CordformContext {
      *   when called from Java code.
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *     random. Note that this must be unique as the driver uses it as a primary key!
-     * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
      * @param verifierType The type of transaction verifier to use. See: [VerifierType]
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
@@ -89,7 +87,6 @@ interface DriverDSLExposedInterface : CordformContext {
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
             providedName: CordaX500Name? = defaultParameters.providedName,
-            advertisedServices: Set<ServiceInfo> = defaultParameters.advertisedServices,
             rpcUsers: List<User> = defaultParameters.rpcUsers,
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
@@ -268,7 +265,6 @@ sealed class PortAllocation {
  */
 data class NodeParameters(
         val providedName: CordaX500Name? = null,
-        val advertisedServices: Set<ServiceInfo> = emptySet(),
         val rpcUsers: List<User> = emptyList(),
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
@@ -276,7 +272,6 @@ data class NodeParameters(
         val maximumHeapSize: String = "200m"
 ) {
     fun setProvidedName(providedName: CordaX500Name?) = copy(providedName = providedName)
-    fun setAdvertisedServices(advertisedServices: Set<ServiceInfo>) = copy(advertisedServices = advertisedServices)
     fun setRpcUsers(rpcUsers: List<User>) = copy(rpcUsers = rpcUsers)
     fun setVerifierType(verifierType: VerifierType) = copy(verifierType = verifierType)
     fun setCustomerOverrides(customOverrides: Map<String, Any?>) = copy(customOverrides = customOverrides)
@@ -686,7 +681,6 @@ class DriverDSL(
     override fun startNode(
             defaultParameters: NodeParameters,
             providedName: CordaX500Name?,
-            advertisedServices: Set<ServiceInfo>,
             rpcUsers: List<User>,
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
@@ -710,7 +704,6 @@ class DriverDSL(
                         "p2pAddress" to p2pAddress.toString(),
                         "rpcAddress" to rpcAddress.toString(),
                         "webAddress" to webAddress.toString(),
-                        "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                         "networkMapService" to networkMapServiceConfigLookup(name),
                         "useTestClock" to useTestClock,
                         "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers.map { it.toMap() },
@@ -741,7 +734,6 @@ class DriverDSL(
                     baseDirectory = baseDirectory(name),
                     allowMissingConfig = true,
                     configOverrides = node.config + notary + mapOf(
-                            "extraAdvertisedServiceIds" to node.advertisedServices,
                             "networkMapService" to networkMapServiceConfigLookup(name),
                             "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
                     )
@@ -934,8 +926,7 @@ class DriverDSL(
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 // TODO pass the version in?
-                val node = Node(nodeConf, nodeConf.calculateServices(), MOCK_VERSION_INFO, initialiseSerialization = false,
-                        cordappLoader = CordappLoader.createDefaultWithTestPackages(nodeConf, cordappPackages)).start()
+                val node = Node(nodeConf, MOCK_VERSION_INFO, initialiseSerialization = false, cordappLoader = CordappLoader.createDefaultWithTestPackages(nodeConf, cordappPackages)).start()
                 val nodeThread = thread(name = nodeConf.myLegalName.organisation) {
                     node.internals.run()
                 }

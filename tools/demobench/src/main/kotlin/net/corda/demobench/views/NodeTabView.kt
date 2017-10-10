@@ -16,10 +16,14 @@ import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
 import net.corda.core.internal.*
-import net.corda.finance.utils.CityDatabase
-import net.corda.finance.utils.WorldMapLocation
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
+import net.corda.finance.CHF
+import net.corda.finance.EUR
+import net.corda.finance.GBP
+import net.corda.finance.USD
+import net.corda.finance.utils.CityDatabase
+import net.corda.finance.utils.WorldMapLocation
 import org.controlsfx.control.CheckListView
 import tornadofx.*
 import java.nio.file.Path
@@ -39,10 +43,10 @@ class NodeTabView : Fragment() {
         val cordappPathsFile: Path = jvm.dataHome / "cordapp-paths.txt"
 
         fun loadDefaultCordappPaths(): MutableList<Path> {
-            if (cordappPathsFile.exists())
-                return cordappPathsFile.readAllLines().map { Paths.get(it) }.filter { it.exists() }.toMutableList()
+            return if (cordappPathsFile.exists())
+                cordappPathsFile.readAllLines().map { Paths.get(it) }.filter { it.exists() }.toMutableList()
             else
-                return ArrayList()
+                ArrayList()
         }
 
         // This is shared between tabs.
@@ -58,11 +62,9 @@ class NodeTabView : Fragment() {
     }
 
     private val nodeController by inject<NodeController>()
-    private val serviceController by inject<ServiceController>()
     private val chooser = FileChooser()
 
     private val model = NodeDataModel()
-    private val availableServices: List<String> = if (nodeController.hasNetworkMap()) serviceController.issuers.keys.toList() else serviceController.notaries.keys.toList()
 
     private val nodeTerminalView = find<NodeTerminalView>()
     private val nodeConfigView = stackpane {
@@ -112,8 +114,13 @@ class NodeTabView : Fragment() {
 
                 fieldset("Additional configuration") {
                     styleClass.addAll("services-panel")
+                    val extraServices = if (nodeController.hasNetworkMap()) {
+                        listOf(USD, GBP, CHF, EUR).map { CurrencyIssuer(it) }
+                    } else {
+                        listOf(NotaryService(true), NotaryService(false))
+                    }
 
-                    val servicesList = CheckListView(availableServices.observable()).apply {
+                    val servicesList = CheckListView(extraServices.observable()).apply {
                         vboxConstraints { vGrow = Priority.ALWAYS }
                         model.item.extraServices.set(checkModel.checkedItems)
                         if (!nodeController.hasNetworkMap()) {
@@ -263,17 +270,17 @@ class NodeTabView : Fragment() {
     /**
      * Launches a preconfigured Corda node, e.g. from a saved profile.
      */
-    fun launch(config: NodeConfig) {
+    fun launch(config: NodeConfigWrapper) {
         nodeController.register(config)
         launchNode(config)
     }
 
-    private fun launchNode(config: NodeConfig) {
-        val countryCode = CityDatabase.cityMap[config.nearestCity]?.countryCode
+    private fun launchNode(config: NodeConfigWrapper) {
+        val countryCode = CityDatabase.cityMap[config.nodeConfig.myLegalName.locality]?.countryCode
         if (countryCode != null) {
             nodeTab.graphic = ImageView(flags.get()[countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
         }
-        nodeTab.text = config.legalName.organisation
+        nodeTab.text = config.nodeConfig.myLegalName.organisation
         nodeTerminalView.open(config) { exitCode ->
             Platform.runLater {
                 if (exitCode == 0) {

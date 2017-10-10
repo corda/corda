@@ -271,9 +271,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             // that Bob was waiting on before the reboot occurred.
             bobNode = mockNet.createNode(bobAddr.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
                 override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                    advertisedServices: Set<ServiceInfo>, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                    entropyRoot: BigInteger): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, bobAddr.id, notaryIdentity, entropyRoot)
+                                    id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
+                    return MockNetwork.MockNode(config, network, networkMapAddr, bobAddr.id, notaryIdentity, entropyRoot)
                 }
             }, BOB.name)
 
@@ -314,10 +313,9 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             override fun create(config: NodeConfiguration,
                                 network: MockNetwork,
                                 networkMapAddr: SingleMessageRecipient?,
-                                advertisedServices: Set<ServiceInfo>, id: Int,
-                                notaryIdentity: Pair<ServiceInfo, KeyPair>?,
+                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, notaryIdentity, entropyRoot) {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
                     // That constructs a recording tx storage
                     override fun makeTransactionStorage(): WritableTransactionStorage {
                         return RecordingTransactionStorage(database, super.makeTransactionStorage())

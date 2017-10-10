@@ -2,11 +2,11 @@ package net.corda.demobench.web
 
 import com.google.common.util.concurrent.RateLimiter
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.utilities.minutes
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.until
 import net.corda.core.utilities.loggerFor
-import net.corda.demobench.model.NodeConfig
+import net.corda.core.utilities.minutes
+import net.corda.demobench.model.NodeConfigWrapper
 import net.corda.demobench.readErrorLines
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -25,7 +25,7 @@ class WebServer internal constructor(private val webServerController: WebServerC
     private var process: Process? = null
 
     @Throws(IOException::class)
-    fun open(config: NodeConfig): CordaFuture<URI> {
+    fun open(config: NodeConfigWrapper): CordaFuture<URI> {
         val nodeDir = config.nodeDir.toFile()
 
         if (!nodeDir.isDirectory) {
@@ -33,13 +33,14 @@ class WebServer internal constructor(private val webServerController: WebServerC
             return openFuture()
         }
 
+        val legalName = config.nodeConfig.myLegalName
         try {
             val p = webServerController.process()
                     .directory(nodeDir)
                     .start()
             process = p
 
-            log.info("Launched Web Server for '{}'", config.legalName)
+            log.info("Launched Web Server for '{}'", legalName)
 
             // Close these streams because no-one is using them.
             safeClose(p.outputStream)
@@ -51,22 +52,22 @@ class WebServer internal constructor(private val webServerController: WebServerC
                 process = null
 
                 if (errors.isEmpty()) {
-                    log.info("Web Server for '{}' has exited (value={})", config.legalName, exitValue)
+                    log.info("Web Server for '{}' has exited (value={})", legalName, exitValue)
                 } else {
-                    log.error("Web Server for '{}' has exited (value={}, {})", config.legalName, exitValue, errors)
+                    log.error("Web Server for '{}' has exited (value={}, {})", legalName, exitValue, errors)
                 }
             }
 
             val future = openFuture<URI>()
             thread {
                 future.capture {
-                    log.info("Waiting for web server for ${config.legalName} to start ...")
-                    waitForStart(config.webPort)
+                    log.info("Waiting for web server for $legalName to start ...")
+                    waitForStart(config.nodeConfig.webAddress.port)
                 }
             }
             return future
         } catch (e: IOException) {
-            log.error("Failed to launch Web Server for '{}': {}", config.legalName, e.message)
+            log.error("Failed to launch Web Server for '{}': {}", legalName, e.message)
             throw e
         }
     }
