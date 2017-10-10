@@ -9,8 +9,8 @@ import kotlin.test.assertFailsWith
 
 class DoormanParametersTest {
     private val testDummyPath = ".${File.separator}testDummyPath.jks"
-    private val validConfigPath = javaClass.getResource("/node.conf").path
-    private val invalidConfigPath = javaClass.getResource("/node_fail.conf").path
+    private val validConfigPath = File(javaClass.getResource("/node.conf").toURI()).absolutePath
+    private val invalidConfigPath = File(javaClass.getResource("/node_fail.conf").toURI()).absolutePath
 
     @Test
     fun `parse mode flag arg correctly`() {
