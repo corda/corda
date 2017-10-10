@@ -180,6 +180,32 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     fun isNotaryChangeTransaction() = transaction is NotaryChangeWireTransaction
 
     /**
+     * Resolves the underlying base transaction and then returns it, handling any special case transactions such as
+     * [NotaryChangeWireTransaction].
+     */
+    fun resolveBaseTransaction(services: StateLoader): BaseTransaction {
+        return when (transaction) {
+            is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(services)
+            is WireTransaction -> this.tx
+            is FilteredTransaction -> throw IllegalStateException("Persistence of filtered transactions is not supported.")
+            else -> throw IllegalStateException("Unknown transaction type ${transaction::class.qualifiedName}")
+        }
+    }
+
+    /**
+     * Resolves the underlying transaction with signatures and then returns it, handling any special case transactions
+     * such as [NotaryChangeWireTransaction].
+     */
+    fun resolveTransactionWithSignatures(services: ServiceHub): TransactionWithSignatures {
+        return when (transaction) {
+            is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(services)
+            is WireTransaction -> this
+            is FilteredTransaction -> throw IllegalStateException("Persistence of filtered transactions is not supported.")
+            else -> throw IllegalStateException("Unknown transaction type ${transaction::class.qualifiedName}")
+        }
+    }
+
+    /**
      * If [transaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
      * [NotaryChangeLedgerTransaction] so the signatures can be verified.
      */
