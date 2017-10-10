@@ -8,10 +8,10 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.seconds
 import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
@@ -22,13 +22,17 @@ import kotlin.streams.toList
  * - Poll a directory for new serialized [NodeInfo]
  *
  * @param path the base path of a node.
+ * @param pollFrequencyMsec how often to poll the filesystem in milliseconds. Any value smaller than 5 seconds will
+ *        be treated as 5 seconds.
  * @param scheduler a [Scheduler] for the rx [Observable] returned by [nodeInfoUpdates], this is mainly useful for
  *        testing. It defaults to the io scheduler which is the appropriate value for production uses.
  */
 class NodeInfoWatcher(private val nodePath: Path,
+                      pollFrequencyMsec: Long = 5.seconds.toMillis(),
                       private val scheduler: Scheduler = Schedulers.io()) {
 
     private val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
+    private val pollFrequencyMsec: Long
 
     companion object {
         private val logger = loggerFor<NodeInfoWatcher>()
@@ -56,6 +60,10 @@ class NodeInfoWatcher(private val nodePath: Path,
         }
     }
 
+    init {
+        this.pollFrequencyMsec = maxOf(pollFrequencyMsec, 5.seconds.toMillis())
+    }
+
     /**
      * Read all the files contained in [nodePath] / [CordformNode.NODE_INFO_DIRECTORY] and keep watching
      * the folder for further updates.
@@ -67,7 +75,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      *      than once.
      */
     fun nodeInfoUpdates(): Observable<NodeInfo> {
-        return Observable.interval(5, TimeUnit.SECONDS, scheduler)
+        return Observable.interval(pollFrequencyMsec, TimeUnit.MILLISECONDS, scheduler)
                 .flatMapIterable { loadFromDirectory() }
     }
 

@@ -39,6 +39,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.security.SignatureException
+import java.time.Duration
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashMap
@@ -87,7 +88,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
                     .sortedBy { it.name.toString() }
         }
 
-    private val nodeInfoSerializer = NodeInfoWatcher(serviceHub.configuration.baseDirectory)
+    private val nodeInfoSerializer = NodeInfoWatcher(serviceHub.configuration.baseDirectory,
+            serviceHub.configuration.additionalNodeInfoPollingFrequencyMsec)
 
     init {
         loadFromFiles()
