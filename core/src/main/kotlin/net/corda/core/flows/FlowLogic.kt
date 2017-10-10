@@ -55,14 +55,21 @@ abstract class FlowLogic<out T> {
 
         /**
          * If on a flow, suspends the flow and only wakes it up after at least [duration] time has passed.  Otherwise,
-         * just sleep for [duration].
+         * just sleep for [duration].  This sleep function is not designed to aid scheduling, for which you should
+         * consider using [SchedulableState].  It is designed to aid with managing contention for which you have not
+         * managed via another means.
          *
-         * Note that long sleeps and in general long running flows are highly discouraged, as there is currently no
-         * support for flow migration!
+         * Warning: long sleeps and in general long running flows are highly discouraged, as there is currently no
+         * support for flow migration! This method will throw an exception if you attempt to sleep for longer than
+         * 5 minutes.
          */
         @Suspendable
         @JvmStatic
+        @Throws(FlowException::class)
         fun sleep(duration: Duration) {
+            if (duration.compareTo(Duration.ofMinutes(5)) > 0) {
+                throw FlowException("Attempt to sleep for longer than 5 minutes is not supported.  Consider using SchedulableState.")
+            }
             (Strand.currentStrand() as? FlowStateMachine<*>)?.sleepUntil(Instant.now() + duration) ?: Strand.sleep(duration.toMillis())
         }
     }
