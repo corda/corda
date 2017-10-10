@@ -164,11 +164,7 @@ interface ServiceHub : ServicesForResolution {
     @Throws(TransactionResolutionException::class)
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return if (stx.isNotaryChangeTransaction()) {
-            stx.resolveNotaryChangeTransaction(this).outRef(stateRef.index)
-        } else {
-            stx.tx.outRef(stateRef.index)
-        }
+        return stx.resolveBaseTransaction(this).outRef<T>(stateRef.index)
     }
 
     private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey

@@ -54,11 +54,7 @@ class NotaryFlow {
             }
 
             try {
-                if (stx.isNotaryChangeTransaction()) {
-                    stx.resolveNotaryChangeTransaction(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
-                } else {
-                    stx.verifySignaturesExcept(notaryParty.owningKey)
-                }
+                stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
             } catch (ex: SignatureException) {
                 throw NotaryException(NotaryError.TransactionInvalid(ex))
             }
