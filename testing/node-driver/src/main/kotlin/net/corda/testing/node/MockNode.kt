@@ -157,7 +157,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overriden to cause nodes to have stable or colliding identity/service keys.
      */
-    open class MockNode(val config: NodeConfiguration,
+    open class MockNode(config: NodeConfiguration,
                         val mockNet: MockNetwork,
                         override val networkMapAddress: SingleMessageRecipient?,
                         advertisedServices: Set<ServiceInfo>,

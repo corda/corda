@@ -67,8 +67,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema>) : SchemaService, Singl
                     Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
                     Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
-    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
-        mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())
+    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map { mappedSchema ->
+        Pair(mappedSchema, SchemaService.SchemaOptions())
     })
 
     // Currently returns all schemas supported by the state, with no filtering or enrichment.
