@@ -21,7 +21,6 @@ notary/network map node:
         node {
             name "O=Controller,OU=corda,L=London,C=UK"
             notary = [validating : true]
-            advertisedServices = []
             p2pPort 10002
             rpcPort 10003
             webPort 10004
@@ -29,7 +28,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeA,O=NodeA,L=London,C=UK"
-            advertisedServices = []
             p2pPort 10005
             rpcPort 10006
             webPort 10007
@@ -38,7 +36,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeB,O=NodeB,L=New York,C=US"
-            advertisedServices = []
             p2pPort 10008
             rpcPort 10009
             webPort 10010
@@ -47,7 +44,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeC,O=NodeC,L=Paris,C=FR"
-            advertisedServices = []
             p2pPort 10011
             rpcPort 10012
             webPort 10013

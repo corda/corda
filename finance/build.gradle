@@ -10,11 +10,24 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda finance modules'
 
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
 dependencies {
     // Note the :finance module is a CorDapp in its own right
     // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
     cordaCompile project(':core')
     cordaCompile project(':confidential-identities')
+
+    // TODO Remove this once we have app configs
+    compile "com.typesafe:config:$typesafe_config_version"
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
@@ -23,11 +36,18 @@ dependencies {
 
 configurations {
     testArtifacts.extendsFrom testRuntime
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
 }
 
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
+}
+
+task integrationTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 artifacts {

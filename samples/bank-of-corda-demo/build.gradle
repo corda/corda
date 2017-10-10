@@ -55,14 +55,13 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
-        advertisedServices = []
         p2pPort 10002
         rpcPort 10003
         cordapps = ["net.corda:finance:$corda_release_version"]
     }
     node {
         name "O=BankOfCorda,L=London,C=GB"
-        advertisedServices = ["corda.issuer.USD"]
+        extraConfig = [issuableCurrencies : ["USD"]]
         p2pPort 10005
         rpcPort 10006
         webPort 10007
@@ -79,7 +78,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     }
     node {
         name "O=BigCorporation,L=New York,C=US"
-        advertisedServices = []
         p2pPort 10008
         rpcPort 10009
         webPort 10010

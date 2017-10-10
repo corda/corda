@@ -1,6 +1,12 @@
 package net.corda.demobench.model
 
+import javafx.beans.binding.IntegerExpression
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.copyToDirectory
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.noneOrSingle
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
 import tornadofx.*
@@ -22,18 +28,17 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     private val jvm by inject<JVMConfig>()
     private val pluginController by inject<PluginController>()
-    private val serviceController by inject<ServiceController>()
 
     private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
     private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
     private val command = jvm.commandFor(cordaPath).toTypedArray()
 
-    private val nodes = LinkedHashMap<String, NodeConfig>()
+    private val nodes = LinkedHashMap<String, NodeConfigWrapper>()
     private val port = AtomicInteger(firstPort)
 
     private var networkMapConfig: NetworkMapConfig? = null
 
-    val activeNodes: List<NodeConfig>
+    val activeNodes: List<NodeConfigWrapper>
         get() = nodes.values.filter {
             (it.state == NodeState.RUNNING) || (it.state == NodeState.STARTING)
         }
@@ -50,38 +55,45 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     /**
      * Validate a Node configuration provided by [net.corda.demobench.views.NodeTabView].
      */
-    fun validate(nodeData: NodeData): NodeConfig? {
+    fun validate(nodeData: NodeData): NodeConfigWrapper? {
+        fun IntegerExpression.toLocalAddress() = NetworkHostAndPort("localhost", value)
+
         val location = nodeData.nearestCity.value
-        val config = NodeConfig(
-                baseDir,
-                CordaX500Name(
+        val nodeConfig = NodeConfig(
+                myLegalName = CordaX500Name(
                         organisation = nodeData.legalName.value.trim(),
                         locality = location.description,
                         country = location.countryCode
                 ),
-                nodeData.p2pPort.value,
-                nodeData.rpcPort.value,
-                nodeData.webPort.value,
-                nodeData.h2Port.value,
-                nodeData.extraServices.map { serviceController.services[it]!! }.toMutableList()
+                p2pAddress = nodeData.p2pPort.toLocalAddress(),
+                rpcAddress = nodeData.rpcPort.toLocalAddress(),
+                webAddress = nodeData.webPort.toLocalAddress(),
+                notary = nodeData.extraServices.filterIsInstance<NotaryService>().noneOrSingle(),
+                networkMapService = networkMapConfig,  // The first node becomes the network map
+                h2port = nodeData.h2Port.value,
+                issuableCurrencies = nodeData.extraServices.filterIsInstance<CurrencyIssuer>().map { it.currency.toString() }
         )
 
-        if (nodes.putIfAbsent(config.key, config) != null) {
-            log.warning("Node with key '${config.key}' already exists.")
+        val wrapper = NodeConfigWrapper(baseDir, nodeConfig)
+
+        if (nodes.putIfAbsent(wrapper.key, wrapper) != null) {
+            log.warning("Node with key '${wrapper.key}' already exists.")
             return null
         }
 
-        // The first node becomes our network map
-        chooseNetworkMap(config)
+        if (nodeConfig.isNetworkMap) {
+            networkMapConfig = nodeConfig.let { NetworkMapConfig(it.myLegalName, it.p2pAddress) }
+            log.info("Network map provided by: ${nodeConfig.myLegalName}")
+        }
 
-        return config
+        return wrapper
     }
 
-    fun dispose(config: NodeConfig) {
+    fun dispose(config: NodeConfigWrapper) {
         config.state = NodeState.DEAD
 
-        if (config.networkMap == null) {
-            log.warning("Network map service (Node '${config.legalName}') has exited.")
+        if (config.nodeConfig.isNetworkMap) {
+            log.warning("Network map service (Node '${config.nodeConfig.myLegalName}') has exited.")
         }
     }
 
@@ -95,39 +107,26 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     fun hasNetworkMap(): Boolean = networkMapConfig != null
 
-    private fun chooseNetworkMap(config: NodeConfig) {
-        if (hasNetworkMap()) {
-            config.networkMap = networkMapConfig
-        } else {
-            networkMapConfig = config
-            log.info("Network map provided by: ${config.legalName}")
-        }
-    }
+    fun runCorda(pty: R3Pty, config: NodeConfigWrapper): Boolean {
+        try {
+            config.nodeDir.createDirectories()
 
-    fun runCorda(pty: R3Pty, config: NodeConfig): Boolean {
-        val nodeDir = config.nodeDir.toFile()
+            // Install any built-in plugins into the working directory.
+            pluginController.populate(config)
 
-        if (nodeDir.forceDirectory()) {
-            try {
-                // Install any built-in plugins into the working directory.
-                pluginController.populate(config)
+            // Write this node's configuration file into its working directory.
+            val confFile = config.nodeDir / "node.conf"
+            Files.write(confFile, config.nodeConfig.toText().toByteArray())
 
-                // Write this node's configuration file into its working directory.
-                val confFile = nodeDir.resolve("node.conf")
-                confFile.writeText(config.toText())
-
-                // Execute the Corda node
-                val cordaEnv = System.getenv().toMutableMap().apply {
-                    jvm.setCapsuleCacheDir(this)
-                }
-                pty.run(command, cordaEnv, nodeDir.toString())
-                log.info("Launched node: ${config.legalName}")
-                return true
-            } catch (e: Exception) {
-                log.log(Level.SEVERE, "Failed to launch Corda: ${e.message}", e)
-                return false
+            // Execute the Corda node
+            val cordaEnv = System.getenv().toMutableMap().apply {
+                jvm.setCapsuleCacheDir(this)
             }
-        } else {
+            pty.run(command, cordaEnv, config.nodeDir.toString())
+            log.info("Launched node: ${config.nodeConfig.myLegalName}")
+            return true
+        } catch (e: Exception) {
+            log.log(Level.SEVERE, "Failed to launch Corda: ${e.message}", e)
             return false
         }
     }
@@ -144,15 +143,15 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     /**
      * Add a [NodeConfig] object that has been loaded from a profile.
      */
-    fun register(config: NodeConfig): Boolean {
+    fun register(config: NodeConfigWrapper): Boolean {
         if (nodes.putIfAbsent(config.key, config) != null) {
             return false
         }
 
-        updatePort(config)
+        updatePort(config.nodeConfig)
 
-        if ((networkMapConfig == null) && config.isNetworkMap()) {
-            networkMapConfig = config
+        if (networkMapConfig == null && config.nodeConfig.isNetworkMap) {
+            networkMapConfig = config.nodeConfig.let { NetworkMapConfig(it.myLegalName, it.p2pAddress) }
         }
 
         return true
@@ -162,12 +161,12 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
      * Creates a node directory that can host a running instance of Corda.
      */
     @Throws(IOException::class)
-    fun install(config: InstallConfig): NodeConfig {
+    fun install(config: InstallConfig): NodeConfigWrapper {
         val installed = config.installTo(baseDir)
 
         pluginController.userPluginsFor(config).forEach {
-            val pluginDir = Files.createDirectories(installed.pluginDir)
-            val plugin = Files.copy(it, pluginDir.resolve(it.fileName.toString()))
+            installed.pluginDir.createDirectories()
+            val plugin = it.copyToDirectory(installed.pluginDir)
             log.info("Installed: $plugin")
         }
 
@@ -179,7 +178,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     }
 
     private fun updatePort(config: NodeConfig) {
-        val nextPort = 1 + arrayOf(config.p2pPort, config.rpcPort, config.webPort, config.h2Port).max() as Int
+        val nextPort = 1 + arrayOf(config.p2pAddress.port, config.rpcAddress.port, config.webAddress.port, config.h2port).max() as Int
         port.getAndUpdate { Math.max(nextPort, it) }
     }
 

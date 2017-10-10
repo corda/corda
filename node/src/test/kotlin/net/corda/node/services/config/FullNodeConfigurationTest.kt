@@ -30,7 +30,6 @@ class FullNodeConfigurationTest {
                 p2pAddress = NetworkHostAndPort("localhost", 0),
                 rpcAddress = NetworkHostAndPort("localhost", 1),
                 messagingServerAddress = null,
-                extraAdvertisedServiceIds = emptyList(),
                 notary = null,
                 certificateChainCheckPolicies = emptyList(),
                 devMode = true,
