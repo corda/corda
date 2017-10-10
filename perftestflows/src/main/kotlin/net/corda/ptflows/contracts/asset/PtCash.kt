@@ -53,7 +53,7 @@ interface PtCashSelection {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
                 } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                        "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection")
+                        "\nPlease specify an implementation in META-INF/services/net.corda.ptflows.contracts.asset.PtCashSelection")
             }.invoke()
         }
     }
@@ -261,7 +261,7 @@ class PtCash : PtOnLedgerAsset<Currency, PtCash.Commands, PtCash.State>() {
     }
 
     companion object {
-        const val PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.asset.Cash"
+        const val PROGRAM_ID: ContractClassName = "net.corda.ptflows.contracts.asset.PtCash"
 
         /**
          * Generate a transaction that moves an amount of currency to the given party, and sends any change back to
