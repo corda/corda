@@ -7,7 +7,7 @@ import java.sql.ResultSet
 import java.sql.Statement
 import java.util.*
 
-class CashSelectionMySQLImpl : CashSelection() {
+class CashSelectionMySQLImpl : AbstractCashSelection() {
 
     companion object {
         const val JDBC_DRIVER_NAME = "MySQL JDBC Driver"

@@ -30,27 +30,28 @@ import kotlin.concurrent.withLock
  * Custom implementations must implement this interface and declare their implementation in
  * META-INF/services/net.corda.contracts.asset.CashSelection
  */
-abstract class CashSelection {
+abstract class AbstractCashSelection {
     companion object {
-        val instance = AtomicReference<CashSelection>()
+        val instance = AtomicReference<AbstractCashSelection>()
 
-        fun getInstance(metadata: () -> java.sql.DatabaseMetaData): CashSelection {
+        fun getInstance(metadata: () -> java.sql.DatabaseMetaData): AbstractCashSelection {
             return instance.get() ?: {
                 val _metadata = metadata()
-                val cashSelectionAlgos = ServiceLoader.load(CashSelection::class.java).toList()
+                val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java).toList()
                 val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
                 } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                        "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection")
+                        "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.java}")
             }.invoke()
         }
 
-        val log = loggerFor<CashSelection>()
+        val log = loggerFor<AbstractCashSelection>()
     }
 
     // coin selection retry loop counter, sleep (msecs) and lock for selecting states
+    // TODO: make parameters configurable when we get CorDapp configuration.
     private val MAX_RETRIES = 5
     private val RETRY_SLEEP = 100
     private val spendLock: ReentrantLock = ReentrantLock()
@@ -150,7 +151,7 @@ abstract class CashSelection {
                     // retry as more states may become available
                 } catch (e: SQLException) {
                     log.error("""Failed retrieving unconsumed states for: amount [$amount], onlyFromIssuerParties [$onlyFromIssuerParties], notary [$notary], lockId [$lockId]
-                        $e.
+                        ${e.stackTrace}.
                     """)
                 } catch (e: StatesNotAvailableException) { // Should never happen with single threaded state machine
                     stateAndRefs.clear()

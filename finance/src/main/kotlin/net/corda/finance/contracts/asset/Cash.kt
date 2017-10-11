@@ -20,7 +20,7 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.toBase58String
-import net.corda.finance.contracts.asset.cash.selection.CashSelection
+import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashOrNull
@@ -326,7 +326,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 
             // Retrieve unspent and unlocked cash states that meet our spending criteria.
             val totalAmount = payments.map { it.amount }.sumOrThrow()
-            val cashSelection = CashSelection.getInstance({ services.jdbcSession().metaData })
+            val cashSelection = AbstractCashSelection.getInstance({ services.jdbcSession().metaData })
             val acceptableCoins = cashSelection.unconsumedCashStatesForSpending(services, totalAmount, onlyFromParties, tx.notary, tx.lockId)
             val revocationEnabled = false // Revocation is currently unsupported
             // Generate a new identity that change will be sent to for confidentiality purposes. This means that a

@@ -21,7 +21,7 @@ import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class CashSelectionH2Impl : CashSelection() {
+class CashSelectionH2Impl : AbstractCashSelection() {
 
     companion object {
         const val JDBC_DRIVER_NAME = "H2 JDBC Driver"

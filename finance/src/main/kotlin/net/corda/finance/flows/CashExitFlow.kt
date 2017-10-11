@@ -14,7 +14,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.cash.selection.CashSelection
+import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.issuedBy
 import java.util.*
 
@@ -46,7 +46,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = null)
         val issuer = ourIdentity.ref(issuerRef)
-        val exitStates = CashSelection
+        val exitStates = AbstractCashSelection
                 .getInstance { serviceHub.jdbcSession().metaData }
                 .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
