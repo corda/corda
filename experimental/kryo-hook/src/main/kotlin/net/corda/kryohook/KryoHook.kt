@@ -130,7 +130,6 @@ sealed class StatsTree {
     ) : StatsTree()
 }
 
-
 fun readTree(events: List<StatsEvent>, index: Int): Pair<Int, StatsTree> {
     val event = events[index]
     when (event) {
