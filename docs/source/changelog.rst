@@ -46,6 +46,9 @@ UNRELEASED
   allows services to start flows marked with the ``StartableByService`` annotation. For backwards compatability
   service classes with only ``ServiceHub`` constructors will still work.
 
+* ``TimeWindow`` now has a ``length`` property that returns the length of the time-window, or ``null`` if the
+  time-window is open-ended.
+
 .. _changelog_v1:
 
 Release 1.0
