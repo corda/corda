@@ -47,6 +47,12 @@ fun prettyStatsTree(indent: Int, statsTree: StatsTree, builder: StringBuilder) {
     }
 }
 
+/**
+ * The hook simply records the write() entries and exits together with the output offset at the time of the call.
+ * This is recorded in a StrandID -> List<StatsEvent> map.
+ *
+ * Later we "parse" these lists into a tree.
+ */
 object KryoHook : ClassFileTransformer {
     val classPool = ClassPool.getDefault()
 
@@ -88,17 +94,14 @@ object KryoHook : ClassFileTransformer {
         return null
     }
 
+    // StrandID -> StatsEvent map
     val events = ConcurrentHashMap<Long, ArrayList<StatsEvent>>()
-    val eventCount = AtomicInteger(0)
 
     @JvmStatic
     fun writeEnter(kryo: Kryo, output: Output, obj: Any) {
         events.getOrPut(Strand.currentStrand().id) { ArrayList() }.add(
                 StatsEvent.Enter(obj.javaClass.name, output.total())
         )
-        if (eventCount.incrementAndGet() % 100 == 0) {
-            println("EVENT COUNT ${eventCount}")
-        }
     }
     @JvmStatic
     fun writeExit(kryo: Kryo, output: Output, obj: Any) {
@@ -108,11 +111,17 @@ object KryoHook : ClassFileTransformer {
     }
 }
 
+/**
+ * TODO we could add events on entries/exits to field serializers to get more info on what's being serialised.
+ */
 sealed class StatsEvent {
     data class Enter(val className: String, val offset: Long) : StatsEvent()
     data class Exit(val className: String, val offset: Long) : StatsEvent()
 }
 
+/**
+ * TODO add Field constructor.
+ */
 sealed class StatsTree {
     data class Object(
             val className: String,
