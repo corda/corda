@@ -23,8 +23,7 @@ class FinalityFlowTests {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.finance.contracts.asset")
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
         mockNet.createNotaryNode()
         aliceNode = mockNet.createPartyNode(ALICE.name)
         bobNode = mockNet.createPartyNode(BOB.name)
@@ -36,7 +35,6 @@ class FinalityFlowTests {
     @After
     fun tearDown() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test

@@ -1,11 +1,6 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.setCordappPackages
-import net.corda.testing.transaction
-import net.corda.testing.unsetCordappPackages
-import org.junit.After
-import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
@@ -50,17 +45,6 @@ class FXFwdTimeOption
     val inState = UniversalContract.State(listOf(DUMMY_NOTARY), initialContract)
     val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY), outContract1)
     val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY), outContract2)
-
-    @Before
-    fun setup() {
-        setCordappPackages("net.corda.finance.contracts.universal")
-    }
-
-    @After
-    fun tearDown() {
-        unsetCordappPackages()
-    }
-
     @Test
     fun `issue - signature`() {
         transaction {

@@ -33,8 +33,7 @@ class NotaryServiceTests {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.testing.contracts")
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name, validating = false)
         clientNode = mockNet.createNode()
         mockNet.runNetwork() // Clear network map registration messages
@@ -45,7 +44,6 @@ class NotaryServiceTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test

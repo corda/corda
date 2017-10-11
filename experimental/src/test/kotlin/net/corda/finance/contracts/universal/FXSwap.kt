@@ -1,11 +1,6 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.setCordappPackages
-import net.corda.testing.transaction
-import net.corda.testing.unsetCordappPackages
-import org.junit.After
-import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
@@ -41,17 +36,6 @@ class FXSwap {
     val outStateBad3 = UniversalContract.State(listOf(DUMMY_NOTARY), transferBad3)
 
     val inState = UniversalContract.State(listOf(DUMMY_NOTARY), contract)
-
-    @Before
-    fun setup() {
-        setCordappPackages("net.corda.finance.contracts.universal")
-    }
-
-    @After
-    fun tearDown() {
-        unsetCordappPackages()
-    }
-
     @Test
     fun `issue - signature`() {
 

@@ -28,15 +28,13 @@ class IdentitySyncFlowTests {
 
     @Before
     fun before() {
-        setCordappPackages("net.corda.finance.contracts.asset")
         // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = MockNetwork(networkSendManuallyPumped = false, threadPerNode = true)
+        mockNet = MockNetwork(networkSendManuallyPumped = false, threadPerNode = true, cordappPackages = listOf("net.corda.finance.contracts.asset"))
     }
 
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test

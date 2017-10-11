@@ -14,6 +14,7 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.classloading.requireAnnotation
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import java.io.File
 import java.io.FileOutputStream
@@ -64,14 +65,12 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
          * and plugins directory. This is intended mostly for use by the driver.
-         *
-         * @param baseDir See [createDefault.baseDir]
-         * @param testPackages See [createWithTestPackages.testPackages]
          */
         @VisibleForTesting
-        @JvmOverloads
-        fun createDefaultWithTestPackages(baseDir: Path, testPackages: List<String> = CordappLoader.testPackages)
-                = CordappLoader(getCordappsInDirectory(getPluginsPath(baseDir)) + testPackages.flatMap(this::createScanPackage))
+        fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
+            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
+            return CordappLoader(getCordappsInDirectory(getPluginsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage))
+        }
 
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath.
@@ -81,8 +80,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
          * CorDapps.
          */
         @VisibleForTesting
-        @JvmOverloads
-        fun createWithTestPackages(testPackages: List<String> = CordappLoader.testPackages)
+        fun createWithTestPackages(testPackages: List<String>)
                 = CordappLoader(testPackages.flatMap(this::createScanPackage))
 
         /**
@@ -147,11 +145,6 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             }
         }
 
-        /**
-         * A list of test packages that will be scanned as CorDapps and compiled into CorDapp JARs for use in tests only.
-         */
-        @VisibleForTesting
-        var testPackages: List<String> = emptyList()
         private val generatedCordapps = mutableMapOf<URL, URI>()
 
         /** A list of the core RPC flows present in Corda */

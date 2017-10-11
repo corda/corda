@@ -141,7 +141,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val mockNet = MockNetwork(networkSendManuallyPumped, runAsync)
+    val mockNet = MockNetwork(networkSendManuallyPumped, runAsync, cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract"))
     // This one must come first.
     val networkMap = mockNet.startNetworkMapNode(nodeFactory = NetworkMapNodeFactory)
     val notary = mockNet.createNotaryNode(validating = false, nodeFactory = NotaryNodeFactory)
@@ -255,7 +255,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val networkInitialisationFinished = allOf(*mockNet.nodes.map { it.nodeReadyFuture.toCompletableFuture() }.toTypedArray())
 
     fun start(): Future<Unit> {
-        setCordappPackages("net.corda.irs.contract", "net.corda.finance.contract")
         mockNet.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
         return networkInitialisationFinished.thenCompose { startMainSimulation() }

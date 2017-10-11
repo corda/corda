@@ -91,8 +91,7 @@ class ScheduledFlowTests {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.testing.contracts")
-        mockNet = MockNetwork(threadPerNode = true)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
         notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
         val a = mockNet.createUnstartedNode()
         val b = mockNet.createUnstartedNode()
@@ -107,7 +106,6 @@ class ScheduledFlowTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test

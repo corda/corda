@@ -167,9 +167,8 @@ open class MockServices(
             return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
-    val mockCordappProvider = MockCordappProvider(CordappLoader.createWithTestPackages(cordappPackages + CordappLoader.testPackages), attachments)
-    override val cordappProvider: CordappProvider = mockCordappProvider
-
+    val mockCordappProvider = MockCordappProvider(CordappLoader.createWithTestPackages(cordappPackages), attachments)
+    override val cordappProvider: CordappProvider get() = mockCordappProvider
     lateinit var hibernatePersister: HibernateObserver
 
     fun makeVaultService(hibernateConfig: HibernateConfiguration): VaultServiceInternal {
