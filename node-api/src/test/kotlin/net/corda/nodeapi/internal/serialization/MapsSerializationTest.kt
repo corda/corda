@@ -3,17 +3,19 @@ package net.corda.nodeapi.internal.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
 import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
 import net.corda.testing.kryoSpecific
 import org.assertj.core.api.Assertions
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
-import org.bouncycastle.asn1.x500.X500Name
 import java.io.ByteArrayOutputStream
 import java.util.*
+import kotlin.test.assertEquals
 
 class MapsSerializationTest : TestDependencyInjectionBase() {
     private companion object {
@@ -33,8 +35,9 @@ class MapsSerializationTest : TestDependencyInjectionBase() {
 
     @Test
     fun `check list can be serialized as part of SessionData`() {
-        val sessionData = SessionData(123, smallMap)
+        val sessionData = SessionData(123, smallMap.serialize())
         assertEqualAfterRoundTripSerialization(sessionData)
+        assertEquals(smallMap, sessionData.payload.deserialize())
     }
 
     @CordaSerializable
