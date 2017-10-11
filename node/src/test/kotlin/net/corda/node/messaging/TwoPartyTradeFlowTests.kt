@@ -16,7 +16,6 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
@@ -32,6 +31,7 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.ownedBy
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
@@ -271,8 +271,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             // that Bob was waiting on before the reboot occurred.
             bobNode = mockNet.createNode(bobAddr.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
                 override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                    id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger, customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(config, network, networkMapAddr, bobAddr.id, notaryIdentity, entropyRoot, customSchemas)
+                                    id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
+                    return MockNetwork.MockNode(config, network, networkMapAddr, bobAddr.id, notaryIdentity, entropyRoot)
                 }
             }, BOB.name)
 
@@ -314,8 +314,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
                                 network: MockNetwork,
                                 networkMapAddr: SingleMessageRecipient?,
                                 id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                entropyRoot: BigInteger, customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot, customSchemas) {
+                                entropyRoot: BigInteger): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
                     // That constructs a recording tx storage
                     override fun makeTransactionStorage(): WritableTransactionStorage {
                         return RecordingTransactionStorage(database, super.makeTransactionStorage())

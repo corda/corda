@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
@@ -34,9 +33,8 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
                             networkMapAddr: SingleMessageRecipient?,
                             id: Int,
                             notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger,
-                            customSchemas: Set<MappedSchema>): MockNode {
-            return object : MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot, customSchemas) {
+                            entropyRoot: BigInteger): MockNode {
+            return object : MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
                 override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = SwizzleNetworkMapService(network, networkMapCache)
             }
         }

@@ -96,7 +96,7 @@ class CordaPersistence(var dataSource: HikariDataSource, private val schemaServi
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, createIdentityService: () -> IdentityService, schemaService: SchemaService = NodeSchemaService(emptySet())): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, createIdentityService: () -> IdentityService, schemaService: SchemaService = NodeSchemaService(null)): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
     val persistence = CordaPersistence.connect(dataSource, schemaService, createIdentityService, databaseProperties ?: Properties())

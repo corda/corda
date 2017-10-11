@@ -8,7 +8,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
@@ -120,8 +119,8 @@ class AttachmentTests {
         val aliceNode = mockNet.createNotaryNode(legalName = ALICE.name, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                entropyRoot: BigInteger, customSchemas: Set<MappedSchema>): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot, customSchemas) {
+                                entropyRoot: BigInteger): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }

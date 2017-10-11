@@ -4,7 +4,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
@@ -273,9 +272,8 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
                             networkMapAddr: SingleMessageRecipient?,
                             id: Int,
                             notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger,
-                            customSchemas: Set<MappedSchema>): MockNode {
-            return object : MockNode(config, network, null, id, notaryIdentity, entropyRoot, customSchemas) {
+                            entropyRoot: BigInteger): MockNode {
+            return object : MockNode(config, network, null, id, notaryIdentity, entropyRoot) {
                 override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = NullNetworkMapService
             }
         }

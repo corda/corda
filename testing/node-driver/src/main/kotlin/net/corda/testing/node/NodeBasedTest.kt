@@ -5,7 +5,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
@@ -87,7 +86,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
         check(_networkMapNode == null || _networkMapNode!!.info.legalIdentitiesAndCerts.first().name == legalName)
-        return startNodeInternal(legalName, platformVersion, rpcUsers, configOverrides, false, emptySet()).apply {
+        return startNodeInternal(legalName, platformVersion, rpcUsers, configOverrides).apply {
             _networkMapNode = this
         }
     }
@@ -97,7 +96,6 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                   platformVersion: Int = 1,
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap(),
-                  customSchemas: Set<MappedSchema> = emptySet(),
                   noNetworkMap: Boolean = false,
                   waitForConnection: Boolean = true): CordaFuture<StartedNode<Node>> {
         val networkMapConf = if (noNetworkMap) {
@@ -121,17 +119,15 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 platformVersion,
                 rpcUsers,
                 networkMapConf + configOverrides,
-                noNetworkMap,
-                customSchemas)
+                noNetworkMap)
         return if (waitForConnection) node.internals.nodeReadyFuture.map { node } else doneFuture(node)
     }
 
     // TODO This method has been added temporarily, to be deleted once the set of notaries is defined at the network level.
     fun startNotaryNode(name: CordaX500Name,
                         rpcUsers: List<User> = emptyList(),
-                        validating: Boolean = true,
-                        customSchemas: Set<MappedSchema> = emptySet()): CordaFuture<StartedNode<Node>> {
-        return startNode(name, rpcUsers = rpcUsers, configOverrides = mapOf("notary" to mapOf("validating" to validating)), customSchemas = customSchemas)
+                        validating: Boolean = true): CordaFuture<StartedNode<Node>> {
+        return startNode(name, rpcUsers = rpcUsers, configOverrides = mapOf("notary" to mapOf("validating" to validating)))
     }
 
     fun startNotaryCluster(notaryName: CordaX500Name, clusterSize: Int): CordaFuture<List<StartedNode<Node>>> {
@@ -178,8 +174,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                                   platformVersion: Int,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>,
-                                  noNetworkMap: Boolean,
-                                  customSchemas: Set<MappedSchema>): StartedNode<Node> {
+                                  noNetworkMap: Boolean = false): StartedNode<Node> {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
@@ -196,13 +191,11 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         )
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
-        val node = object : Node(
+        val node = Node(
                 parsedConfig,
                 MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
                 initialiseSerialization = false,
-                cordappLoader = CordappLoader.createDefaultWithTestPackages(parsedConfig, cordappPackages)) {
-            override fun customSchemas() = super.customSchemas() + customSchemas
-        }.start()
+                cordappLoader = CordappLoader.createDefaultWithTestPackages(parsedConfig, cordappPackages)).start()
         nodes += node
         thread(name = legalName.organisation) {
             node.internals.run()

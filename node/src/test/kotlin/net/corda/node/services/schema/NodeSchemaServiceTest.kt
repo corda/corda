@@ -3,6 +3,7 @@ package net.corda.node.services.schema
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -25,8 +26,8 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `registering custom schemas for testing with MockNode`() {
-        val mockNet = MockNetwork()
-        val mockNode = mockNet.createNode(customSchemas = setOf(DummyLinearStateSchemaV1))
+        val mockNet = MockNetwork(cordappPackages = listOf(DummyLinearStateSchemaV1::class.packageName))
+        val mockNode = mockNet.createNode()
         mockNet.runNetwork()
         val schemaService = mockNode.services.schemaService
         assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))

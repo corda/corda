@@ -26,7 +26,6 @@ import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -537,7 +536,6 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             services.fillWithSomeTestLinearStates(2)
         }
-
         val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV1)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
@@ -569,7 +567,6 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             services.fillWithSomeTestLinearStates(2)
         }
-
         val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV2)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
@@ -636,7 +633,6 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
                 hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
             }
         }
-
         val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, CommonSchemaV1, SampleCashSchemaV3)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
@@ -765,7 +761,6 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(2, externalId = "222")
             services.fillWithSomeTestLinearStates(3, externalId = "333")
         }
-
         val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV2)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
@@ -818,7 +813,6 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(2, externalId = "222")
             services.fillWithSomeTestLinearStates(3, externalId = "333")
         }
-
         val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV1)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()

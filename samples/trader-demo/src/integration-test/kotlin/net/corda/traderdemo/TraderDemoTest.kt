@@ -1,6 +1,7 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.internal.packageName
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
@@ -20,7 +21,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.concurrent.Executors
 
-class TraderDemoTest : NodeBasedTest(listOf("net.corda.finance.contracts.asset", "net.corda.finance.contracts")) {
+class TraderDemoTest : NodeBasedTest(listOf(
+        "net.corda.finance.contracts.asset", "net.corda.finance.contracts",
+        CashSchemaV1::class.packageName, CommercialPaperSchemaV1::class.packageName)) {
     @Test
     fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlowPermission<SellerFlow>()))
@@ -29,8 +32,8 @@ class TraderDemoTest : NodeBasedTest(listOf("net.corda.finance.contracts.asset",
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CommercialPaperIssueFlow>()))
         val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, validating = false)
-        val nodeAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser), customSchemas = setOf(CashSchemaV1))
-        val nodeBFuture = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser), customSchemas = setOf(CashSchemaV1, CommercialPaperSchemaV1))
+        val nodeAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(demoUser))
+        val nodeBFuture = startNode(DUMMY_BANK_B.name, rpcUsers = listOf(demoUser))
         val bankNodeFuture = startNode(BOC.name, rpcUsers = listOf(bankUser))
         val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).map { it.getOrThrow() }
 

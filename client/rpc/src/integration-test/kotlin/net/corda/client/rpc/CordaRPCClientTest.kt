@@ -2,6 +2,7 @@ package net.corda.client.rpc
 
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
@@ -32,7 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts")) {
+class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
     private val rpcUser = User("user1", "test", permissions = setOf(
             startFlowPermission<CashIssueFlow>(),
             startFlowPermission<CashPaymentFlow>()
@@ -47,7 +48,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts")) 
 
     @Before
     fun setUp() {
-        node = startNotaryNode(ALICE.name, rpcUsers = listOf(rpcUser), customSchemas = setOf(CashSchemaV1)).getOrThrow()
+        node = startNotaryNode(ALICE.name, rpcUsers = listOf(rpcUser)).getOrThrow()
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }
 

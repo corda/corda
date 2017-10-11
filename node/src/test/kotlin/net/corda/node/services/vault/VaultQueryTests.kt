@@ -6,6 +6,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
@@ -45,10 +46,9 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 class VaultQueryTests : TestDependencyInjectionBase() {
-    companion object {
-        private val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts")
-    }
-
+    private val cordappPackages = setOf(
+            "net.corda.testing.contracts", "net.corda.finance.contracts",
+            CashSchemaV1::class.packageName, CommercialPaperSchemaV1::class.packageName, DummyLinearStateSchemaV1::class.packageName).toMutableList()
     private lateinit var services: MockServices
     private lateinit var notaryServices: MockServices
     private val vaultService: VaultService get() = services.vaultService
@@ -67,7 +67,6 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY),
                 createIdentityService = { identitySvc },
-                customSchemas = setOf(CashSchemaV1, CommercialPaperSchemaV1, DummyLinearStateSchemaV1),
                 cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
@@ -86,7 +85,6 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Test
     fun createPersistentTestDb() {
         val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), { identitySvc })
-
         setUpDb(database, 5000)
 
         database.close()
@@ -1753,6 +1751,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
     @Test
     fun `query attempting to use unregistered schema`() {
+        tearDown()
+        cordappPackages -= SampleCashSchemaV3::class.packageName
+        setUp()
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))

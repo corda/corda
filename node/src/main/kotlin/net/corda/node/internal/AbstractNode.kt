@@ -186,7 +186,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         validateKeystore()
     }
 
-    private fun makeSchemaService() = NodeSchemaService(customSchemas())
+    private fun makeSchemaService() = NodeSchemaService(cordappLoader)
     open fun generateNodeInfo() {
         check(started == null) { "Node has already been started" }
         initCertificate()
@@ -469,7 +469,6 @@ abstract class AbstractNode(config: NodeConfiguration,
         return tokenizableServices
     }
 
-    protected open fun customSchemas() = cordappLoader.cordapps.flatMap { it.customSchemas }.toSet()
     protected open fun makeTransactionStorage(): WritableTransactionStorage = DBTransactionStorage()
 
     private fun makeVaultObservers() {

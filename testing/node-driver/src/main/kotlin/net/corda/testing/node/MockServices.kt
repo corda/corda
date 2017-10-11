@@ -14,7 +14,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -51,7 +50,7 @@ import java.util.*
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
 open class MockServices(
-        cordappPackages: List<String>,
+        cordappLoader: CordappLoader,
         override val validatedTransactions: WritableTransactionStorage,
         protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions),
         vararg val keys: KeyPair
@@ -101,24 +100,22 @@ open class MockServices(
 
         /**
          * Makes database and mock services appropriate for unit tests.
-         *
-         * @param customSchemas a set of schemas being used by [NodeSchemaService]
-         * @param keys a lis of [KeyPair] instances to be used by [MockServices]. Defualts to [MEGA_CORP_KEY]
+         * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defualts to [MEGA_CORP_KEY]
          * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defauts to [InMemoryIdentityService].
          *
          * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
         @JvmStatic
-        fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = emptySet(),
-                                            keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
+        fun makeTestDatabaseAndMockServices(keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
                                             createIdentityService: () -> IdentityService = { makeTestIdentityService() },
                                             cordappPackages: List<String> = emptyList()): Pair<CordaPersistence, MockServices> {
+            val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val databaseProperties = makeTestDatabaseProperties()
             val identityServiceRef: IdentityService by lazy { createIdentityService() }
-            val database = configureDatabase(dataSourceProps, databaseProperties, { identityServiceRef }, NodeSchemaService(customSchemas))
+            val database = configureDatabase(dataSourceProps, databaseProperties, { identityServiceRef }, NodeSchemaService(cordappLoader))
             val mockService = database.transaction {
-                object : MockServices(cordappPackages, *(keys.toTypedArray())) {
+                object : MockServices(cordappLoader, *(keys.toTypedArray())) {
                     override val identityService: IdentityService = database.transaction { identityServiceRef }
                     override val vaultService = makeVaultService(database.hibernateConfig)
 
@@ -137,7 +134,8 @@ open class MockServices(
         }
     }
 
-    constructor(cordappPackages: List<String>, vararg keys: KeyPair) : this(cordappPackages, MockTransactionStorage(), keys = *keys)
+    private constructor(cordappLoader: CordappLoader, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), keys = *keys)
+    constructor(cordappPackages: List<String>, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), keys = *keys)
     constructor(vararg keys: KeyPair) : this(emptyList(), *keys)
     constructor() : this(generateKeyPair())
 
@@ -167,7 +165,7 @@ open class MockServices(
             return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
-    val mockCordappProvider = MockCordappProvider(CordappLoader.createWithTestPackages(cordappPackages), attachments)
+    val mockCordappProvider = MockCordappProvider(cordappLoader, attachments)
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     lateinit var hibernatePersister: HibernateObserver
 
