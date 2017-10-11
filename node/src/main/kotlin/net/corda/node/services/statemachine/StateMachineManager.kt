@@ -584,6 +584,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         when (ioRequest) {
             is SendRequest -> processSendRequest(ioRequest)
             is WaitForLedgerCommit -> processWaitForCommitRequest(ioRequest)
+            is Sleep -> processSleepRequest(ioRequest)
         }
     }
 
@@ -619,6 +620,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 fibersWaitingForLedgerCommit[ioRequest.hash] += ioRequest.fiber
             }
         }
+    }
+
+    private fun processSleepRequest(ioRequest: Sleep) {
+        // Resume the fiber now we have checkpointed, so we can sleep on the Fiber.
+        resumeFiber(ioRequest.fiber)
     }
 
     private fun sendSessionMessage(party: Party, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null, retryId: Long? = null) {
