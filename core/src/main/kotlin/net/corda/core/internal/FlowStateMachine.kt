@@ -10,6 +10,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
+import java.time.Instant
 
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 interface FlowStateMachine<R> {
@@ -35,6 +36,9 @@ interface FlowStateMachine<R> {
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
 
+    @Suspendable
+    fun sleepUntil(until: Instant)
+
     fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>)
 
     fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>)
@@ -45,6 +49,7 @@ interface FlowStateMachine<R> {
     @Suspendable
     fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>)
 
+    val logic: FlowLogic<R>
     val serviceHub: ServiceHub
     val logger: Logger
     val id: StateMachineRunId
