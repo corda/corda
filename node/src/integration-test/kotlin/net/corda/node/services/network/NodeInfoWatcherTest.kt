@@ -56,11 +56,12 @@ class NodeInfoWatcherTest : NodeBasedTest() {
 
     @Test
     fun `save a NodeInfo`() {
-        assertEquals(0, folder.root.list().size)
+        assertEquals(0, folder.root.list().filter { it.matches(nodeInfoFileRegex) }.size)
         NodeInfoWatcher.saveToFile(folder.root.toPath(), nodeInfo, keyManagementService)
 
-        assertEquals(1, folder.root.list().size)
-        val fileName = folder.root.list()[0]
+        val nodeInfoFiles = folder.root.list().filter { it.matches(nodeInfoFileRegex) }
+        assertEquals(1, nodeInfoFiles.size)
+        val fileName = nodeInfoFiles.first()
         assertTrue(fileName.matches(nodeInfoFileRegex))
         val file = (folder.root.path / fileName).toFile()
         // Just check that something is written, another tests verifies that the written value can be read back.
