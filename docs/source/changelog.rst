@@ -36,6 +36,10 @@ UNRELEASED
 * Cordformation node building DSL can have an additional parameter `configFile` with the path to a properties file
   to be appended to node.conf.
 
+* ``CordaService`` annotated classes should be upgraded to take a constructor parameter of type ``AppServiceHub`` which
+  allows services to start flows marked with the ``StartableByService`` annotation. For backwards compatability
+  service classes with only ``ServiceHub`` constructors will still work.
+
 .. _changelog_v1:
 
 Release 1.0
