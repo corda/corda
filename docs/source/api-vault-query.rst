@@ -172,7 +172,7 @@ The API provides support for paging where large numbers of results are expected 
 results). Defining a sensible default page size enables efficient checkpointing within flows, and frees the developer
 from worrying about pagination where result sets are expected to be constrained to 200 or fewer entries. Where large
 result sets are expected (such as using the RPC API for reporting and/or UI display), it is strongly recommended to
-define a ``PageSpecification`` to correctly process results with efficient memory utilistion. A fail-fast mode is in
+define a ``PageSpecification`` to correctly process results with efficient memory utilisation. A fail-fast mode is in
 place to alert API users to the need for pagination where a single query returns more than 200 results and no
 ``PageSpecification`` has been supplied.
 
