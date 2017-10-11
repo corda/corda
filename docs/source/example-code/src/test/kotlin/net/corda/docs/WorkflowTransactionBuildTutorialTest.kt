@@ -12,8 +12,6 @@ import net.corda.node.internal.StartedNode
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.setCordappPackages
-import net.corda.testing.unsetCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -32,8 +30,7 @@ class WorkflowTransactionBuildTutorialTest {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.docs")
-        mockNet = MockNetwork(threadPerNode = true)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.docs"))
         mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
@@ -43,7 +40,6 @@ class WorkflowTransactionBuildTutorialTest {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test
