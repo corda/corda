@@ -20,9 +20,19 @@ import java.security.*
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
-@Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+@Throws(InvalidKeyException::class, SignatureException::class)
 fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature(Crypto.doSign(this, bytesToSign))
 
+/**
+ * Utility to simplify the act of signing a byte array and return a [DigitalSignature.WithKey] object.
+ * Note that there is no check if the public key matches with the signing private key.
+ * @param bytesToSign the data/message to be signed in [ByteArray] form (usually the Merkle root).
+ * @return the [DigitalSignature.WithKey] object on the input message [bytesToSign] and [publicKey].
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
+ * @throws InvalidKeyException if the private key is invalid.
+ * @throws SignatureException if signing is not possible due to malformed data or private key.
+ */
+@Throws(InvalidKeyException::class, SignatureException::class)
 fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey) = DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
 
 /**
@@ -33,10 +43,13 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey) = DigitalSigna
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
-@Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+@Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray) = private.sign(bytesToSign, public)
 
+/** Helper function to sign the bytes of [bytesToSign] with a key pair. */
+@Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: OpaqueBytes) = sign(bytesToSign.bytes)
+
 /**
  * Helper function for signing a [SignableData] object.
  * @param signableData the object to be signed.
@@ -56,8 +69,8 @@ fun KeyPair.sign(signableData: SignableData): TransactionSignature = Crypto.doSi
  * @throws SignatureException if the signature is invalid (i.e. damaged), or does not match the key (incorrect).
  * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
  */
-// TODO: SignatureException should be used only for a damaged signature, as per `java.security.Signature.verify()`,
-@Throws(SignatureException::class, IllegalArgumentException::class, InvalidKeyException::class)
+// TODO: SignatureException should be used only for a damaged signature, as per `java.security.Signature.verify()`.
+@Throws(SignatureException::class, InvalidKeyException::class)
 fun PublicKey.verify(content: ByteArray, signature: DigitalSignature) = Crypto.doVerify(this, signature.bytes, content)
 
 /**
@@ -70,9 +83,10 @@ fun PublicKey.verify(content: ByteArray, signature: DigitalSignature) = Crypto.d
  * signature).
  * @throws SignatureException if the signature is invalid (i.e. damaged).
  * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
+ * @throws IllegalStateException if this is a [CompositeKey], because verification of composite key signatures is not supported.
  * @return whether the signature is correct for this key.
  */
-@Throws(IllegalStateException::class, SignatureException::class, IllegalArgumentException::class)
+@Throws(SignatureException::class, InvalidKeyException::class)
 fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature): Boolean {
     if (this is CompositeKey)
         throw IllegalStateException("Verification of CompositeKey signatures currently not supported.") // TODO CompositeSignature verification.
@@ -82,9 +96,12 @@ fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature): Boolean 
 /** Render a public key to its hash (in Base58) of its serialised form using the DL prefix. */
 fun PublicKey.toStringShort(): String = "DL" + this.toSHA256Bytes().toBase58()
 
+/** Return a [Set] of the contained keys if this is a [CompositeKey]; otherwise, return a [Set] with a single element (this [PublicKey]). */
 val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: setOf(this)
 
+/** Return true if [otherKey] fulfils the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean = isFulfilledBy(setOf(otherKey))
+/** Return true if [otherKeys] fulfil the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
 
 /** Checks whether any of the given [keys] matches a leaf on the [CompositeKey] tree or a single [PublicKey]. */
@@ -98,8 +115,9 @@ fun Iterable<TransactionSignature>.byKeys() = map { it.by }.toSet()
 
 // Allow Kotlin destructuring:
 // val (private, public) = keyPair
+/* The [PrivateKey] of this [KeyPair] .*/
 operator fun KeyPair.component1(): PrivateKey = this.private
-
+/* The [PublicKey] of this [KeyPair] .*/
 operator fun KeyPair.component2(): PublicKey = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future. */
@@ -122,7 +140,7 @@ fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEnt
  * if this signatureData algorithm is unable to process the input data provided, etc.
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
  */
-@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+@Throws(InvalidKeyException::class, SignatureException::class)
 fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Crypto.doVerify(this, signatureData, clearData)
 
 /**
@@ -135,7 +153,7 @@ fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = 
  * if this signatureData algorithm is unable to process the input data provided, etc.
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key or if any of the clear or signature data is empty.
  */
-@Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+@Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Crypto.doVerify(this.public, signatureData, clearData)
 
 /**
