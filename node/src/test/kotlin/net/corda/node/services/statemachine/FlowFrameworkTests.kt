@@ -65,8 +65,7 @@ class FlowFrameworkTests {
 
     @Before
     fun start() {
-        setCordappPackages("net.corda.finance.contracts", "net.corda.testing.contracts")
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"))
         node1 = mockNet.createNode()
         node2 = mockNet.createNode()
 
@@ -87,7 +86,6 @@ class FlowFrameworkTests {
     fun cleanUp() {
         mockNet.stopNodes()
         receivedSessionMessages.clear()
-        unsetCordappPackages()
     }
 
     @Test

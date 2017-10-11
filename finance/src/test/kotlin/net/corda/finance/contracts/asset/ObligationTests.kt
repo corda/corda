@@ -593,7 +593,6 @@ class ObligationTests {
         }
 
         // Try defaulting an obligation that is now in the past
-        unsetCordappPackages()
         ledger {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)

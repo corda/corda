@@ -73,14 +73,14 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
-        issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
+        val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
         database = configureDatabase(dataSourceProps, defaultDatabaseProperties, NodeSchemaService(), ::makeTestIdentityService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
-            services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
+            services = object : MockServices(cordappPackages, BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService = makeVaultService(database.hibernateConfig)
                 override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -105,7 +105,6 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     @After
     fun cleanUp() {
         database.close()
-        unsetCordappPackages()
     }
 
     private fun setUpDb() {
