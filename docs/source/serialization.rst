@@ -63,7 +63,7 @@ The long term goal is to migrate the current serialization format for everything
     #.  A desire to support open-ended polymorphism, where the number of subclasses of a superclass can expand over time
         and do not need to be defined in the schema *upfront*, which is key to many Corda concepts, such as contract states.
     #.  Increased security from deserialized objects being constructed through supported constructors rather than having
-        data poked directy into their fields without an opportunity to validate consistency or intercept attempts to manipulate
+        data poked directly into their fields without an opportunity to validate consistency or intercept attempts to manipulate
         supposed invariants.
 
 Documentation on that format, and how JVM classes are translated to AMQP, will be linked here when it is available.
@@ -259,9 +259,10 @@ Kotlin Objects
 ``````````````
 
     #.  Kotlin ``object`` s are singletons and treated differently.  They are recorded into the stream with no properties
-        and deserialize back to the singleton instance.
-
-Currently, the same is not true of Java singletons, and they will deserialize to new instances of the class.
+        and deserialize back to the singleton instance. Currently, the same is not true of Java singletons,
+        and they will deserialize to new instances of the class.
+    #.  Kotlin's anonymous ``object`` s are not currently supported. I.e. constructs like:
+        ``object : Contract {...}`` will not serialize correctly and need to be re-written as an explicit class declaration.
 
 The Carpenter
 `````````````
