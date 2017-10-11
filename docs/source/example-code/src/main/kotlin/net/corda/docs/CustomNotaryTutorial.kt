@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
@@ -15,7 +15,7 @@ import java.security.SignatureException
 
 // START 1
 @CordaService
-class MyCustomValidatingNotaryService(override val services: ServiceHub, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
+class MyCustomValidatingNotaryService(override val services: AppServiceHub, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
     override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = PersistentUniquenessProvider()
 

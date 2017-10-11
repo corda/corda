@@ -10,10 +10,10 @@ UNRELEASED
 
 * The ``Cordformation`` gradle plugin has been split into ``cordformation`` and ``cordapp``. The former builds and
   deploys nodes for development and testing, the latter turns a project into a cordapp project that generates JARs in
-  the standard CorDapp format.   
+  the standard CorDapp format.
 
-* ``Cordform`` and node identity generation
-  * Cordform may not specify a value for ``NetworkMap``, when that happens, during the task execution the following happens:
+* ``Cordform`` and node identity generation:
+  * Removed the parameter ``NetworkMap`` from Cordform. Now at the end of the deployment the following happens:
     1. Each node is started and its signed serialized NodeInfo is written to disk in the node base directory.
     2. Every serialized ``NodeInfo`` above is copied in every other node "additional-node-info" folder under the NodeInfo folder.
 
@@ -29,6 +29,16 @@ UNRELEASED
   services. The remaining use of this config was for notaries, the configuring of which has been cleaned up and simplified.
   ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` have also been removed and replaced by a single
   ``notary`` config object. See :doc:`corda-configuration-file` for more details.
+
+* Gradle task ``deployNodes`` can have an additional parameter `configFile` with the path to a properties file
+  to be appended to node.conf.
+
+* Cordformation node building DSL can have an additional parameter `configFile` with the path to a properties file
+  to be appended to node.conf.
+
+* ``CordaService`` annotated classes should be upgraded to take a constructor parameter of type ``AppServiceHub`` which
+  allows services to start flows marked with the ``StartableByService`` annotation. For backwards compatability
+  service classes with only ``ServiceHub`` constructors will still work.
 
 .. _changelog_v1:
 
