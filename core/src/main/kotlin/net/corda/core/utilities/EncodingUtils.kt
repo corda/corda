@@ -3,9 +3,8 @@
 package net.corda.core.utilities
 
 import net.corda.core.crypto.Base58
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sha256
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import java.nio.charset.Charset
 import java.security.PublicKey
 import java.util.*
@@ -72,10 +71,10 @@ fun String.hexToBase64(): String = hexToByteArray().toBase64()
  * @param base58String the Base58 encoded format of the serialised [PublicKey].
  * @return the resulted [PublicKey] after decoding the [base58String] input and then deserialising to a [PublicKey] object.
  */
-fun parsePublicKeyBase58(base58String: String): PublicKey = base58String.base58ToByteArray().deserialize<PublicKey>()
+fun parsePublicKeyBase58(base58String: String): PublicKey = Crypto.decodePublicKey(base58String.base58ToByteArray())
 
 /** Return the Base58 representation of the serialised public key. */
-fun PublicKey.toBase58String(): String = this.serialize().bytes.toBase58()
+fun PublicKey.toBase58String(): String = this.encoded.toBase58()
 
 /** Return the bytes of the SHA-256 output for this public key. */
 fun PublicKey.toSHA256Bytes(): ByteArray = this.encoded.sha256().bytes
