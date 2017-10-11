@@ -16,6 +16,13 @@ class ProjectPublishExtension {
     }
 
     /**
+     * Get the publishing name for this project.
+     */
+    String name() {
+        return task.getPublishName()
+    }
+
+    /**
      * True when we do not want to publish default Java components
      */
     Boolean disableDefaultJar = false
