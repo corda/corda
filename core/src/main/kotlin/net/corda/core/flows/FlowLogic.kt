@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -16,6 +17,8 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import org.slf4j.Logger
+import java.time.Duration
+import java.time.Instant
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -42,6 +45,34 @@ import org.slf4j.Logger
 abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
+
+    companion object {
+        /**
+         * Return the outermost [FlowLogic] instance, or null if not in a flow.
+         */
+        @JvmStatic
+        val currentTopLevel: FlowLogic<*>? get() = (Strand.currentStrand() as? FlowStateMachine<*>)?.logic
+
+        /**
+         * If on a flow, suspends the flow and only wakes it up after at least [duration] time has passed.  Otherwise,
+         * just sleep for [duration].  This sleep function is not designed to aid scheduling, for which you should
+         * consider using [SchedulableState].  It is designed to aid with managing contention for which you have not
+         * managed via another means.
+         *
+         * Warning: long sleeps and in general long running flows are highly discouraged, as there is currently no
+         * support for flow migration! This method will throw an exception if you attempt to sleep for longer than
+         * 5 minutes.
+         */
+        @Suspendable
+        @JvmStatic
+        @Throws(FlowException::class)
+        fun sleep(duration: Duration) {
+            if (duration.compareTo(Duration.ofMinutes(5)) > 0) {
+                throw FlowException("Attempt to sleep for longer than 5 minutes is not supported.  Consider using SchedulableState.")
+            }
+            (Strand.currentStrand() as? FlowStateMachine<*>)?.sleepUntil(Instant.now() + duration) ?: Strand.sleep(duration.toMillis())
+        }
+    }
 
     /**
      * Returns a wrapped [java.util.UUID] object that identifies this state machine run (i.e. subflows have the same
