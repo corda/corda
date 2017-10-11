@@ -23,6 +23,10 @@ import kotlin.reflect.KClass
 import kotlin.test.assertFailsWith
 
 class CollectSignaturesFlowTests {
+    companion object {
+        private val cordappPackages = listOf("net.corda.testing.contracts")
+    }
+
     lateinit var mockNet: MockNetwork
     lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
     lateinit var bobNode: StartedNode<MockNetwork.MockNode>
@@ -31,8 +35,7 @@ class CollectSignaturesFlowTests {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.testing.contracts")
-        mockNet = MockNetwork()
+        mockNet = MockNetwork(cordappPackages = cordappPackages)
         val notaryNode = mockNet.createNotaryNode()
         aliceNode = mockNet.createPartyNode(ALICE.name)
         bobNode = mockNet.createPartyNode(BOB.name)
@@ -45,7 +48,6 @@ class CollectSignaturesFlowTests {
     @After
     fun tearDown() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     private fun registerFlowOnAllNodes(flowClass: KClass<out FlowLogic<*>>) {
@@ -174,7 +176,7 @@ class CollectSignaturesFlowTests {
     @Test
     fun `fails when not signed by initiator`() {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, aliceNode.info.chooseIdentity().ref(1))
-        val miniCorpServices = MockServices(MINI_CORP_KEY)
+        val miniCorpServices = MockServices(cordappPackages, MINI_CORP_KEY)
         val ptx = miniCorpServices.signInitialTransaction(onePartyDummyContract)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()

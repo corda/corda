@@ -102,6 +102,7 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 abstract class AbstractNode(config: NodeConfiguration,
                             val platformClock: Clock,
                             protected val versionInfo: VersionInfo,
+                            protected val cordappLoader: CordappLoader,
                             @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
     open val configuration = config.apply {
         require(minimumPlatformVersion <= versionInfo.platformVersion) {
@@ -151,8 +152,6 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     protected lateinit var database: CordaPersistence
     lateinit var cordappProvider: CordappProviderImpl
-    protected val cordappLoader by lazy { makeCordappLoader() }
-
     protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
@@ -470,19 +469,6 @@ abstract class AbstractNode(config: NodeConfiguration,
                 services, cordappProvider, this)
         makeNetworkServices(network, networkMapCache, tokenizableServices)
         return tokenizableServices
-    }
-
-    private fun makeCordappLoader(): CordappLoader {
-        val scanPackages = System.getProperty("net.corda.node.cordapp.scan.packages")
-        return if (CordappLoader.testPackages.isNotEmpty()) {
-            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createDefaultWithTestPackages(configuration.baseDirectory, CordappLoader.testPackages)
-        } else if (scanPackages != null) {
-            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            CordappLoader.createDefaultWithTestPackages(configuration.baseDirectory, scanPackages.split(","))
-        } else {
-            CordappLoader.createDefault(configuration.baseDirectory)
-        }
     }
 
     protected open fun makeTransactionStorage(): WritableTransactionStorage = DBTransactionStorage()
