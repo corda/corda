@@ -121,7 +121,7 @@ class CashSelectionH2Impl : CashSelection {
                     psSelectJoin.setObject(5, onlyFromIssuerParties.map { it.owningKey.toBase58String() as Any}.toTypedArray() )
                 if (withIssuerRefs.isNotEmpty())
                     psSelectJoin.setObject(6, withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray())
-                log.info(psSelectJoin.toString())
+                log.debug { psSelectJoin.toString() }
 
                 // Retrieve spendable state refs
                 val rs = psSelectJoin.executeQuery()
