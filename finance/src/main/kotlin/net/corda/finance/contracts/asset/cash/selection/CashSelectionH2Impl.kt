@@ -61,20 +61,10 @@ class CashSelectionH2Impl : CashSelection {
                                                  lockId: UUID,
                                                  withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
 
-        val issuerKeysStr = onlyFromIssuerParties.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }.dropLast(1)
-        val issuerRefsStr = withIssuerRefs.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }.dropLast(1)
-
         val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
 
-        //       We are using an H2 specific means of selecting a minimum set of rows that match a request amount of coins:
-        //       1) There is no standard SQL mechanism of calculating a cumulative total on a field and restricting row selection on the
-        //          running total of such an accumulator
-        //       2) H2 uses session variables to perform this accumulator function:
-        //          http://www.h2database.com/html/functions.html#set
-        //       3) H2 does not support JOIN's in FOR UPDATE (hence we are forced to execute 2 queries)
-
         for (retryCount in 1..MAX_RETRIES) {
-            if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, issuerKeysStr, withIssuerRefs, issuerRefsStr, stateAndRefs)) {
+            if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs, stateAndRefs)) {
                 log.warn("Coin selection failed on attempt $retryCount")
                 // TODO: revisit the back off strategy for contended spending.
                 if (retryCount != MAX_RETRIES) {
@@ -91,32 +81,51 @@ class CashSelectionH2Impl : CashSelection {
         return stateAndRefs
     }
 
-    private fun attemptSpend(services: ServiceHub, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, issuerKeysStr: String, withIssuerRefs: Set<OpaqueBytes>, issuerRefsStr: String, stateAndRefs: MutableList<StateAndRef<Cash.State>>): Boolean {
+    //       We are using an H2 specific means of selecting a minimum set of rows that match a request amount of coins:
+    //       1) There is no standard SQL mechanism of calculating a cumulative total on a field and restricting row selection on the
+    //          running total of such an accumulator
+    //       2) H2 uses session variables to perform this accumulator function:
+    //          http://www.h2database.com/html/functions.html#set
+    //       3) H2 does not support JOIN's in FOR UPDATE (hence we are forced to execute 2 queries)
+
+    private fun attemptSpend(services: ServiceHub, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, stateAndRefs: MutableList<StateAndRef<Cash.State>>): Boolean {
+        val connection = services.jdbcSession()
         spendLock.withLock {
-            val statement = services.jdbcSession().createStatement()
+            val statement = connection.createStatement()
             try {
                 statement.execute("CALL SET(@t, CAST(0 AS BIGINT));")
 
-                // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
-                // the softLockReserve update will detect whether we try to lock states locked by others
                 val selectJoin = """
-                        SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
-                        FROM vault_states AS vs, contract_cash_states AS ccs
-                        WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
-                        AND vs.state_status = 0
-                        AND ccs.ccy_code = '${amount.token}' and @t < ${amount.quantity}
-                        AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
-                        """ +
+                SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
+                FROM vault_states AS vs, contract_cash_states AS ccs
+                WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
+                AND vs.state_status = 0
+                AND ccs.ccy_code = ? and @t < ?
+                AND (vs.lock_id = ? OR vs.lock_id is null)
+                """ +
                         (if (notary != null)
-                            " AND vs.notary_name = '${notary.name}'" else "") +
+                            " AND vs.notary_name = ?" else "") +
                         (if (onlyFromIssuerParties.isNotEmpty())
-                            " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
+                            " AND ccs.issuer_key IN (?)" else "") +
                         (if (withIssuerRefs.isNotEmpty())
-                            " AND ccs.issuer_ref IN ($issuerRefsStr)" else "")
+                            " AND ccs.issuer_ref IN (?)" else "")
+
+                // Use prepared statement for protection against SQL Injection (http://www.h2database.com/html/advanced.html#sql_injection)
+                val psSelectJoin = connection.prepareStatement(selectJoin)
+                psSelectJoin.setString(1, amount.token.currencyCode)
+                psSelectJoin.setLong(2, amount.quantity)
+                psSelectJoin.setString(3, lockId.toString())
+                if (notary != null)
+                    psSelectJoin.setString(4, notary.name.toString())
+                if (onlyFromIssuerParties.isNotEmpty())
+                    psSelectJoin.setObject(5, onlyFromIssuerParties.map { it.owningKey.toBase58String() as Any}.toTypedArray() )
+                if (withIssuerRefs.isNotEmpty())
+                    psSelectJoin.setObject(6, withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray())
+                log.info(psSelectJoin.toString())
 
                 // Retrieve spendable state refs
-                val rs = statement.executeQuery(selectJoin)
-                log.debug(selectJoin)
+                val rs = psSelectJoin.executeQuery()
+                stateAndRefs.clear()
                 var totalPennies = 0L
                 while (rs.next()) {
                     val txHash = SecureHash.parse(rs.getString(1))
