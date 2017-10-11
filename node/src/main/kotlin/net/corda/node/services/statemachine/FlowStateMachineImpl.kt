@@ -15,6 +15,8 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
@@ -327,7 +329,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             is FlowSessionState.Initiated -> sessionState.peerSessionId
             else -> throw IllegalStateException("We've somehow held onto a non-initiated session: $session")
         }
-        return SessionData(peerSessionId, payload)
+        return SessionData(peerSessionId, payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
     }
 
     @Suspendable
@@ -389,7 +391,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         session.state = FlowSessionState.Initiating(state.otherParty)
         session.retryable = retryable
         val (version, initiatingFlowClass) = session.flow.javaClass.flowVersionAndInitiatingClass
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, firstPayload)
+        val payloadBytes = firstPayload?.serialize(context = SerializationDefaults.P2P_CONTEXT)
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, payloadBytes)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
