@@ -19,8 +19,8 @@ class SwapIdentitiesFlowTests {
         val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
-        val alice = aliceNode.services.myInfo.chooseIdentity(ALICE_NAME)
-        val bob = bobNode.services.myInfo.chooseIdentity(BOB_NAME)
+        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
+        val bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
 
         // Run the flows
         val requesterFlow = aliceNode.services.startFlow(SwapIdentitiesFlow(bob))

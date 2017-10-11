@@ -39,8 +39,8 @@ class WorkflowTransactionBuildTutorialTest {
         aliceNode.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)
         aliceServices = aliceNode.services
         bobServices = bobNode.services
-        alice = aliceNode.services.myInfo.chooseIdentity(ALICE_NAME)
-        bob = bobNode.services.myInfo.chooseIdentity(BOB_NAME)
+        alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
+        bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
     }
 
     @After

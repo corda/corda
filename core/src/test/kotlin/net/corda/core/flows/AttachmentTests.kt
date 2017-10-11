@@ -62,7 +62,7 @@ class AttachmentTests {
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
         aliceNode.internals.ensureRegistered()
-        val alice = aliceNode.services.myInfo.chooseIdentity(ALICE_NAME)
+        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -108,7 +108,7 @@ class AttachmentTests {
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         mockNet.runNetwork()
-        val alice = aliceNode.services.myInfo.chooseIdentity(ALICE_NAME)
+        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
         val bobFlow = bobNode.startAttachmentFlow(setOf(hash), alice)
         mockNet.runNetwork()
         val e = assertFailsWith<FetchDataFlow.HashNotFound> { bobFlow.resultFuture.getOrThrow() }
@@ -132,7 +132,7 @@ class AttachmentTests {
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
         aliceNode.internals.ensureRegistered()
-        val alice = aliceNode.services.myInfo.chooseIdentity(ALICE_NAME)
+        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
