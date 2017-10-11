@@ -96,13 +96,13 @@ class CashSelectionH2Impl : CashSelection {
                 statement.execute("CALL SET(@t, CAST(0 AS BIGINT));")
 
                 val selectJoin = """
-                SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
-                FROM vault_states AS vs, contract_cash_states AS ccs
-                WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
-                AND vs.state_status = 0
-                AND ccs.ccy_code = ? and @t < ?
-                AND (vs.lock_id = ? OR vs.lock_id is null)
-                """ +
+                    SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
+                    FROM vault_states AS vs, contract_cash_states AS ccs
+                    WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
+                    AND vs.state_status = 0
+                    AND ccs.ccy_code = ? and @t < ?
+                    AND (vs.lock_id = ? OR vs.lock_id is null)
+                    """ +
                         (if (notary != null)
                             " AND vs.notary_name = ?" else "") +
                         (if (onlyFromIssuerParties.isNotEmpty())
