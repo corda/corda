@@ -336,7 +336,7 @@ abstract class AbstractNode(config: NodeConfiguration,
             if (NotaryService::class.java.isAssignableFrom(serviceClass)) {
                 check(myNotaryIdentity != null) { "Trying to install a notary service but no notary identity specified" }
                 val constructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
-                serviceContext.serviceInstance = constructor.newInstance(services, myNotaryIdentity!!.owningKey)
+                serviceContext.serviceInstance = constructor.newInstance(serviceContext, myNotaryIdentity!!.owningKey)
                 serviceContext.serviceInstance
             } else {
                 try {

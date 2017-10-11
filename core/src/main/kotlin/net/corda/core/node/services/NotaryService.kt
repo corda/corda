@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import com.google.common.primitives.Booleans
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.*
@@ -16,7 +17,7 @@ abstract class NotaryService : SingletonSerializeAsToken() {
     companion object {
         const val ID_PREFIX = "corda.notary."
         fun constructId(validating: Boolean, raft: Boolean = false, bft: Boolean = false, custom: Boolean = false): String {
-            require(!raft || !bft)
+            require(Booleans.countTrue(raft, bft, custom) <= 1) { "At most one of raft, bft or custom may be true" }
             return StringBuffer(ID_PREFIX).apply {
                 append(if (validating) "validating" else "simple")
                 if (raft) append(".raft")

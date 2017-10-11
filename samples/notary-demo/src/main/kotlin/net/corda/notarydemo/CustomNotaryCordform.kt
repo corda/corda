@@ -11,7 +11,7 @@ import net.corda.testing.internal.demorun.*
 
 fun main(args: Array<String>) = CustomNotaryCordform.runNodes()
 
-object CustomNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", DUMMY_NOTARY.name.toString()) {
+object CustomNotaryCordform : CordformDefinition("build" / "notary-demo-nodes") {
     init {
         node {
             name(ALICE.name)

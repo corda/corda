@@ -46,7 +46,7 @@ publishing {
     }
 }
 
-task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT'])
+task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 
 task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
     directory "./build/nodes/nodesSingle"

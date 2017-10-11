@@ -94,7 +94,7 @@ path to the node's base directory.
     .. note:: The driver will not automatically create a webserver instance, but the Cordformation will. If this field
               is present the web server will start.
 
-:notary: Optional config object which if present configures the node to run as a notary. If part of a Raft or BFT SMaRt
+:notary: Optional configuration object which if present configures the node to run as a notary. If part of a Raft or BFT SMaRt
     cluster then specify ``raft`` or ``bftSMaRt`` respectively as described below. If a single node notary then omit both.
 
         :validating: Boolean to determine whether the notary is a validating or non-validating one.
@@ -115,6 +115,8 @@ path to the node's base directory.
                 :clusterAddresses: List of all BFT-SMaRt cluster member addresses.
 
         :custom: If `true`, will load and install a notary service from a CorDapp. See :doc:`tutorial-custom-notary`.
+
+    Only one of ``raft``, ``bftSMaRt`` or ``custom`` configuration values may be specified.
 
 :networkMapService: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise this is
     a config object with the details of the network map service:
