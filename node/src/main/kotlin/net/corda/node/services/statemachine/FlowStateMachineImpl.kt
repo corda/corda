@@ -12,13 +12,9 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.abbreviate
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.staticField
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
@@ -486,7 +482,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         }
 
-        if (ioRequest is Sleep) {
+        if (exceptionDuringSuspend == null && ioRequest is Sleep) {
             // Sleep on the fiber.  This will not sleep if it's in the past.
             Strand.sleep(Duration.between(Instant.now(), ioRequest.until).toNanos(), TimeUnit.NANOSECONDS)
         }
