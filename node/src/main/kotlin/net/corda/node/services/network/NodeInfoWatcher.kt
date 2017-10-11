@@ -12,6 +12,7 @@ import net.corda.core.utilities.seconds
 import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
+import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
@@ -32,7 +33,8 @@ class NodeInfoWatcher(private val nodePath: Path,
                       private val scheduler: Scheduler = Schedulers.io()) {
 
     private val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
-    private val pollFrequencyMsec: Long
+    private val pollFrequencyMsec: Long = maxOf(pollFrequencyMsec, 5.seconds.toMillis())
+    private val successfullyProcessedFiles = mutableSetOf<Path>()
 
     companion object {
         private val logger = loggerFor<NodeInfoWatcher>()
@@ -61,7 +63,13 @@ class NodeInfoWatcher(private val nodePath: Path,
     }
 
     init {
-        this.pollFrequencyMsec = maxOf(pollFrequencyMsec, 5.seconds.toMillis())
+        if (!nodeInfoDirectory.isDirectory()) {
+            try {
+                nodeInfoDirectory.createDirectories()
+            } catch (e: IOException) {
+                logger.info("Failed to create $nodeInfoDirectory", e)
+            }
+        }
     }
 
     /**
@@ -71,8 +79,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      * We simply list the directory content every 5 seconds, the Java implementation of WatchService has been proven to
      * be unreliable on MacOs and given the fairly simple use case we have, this simple implementation should do.
      *
-     * @return an [Observable] returning [NodeInfo]s, there is no guarantee that the same value isn't returned more
-     *      than once.
+     * @return an [Observable] returning [NodeInfo]s, at most one [NodeInfo] is returned for each processed file.
      */
     fun nodeInfoUpdates(): Observable<NodeInfo> {
         return Observable.interval(pollFrequencyMsec, TimeUnit.MILLISECONDS, scheduler)
@@ -87,16 +94,20 @@ class NodeInfoWatcher(private val nodePath: Path,
      */
     private fun loadFromDirectory(): List<NodeInfo> {
         if (!nodeInfoDirectory.isDirectory()) {
-            logger.info("$nodeInfoDirectory isn't a Directory, not loading NodeInfo from files")
             return emptyList()
         }
         val result = nodeInfoDirectory.list { paths ->
-            paths.filter { it.isRegularFile() }
-                    .map { processFile(it) }
+            paths.filter { it !in successfullyProcessedFiles }
+                    .filter { it.isRegularFile() }
+                    .map { path ->
+                        processFile(path)?.apply { successfullyProcessedFiles.add(path) }
+                    }
                     .toList()
                     .filterNotNull()
         }
-        logger.info("Successfully read ${result.size} NodeInfo files.")
+        if (result.isNotEmpty()) {
+            logger.info("Successfully read ${result.size} NodeInfo files from disk.")
+        }
         return result
     }
 

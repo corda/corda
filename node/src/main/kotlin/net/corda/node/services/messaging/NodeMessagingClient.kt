@@ -133,6 +133,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     persistentEntityClass = RetryMessage::class.java
             )
         }
+
+        private class NodeClientMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID) : Message {
+            override val debugTimestamp: Instant = Instant.now()
+            override fun toString() = "$topicSession#${String(data)}"
+        }
     }
 
     private class InnerState {
@@ -599,13 +604,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
-        return object : Message {
-            override val topicSession: TopicSession = topicSession
-            override val data: ByteArray = data
-            override val debugTimestamp: Instant = Instant.now()
-            override val uniqueMessageId: UUID = uuid
-            override fun toString() = "$topicSession#${String(data)}"
-        }
+        return NodeClientMessage(topicSession, data, uuid)
     }
 
     private fun createOutOfProcessVerifierService(): TransactionVerifierService {
