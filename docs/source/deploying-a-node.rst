@@ -11,13 +11,12 @@ Cordform is the local node deployment system for CorDapps. The nodes generated a
 debugging, and testing node configurations, but not for production or testnet deployment.
 
 Here is an example Gradle task called ``deployNodes`` that uses the Cordform plugin to deploy three nodes, plus a
-notary/network map node:
+notary node:
 
 .. sourcecode:: groovy
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
-        networkMap "O=Controller,OU=corda,L=London,C=UK"
         node {
             name "O=Controller,OU=corda,L=London,C=UK"
             notary = [validating : true]
@@ -52,9 +51,7 @@ notary/network map node:
         }
     }
 
-You can extend ``deployNodes`` to generate any number of nodes you like. The only requirement is that you must specify
-one node as running the network map service, by putting their name in the ``networkMap`` field. In our example, the
-``Controller`` is set as the network map service.
+You can extend ``deployNodes`` to generate any number of nodes you like.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
@@ -85,9 +82,14 @@ run all the nodes at once. Each node in the ``nodes`` folder has the following s
 .. sourcecode:: none
 
     . nodeName
-    ├── corda.jar       // The Corda runtime
-    ├── node.conf       // The node's configuration
-    └── plugins         // Any installed CorDapps
+    ├── corda.jar               // The Corda runtime
+    ├── node.conf               // The node's configuration
+    ├── plugins                 // Any installed CorDapps
+    └── additional-node-infos   // Directory containing all the addresses and certificates of the other nodes.
+
+.. note:: During the build process each node generates a NodeInfo file which is written in its own root directory,
+the plug-in proceeds and copies each node NodeInfo to every other node ``additional-node-infos`` directory.
+The NodeInfo file contains a node hostname and port, legal name and security certificate.
 
 .. note:: Outside of development environments, do not store your node directories in the build folder.
 
