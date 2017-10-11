@@ -24,8 +24,7 @@ class FxTransactionBuildTutorialTest {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.finance.contracts.asset")
-        mockNet = MockNetwork(threadPerNode = true)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance.contracts.asset"))
         mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
@@ -38,7 +37,6 @@ class FxTransactionBuildTutorialTest {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test

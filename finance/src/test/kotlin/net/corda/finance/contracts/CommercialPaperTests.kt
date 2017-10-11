@@ -231,7 +231,6 @@ class CommercialPaperTestsGeneric {
     //    @Test
     @Ignore
     fun `issue move and then redeem`() {
-        setCordappPackages("net.corda.finance.contracts")
         initialiseTestSerialization()
         val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(ALICE_KEY))
         val databaseAlice = aliceDatabaseAndServices.first

@@ -11,8 +11,6 @@ import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -26,19 +24,9 @@ class SimmValuationTest : IntegrationTestCategory {
         val testTradeId = "trade1"
     }
 
-    @Before
-    fun setup() {
-        setCordappPackages("net.corda.vega.contracts")
-    }
-
-    @After
-    fun tearDown() {
-        unsetCordappPackages()
-    }
-
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(isDebug = true) {
+        driver(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.vega.contracts")) {
             startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)

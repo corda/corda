@@ -9,7 +9,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -46,11 +45,6 @@ class AttachmentsClassLoaderStaticContractTests : TestDependencyInjectionBase() 
     @Before
     fun `create service hub`() {
         serviceHub = MockServices(cordappPackages = listOf("net.corda.nodeapi.internal"))
-    }
-
-    @After
-    fun `clear packages`() {
-        unsetCordappPackages()
     }
 
     @Test
