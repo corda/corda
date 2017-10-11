@@ -14,7 +14,6 @@ buildscript {
 ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
 
-
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-spring'
 apply plugin: 'eclipse'
@@ -43,7 +42,6 @@ jar {
 }
 
 task deployWebapps(type: Copy, dependsOn: ['jar', 'bootRepackage']) {
-
 	ext.webappDir = file("build/webapps")
 
 	from(jar.outputs)
