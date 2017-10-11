@@ -1,6 +1,7 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -16,7 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TransactionSerializationTests : TestDependencyInjectionBase() {
-    val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
+    private val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
 
     class TestCash : Contract {
         override fun verify(tx: LedgerTransaction) {
@@ -63,12 +64,6 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
 
         // Now check that the signature we just made verifies.
         stx.verifyRequiredSignatures()
-
-        // Corrupt the data and ensure the signature catches the problem.
-        stx.id.bytes[5] = stx.id.bytes[5].inc()
-        assertFailsWith(SignatureException::class) {
-            stx.verifyRequiredSignatures()
-        }
     }
 
     @Test

@@ -19,13 +19,29 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         }
     }
 
+    /**
+     * Convert the hash value to a hexadecimal [String].
+     */
     override fun toString(): String = bytes.toHexString()
 
+    /**
+     * Returns the first [prefixLen] hexadecimal digits of the [SecureHash] value.
+     * @param prefixLen
+     */
     fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
+
+    /**
+     * Append a second hash value to this hash value, and then compute the SHA-256 hash of the result.
+     * @param other
+     */
     fun hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
+        /**
+         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SecureHash].
+         * @param str A sequence of 64 hexadecimal digits that represents a SHA-256 hash value.
+         */
         @JvmStatic
         fun parse(str: String) = str.toUpperCase().parseAsHex().let {
             when (it.size) {
@@ -34,24 +50,55 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             }
         }
 
+        /**
+         * Computes the SHA-256 hash value of the [ByteArray].
+         * @param bytes
+         */
         @JvmStatic
         fun sha256(bytes: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bytes))
 
+        /**
+         * Computes the SHA-256 hash of the [ByteArray], and then computes the SHA-256 hash of the hash.
+         * @param bytes
+         */
         @JvmStatic
         fun sha256Twice(bytes: ByteArray) = sha256(sha256(bytes).bytes)
 
+        /**
+         * Computes the SHA-256 hash of the [String]'s UTF-8 byte contents.
+         * @param str
+         */
         @JvmStatic
         fun sha256(str: String) = sha256(str.toByteArray())
 
+        /**
+         * Generates a random SHA-256 value.
+         */
         @JvmStatic
         fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
 
+        /**
+         * A SHA-256 hash value consisting of 32 0x00 bytes.
+         */
+        @JvmField
         val zeroHash = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
+
+        /**
+         * A SHA-256 hash value consisting of 32 0xFF bytes.
+         */
+        @JvmField
         val allOnesHash = SecureHash.SHA256(ByteArray(32, { 255.toByte() }))
     }
 
     // In future, maybe SHA3, truncated hashes etc.
 }
 
+/**
+ * Compute the SHA-256 hash for the contents of the [ByteArray].
+ */
 fun ByteArray.sha256(): SecureHash.SHA256 = SecureHash.sha256(this)
+
+/**
+ * Compute the SHA-256 hash for the contents of the [OpaqueBytes].
+ */
 fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bytes)
