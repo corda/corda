@@ -52,7 +52,7 @@ class InteractiveShellTest {
     private fun check(input: String, expected: String) {
         var output: DummyFSM? = null
         InteractiveShell.runFlowFromString({ DummyFSM(it as FlowA).apply { output = this } }, input, FlowA::class.java, om)
-        assertEquals(expected, output!!.logic.a, input)
+        assertEquals(expected, output!!.flowA.a, input)
     }
 
     @Test
@@ -84,4 +84,4 @@ class InteractiveShellTest {
     fun party() = check("party: \"${MEGA_CORP.name}\"", MEGA_CORP.name.toString())
 
     class DummyFSM(val logic: FlowA) : FlowStateMachine<Any?> by mock()
-        }
+}
