@@ -26,7 +26,7 @@ import java.nio.file.Paths
 
 data class VerifierConfiguration(
         override val baseDirectory: Path,
-        private val config: Config
+        val config: Config // NB: This property is being used via reflection.
 ) : NodeSSLConfiguration {
     val nodeHostAndPort: NetworkHostAndPort by config
     override val keyStorePassword: String by config
