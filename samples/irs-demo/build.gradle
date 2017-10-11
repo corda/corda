@@ -51,7 +51,6 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "O=Notary Service,L=Zurich,C=CH"
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]

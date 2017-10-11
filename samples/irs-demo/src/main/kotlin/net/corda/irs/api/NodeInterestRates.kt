@@ -2,11 +2,10 @@ package net.corda.irs.api
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.internal.ThreadBox
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -78,7 +77,7 @@ object NodeInterestRates {
     @ThreadSafe
     // DOCSTART 3
     @CordaService
-    class Oracle(private val services: ServiceHub) : SingletonSerializeAsToken() {
+    class Oracle(private val services: AppServiceHub) : SingletonSerializeAsToken() {
         private val mutex = ThreadBox(InnerState())
 
         init {
