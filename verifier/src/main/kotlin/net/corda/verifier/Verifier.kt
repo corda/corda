@@ -17,17 +17,16 @@ import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
+import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths
 
 data class VerifierConfiguration(
         override val baseDirectory: Path,
-        val config: Config
+        private val config: Config
 ) : NodeSSLConfiguration {
     val nodeHostAndPort: NetworkHostAndPort by config
     override val keyStorePassword: String by config
@@ -88,18 +87,27 @@ class Verifier {
 
         private fun initialiseSerialization() {
             SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                registerScheme(KryoVerifierSerializationScheme())
+                registerScheme(KryoVerifierSerializationScheme)
+                registerScheme(AMQPVerifierSerializationScheme)
             }
-            SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         }
     }
 
-    class KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
+    private object KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
         override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
             return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
         }
 
         override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
+    }
+
+    private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme() {
+        override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
+            return (byteSequence == AmqpHeaderV1_0 && (target == SerializationContext.UseCase.P2P))
+        }
+
+        override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory = throw UnsupportedOperationException()
+        override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory = throw UnsupportedOperationException()
     }
 }

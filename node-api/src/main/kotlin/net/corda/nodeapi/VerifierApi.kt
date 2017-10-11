@@ -1,8 +1,16 @@
 package net.corda.nodeapi
 
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.sequence
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
+import net.corda.nodeapi.internal.serialization.obtainHeaderSignature
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.reader.MessageUtil
@@ -21,12 +29,22 @@ object VerifierApi {
     ) {
         companion object {
             fun fromClientMessage(message: ClientMessage): VerificationRequest {
+                val bytes = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
+                val bytesSequence = bytes.sequence()
+                val context = establishSuitableContext(bytesSequence.obtainHeaderSignature())
                 return VerificationRequest(
                         message.getLongProperty(VERIFICATION_ID_FIELD_NAME),
-                        ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }.deserialize(),
+                        bytesSequence.deserialize(context = context),
                         MessageUtil.getJMSReplyTo(message)
                 )
             }
+
+            private fun establishSuitableContext(headerSignature: ByteSequence): SerializationContext =
+                    when (headerSignature) {
+                        KryoHeaderV0_1 -> KRYO_P2P_CONTEXT
+                        AmqpHeaderV1_0 -> AMQP_P2P_CONTEXT
+                        else -> throw IllegalArgumentException("Unrecognised header signature '$headerSignature'")
+                    }
         }
 
         fun writeToClientMessage(message: ClientMessage) {
