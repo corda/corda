@@ -23,7 +23,6 @@ class BankOfCordaRPCClientTest {
             val nodeBankOfCordaFuture = startNotaryNode(BOC.name, rpcUsers = listOf(bocManager), validating = false)
             val nodeBigCorporationFuture = startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(nodeBankOfCordaFuture, nodeBigCorporationFuture).map { it.getOrThrow() }
-            val bigCorporation = nodeBankOfCorda.rpc.wellKnownPartyFromX500Name(BIGCORP_LEGAL_NAME)!!
 
             // Bank of Corda RPC Client
             val bocClient = nodeBankOfCorda.rpcClientToNode()
@@ -41,6 +40,8 @@ class BankOfCordaRPCClientTest {
 
             // Register for Big Corporation Vault updates
             val vaultUpdatesBigCorp = bigCorpProxy.vaultTrackByCriteria(Cash.State::class.java, criteria).updates
+
+            val bigCorporation = bigCorpProxy.wellKnownPartyFromX500Name(BIGCORP_LEGAL_NAME)!!
 
             // Kick-off actual Issuer Flow
             val anonymous = true
