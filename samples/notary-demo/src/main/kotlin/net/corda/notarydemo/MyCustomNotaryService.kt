@@ -32,7 +32,7 @@ class MyCustomValidatingNotaryService(override val services: AppServiceHub, over
 }
 // END 1
 
-@SuppressWarnings("This is a template class")
+@Suppress("UNUSED_PARAMETER")
 // START 2
 class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidatingNotaryService) : NotaryFlow.Service(otherSide, service) {
     /**

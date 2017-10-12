@@ -254,41 +254,38 @@ abstract class AbstractNode(config: NodeConfiguration,
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
     private fun installCordaServices() {
-        cordappProvider.cordapps
-                .flatMap { it.services }
-                .forEach {
-                    try {
-                        if (isServiceEnabled(it)) {
-                            installCordaService(it)
-                        }
-                    } catch (e: NoSuchMethodException) {
-                        log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
-                                ServiceHub::class.java.name)
-                    } catch (e: ServiceInstantiationException) {
-                        log.error("Corda service ${it.name} failed to instantiate", e.cause)
-                    } catch (e: Exception) {
-                        log.error("Unable to install Corda service ${it.name}", e)
-                    }
+        val loadedServices = cordappProvider.cordapps.flatMap { it.services }
+        filterServicesToInstall(loadedServices).forEach {
+            try {
+                installCordaService(it)
+            } catch (e: NoSuchMethodException) {
+                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
+                        ServiceHub::class.java.name)
+            } catch (e: ServiceInstantiationException) {
+                log.error("Corda service ${it.name} failed to instantiate", e.cause)
+            } catch (e: Exception) {
+                log.error("Unable to install Corda service ${it.name}", e)
+            }
+        }
+    }
+
+    private fun filterServicesToInstall(loadedServices: List<Class<out SerializeAsToken>>): List<Class<out SerializeAsToken>> {
+        val customNotaryServiceList = loadedServices.filter { isNotaryService(it) }
+        if (customNotaryServiceList.isNotEmpty()) {
+            if (configuration.notary?.custom == true) {
+                require(customNotaryServiceList.size == 1) {
+                    "Attempting to install more than one notary service: ${customNotaryServiceList.joinToString()}"
                 }
+            }
+            else return loadedServices - customNotaryServiceList
+        }
+        return loadedServices
     }
 
     /**
      * If the [serviceClass] is a notary service, it will only be enable if the "custom" flag is set in
      * the notary configuration.
      */
-    private fun isServiceEnabled(serviceClass: Class<*>): Boolean {
-        return if (isNotaryService(serviceClass)) {
-            if (configuration.notary?.custom == true) {
-                val alreadyInstalledCustomNotary = cordappServices.keys.singleOrNull { isNotaryService(it) }
-                if (alreadyInstalledCustomNotary != null) {
-                    log.warn("A custom notary service has already been installed: ${alreadyInstalledCustomNotary.canonicalName}, ${serviceClass.canonicalName} will be ignored.")
-                    false
-                } else true
-            } else false
-        }
-        else true
-    }
-
     private fun isNotaryService(serviceClass: Class<*>) = NotaryService::class.java.isAssignableFrom(serviceClass)
 
     /**
