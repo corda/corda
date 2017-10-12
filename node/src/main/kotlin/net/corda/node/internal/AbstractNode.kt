@@ -256,10 +256,11 @@ abstract class AbstractNode(config: NodeConfiguration,
     private fun installCordaServices() {
         cordappProvider.cordapps
                 .flatMap { it.services }
-                .filter { isServiceEnabled(it) }
                 .forEach {
                     try {
-                        installCordaService(it)
+                        if (isServiceEnabled(it)) {
+                            installCordaService(it)
+                        }
                     } catch (e: NoSuchMethodException) {
                         log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
                                 ServiceHub::class.java.name)
@@ -276,11 +277,19 @@ abstract class AbstractNode(config: NodeConfiguration,
      * the notary configuration.
      */
     private fun isServiceEnabled(serviceClass: Class<*>): Boolean {
-        if (NotaryService::class.java.isAssignableFrom(serviceClass)) {
-            return configuration.notary?.custom == true
+        return if (isNotaryService(serviceClass)) {
+            if (configuration.notary?.custom == true) {
+                val alreadyInstalledCustomNotary = cordappServices.keys.singleOrNull { isNotaryService(it) }
+                if (alreadyInstalledCustomNotary != null) {
+                    log.warn("A custom notary service has already been installed: ${alreadyInstalledCustomNotary.canonicalName}, ${serviceClass.canonicalName} will be ignored.")
+                    false
+                } else true
+            } else false
         }
-        return true
+        else true
     }
+
+    private fun isNotaryService(serviceClass: Class<*>) = NotaryService::class.java.isAssignableFrom(serviceClass)
 
     /**
      * This customizes the ServiceHub for each CordaService that is initiating flows
@@ -333,7 +342,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         serviceClass.requireAnnotation<CordaService>()
         val service = try {
             val serviceContext = AppServiceHubImpl<T>(services)
-            if (NotaryService::class.java.isAssignableFrom(serviceClass)) {
+            if (isNotaryService(serviceClass)) {
                 check(myNotaryIdentity != null) { "Trying to install a notary service but no notary identity specified" }
                 val constructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
                 serviceContext.serviceInstance = constructor.newInstance(serviceContext, myNotaryIdentity!!.owningKey)
