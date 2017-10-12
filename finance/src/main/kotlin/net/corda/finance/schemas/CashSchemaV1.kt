@@ -6,7 +6,6 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import javax.persistence.*
-import org.hibernate.annotations.Type
 
 /**
  * An object used to fully qualify the [CashSchema] family name (i.e. independent of version).
@@ -26,7 +25,6 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
     class PersistentCashState(
             /** X500Name of owner party **/
             @Column(name = "owner_name")
-            @Type(type = "party")
             var owner: AbstractParty,
 
             @Column(name = "pennies")

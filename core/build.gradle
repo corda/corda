@@ -32,9 +32,6 @@ dependencies {
     // Quasar, for suspendable fibres.
     compileOnly "co.paralleluniverse:quasar-core:$quasar_version:jdk8"
 
-    // Hibernate: an object relational mapper for writing state objects to the database automatically.
-    compileOnly "org.hibernate:hibernate-core:$hibernate_version"
-
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:3.0.1"
 

@@ -9,7 +9,6 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
-import org.hibernate.annotations.Type
 import java.io.Serializable
 import java.time.Instant
 import java.util.*
@@ -32,7 +31,6 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     class VaultStates(
             /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name")
-            @Type(type = "party")
             var notary: Party,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
@@ -76,7 +74,6 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** X500Name of participant parties **/
             @ElementCollection
             @Column(name = "participants")
-            @Type(type = "party")
             var participants: MutableSet<AbstractParty>? = null,
             // Reason for not using Set is described here:
             // https://stackoverflow.com/questions/44213074/kotlin-collection-has-neither-generic-type-or-onetomany-targetentity
@@ -104,14 +101,12 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** X500Name of participant parties **/
             @ElementCollection
             @Column(name = "participants")
-            @Type(type = "party")
             var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
 
             /** X500Name of owner party **/
             @Column(name = "owner_name")
-            @Type(type = "party")
             var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
@@ -128,7 +123,6 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** X500Name of issuer party **/
             @Column(name = "issuer_name")
-            @Type(type = "party")
             var issuer: AbstractParty,
 
             @Column(name = "issuer_reference")

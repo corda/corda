@@ -4,7 +4,6 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import org.hibernate.annotations.Type
 import javax.persistence.Entity
 import javax.persistence.Table
 import javax.persistence.Transient
@@ -24,7 +23,6 @@ object DummyDealStateSchemaV1 : MappedSchema(schemaFamily = DummyDealStateSchema
     class PersistentDummyDealState(
             /** parent attributes */
             @Transient
-            @Type(type = "party")
             val _participants: Set<AbstractParty>,
 
             @Transient

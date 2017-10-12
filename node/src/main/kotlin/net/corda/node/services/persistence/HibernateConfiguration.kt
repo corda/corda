@@ -18,6 +18,7 @@ import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
+import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import java.sql.Connection
@@ -35,6 +36,8 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?: "")
     val sessionFactoryForRegisteredSchemas = schemaService.schemaOptions.keys.let {
         logger.info("Init HibernateConfiguration for schemas: $it")
+        // Register the AbstractPartyDescriptor so Hibernate doesn't warn
+        JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(createIdentityService))
         sessionFactoryForSchemas(it)
     }
 
@@ -72,8 +75,8 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                     return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
                 }
             })
-            // register custom types
-            applyBasicType(AbstractPartyType(createIdentityService))
+            // register custom converters
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityService))
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
