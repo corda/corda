@@ -17,7 +17,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.CertificateAndKeyPair
@@ -169,18 +168,3 @@ fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 /** Returns the identity of the first notary found on the network */
 fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
-
-/**
- * Set the package to scan for cordapps - this overrides the default behaviour of scanning the cordapps directory
- * @param packageNames A package name that you wish to scan for cordapps
- */
-fun setCordappPackages(vararg packageNames: String) {
-    CordappLoader.testPackages = packageNames.toList()
-}
-
-/**
- * Unsets the default overriding behaviour of [setCordappPackages]
- */
-fun unsetCordappPackages() {
-    CordappLoader.testPackages = emptyList()
-}

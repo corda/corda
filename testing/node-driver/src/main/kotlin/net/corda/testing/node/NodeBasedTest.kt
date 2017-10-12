@@ -9,6 +9,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
@@ -31,7 +32,7 @@ import kotlin.concurrent.thread
  * purposes. Use the driver if you need to run the nodes in separate processes otherwise this class will suffice.
  */
 // TODO Some of the logic here duplicates what's in the driver
-abstract class NodeBasedTest : TestDependencyInjectionBase() {
+abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) : TestDependencyInjectionBase() {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
     }
@@ -193,7 +194,8 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
         val node = Node(
                 parsedConfig,
                 MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
-                initialiseSerialization = false).start()
+                initialiseSerialization = false,
+                cordappLoader = CordappLoader.createDefaultWithTestPackages(parsedConfig, cordappPackages)).start()
         nodes += node
         thread(name = legalName.organisation) {
             node.internals.run()

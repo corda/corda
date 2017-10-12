@@ -11,11 +11,12 @@ import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
 import net.corda.testing.kryoSpecific
 import org.assertj.core.api.Assertions
-import org.junit.Assert.*
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
-import java.nio.charset.StandardCharsets.*
+import java.nio.charset.StandardCharsets.US_ASCII
 import java.util.*
 
 class ListsSerializationTest : TestDependencyInjectionBase() {
@@ -40,16 +41,19 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
     @Test
     fun `check list can be serialized as part of SessionData`() {
         run {
-            val sessionData = SessionData(123, listOf(1))
+            val sessionData = SessionData(123, listOf(1).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
+            assertEquals(listOf(1), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, listOf(1, 2))
+            val sessionData = SessionData(123, listOf(1, 2).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
+            assertEquals(listOf(1, 2), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, emptyList<Int>())
+            val sessionData = SessionData(123, emptyList<Int>().serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
+            assertEquals(emptyList<Int>(), sessionData.payload.deserialize())
         }
     }
 

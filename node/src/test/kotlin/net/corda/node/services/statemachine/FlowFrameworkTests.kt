@@ -65,8 +65,7 @@ class FlowFrameworkTests {
 
     @Before
     fun start() {
-        setCordappPackages("net.corda.finance.contracts", "net.corda.testing.contracts")
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"))
         node1 = mockNet.createNode()
         node2 = mockNet.createNode()
 
@@ -87,7 +86,6 @@ class FlowFrameworkTests {
     fun cleanUp() {
         mockNet.stopNodes()
         receivedSessionMessages.clear()
-        unsetCordappPackages()
     }
 
     @Test
@@ -712,11 +710,11 @@ class FlowFrameworkTests {
     }
 
     private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
-        return SessionInit(0, clientFlowClass.java.name, flowVersion, "", payload)
+        return SessionInit(0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
     }
 
     private fun sessionConfirm(flowVersion: Int = 1) = SessionConfirm(0, 0, flowVersion, "")
-    private fun sessionData(payload: Any) = SessionData(0, payload)
+    private fun sessionData(payload: Any) = SessionData(0, payload.serialize())
     private val normalEnd = NormalSessionEnd(0)
     private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
 

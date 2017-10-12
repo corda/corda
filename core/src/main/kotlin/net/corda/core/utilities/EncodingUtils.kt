@@ -3,9 +3,8 @@
 package net.corda.core.utilities
 
 import net.corda.core.crypto.Base58
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sha256
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import java.nio.charset.Charset
 import java.security.PublicKey
 import java.util.*
@@ -15,11 +14,13 @@ import javax.xml.bind.DatatypeConverter
 
 // [ByteArray] encoders
 
+/** Convert a byte array to a Base58 encoded [String]. */
 fun ByteArray.toBase58(): String = Base58.encode(this)
 
+/** Convert a byte array to a Base64 encoded [String]. */
 fun ByteArray.toBase64(): String = Base64.getEncoder().encodeToString(this)
 
-/** Convert a byte array to a hex (base 16) capitalized encoded string.*/
+/** Convert a byte array to a hex (Base16) capitalized encoded [String]. */
 fun ByteArray.toHex(): String = DatatypeConverter.printHexBinary(this)
 
 
@@ -65,7 +66,15 @@ fun String.hexToBase64(): String = hexToByteArray().toBase64()
 // TODO We use for both CompositeKeys and EdDSAPublicKey custom serializers and deserializers. We need to specify encoding.
 // TODO: follow the crypto-conditions ASN.1 spec, some changes are needed to be compatible with the condition
 //       structure, e.g. mapping a PublicKey to a condition with the specific feature (ED25519).
-fun parsePublicKeyBase58(base58String: String): PublicKey = base58String.base58ToByteArray().deserialize<PublicKey>()
+/**
+ * Method to return the [PublicKey] object given its Base58-[String] representation.
+ * @param base58String the Base58 encoded format of the serialised [PublicKey].
+ * @return the resulted [PublicKey] after decoding the [base58String] input and then deserialising to a [PublicKey] object.
+ */
+fun parsePublicKeyBase58(base58String: String): PublicKey = Crypto.decodePublicKey(base58String.base58ToByteArray())
 
-fun PublicKey.toBase58String(): String = this.serialize().bytes.toBase58()
-fun PublicKey.toSHA256Bytes(): ByteArray = this.serialize().bytes.sha256().bytes // TODO: decide on the format of hashed key (encoded Vs serialised).
+/** Return the Base58 representation of the serialised public key. */
+fun PublicKey.toBase58String(): String = this.encoded.toBase58()
+
+/** Return the bytes of the SHA-256 output for this public key. */
+fun PublicKey.toSHA256Bytes(): ByteArray = this.encoded.sha256().bytes

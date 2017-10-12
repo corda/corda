@@ -3,9 +3,7 @@ package net.corda.plugins
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
-import net.corda.cordform.CordformNode
 import org.apache.tools.ant.filters.FixCrLfFilter
-import org.bouncycastle.asn1.x500.X500Name
 import org.gradle.api.DefaultTask
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.TaskAction
@@ -24,7 +22,6 @@ class Cordform extends DefaultTask {
     String definitionClass
     protected def directory = Paths.get("build", "nodes")
     private def nodes = new ArrayList<Node>()
-    protected String networkMapNodeName
 
     /**
      * Set the directory to install nodes into.
@@ -34,16 +31,6 @@ class Cordform extends DefaultTask {
      */
     void directory(String directory) {
         this.directory = Paths.get(directory)
-    }
-
-    /**
-     * Set the network map node.
-     *
-     * @warning Ensure the node name is one of the configured nodes.
-     * @param nodeName The name of the node that will host the network map.
-     */
-    void networkMap(String nodeName) {
-        networkMapNodeName = nodeName
     }
 
     /**
@@ -110,12 +97,15 @@ class Cordform extends DefaultTask {
      */
     @TaskAction
     void build() {
-        String networkMapNodeName = initializeConfigurationAndGetNetworkMapNodeName()
+        initializeConfiguration()
         installRunScript()
-        finalizeConfiguration(networkMapNodeName)
+        nodes.each {
+            it.build()
+        }
+        generateNodeInfos()
     }
 
-    private initializeConfigurationAndGetNetworkMapNodeName() {
+    private initializeConfiguration() {
         if (null != definitionClass) {
             def cd = loadCordformDefinition()
             cd.nodeConfigurers.each { nc ->
@@ -129,29 +119,9 @@ class Cordform extends DefaultTask {
                     project.projectDir.toPath().resolve(getNodeByName(nodeName).nodeDir.toPath())
                 }
             }
-            return cd.networkMapNodeName.toString()
         } else {
             nodes.each {
                 it.rootDir directory
-            }
-            return this.networkMapNodeName
-        }
-    }
-
-    private finalizeConfiguration(String networkMapNodeName) {
-        Node networkMapNode = getNodeByName(networkMapNodeName)
-        if (networkMapNode == null) {
-            nodes.each {
-                it.build()
-            }
-            generateNodeInfos()
-            logger.info("Starting without networkMapNode, this an experimental feature")
-        } else {
-            nodes.each {
-                if (it != networkMapNode) {
-                    it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
-                }
-                it.build()
             }
         }
     }

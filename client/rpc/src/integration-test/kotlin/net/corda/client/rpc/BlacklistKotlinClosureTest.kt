@@ -23,7 +23,7 @@ import org.junit.rules.ExpectedException
 @CordaSerializable
 data class Packet(val x: () -> Long)
 
-class BlacklistKotlinClosureTest : NodeBasedTest() {
+class BlacklistKotlinClosureTest : NodeBasedTest(listOf("net.corda.client.rpc")) {
     companion object {
         @Suppress("UNUSED") val logger = loggerFor<BlacklistKotlinClosureTest>()
         const val EVIL: Long = 666
@@ -66,7 +66,6 @@ class BlacklistKotlinClosureTest : NodeBasedTest() {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.client.rpc")
         aliceNode = startNode(ALICE.name, rpcUsers = listOf(rpcUser)).getOrThrow()
         bobNode = startNode(BOB.name, rpcUsers = listOf(rpcUser)).getOrThrow()
         bobNode.registerInitiatedFlow(RemoteFlowC::class.java)
@@ -78,7 +77,6 @@ class BlacklistKotlinClosureTest : NodeBasedTest() {
         connection?.close()
         bobNode.internals.stop()
         aliceNode.internals.stop()
-        unsetCordappPackages()
     }
 
     @Test

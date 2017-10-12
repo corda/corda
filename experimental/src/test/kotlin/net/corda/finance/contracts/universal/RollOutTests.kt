@@ -2,11 +2,6 @@ package net.corda.finance.contracts.universal
 
 import net.corda.finance.contracts.Frequency
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.setCordappPackages
-import net.corda.testing.transaction
-import net.corda.testing.unsetCordappPackages
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -120,16 +115,6 @@ class RollOutTests {
             }
         }
         next()
-    }
-
-    @Before
-    fun setup() {
-        setCordappPackages("net.corda.finance.contracts.universal")
-    }
-
-    @After
-    fun tearDown() {
-        unsetCordappPackages()
     }
 
     @Test

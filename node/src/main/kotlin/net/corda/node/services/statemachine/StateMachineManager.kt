@@ -15,11 +15,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.castIfPossible
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
@@ -290,7 +286,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun onSessionMessage(message: ReceivedMessage) {
-        val sessionMessage = message.data.deserialize<SessionMessage>()
+        val sessionMessage = try {
+            message.data.deserialize<SessionMessage>()
+        } catch (ex: Exception) {
+            logger.error("Received corrupt SessionMessage data from ${message.peer}")
+            return
+        }
         val sender = serviceHub.networkMapCache.getPeerByLegalName(message.peer)
         if (sender != null) {
             when (sessionMessage) {
@@ -382,12 +383,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             updateCheckpoint(fiber)
             session to initiatedFlowFactory
         } catch (e: SessionRejectException) {
-            // TODO: Handle this more gracefully
-            try {
-                logger.warn("${e.logMessage}: $sessionInit")
-            } catch (e: Throwable) {
-                logger.warn("Problematic session init message during logging", e)
-            }
+            logger.warn("${e.logMessage}: $sessionInit")
             sendSessionReject(e.rejectMessage)
             return
         } catch (e: Exception) {
@@ -584,6 +580,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         when (ioRequest) {
             is SendRequest -> processSendRequest(ioRequest)
             is WaitForLedgerCommit -> processWaitForCommitRequest(ioRequest)
+            is Sleep -> processSleepRequest(ioRequest)
         }
     }
 
@@ -619,6 +616,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 fibersWaitingForLedgerCommit[ioRequest.hash] += ioRequest.fiber
             }
         }
+    }
+
+    private fun processSleepRequest(ioRequest: Sleep) {
+        // Resume the fiber now we have checkpointed, so we can sleep on the Fiber.
+        resumeFiber(ioRequest.fiber)
     }
 
     private fun sendSessionMessage(party: Party, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null, retryId: Long? = null) {

@@ -25,6 +25,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.finance.utils.WorldMapLocation
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.BFTSMaRtConfiguration
@@ -42,12 +43,9 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.testing.DUMMY_KEY_1
-import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.resetTestSerialization
-import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import java.io.Closeable
@@ -81,7 +79,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
                   InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory<*> = MockNetwork.DefaultFactory,
-                  private val initialiseSerialization: Boolean = true) : Closeable {
+                  private val initialiseSerialization: Boolean = true,
+                  private val cordappPackages: List<String> = emptyList()) : Closeable {
     companion object {
         // TODO In future PR we're removing the concept of network map node so the details of this mock are not important.
         val MOCK_NET_MAP = Party(CordaX500Name(organisation = "Mock Network Map", locality = "Madrid", country = "ES"), DUMMY_KEY_1.public)
@@ -159,7 +158,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         val id: Int,
                         internal val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
-            AbstractNode(config, TestClock(), MOCK_VERSION_INFO, mockNet.busyLatch) {
+            AbstractNode(config, TestClock(), MOCK_VERSION_INFO, CordappLoader.createDefaultWithTestPackages(config, mockNet.cordappPackages), mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
@@ -370,13 +369,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     @JvmOverloads
-    fun createNotaryNode(legalName: CordaX500Name? = null, validating: Boolean = true): StartedNode<MockNode> {
+    fun createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name, validating: Boolean = true): StartedNode<MockNode> {
         return createNode(legalName = legalName, configOverrides = {
             whenever(it.notary).thenReturn(NotaryConfig(validating))
         })
     }
 
-    fun <N : MockNode> createNotaryNode(legalName: CordaX500Name? = null,
+    fun <N : MockNode> createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name,
                                         validating: Boolean = true,
                                         nodeFactory: Factory<N>): StartedNode<N> {
         return createNode(legalName = legalName, nodeFactory = nodeFactory, configOverrides = {

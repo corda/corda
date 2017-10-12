@@ -279,7 +279,6 @@ class InMemoryMessagingNetwork(
         _sentMessages.onNext(transfer)
     }
 
-    @CordaSerializable
     private data class InMemoryMessage(override val topicSession: TopicSession,
                                        override val data: ByteArray,
                                        override val uniqueMessageId: UUID,
@@ -287,7 +286,6 @@ class InMemoryMessagingNetwork(
         override fun toString() = "$topicSession#${String(data)}"
     }
 
-    @CordaSerializable
     private data class InMemoryReceivedMessage(override val topicSession: TopicSession,
                                                override val data: ByteArray,
                                                override val platformVersion: Int,
