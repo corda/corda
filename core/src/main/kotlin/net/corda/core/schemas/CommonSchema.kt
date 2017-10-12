@@ -5,8 +5,11 @@ import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.OwnableState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
+import org.hibernate.annotations.Type
 import java.util.*
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.ElementCollection
+import javax.persistence.MappedSuperclass
 
 /**
  * JPA representation of the common schema entities
@@ -25,6 +28,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** X500Name of participant parties **/
             @ElementCollection
             @Column(name = "participants")
+            @Type(type = "party")
             var participants: MutableSet<AbstractParty>? = null,
 
             /**
@@ -50,12 +54,14 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** X500Name of participant parties **/
             @ElementCollection
             @Column(name = "participants")
+            @Type(type = "party")
             var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
 
             /** X500Name of owner party **/
             @Column(name = "owner_name")
+            @Type(type = "party")
             var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
@@ -72,6 +78,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
             /** X500Name of issuer party **/
             @Column(name = "issuer_name")
+            @Type(type = "party")
             var issuer: AbstractParty,
 
             @Column(name = "issuer_reference")

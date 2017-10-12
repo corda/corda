@@ -72,8 +72,8 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                     return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
                 }
             })
-            // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityService))
+            // register custom types
+            applyBasicType(AbstractPartyType(createIdentityService))
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
