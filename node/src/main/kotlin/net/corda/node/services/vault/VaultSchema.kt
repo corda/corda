@@ -3,13 +3,12 @@ package net.corda.node.services.vault
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
-import org.hibernate.annotations.Generated
-import org.hibernate.annotations.GenerationTime
 import java.io.Serializable
 import java.time.Instant
 import java.util.*
@@ -32,7 +31,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     class VaultStates(
             /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name")
-            var notary: AbstractParty,
+            var notary: Party,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name")
