@@ -65,16 +65,14 @@ To run the demo, CordApp has to be started first, as the webapplications connect
 To run from the command line in Unix:
 
 1. Run ``./gradlew samples:irs-demo:cordapp:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/cordapp/build``
-2. Run ``./gradlew samples:irs-demo:cordapp:installDist``
-3. Move to the ``samples/irs-demo/cordapp/build`` directory
-4. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm).
+2. Move to the ``samples/irs-demo/cordapp/build`` directory
+3. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm).
 
 To run from the command line in Windows:
 
 1. Run ``gradlew samples:irs-demo:cordapp:deployNodes`` to install configs and a command line tool under ``samples\irs-demo\cordapp\build``
-2. Run ``gradlew samples:irs-demo:cordapp:installDist``
-3. Move to the ``samples\irs-demo\cordapp\build`` directory
-4. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
+2. Move to the ``samples\irs-demo\cordapp\build`` directory
+3. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
 
 Wait for the all the nodes to start, then proceed to run Spring Boot frontend
 
