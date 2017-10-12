@@ -20,13 +20,13 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     }
 
     /**
-     * Convert the hash value to a hexadecimal [String].
+     * Convert the hash value to an uppercase hexadecimal [String].
      */
     override fun toString(): String = bytes.toHexString()
 
     /**
      * Returns the first [prefixLen] hexadecimal digits of the [SecureHash] value.
-     * @param prefixLen
+     * @param prefixLen The number of characters in the prefix.
      */
     fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
 
@@ -41,6 +41,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SecureHash].
          * @param str A sequence of 64 hexadecimal digits that represents a SHA-256 hash value.
+         * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits.
          */
         @JvmStatic
         fun parse(str: String) = str.toUpperCase().parseAsHex().let {
@@ -80,13 +81,11 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * A SHA-256 hash value consisting of 32 0x00 bytes.
          */
-        @JvmField
         val zeroHash = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
 
         /**
          * A SHA-256 hash value consisting of 32 0xFF bytes.
          */
-        @JvmField
         val allOnesHash = SecureHash.SHA256(ByteArray(32, { 255.toByte() }))
     }
 

@@ -1,7 +1,6 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -13,6 +12,7 @@ import org.junit.Before
 import org.junit.Test
 import java.security.SignatureException
 import java.util.*
+import kotlin.reflect.jvm.javaField
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -64,6 +64,15 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
 
         // Now check that the signature we just made verifies.
         stx.verifyRequiredSignatures()
+
+        // Corrupt the data and ensure the signature catches the problem.
+        val bytesField = stx.id::bytes.javaField?.apply { setAccessible(true) }
+        val bytes = bytesField?.get(stx.id) as ByteArray
+        bytes[5] = bytes[5].inc()
+
+        assertFailsWith(SignatureException::class) {
+            stx.verifyRequiredSignatures()
+        }
     }
 
     @Test

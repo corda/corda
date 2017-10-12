@@ -131,7 +131,14 @@ open class OpaqueBytes(bytes: ByteArray) : ByteSequence() {
         require(bytes.isNotEmpty())
     }
 
-    // The bytes are always cloned so that this object becomes immutable. We need this for security reasons.
+    /* The bytes are always cloned so that this object becomes immutable. This has been done
+     * to prevent tampering with entities such as [SecureHash] and [PrivacySalt], as well as
+     * preserve the integrity of our hash constants [zeroHash] and [allOnesHash].
+     *
+     * Cloning like this may become a performance issue, depending on whether or not the JIT
+     * compiler is ever able to optimise away the clone. In which case we may need to revisit
+     * this later.
+     */
     override final val bytes: ByteArray = bytes
         get() = field.clone()
     override val size: Int = bytes.size
