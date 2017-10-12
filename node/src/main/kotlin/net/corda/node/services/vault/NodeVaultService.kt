@@ -29,7 +29,7 @@ import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.currentSession
+import net.corda.node.utilities.currentDBSession
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
@@ -83,7 +83,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
             val consumedStateRefs = update.consumed.map { it.ref }
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
-            val session = currentSession()
+            val session = currentDBSession()
             producedStateRefsMap.forEach { stateAndRef ->
                 val state = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
@@ -199,7 +199,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     private fun loadStates(refs: Collection<StateRef>): HashSet<StateAndRef<ContractState>> {
         val states = HashSet<StateAndRef<ContractState>>()
         if (refs.isNotEmpty()) {
-            val session = currentSession()
+            val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
             val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
@@ -233,11 +233,11 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
         val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
-        currentSession().save(txnNoteEntity)
+        currentDBSession().save(txnNoteEntity)
     }
 
     override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
-        val session = currentSession()
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultTxnNote::class.java)
         val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultTxnNote::class.java)
@@ -251,7 +251,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
         val softLockTimestamp = clock.instant()
         try {
-            val session = currentSession()
+            val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
             fun execute(configure: Root<*>.(CriteriaUpdate<*>, Array<Predicate>) -> Any?) = criteriaBuilder.executeUpdate(session) { update ->
                 val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
@@ -295,7 +295,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
 
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
         val softLockTimestamp = clock.instant()
-        val session = currentSession()
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         fun execute(configure: Root<*>.(CriteriaUpdate<*>, Array<Predicate>) -> Any?) = criteriaBuilder.executeUpdate(session) { update ->
             val stateStatusPredication = criteriaBuilder.equal(get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)

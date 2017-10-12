@@ -40,7 +40,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
      * Returns all key/value pairs from the underlying storage.
      */
     fun allPersisted(): Sequence<Pair<K, V>> {
-        val session = currentSession()
+        val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         val root = criteriaQuery.from(persistentEntityClass)
         criteriaQuery.select(root)
@@ -88,7 +88,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
      */
     operator fun set(key: K, value: V) =
             set(key, value, logWarning = false) { k, v ->
-                currentSession().save(toPersistentEntity(k, v))
+                currentDBSession().save(toPersistentEntity(k, v))
                 null
             }
 
@@ -99,7 +99,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
      */
     fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean =
             set(key, value, logWarning) { k, v ->
-                val session = currentSession()
+                val session = currentDBSession()
                 val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
                 if (existingEntry == null) {
                     session.save(toPersistentEntity(k, v))
@@ -116,7 +116,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
     }
 
     private fun loadValue(key: K): V? {
-        val result = currentSession().find(persistentEntityClass, toPersistentEntityKey(key))
+        val result = currentDBSession().find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
@@ -127,7 +127,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
      * WARNING!! The method is not thread safe.
      */
     fun clear() {
-        val session = currentSession()
+        val session = currentDBSession()
         val deleteQuery = session.criteriaBuilder.createCriteriaDelete(persistentEntityClass)
         deleteQuery.from(persistentEntityClass)
         session.createQuery(deleteQuery).executeUpdate()

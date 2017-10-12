@@ -4,7 +4,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import net.corda.node.utilities.currentSession
+import net.corda.node.utilities.currentDBSession
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -28,14 +28,14 @@ class DBCheckpointStorage : CheckpointStorage {
     )
 
     override fun addCheckpoint(checkpoint: Checkpoint) {
-        currentSession().save(DBCheckpoint().apply {
+        currentDBSession().save(DBCheckpoint().apply {
             checkpointId = checkpoint.id.toString()
             this.checkpoint = checkpoint.serializedFiber.bytes
         })
     }
 
     override fun removeCheckpoint(checkpoint: Checkpoint) {
-        val session = currentSession()
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val delete = criteriaBuilder.createCriteriaDelete(DBCheckpoint::class.java)
         val root = delete.from(DBCheckpoint::class.java)
@@ -44,7 +44,7 @@ class DBCheckpointStorage : CheckpointStorage {
     }
 
     override fun forEach(block: (Checkpoint) -> Boolean) {
-        val session = currentSession()
+        val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(DBCheckpoint::class.java)
         val root = criteriaQuery.from(DBCheckpoint::class.java)
         criteriaQuery.select(root)

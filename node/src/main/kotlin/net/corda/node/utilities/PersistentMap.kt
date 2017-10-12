@@ -28,7 +28,7 @@ class PersistentMap<K, V, E, out EK>(
             removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass)
     ).apply {
         //preload to allow all() to take data only from the cache (cache is unbound)
-        val session = currentSession()
+        val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
         getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
@@ -38,7 +38,7 @@ class PersistentMap<K, V, E, out EK>(
         override fun onRemoval(notification: RemovalNotification<K, V>?) {
             when (notification?.cause) {
                 RemovalCause.EXPLICIT -> {
-                    val session = currentSession()
+                    val session = currentDBSession()
                     val elem = session.find(persistentEntityClass, toPersistentEntityKey(notification.key))
                     if (elem != null) {
                         session.remove(elem)
@@ -101,7 +101,7 @@ class PersistentMap<K, V, E, out EK>(
             set(key, value,
                     logWarning = false,
                     store = { k: K, v: V ->
-                        currentSession().save(toPersistentEntity(k, v))
+                        currentDBSession().save(toPersistentEntity(k, v))
                         null
                     },
                     replace = { _: K, _: V -> Unit }
@@ -115,7 +115,7 @@ class PersistentMap<K, V, E, out EK>(
     fun addWithDuplicatesAllowed(key: K, value: V) =
             set(key, value,
                     store = { k, v ->
-                        val session = currentSession()
+                        val session = currentDBSession()
                         val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
                         if (existingEntry == null) {
                             session.save(toPersistentEntity(k, v))
@@ -146,7 +146,7 @@ class PersistentMap<K, V, E, out EK>(
     }
 
     private fun merge(key: K, value: V): V? {
-        val session = currentSession()
+        val session = currentDBSession()
         val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(key))
         return if (existingEntry != null) {
             session.merge(toPersistentEntity(key, value))
@@ -158,7 +158,7 @@ class PersistentMap<K, V, E, out EK>(
     }
 
     private fun loadValue(key: K): V? {
-        val result = currentSession().find(persistentEntityClass, toPersistentEntityKey(key))
+        val result = currentDBSession().find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
@@ -258,7 +258,7 @@ class PersistentMap<K, V, E, out EK>(
     }
 
     fun load() {
-        val session = currentSession()
+        val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
         cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
