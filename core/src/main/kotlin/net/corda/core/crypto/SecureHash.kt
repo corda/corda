@@ -32,7 +32,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
 
     /**
      * Append a second hash value to this hash value, and then compute the SHA-256 hash of the result.
-     * @param other
+     * @param other The hash to append to this one.
      */
     fun hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
@@ -41,33 +41,35 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SecureHash].
          * @param str A sequence of 64 hexadecimal digits that represents a SHA-256 hash value.
-         * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits.
+         * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits, or it contains incorrectly-encoded characters.
          */
         @JvmStatic
-        fun parse(str: String) = str.toUpperCase().parseAsHex().let {
-            when (it.size) {
-                32 -> SHA256(it)
-                else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 bytes in hex: $str")
+        fun parse(str: String): SHA256 {
+            return str.toUpperCase().parseAsHex().let {
+                when (it.size) {
+                    32 -> SHA256(it)
+                    else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 bytes in hex: $str")
+                }
             }
         }
 
         /**
          * Computes the SHA-256 hash value of the [ByteArray].
-         * @param bytes
+         * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
         fun sha256(bytes: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bytes))
 
         /**
          * Computes the SHA-256 hash of the [ByteArray], and then computes the SHA-256 hash of the hash.
-         * @param bytes
+         * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
         fun sha256Twice(bytes: ByteArray) = sha256(sha256(bytes).bytes)
 
         /**
          * Computes the SHA-256 hash of the [String]'s UTF-8 byte contents.
-         * @param str
+         * @param str [String] whose UTF-8 contents will be hashed.
          */
         @JvmStatic
         fun sha256(str: String) = sha256(str.toByteArray())

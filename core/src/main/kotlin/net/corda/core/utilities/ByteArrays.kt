@@ -131,7 +131,8 @@ open class OpaqueBytes(bytes: ByteArray) : ByteSequence() {
         require(bytes.isNotEmpty())
     }
 
-    /* The bytes are always cloned so that this object becomes immutable. This has been done
+    /**
+     * The bytes are always cloned so that this object becomes immutable. This has been done
      * to prevent tampering with entities such as [SecureHash] and [PrivacySalt], as well as
      * preserve the integrity of our hash constants [zeroHash] and [allOnesHash].
      *
@@ -147,8 +148,6 @@ open class OpaqueBytes(bytes: ByteArray) : ByteSequence() {
 
 /**
  * Copy [size] bytes from this [ByteArray] starting from [offset] into a new [ByteArray].
- * @param offset
- * @param size
  */
 fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of(this, offset, size)
 
@@ -158,7 +157,8 @@ fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of
 fun ByteArray.toHexString(): String = DatatypeConverter.printHexBinary(this)
 
 /**
- * Converts this [String] of hexadecimal digits  into a [ByteArray].
+ * Converts this [String] of hexadecimal digits into a [ByteArray].
+ * @throws IllegalArgumentException if the [String] contains incorrectly-encoded characters.
  */
 fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
 
