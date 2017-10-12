@@ -25,7 +25,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase58String
 import net.corda.node.services.api.NetworkCacheException
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.api.NetworkMapCacheLiteInternal
+import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.createMessage
@@ -42,10 +42,10 @@ import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashMap
 
-class NetworkMapCacheImpl(networkMapCacheLite: NetworkMapCacheLiteInternal, private val identityService: IdentityService) : NetworkMapCacheLiteInternal by networkMapCacheLite, NetworkMapCacheInternal {
+class NetworkMapCacheImpl(networkMapCacheBase: NetworkMapCacheBaseInternal, private val identityService: IdentityService) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal {
     init {
-        networkMapCacheLite.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
-        networkMapCacheLite.changed.subscribe { mapChange ->
+        networkMapCacheBase.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
+        networkMapCacheBase.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
                 mapChange.node.legalIdentitiesAndCerts.forEach {
@@ -67,7 +67,7 @@ class NetworkMapCacheImpl(networkMapCacheLite: NetworkMapCacheLiteInternal, priv
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheLiteInternal {
+open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
     companion object {
         val logger = loggerFor<PersistentNetworkMapCache>()
     }

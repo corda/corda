@@ -18,7 +18,7 @@ import java.security.PublicKey
  * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
  * with a specified network map service, which it fetches data from and then subscribes to updates of.
  */
-interface NetworkMapCache : NetworkMapCacheLite {
+interface NetworkMapCache : NetworkMapCacheBase {
     @CordaSerializable
     sealed class MapChange {
         abstract val node: NodeInfo
@@ -43,7 +43,7 @@ interface NetworkMapCache : NetworkMapCacheLite {
 }
 
 /** Subset of [NetworkMapCache] that doesn't depend on an [IdentityService]. */
-interface NetworkMapCacheLite {
+interface NetworkMapCacheBase {
     // DOCSTART 1
     /**
      * A list of notary services available on the network.
