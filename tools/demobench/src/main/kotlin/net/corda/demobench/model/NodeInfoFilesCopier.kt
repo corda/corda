@@ -105,6 +105,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() 
             Files.copy(source, tempDestination, COPY_ATTRIBUTES, REPLACE_EXISTING)
         } catch (exception: IOException) {
             log.log(Level.WARNING, "Couldn't copy $source to $tempDestination.", exception)
+            Files.delete(tempDestination)
             throw exception
         }
         try {
