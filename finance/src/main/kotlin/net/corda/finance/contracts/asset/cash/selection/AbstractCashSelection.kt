@@ -98,7 +98,7 @@ abstract class AbstractCashSelection {
     fun unconsumedCashStatesForSpending(services: ServiceHub,
                                         amount: Amount<Currency>,
                                         onlyFromIssuerParties: Set<AbstractParty> = emptySet(),
-                                        notary: Party?,
+                                        notary: Party? = null,
                                         lockId: UUID,
                                         withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<Cash.State>> {
         val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
