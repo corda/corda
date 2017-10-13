@@ -6,6 +6,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -122,6 +123,8 @@ class VerifierTests {
             val alice = aliceNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
             val notary = notaryNode.rpc.notaryPartyFromX500Name(DUMMY_NOTARY_SERVICE_NAME)!!
             startVerifier(notaryNode)
+            notaryNode.pollUntilKnowsAbout(aliceNode).getOrThrow()
+            aliceNode.pollUntilKnowsAbout(notaryNode).getOrThrow()
             aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notary).returnValue.get()
             notaryNode.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
