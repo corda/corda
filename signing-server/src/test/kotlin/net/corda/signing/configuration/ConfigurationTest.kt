@@ -3,12 +3,13 @@ package net.corda.signing.configuration
 import com.typesafe.config.ConfigException
 import net.corda.signing.authentication.AuthMode
 import org.junit.Test
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ConfigurationTest {
-    private val validConfigPath = javaClass.getResource("/signing_service.conf").path
-    private val invalidConfigPath = javaClass.getResource("/signing_service_fail.conf").path
+    private val validConfigPath = File(javaClass.getResource("/signing_service.conf").path).absolutePath
+    private val invalidConfigPath = File(javaClass.getResource("/signing_service_fail.conf").path).absolutePath
 
     @Test
     fun `authMode is parsed correctly`() {
