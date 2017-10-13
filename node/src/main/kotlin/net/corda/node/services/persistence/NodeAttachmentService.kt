@@ -13,8 +13,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.node.utilities.currentDBSession
 import java.io.*
 import java.nio.file.Paths
 import java.util.jar.JarInputStream
@@ -50,7 +50,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
     private val attachmentCount = metrics.counter("Attachments")
 
     init {
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
         criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
@@ -140,7 +140,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
     }
 
     override fun openAttachment(id: SecureHash): Attachment? {
-        val attachment = DatabaseTransactionManager.current().session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
+        val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
         attachment?.let {
             return AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad)
         }
@@ -161,7 +161,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         checkIsAValidJAR(ByteArrayInputStream(bytes))
         val id = SecureHash.SHA256(hs.hash().asBytes())
 
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
         val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)

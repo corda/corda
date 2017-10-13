@@ -33,6 +33,9 @@ import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.*
+import net.corda.node.utilities.AddOrRemove
+import net.corda.node.utilities.bufferUntilDatabaseCommit
+import net.corda.node.utilities.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -108,7 +111,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
 
     init {
         loadFromFiles()
-        database.transaction { loadFromDB() }
+        database.transaction { loadFromDB(session) }
     }
 
     private fun loadFromFiles() {
@@ -117,7 +120,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
     }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
-        val nodes = database.transaction { queryByIdentityKey(party.owningKey) }
+        val nodes = database.transaction { queryByIdentityKey(session, party.owningKey) }
         if (nodes.size == 1 && nodes[0].isLegalIdentity(party)) {
             return PartyInfo.SingleNode(party, nodes[0].addresses)
         }
@@ -132,13 +135,13 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
     }
 
     override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? = getNodesByLegalName(name).firstOrNull()
-    override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = database.transaction { queryByLegalName(name) }
+    override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = database.transaction { queryByLegalName(session, name) }
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> =
-            database.transaction { queryByIdentityKey(identityKey) }
+            database.transaction { queryByIdentityKey(session, identityKey) }
 
-    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(address) }
+    override fun getNodeByAddress(address: NetworkHostAndPort): NodeInfo? = database.transaction { queryByAddress(session, address) }
 
-    override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = database.transaction { queryIdentityByLegalName(name) }
+    override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? = database.transaction { queryIdentityByLegalName(session, name) }
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
@@ -212,7 +215,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
         synchronized(_changed) {
             registeredNodes.remove(node.legalIdentities.first().owningKey)
             database.transaction {
-                removeInfoDB(node)
+                removeInfoDB(session, node)
                 changePublisher.onNext(MapChange.Removed(node))
             }
         }
@@ -247,9 +250,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
 
     override val allNodes: List<NodeInfo>
         get() = database.transaction {
-            createSession {
-                getAllInfos(it).map { it.toNodeInfo() }
-            }
+            getAllInfos(session).map { it.toNodeInfo() }
         }
 
     private fun processRegistration(reg: NodeRegistration) {
@@ -267,10 +268,6 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
     // Changes related to NetworkMap redesign
     // TODO It will be properly merged into network map cache after services removal.
 
-    private inline fun <T> createSession(block: (Session) -> T): T {
-        return DatabaseTransactionManager.current().session.let { block(it) }
-    }
-
     private fun getAllInfos(session: Session): List<NodeInfoSchemaV1.PersistentNodeInfo> {
         val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         criteria.select(criteria.from(NodeInfoSchemaV1.PersistentNodeInfo::class.java))
@@ -280,23 +277,21 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
     /**
      * Load NetworkMap data from the database if present. Node can start without having NetworkMapService configured.
      */
-    private fun loadFromDB() {
+    private fun loadFromDB(session: Session) {
         logger.info("Loading network map from database...")
-        createSession {
-            val result = getAllInfos(it)
-            for (nodeInfo in result) {
-                try {
-                    logger.info("Loaded node info: $nodeInfo")
-                    val node = nodeInfo.toNodeInfo()
-                    addNode(node)
-                    _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
-                } catch (e: Exception) {
-                    logger.warn("Exception parsing network map from the database.", e)
-                }
+        val result = getAllInfos(session)
+        for (nodeInfo in result) {
+            try {
+                logger.info("Loaded node info: $nodeInfo")
+                val node = nodeInfo.toNodeInfo()
+                addNode(node)
+                _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
+            } catch (e: Exception) {
+                logger.warn("Exception parsing network map from the database.", e)
             }
-            if (loadDBSuccess) {
-                _registrationFuture.set(null) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
-            }
+        }
+        if (loadDBSuccess) {
+            _registrationFuture.set(null) // Useful only if we don't have NetworkMapService configured so StateMachineManager can start.
         }
     }
 
@@ -321,11 +316,9 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
         }
     }
 
-    private fun removeInfoDB(nodeInfo: NodeInfo) {
-        createSession {
-            val info = findByIdentityKey(it, nodeInfo.legalIdentitiesAndCerts.first().owningKey).single()
-            it.remove(info)
-        }
+    private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {
+        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).single()
+        session.remove(info)
     }
 
     private fun findByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfoSchemaV1.PersistentNodeInfo> {
@@ -336,48 +329,40 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
         return query.resultList
     }
 
-    private fun queryByIdentityKey(identityKey: PublicKey): List<NodeInfo> {
-        createSession {
-            val result = findByIdentityKey(it, identityKey)
-            return result.map { it.toNodeInfo() }
-        }
+    private fun queryByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfo> {
+        val result = findByIdentityKey(session, identityKey)
+        return result.map { it.toNodeInfo() }
     }
 
-    private fun queryIdentityByLegalName(name: CordaX500Name): PartyAndCertificate? {
-        createSession {
-            val query = it.createQuery(
-                    // We do the JOIN here to restrict results to those present in the network map
-                    "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
-                    NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
-            query.setParameter("name", name.toString())
-            val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
-            // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
-            return candidates.firstOrNull()
-        }
+    private fun queryIdentityByLegalName(session: Session, name: CordaX500Name): PartyAndCertificate? {
+        val query = session.createQuery(
+                // We do the JOIN here to restrict results to those present in the network map
+                "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
+        query.setParameter("name", name.toString())
+        val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
+        // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
+        return candidates.firstOrNull()
     }
 
-    private fun queryByLegalName(name: CordaX500Name): List<NodeInfo> {
-        createSession {
-            val query = it.createQuery(
-                    "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
-                    NodeInfoSchemaV1.PersistentNodeInfo::class.java)
-            query.setParameter("name", name.toString())
-            val result = query.resultList
-            return result.map { it.toNodeInfo() }
-        }
+    private fun queryByLegalName(session: Session, name: CordaX500Name): List<NodeInfo> {
+        val query = session.createQuery(
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                NodeInfoSchemaV1.PersistentNodeInfo::class.java)
+        query.setParameter("name", name.toString())
+        val result = query.resultList
+        return result.map { it.toNodeInfo() }
     }
 
-    private fun queryByAddress(hostAndPort: NetworkHostAndPort): NodeInfo? {
-        createSession {
-            val query = it.createQuery(
-                    "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.pk.host = :host AND a.pk.port = :port",
-                    NodeInfoSchemaV1.PersistentNodeInfo::class.java)
-            query.setParameter("host", hostAndPort.host)
-            query.setParameter("port", hostAndPort.port)
-            val result = query.resultList
-            return if (result.isEmpty()) null
-            else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
-        }
+    private fun queryByAddress(session: Session, hostAndPort: NetworkHostAndPort): NodeInfo? {
+        val query = session.createQuery(
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.pk.host = :host AND a.pk.port = :port",
+                NodeInfoSchemaV1.PersistentNodeInfo::class.java)
+        query.setParameter("host", hostAndPort.host)
+        query.setParameter("port", hostAndPort.port)
+        val result = query.resultList
+        return if (result.isEmpty()) null
+        else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
     }
 
     /** Object Relational Mapping support. */
@@ -396,10 +381,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
 
     override fun clearNetworkMapCache() {
         database.transaction {
-            createSession {
-                val result = getAllInfos(it)
-                for (nodeInfo in result) it.remove(nodeInfo)
-            }
+            val result = getAllInfos(session)
+            for (nodeInfo in result) session.remove(nodeInfo)
         }
     }
 }
