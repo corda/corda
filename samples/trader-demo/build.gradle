@@ -15,11 +15,20 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
+    systemTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/system-test/kotlin')
+        }
+    }
 }
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+    systemTestCompile.extendsFrom testCompile
+    systemTestRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -39,6 +48,9 @@ dependencies {
     testCompile project(':test-utils')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
+
+    // https://mvnrepository.com/artifact/net.sf.expectit/expectit-core
+    systemTestCompile group: 'net.sf.expectit', name: 'expectit-core', version: "${expectit_version}"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
@@ -83,6 +95,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task systemTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.systemTest.output.classesDirs
+    classpath = sourceSets.systemTest.runtimeClasspath
 }
 
 idea {
