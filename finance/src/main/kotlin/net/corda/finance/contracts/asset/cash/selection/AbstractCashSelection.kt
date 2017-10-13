@@ -161,8 +161,6 @@ abstract class AbstractCashSelection {
             } catch (e: StatesNotAvailableException) { // Should never happen with single threaded state machine
                 log.warn(e.message)
                 // retry only if there are locked states that may become available again (or consumed with change)
-            } finally {
-                connection.close()
             }
         }
         return false
