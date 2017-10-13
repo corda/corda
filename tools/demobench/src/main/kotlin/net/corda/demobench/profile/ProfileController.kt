@@ -6,13 +6,10 @@ import javafx.stage.FileChooser
 import javafx.stage.FileChooser.ExtensionFilter
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.demobench.model.InstallConfig
-import net.corda.demobench.model.InstallFactory
-import net.corda.demobench.model.JVMConfig
-import net.corda.demobench.model.NodeController
-import net.corda.demobench.plugin.PluginController
-import net.corda.demobench.plugin.inPluginsDir
-import net.corda.demobench.plugin.isPlugin
+import net.corda.demobench.model.*
+import net.corda.demobench.plugin.CordappController
+import net.corda.demobench.plugin.inCordappsDir
+import net.corda.demobench.plugin.isCordapp
 import tornadofx.*
 import java.io.File
 import java.io.IOException
@@ -31,7 +28,7 @@ class ProfileController : Controller() {
     private val jvm by inject<JVMConfig>()
     private val baseDir: Path = jvm.dataHome
     private val nodeController by inject<NodeController>()
-    private val pluginController by inject<PluginController>()
+    private val cordappController by inject<CordappController>()
     private val installFactory by inject<InstallFactory>()
     private val chooser = FileChooser()
 
@@ -64,11 +61,11 @@ class ProfileController : Controller() {
                     val file = Files.write(nodeDir / "node.conf", config.nodeConfig.toText().toByteArray(UTF_8))
                     log.info("Wrote: $file")
 
-                    // Write all of the non-built-in plugins.
-                    val pluginDir = Files.createDirectory(nodeDir.resolve("plugins"))
-                    pluginController.userPluginsFor(config).forEach {
-                        val plugin = Files.copy(it, pluginDir.resolve(it.fileName.toString()))
-                        log.info("Wrote: $plugin")
+                    // Write all of the non-built-in cordapps.
+                    val cordappDir = Files.createDirectory(nodeDir.resolve(NodeConfig.cordappDirName))
+                    cordappController.useCordappsFor(config).forEach {
+                        val cordapp = Files.copy(it, cordappDir.resolve(it.fileName.toString()))
+                        log.info("Wrote: $cordapp")
                     }
                 }
             }
@@ -120,16 +117,16 @@ class ProfileController : Controller() {
             // Now extract all of the plugins from the ZIP file,
             // and copy them to a temporary location.
             StreamSupport.stream(fs.rootDirectories.spliterator(), false)
-                    .flatMap { Files.find(it, 3, BiPredicate { p, attr -> p.inPluginsDir() && p.isPlugin() && attr.isRegularFile }) }
-                    .forEach { plugin ->
-                        val config = nodeIndex[plugin.getName(0).toString()] ?: return@forEach
+                    .flatMap { Files.find(it, 3, BiPredicate { p, attr -> p.inCordappsDir() && p.isCordapp() && attr.isRegularFile }) }
+                    .forEach { cordapp ->
+                        val config = nodeIndex[cordapp.getName(0).toString()] ?: return@forEach
 
                         try {
-                            val pluginDir = Files.createDirectories(config.pluginDir)
-                            Files.copy(plugin, pluginDir.resolve(plugin.fileName.toString()))
-                            log.info("Loaded: $plugin")
+                            val cordappDir = Files.createDirectories(config.cordappsDir)
+                            Files.copy(cordapp, cordappDir.resolve(cordapp.fileName.toString()))
+                            log.info("Loaded: $cordapp")
                         } catch (e: Exception) {
-                            log.log(Level.SEVERE, "Failed to extract '$plugin': ${e.message}", e)
+                            log.log(Level.SEVERE, "Failed to extract '$cordapp': ${e.message}", e)
                             configs.forEach { c -> c.deleteBaseDir() }
                             throw e
                         }

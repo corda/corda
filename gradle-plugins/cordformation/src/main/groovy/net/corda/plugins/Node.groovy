@@ -17,7 +17,7 @@ class Node extends CordformNode {
     static final String WEBJAR_NAME = 'corda-webserver.jar'
 
     /**
-     * Set the list of CorDapps to install to the plugins directory. Each cordapp is a fully qualified Maven
+     * Set the list of CorDapps to install to the cordapps directory. Each cordapp is a fully qualified Maven
      * dependency name, eg: com.example:product-name:0.1
      *
      * @note Your app will be installed by default and does not need to be included here.
@@ -104,7 +104,7 @@ class Node extends CordformNode {
         if (config.hasPath("webAddress")) {
             installWebserverJar()
         }
-        installBuiltPlugin()
+        installBuiltCordapp()
         installCordapps()
         installConfig()
         appendOptionalConfig()
@@ -157,23 +157,23 @@ class Node extends CordformNode {
     /**
      * Installs this project's cordapp to this directory.
      */
-    private void installBuiltPlugin() {
-        def pluginsDir = new File(nodeDir, "plugins")
+    private void installBuiltCordapp() {
+        def cordappsDir = new File(nodeDir, "cordapps")
         project.copy {
             from project.jar
-            into pluginsDir
+            into cordappsDir
         }
     }
 
     /**
-     * Installs other cordapps to this node's plugins directory.
+     * Installs other cordapps to this node's cordapps directory.
      */
     private void installCordapps() {
-        def pluginsDir = new File(nodeDir, "plugins")
+        def cordappsDir = new File(nodeDir, "cordapps")
         def cordapps = getCordappList()
         project.copy {
             from cordapps
-            into pluginsDir
+            into cordappsDir
         }
     }
 
