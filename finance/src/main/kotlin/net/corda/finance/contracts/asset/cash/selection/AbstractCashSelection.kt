@@ -135,7 +135,7 @@ abstract class AbstractCashSelection {
                     val txHash = SecureHash.parse(rs.getString(1))
                     val index = rs.getInt(2)
                     val stateRef = StateRef(txHash, index)
-                    val state = rs.getBytes(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
+                    val state = rs.getBlob(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
                     val pennies = rs.getLong(4)
                     totalPennies = rs.getLong(5)
                     val rowLockId = rs.getString(6)
