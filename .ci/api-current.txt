@@ -2923,7 +2923,7 @@ public static final class net.corda.core.utilities.NonEmptySet$iterator$1 extend
 ##
 public class net.corda.core.utilities.OpaqueBytes extends net.corda.core.utilities.ByteSequence
   public <init>(byte[])
-  @org.jetbrains.annotations.NotNull public byte[] getBytes()
+  @org.jetbrains.annotations.NotNull public final byte[] getBytes()
   public int getOffset()
   public int getSize()
   public static final net.corda.core.utilities.OpaqueBytes$Companion Companion
