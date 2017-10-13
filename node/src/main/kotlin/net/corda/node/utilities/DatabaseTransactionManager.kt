@@ -62,6 +62,7 @@ class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseT
     }
 }
 
+fun currentDBSession() = DatabaseTransactionManager.current().session
 class DatabaseTransactionManager(initDataSource: CordaPersistence) {
     companion object {
         private val threadLocalDb = ThreadLocal<CordaPersistence>()

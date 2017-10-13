@@ -12,7 +12,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.ALICE_NAME
@@ -147,7 +146,7 @@ class AttachmentTests {
 
         val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment)
         aliceNode.database.transaction {
-            DatabaseTransactionManager.current().session.update(corruptAttachment)
+            session.update(corruptAttachment)
         }
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
