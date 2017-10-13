@@ -16,31 +16,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.setCordappPackages
-import net.corda.testing.unsetCordappPackages
 import org.junit.After
-import org.junit.AfterClass
-import org.junit.BeforeClass
 import org.junit.Test
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
 class VaultSoftLockManagerTest {
-    companion object {
-        @BeforeClass
-        @JvmStatic
-        fun beforeClass() {
-            setCordappPackages(ContractImpl::class.java.`package`.name)
-        }
-
-        @AfterClass
-        @JvmStatic
-        fun afterClass() {
-            unsetCordappPackages()
-        }
-    }
-
-    private val mockNet = MockNetwork()
+    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.java.`package`.name))
     private val node = mockNet.createNotaryNode()
     @After
     fun tearDown() {
