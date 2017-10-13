@@ -40,7 +40,8 @@ class NotaryServiceTests {
         aliceServices = mockNet.createNode(legalName = ALICE_NAME).services
         mockNet.runNetwork() // Clear network map registration messages
         notaryNode.internals.ensureRegistered()
-        notary = aliceServices.getDefaultNotary()
+        notaryServices = notaryNode.services
+        notary = notaryServices.getDefaultNotary()
         alice = aliceServices.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
     }
 
