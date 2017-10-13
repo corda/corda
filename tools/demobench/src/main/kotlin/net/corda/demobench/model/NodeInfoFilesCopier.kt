@@ -9,9 +9,11 @@ import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import tornadofx.*
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import java.nio.file.StandardCopyOption.COPY_ATTRIBUTES
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
@@ -96,15 +98,15 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() 
         val tempDestination = destination.parent / ("." + destination.fileName.toString())
         try {
             // First copy the file to a temporary file within the appropriate directory.
-            Files.copy(source, tempDestination, StandardCopyOption.COPY_ATTRIBUTES)
-        } catch (exception: Exception) {
+            Files.copy(source, tempDestination, COPY_ATTRIBUTES, REPLACE_EXISTING)
+        } catch (exception: IOException) {
             log.log(Level.WARNING, "Couldn't copy $source to $tempDestination.", exception)
             throw exception
         }
         try {
             // Then rename it to the desired name. This way the file 'appears' on the filesystem as an atomic operation.
-            Files.move(tempDestination, destination, StandardCopyOption.REPLACE_EXISTING)
-        } catch (exception: Exception) {
+            Files.move(tempDestination, destination, REPLACE_EXISTING)
+        } catch (exception: IOException) {
             log.log(Level.WARNING, "Couldn't move $tempDestination to $destination.", exception)
             Files.delete(tempDestination)
             throw exception
