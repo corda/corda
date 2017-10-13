@@ -103,7 +103,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() 
         }
         try {
             // Then rename it to the desired name. This way the file 'appears' on the filesystem as an atomic operation.
-            Files.move(tempDestination, destination, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
+            Files.move(tempDestination, destination, StandardCopyOption.REPLACE_EXISTING)
         } catch (exception: Exception) {
             log.log(Level.WARNING, "Couldn't move $tempDestination to $destination.", exception)
             Files.delete(tempDestination)
