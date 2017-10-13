@@ -10,7 +10,7 @@ already installed. You run each node by navigating to ``<node_dir>`` in a termin
 
    java -jar corda.jar
 
-.. warning:: If your working directory is not ``<node_dir>`` your plugins and configuration will not be used.
+.. warning:: If your working directory is not ``<node_dir>`` your cordapps and configuration will not be used.
 
 The configuration file and workspace paths can be overridden on the command line. For example:
 
