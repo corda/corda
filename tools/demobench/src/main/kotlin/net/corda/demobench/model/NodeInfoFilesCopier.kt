@@ -2,7 +2,6 @@ package net.corda.demobench.model
 
 import net.corda.cordform.CordformNode
 import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
 import rx.Observable
@@ -95,7 +94,12 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() 
     }
 
     private fun copy(source: Path, destination: Path) {
-        val tempDestination = destination.parent / ("." + destination.fileName.toString())
+        val tempDestination = try {
+            Files.createTempFile(destination.parent, ".", null)
+        } catch (exception: IOException) {
+            log.log(Level.WARNING, "Couldn't create a temporary file to copy $source", exception)
+            throw exception
+        }
         try {
             // First copy the file to a temporary file within the appropriate directory.
             Files.copy(source, tempDestination, COPY_ATTRIBUTES, REPLACE_EXISTING)
