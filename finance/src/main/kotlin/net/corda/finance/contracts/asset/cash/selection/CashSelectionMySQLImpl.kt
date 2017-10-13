@@ -1,10 +1,12 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import net.corda.core.contracts.Amount
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.utilities.OpaqueBytes
+import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
-import java.sql.Statement
 import java.util.*
 
 class CashSelectionMySQLImpl : AbstractCashSelection() {
@@ -17,7 +19,7 @@ class CashSelectionMySQLImpl : AbstractCashSelection() {
         return metadata.driverName == JDBC_DRIVER_NAME
     }
 
-    override fun executeQuery(statement: Statement, amount: Amount<Currency>, lockId: UUID, notary: Party?, issuerKeysStr: String?, issuerRefsStr: String?): ResultSet {
+    override fun executeQuery(statement: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, issuerKeysStr: Set<AbstractParty>, issuerRefsStr: Set<OpaqueBytes>): ResultSet {
         TODO("MySQL cash selection not implemented")
     }
 
