@@ -883,14 +883,16 @@ class DriverDSL(
                 }
                 establishRpc(nodeConfiguration, processDeathFuture).flatMap { rpc ->
                     // Call waitUntilNetworkReady in background in case RPC is failing over:
-                    val networkMapFuture = executorService.fork {
+                    val forked = executorService.fork {
                         rpc.waitUntilNetworkReady()
-                    }.flatMap { it }
+                    }
+                    val networkMapFuture = forked.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
                             throw ListenProcessDeathException(nodeConfiguration.p2pAddress, process)
                         }
                         processDeathFuture.cancel(false)
+                        log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: ${webAddress}")
                         NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, nodeConfiguration, webAddress, debugPort, process)
                     }
                 }
