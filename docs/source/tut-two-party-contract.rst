@@ -17,25 +17,17 @@ the ``requireThat`` block as follows:
 
 .. container:: codeset
 
-    .. code-block:: kotlin
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/contract.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
+        :dedent: 8
 
-        // Constraints on the signers.
-        "There must be two signers." using (command.signers.toSet().size == 2)
-        "The borrower and lender must be signers." using (command.signers.containsAll(listOf(
-            out.borrower.owningKey, out.lender.owningKey)))
-
-    .. code-block:: java
-
-        ...
-
-        import com.google.common.collect.ImmutableList;
-
-        ...
-
-        // Constraints on the signers.
-        check.using("There must be two signers.", command.getSigners().size() == 2);
-        check.using("The borrower and lender must be signers.", command.getSigners().containsAll(
-            ImmutableList.of(borrower.getOwningKey(), lender.getOwningKey())));
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUContract2.java
+        :language: java
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
+        :dedent: 12
 
 Progress so far
 ---------------
