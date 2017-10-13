@@ -33,9 +33,9 @@ class FinalityFlowTests {
         aliceNode.internals.ensureRegistered()
         aliceServices = aliceNode.services
         bobServices = bobNode.services
-        alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
-        bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
-        notary = notaryNode.services.myInfo.identityFromX500Name(DUMMY_NOTARY_SERVICE_NAME)
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+        notary = notaryNode.services.getDefaultNotary()
     }
 
     @After

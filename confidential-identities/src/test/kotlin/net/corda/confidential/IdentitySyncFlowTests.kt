@@ -43,8 +43,8 @@ class IdentitySyncFlowTests {
         val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
-        val alice: Party = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-        val bob: Party = notaryNode.services.networkMapCache.getPeerByLegalName(BOB_NAME)!!
+        val alice: Party = aliceNode.info.singleIdentity()
+        val bob: Party = bobNode.info.singleIdentity()
         val notary = notaryNode.services.getDefaultNotary()
         bobNode.internals.registerInitiatedFlow(Receive::class.java)
 
@@ -74,9 +74,9 @@ class IdentitySyncFlowTests {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
-        val alice: Party = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-        val bob: Party = notaryNode.services.networkMapCache.getPeerByLegalName(BOB_NAME)!!
-        val charlie: Party = notaryNode.services.networkMapCache.getPeerByLegalName(CHARLIE_NAME)!!
+        val alice: Party = aliceNode.info.singleIdentity()
+        val bob: Party = bobNode.info.singleIdentity()
+        val charlie: Party = charlieNode.info.singleIdentity()
         val notary = notaryNode.services.getDefaultNotary()
         bobNode.internals.registerInitiatedFlow(Receive::class.java)
 

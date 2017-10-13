@@ -443,8 +443,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         mockNet.runNetwork()
         notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
-        val alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-        val bank = notaryNode.services.networkMapCache.getPeerByLegalName(BOC_NAME)!!
+        val alice: Party = aliceNode.info.singleIdentity()
+        val bank: Party = bankNode.info.singleIdentity()
         val issuer = bank.ref(1, 2, 3)
 
         ledger(aliceNode.services, initialiseSerialization = false) {

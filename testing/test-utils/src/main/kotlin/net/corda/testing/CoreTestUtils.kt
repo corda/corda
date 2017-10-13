@@ -166,5 +166,14 @@ inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit
 fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
 
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
+/**
+ * Extract a single identity from the node info. Throws an error if the node has multiple identities.
+ */
+fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.single()
+
+/**
+ * Extract a single identity from the node info. Throws an error if the node has multiple identities.
+ */
+fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
 /** Returns the identity of the first notary found on the network */
 fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
