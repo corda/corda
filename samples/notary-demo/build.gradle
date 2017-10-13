@@ -46,11 +46,16 @@ publishing {
     }
 }
 
-task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT'])
+task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 
 task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
     directory "./build/nodes/nodesSingle"
     definitionClass = 'net.corda.notarydemo.SingleNotaryCordform'
+}
+
+task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
+    directory "./build/nodes/nodesCustom"
+    definitionClass = 'net.corda.notarydemo.CustomNotaryCordform'
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: 'jar') {

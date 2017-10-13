@@ -6,7 +6,12 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
+  This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
+
 * ``FlowLogic`` now exposes a series of function called ``receiveAll(...)`` allowing to join ``receive(...)`` instructions.
+
+* Renamed "plugins" directory on nodes to "cordapps"
 
 * The ``Cordformation`` gradle plugin has been split into ``cordformation`` and ``cordapp``. The former builds and
   deploys nodes for development and testing, the latter turns a project into a cordapp project that generates JARs in

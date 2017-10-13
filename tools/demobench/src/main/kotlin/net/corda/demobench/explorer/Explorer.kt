@@ -5,6 +5,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.JVMConfig
+import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeConfigWrapper
 import net.corda.demobench.readErrorLines
 import tornadofx.*
@@ -82,11 +83,11 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
         // Note: does not copy dependencies because we should soon be making all apps fat jars and dependencies implicit.
         //
         // TODO: Remove this code when serialisation has been upgraded.
-        val pluginsDir = config.explorerDir / "plugins"
-        pluginsDir.createDirectories()
-        config.pluginDir.list {
+        val cordappsDir = config.explorerDir / NodeConfig.cordappDirName
+        cordappsDir.createDirectories()
+        config.cordappsDir.list {
             it.forEachOrdered { path ->
-                val destPath = pluginsDir / path.fileName.toString()
+                val destPath = cordappsDir / path.fileName.toString()
                 try {
                     // Try making a symlink to make things faster and use less disk space.
                     Files.createSymbolicLink(destPath, path)

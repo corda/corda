@@ -11,6 +11,7 @@ import net.corda.core.internal.list
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
@@ -39,12 +40,12 @@ class CordappSmokeTest {
 
     @Test
     fun `FlowContent appName returns the filename of the CorDapp jar`() {
-        val pluginsDir = (factory.baseDirectory(aliceConfig) / "plugins").createDirectories()
+        val cordappsDir = (factory.baseDirectory(aliceConfig) / CordappLoader.CORDAPPS_DIR_NAME).createDirectories()
         // Find the jar file for the smoke tests of this module
         val selfCordapp = Paths.get("build", "libs").list {
             it.filter { "-smokeTests" in it.toString() }.toList().single()
         }
-        selfCordapp.copyToDirectory(pluginsDir)
+        selfCordapp.copyToDirectory(cordappsDir)
 
         factory.create(aliceConfig).use { alice ->
             alice.connect().use { connectionToAlice ->
@@ -59,8 +60,8 @@ class CordappSmokeTest {
     }
 
     @Test
-    fun `empty plugins directory`() {
-        (factory.baseDirectory(aliceConfig) / "plugins").createDirectories()
+    fun `empty cordapps directory`() {
+        (factory.baseDirectory(aliceConfig) / CordappLoader.CORDAPPS_DIR_NAME).createDirectories()
         factory.create(aliceConfig).close()
     }
 

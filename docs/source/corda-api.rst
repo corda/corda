@@ -74,7 +74,7 @@ The following modules are available but we do not commit to their stability or c
 * **net.corda.samples.demos.bankofcorda**: simulates the role of an asset issuing authority (eg. central bank for cash)
 * **net.corda.samples.demos.irs**: demonstrates an Interest Rate Swap agreement between two banks
 * **net.corda.samples.demos.notary**: a simple demonstration of a node getting multiple transactions notarised by a distributed (Raft or BFT SMaRt) notary
-* **net.corda.samples.demos.simmvaluation**: See our [main documentation site](https://docs.corda.net/initial-margin-agreement.html) regarding the SIMM valuation and agreement on a distributed ledger
+* **net.corda.samples.demos.simmvaluation**: A demo of SIMM valuation and agreement on a distributed ledger
 * **net.corda.samples.demos.trader**: demonstrates four nodes, a notary, an issuer of cash (Bank of Corda), and two parties trading with each other, exchanging cash for a commercial paper
 * **net.corda.node.smoke.test.utils**: test utilities for smoke testing
 * **net.corda.node.test.common**: common test functionality

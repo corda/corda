@@ -7,7 +7,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.demobench.plugin.PluginController
+import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
 import tornadofx.*
 import java.io.IOException
@@ -27,7 +27,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     }
 
     private val jvm by inject<JVMConfig>()
-    private val pluginController by inject<PluginController>()
+    private val cordappController by inject<CordappController>()
 
     private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
     private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
@@ -112,7 +112,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             config.nodeDir.createDirectories()
 
             // Install any built-in plugins into the working directory.
-            pluginController.populate(config)
+            cordappController.populate(config)
 
             // Write this node's configuration file into its working directory.
             val confFile = config.nodeDir / "node.conf"
@@ -164,9 +164,9 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     fun install(config: InstallConfig): NodeConfigWrapper {
         val installed = config.installTo(baseDir)
 
-        pluginController.userPluginsFor(config).forEach {
-            installed.pluginDir.createDirectories()
-            val plugin = it.copyToDirectory(installed.pluginDir)
+        cordappController.useCordappsFor(config).forEach {
+            installed.cordappsDir.createDirectories()
+            val plugin = it.copyToDirectory(installed.cordappsDir)
             log.info("Installed: $plugin")
         }
 

@@ -5,7 +5,7 @@ By this point, :doc:`your dev environment should be set up <getting-set-up>`, yo
 :doc:`your first CorDapp <tutorial-cordapp>`, and you're familiar with Corda's :doc:`key concepts <key-concepts>`. What
 comes next?
 
-If you're a developer, the next step is to write your own CorDapp. Each CorDapp takes the form of a plugin that is
+If you're a developer, the next step is to write your own CorDapp. Each CorDapp takes the form of a JAR that is
 installed on one or more Corda nodes, and gives them the ability to conduct some new process - anything from
 issuing a debt instrument to making a restaurant booking.
 
