@@ -320,7 +320,7 @@ does this by tracking update notifications from the
 ``TransactionStorage`` service and processing relevant updates to delete 
 consumed states and insert new states. The resulting update is then 
 persisted to the database. The ``VaultService`` then exposes query and 
-event notification APIs to flows and CorDapp plugins to allow them 
+event notification APIs to flows and CorDapp services to allow them
 to respond to updates, or query for states meeting various conditions to 
 begin the formation of new transactions consuming them. The equivalent 
 services are also forwarded to RPC clients, so that they may show 

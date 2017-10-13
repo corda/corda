@@ -84,7 +84,7 @@ run all the nodes at once. Each node in the ``nodes`` folder has the following s
     . nodeName
     ├── corda.jar               // The Corda runtime
     ├── node.conf               // The node's configuration
-    ├── plugins                 // Any installed CorDapps
+    ├── cordapps                // Any installed CorDapps
     └── additional-node-infos   // Directory containing all the addresses and certificates of the other nodes.
 
 .. note:: During the build process each node generates a NodeInfo file which is written in its own root directory,
