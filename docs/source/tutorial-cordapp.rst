@@ -210,9 +210,9 @@ Building the example CorDapp
         . nodeName
         ├── corda.jar
         ├── node.conf
-        └── plugins
+        └── cordapps
 
-    ``corda.jar`` is the Corda runtime, ``plugins`` contains our node's CorDapps, and the node's configuration is
+    ``corda.jar`` is the Corda runtime, ``cordapps`` contains our node's CorDapps, and the node's configuration is
     given by ``node.conf``
 
 Running the example CorDapp

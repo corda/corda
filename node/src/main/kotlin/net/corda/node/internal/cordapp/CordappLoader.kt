@@ -55,21 +55,29 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         private val logger = loggerFor<CordappLoader>()
 
         /**
+         * Default cordapp dir name
+         */
+        val CORDAPPS_DIR_NAME = "cordapps"
+
+        /**
          * Creates a default CordappLoader intended to be used in non-dev or non-test environments.
          *
-         * @param baseDir The directory that this node is running in. Will use this to resolve the plugins directory
+         * @param baseDir The directory that this node is running in. Will use this to resolve the cordapps directory
          *                  for classpath scanning.
          */
-        fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getPluginsPath(baseDir)))
+        fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getCordappsPath(baseDir)))
 
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
-         * and plugins directory. This is intended mostly for use by the driver.
+         * and cordapps directory. This is intended mostly for use by the driver.
+         *
+         * @param baseDir See [createDefault.baseDir]
+         * @param testPackages See [createWithTestPackages.testPackages]
          */
         @VisibleForTesting
         fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            return CordappLoader(getCordappsInDirectory(getPluginsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage))
+            return CordappLoader(getCordappsInDirectory(getCordappsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage))
         }
 
         /**
@@ -91,7 +99,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         @VisibleForTesting
         fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars)
 
-        private fun getPluginsPath(baseDir: Path): Path = baseDir / "plugins"
+        private fun getCordappsPath(baseDir: Path): Path = baseDir / CORDAPPS_DIR_NAME
 
         private fun createScanPackage(scanPackage: String): List<URL> {
             val resource = scanPackage.replace('.', '/')
@@ -135,11 +143,11 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             return generatedCordapps[path]!!
         }
 
-        private fun getCordappsInDirectory(pluginsDir: Path): List<URL> {
-            return if (!pluginsDir.exists()) {
+        private fun getCordappsInDirectory(cordappsDir: Path): List<URL> {
+            return if (!cordappsDir.exists()) {
                 emptyList<URL>()
             } else {
-                pluginsDir.list {
+                cordappsDir.list {
                     it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
                 }
             }

@@ -78,11 +78,11 @@ For further information about managing dependencies, see
 Installing CorDapps
 -------------------
 
-At runtime, nodes will load any plugins present in their ``plugins`` folder. Therefore in order to install a cordapp to
-a node the cordapp JAR must be added to the ``<node_dir>/plugins/`` folder, where ``node_dir`` is the folder in which the
+At runtime, nodes will load any CorDapp JARs present in their ``cordapps`` folder. Therefore in order to install a CorDapp to
+a node the CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder, where ``node_dir`` is the folder in which the
 node's JAR and configuration files are stored).
 
-The ``deployNodes`` gradle task, if correctly configured, will automatically place your cordapp JAR as well as any
+The ``deployNodes`` gradle task, if correctly configured, will automatically place your CorDapp JAR as well as any
 dependent cordapp JARs specified into the directory automatically.
 
 Example

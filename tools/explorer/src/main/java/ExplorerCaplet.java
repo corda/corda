@@ -19,7 +19,7 @@ public class ExplorerCaplet extends Capsule {
         // defined as public static final fields on the Capsule class, therefore referential equality is safe.
         if (ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
-            List<Path> classpath = augmentClasspath((List<Path>) cp, "plugins");
+            List<Path> classpath = augmentClasspath((List<Path>) cp, "cordapps");
             return (T) augmentClasspath(classpath, "dependencies");
         }
         return super.attribute(attr);
