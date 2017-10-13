@@ -12,11 +12,12 @@ import org.junit.Before
 import org.junit.Test
 import java.security.SignatureException
 import java.util.*
+import kotlin.reflect.jvm.javaField
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TransactionSerializationTests : TestDependencyInjectionBase() {
-    val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
+    private val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
 
     class TestCash : Contract {
         override fun verify(tx: LedgerTransaction) {
@@ -65,7 +66,10 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
         stx.verifyRequiredSignatures()
 
         // Corrupt the data and ensure the signature catches the problem.
-        stx.id.bytes[5] = stx.id.bytes[5].inc()
+        val bytesField = stx.id::bytes.javaField?.apply { setAccessible(true) }
+        val bytes = bytesField?.get(stx.id) as ByteArray
+        bytes[5] = bytes[5].inc()
+
         assertFailsWith(SignatureException::class) {
             stx.verifyRequiredSignatures()
         }

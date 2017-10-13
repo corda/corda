@@ -118,8 +118,11 @@ sealed class ByteSequence : Comparable<ByteSequence> {
  * In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
  * functionality to Java, but it won't arrive for a few years yet!
  */
-open class OpaqueBytes(override val bytes: ByteArray) : ByteSequence() {
+open class OpaqueBytes(bytes: ByteArray) : ByteSequence() {
     companion object {
+        /**
+         * Create [OpaqueBytes] from a sequence of [Byte] values.
+         */
         @JvmStatic
         fun of(vararg b: Byte) = OpaqueBytes(byteArrayOf(*b))
     }
@@ -128,13 +131,35 @@ open class OpaqueBytes(override val bytes: ByteArray) : ByteSequence() {
         require(bytes.isNotEmpty())
     }
 
-    override val size: Int get() = bytes.size
-    override val offset: Int get() = 0
+    /**
+     * The bytes are always cloned so that this object becomes immutable. This has been done
+     * to prevent tampering with entities such as [SecureHash] and [PrivacySalt], as well as
+     * preserve the integrity of our hash constants [zeroHash] and [allOnesHash].
+     *
+     * Cloning like this may become a performance issue, depending on whether or not the JIT
+     * compiler is ever able to optimise away the clone. In which case we may need to revisit
+     * this later.
+     */
+    override final val bytes: ByteArray = bytes
+        get() = field.clone()
+    override val size: Int = bytes.size
+    override val offset: Int = 0
 }
 
+/**
+ * Copy [size] bytes from this [ByteArray] starting from [offset] into a new [ByteArray].
+ */
 fun ByteArray.sequence(offset: Int = 0, size: Int = this.size) = ByteSequence.of(this, offset, size)
 
+/**
+ * Converts this [ByteArray] into a [String] of hexadecimal digits.
+ */
 fun ByteArray.toHexString(): String = DatatypeConverter.printHexBinary(this)
+
+/**
+ * Converts this [String] of hexadecimal digits into a [ByteArray].
+ * @throws IllegalArgumentException if the [String] contains incorrectly-encoded characters.
+ */
 fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
 
 /**
