@@ -97,8 +97,7 @@ class NodeAttachmentStorageTest {
     @Test
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
-        val id =
-        database.transaction {
+        val id = database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
 
