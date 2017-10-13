@@ -69,7 +69,7 @@ private class BankOfCordaDriver {
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
                                 permissions = setOf(
                                         startFlowPermission<CashPaymentFlow>()))
-                        startNotaryNode(DUMMY_NOTARY.name, validating = false)
+                        startNotaryNode(DUMMY_NOTARY.name, validating = true)
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
                                 rpcUsers = listOf(bankUser))
