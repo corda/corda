@@ -28,7 +28,7 @@ class PersistentMap<K, V, E, out EK>(
             removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass)
     ).apply {
         //preload to allow all() to take data only from the cache (cache is unbound)
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
         getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
@@ -38,7 +38,7 @@ class PersistentMap<K, V, E, out EK>(
         override fun onRemoval(notification: RemovalNotification<K, V>?) {
             when (notification?.cause) {
                 RemovalCause.EXPLICIT -> {
-                    val session = DatabaseTransactionManager.current().session
+                    val session = currentDBSession()
                     val elem = session.find(persistentEntityClass, toPersistentEntityKey(notification.key))
                     if (elem != null) {
                         session.remove(elem)
@@ -101,7 +101,7 @@ class PersistentMap<K, V, E, out EK>(
             set(key, value,
                     logWarning = false,
                     store = { k: K, v: V ->
-                        DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
+                        currentDBSession().save(toPersistentEntity(k, v))
                         null
                     },
                     replace = { _: K, _: V -> Unit }
@@ -115,9 +115,10 @@ class PersistentMap<K, V, E, out EK>(
     fun addWithDuplicatesAllowed(key: K, value: V) =
             set(key, value,
                     store = { k, v ->
-                        val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(k))
+                        val session = currentDBSession()
+                        val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
                         if (existingEntry == null) {
-                            DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
+                            session.save(toPersistentEntity(k, v))
                             null
                         } else {
                             fromPersistentEntity(existingEntry).second
@@ -145,18 +146,19 @@ class PersistentMap<K, V, E, out EK>(
     }
 
     private fun merge(key: K, value: V): V? {
-        val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+        val session = currentDBSession()
+        val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(key))
         return if (existingEntry != null) {
-            DatabaseTransactionManager.current().session.merge(toPersistentEntity(key, value))
+            session.merge(toPersistentEntity(key, value))
             fromPersistentEntity(existingEntry).second
         } else {
-            DatabaseTransactionManager.current().session.save(toPersistentEntity(key, value))
+            session.save(toPersistentEntity(key, value))
             null
         }
     }
 
     private fun loadValue(key: K): V? {
-        val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+        val result = currentDBSession().find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
@@ -256,7 +258,7 @@ class PersistentMap<K, V, E, out EK>(
     }
 
     fun load() {
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
         cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())

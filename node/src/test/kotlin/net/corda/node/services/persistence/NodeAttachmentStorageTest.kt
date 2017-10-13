@@ -11,7 +11,6 @@ import net.corda.core.internal.write
 import net.corda.core.internal.writeLines
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -98,19 +97,18 @@ class NodeAttachmentStorageTest {
     @Test
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
-        val id =
-                database.transaction {
-                    val storage = NodeAttachmentService(MetricRegistry())
-                    val id = testJar.read { storage.importAttachment(it) }
+        val id = database.transaction {
+            val storage = NodeAttachmentService(MetricRegistry())
+            val id = testJar.read { storage.importAttachment(it) }
 
-                    // Corrupt the file in the store.
-                    val bytes = testJar.readAll()
-                    val corruptBytes = "arggghhhh".toByteArray()
-                    System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-                    val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
-                    DatabaseTransactionManager.current().session.merge(corruptAttachment)
-                    id
-                }
+            // Corrupt the file in the store.
+            val bytes = testJar.readAll()
+            val corruptBytes = "arggghhhh".toByteArray()
+            System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
+            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+            session.merge(corruptAttachment)
+            id
+        }
         database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
             val e = assertFailsWith<NodeAttachmentService.HashMismatchException> {

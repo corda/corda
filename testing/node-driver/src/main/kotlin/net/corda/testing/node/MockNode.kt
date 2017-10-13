@@ -44,12 +44,9 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.testing.DUMMY_KEY_1
-import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.resetTestSerialization
-import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import java.io.Closeable
@@ -393,13 +390,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     @JvmOverloads
-    fun createNotaryNode(legalName: CordaX500Name? = null, validating: Boolean = true): StartedNode<MockNode> {
+    fun createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name, validating: Boolean = true): StartedNode<MockNode> {
         return createNode(legalName = legalName, configOverrides = {
             whenever(it.notary).thenReturn(NotaryConfig(validating))
         })
     }
 
-    fun <N : MockNode> createNotaryNode(legalName: CordaX500Name? = null,
+    fun <N : MockNode> createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name,
                                         validating: Boolean = true,
                                         nodeFactory: Factory<N>): StartedNode<N> {
         return createNode(legalName = legalName, nodeFactory = nodeFactory, configOverrides = {

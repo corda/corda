@@ -29,6 +29,7 @@ import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.bufferUntilDatabaseCommit
+import net.corda.node.utilities.currentDBSession
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
@@ -38,6 +39,15 @@ import java.time.Clock
 import java.time.Instant
 import java.util.*
 import javax.persistence.Tuple
+import javax.persistence.criteria.CriteriaBuilder
+import javax.persistence.criteria.CriteriaUpdate
+import javax.persistence.criteria.Predicate
+import javax.persistence.criteria.Root
+
+private fun CriteriaBuilder.executeUpdate(session: Session, configure: Root<*>.(CriteriaUpdate<*>) -> Any?) = createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java).let { update ->
+    update.from(VaultSchemaV1.VaultStates::class.java).run { configure(update) }
+    session.createQuery(update).executeUpdate()
+}
 
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
@@ -73,7 +83,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
             val consumedStateRefs = update.consumed.map { it.ref }
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
-            val session = DatabaseTransactionManager.current().session
+            val session = currentDBSession()
             producedStateRefsMap.forEach { stateAndRef ->
                 val state = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
@@ -189,7 +199,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     private fun loadStates(refs: Collection<StateRef>): HashSet<StateAndRef<ContractState>> {
         val states = HashSet<StateAndRef<ContractState>>()
         if (refs.isNotEmpty()) {
-            val session = DatabaseTransactionManager.current().session
+            val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
             val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
@@ -223,11 +233,11 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
         val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
-        DatabaseTransactionManager.current().session.save(txnNoteEntity)
+        currentDBSession().save(txnNoteEntity)
     }
 
     override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultTxnNote::class.java)
         val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultTxnNote::class.java)
@@ -241,35 +251,34 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
         val softLockTimestamp = clock.instant()
         try {
-            val session = DatabaseTransactionManager.current().session
+            val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
-            val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java)
-            val vaultStates = criteriaUpdate.from(VaultSchemaV1.VaultStates::class.java)
-            val stateStatusPredication = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
-            val lockIdPredicate = criteriaBuilder.or(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name).isNull,
-                    criteriaBuilder.equal(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString()))
-            val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
-            val compositeKey = vaultStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
-            val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
-            criteriaUpdate.set(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
-            criteriaUpdate.set(vaultStates.get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
-            criteriaUpdate.where(stateStatusPredication, lockIdPredicate, stateRefsPredicate)
-            val updatedRows = session.createQuery(criteriaUpdate).executeUpdate()
+            fun execute(configure: Root<*>.(CriteriaUpdate<*>, Array<Predicate>) -> Any?) = criteriaBuilder.executeUpdate(session) { update ->
+                val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
+                val compositeKey = get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
+                val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
+                configure(update, arrayOf(stateRefsPredicate))
+            }
+
+            val updatedRows = execute { update, commonPredicates ->
+                val stateStatusPredication = criteriaBuilder.equal(get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
+                val lockIdPredicate = criteriaBuilder.or(get<String>(VaultSchemaV1.VaultStates::lockId.name).isNull,
+                        criteriaBuilder.equal(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString()))
+                update.set(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
+                update.set(get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
+                update.where(stateStatusPredication, lockIdPredicate, *commonPredicates)
+            }
             if (updatedRows > 0 && updatedRows == stateRefs.size) {
                 log.trace("Reserving soft lock states for $lockId: $stateRefs")
                 FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
             } else {
                 // revert partial soft locks
-                val criteriaRevertUpdate = criteriaBuilder.createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java)
-                val vaultStatesRevert = criteriaRevertUpdate.from(VaultSchemaV1.VaultStates::class.java)
-                val lockIdPredicateRevert = criteriaBuilder.equal(vaultStatesRevert.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
-                val lockUpdateTime = criteriaBuilder.equal(vaultStatesRevert.get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
-                val persistentStateRefsRevert = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
-                val compositeKeyRevert = vaultStatesRevert.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
-                val stateRefsPredicateRevert = criteriaBuilder.and(compositeKeyRevert.`in`(persistentStateRefsRevert))
-                criteriaRevertUpdate.set(vaultStatesRevert.get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
-                criteriaRevertUpdate.where(lockUpdateTime, lockIdPredicateRevert, stateRefsPredicateRevert)
-                val revertUpdatedRows = session.createQuery(criteriaRevertUpdate).executeUpdate()
+                val revertUpdatedRows = execute { update, commonPredicates ->
+                    val lockIdPredicate = criteriaBuilder.equal(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
+                    val lockUpdateTime = criteriaBuilder.equal(get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
+                    update.set(get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
+                    update.where(lockUpdateTime, lockIdPredicate, *commonPredicates)
+                }
                 if (revertUpdatedRows > 0) {
                     log.trace("Reverting $revertUpdatedRows partially soft locked states for $lockId")
                 }
@@ -286,33 +295,30 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
 
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
         val softLockTimestamp = clock.instant()
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
+        fun execute(configure: Root<*>.(CriteriaUpdate<*>, Array<Predicate>) -> Any?) = criteriaBuilder.executeUpdate(session) { update ->
+            val stateStatusPredication = criteriaBuilder.equal(get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
+            val lockIdPredicate = criteriaBuilder.equal(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
+            update.set<String>(get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
+            update.set(get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
+            configure(update, arrayOf(stateStatusPredication, lockIdPredicate))
+        }
         if (stateRefs == null) {
-            val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java)
-            val vaultStates = criteriaUpdate.from(VaultSchemaV1.VaultStates::class.java)
-            val stateStatusPredication = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
-            val lockIdPredicate = criteriaBuilder.equal(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
-            criteriaUpdate.set<String>(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
-            criteriaUpdate.set(vaultStates.get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
-            criteriaUpdate.where(stateStatusPredication, lockIdPredicate)
-            val update = session.createQuery(criteriaUpdate).executeUpdate()
+            val update = execute { update, commonPredicates ->
+                update.where(*commonPredicates)
+            }
             if (update > 0) {
                 log.trace("Releasing $update soft locked states for $lockId")
             }
         } else {
             try {
-                val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java)
-                val vaultStates = criteriaUpdate.from(VaultSchemaV1.VaultStates::class.java)
-                val stateStatusPredication = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
-                val lockIdPredicate = criteriaBuilder.equal(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
-                val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
-                val compositeKey = vaultStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
-                val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
-                criteriaUpdate.set<String>(vaultStates.get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
-                criteriaUpdate.set(vaultStates.get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
-                criteriaUpdate.where(stateStatusPredication, lockIdPredicate, stateRefsPredicate)
-                val updatedRows = session.createQuery(criteriaUpdate).executeUpdate()
+                val updatedRows = execute { update, commonPredicates ->
+                    val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
+                    val compositeKey = get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
+                    val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
+                    update.where(*commonPredicates, stateRefsPredicate)
+                }
                 if (updatedRows > 0) {
                     log.trace("Releasing $updatedRows soft locked states for $lockId and stateRefs $stateRefs")
                 }
