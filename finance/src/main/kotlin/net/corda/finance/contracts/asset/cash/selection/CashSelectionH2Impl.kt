@@ -112,15 +112,16 @@ class CashSelectionH2Impl : CashSelection {
 
                 // Use prepared statement for protection against SQL Injection (http://www.h2database.com/html/advanced.html#sql_injection)
                 val psSelectJoin = connection.prepareStatement(selectJoin)
-                psSelectJoin.setString(1, amount.token.currencyCode)
-                psSelectJoin.setLong(2, amount.quantity)
-                psSelectJoin.setString(3, lockId.toString())
+                var pIndex = 0
+                psSelectJoin.setString(++pIndex, amount.token.currencyCode)
+                psSelectJoin.setLong(++pIndex, amount.quantity)
+                psSelectJoin.setString(++pIndex, lockId.toString())
                 if (notary != null)
-                    psSelectJoin.setString(4, notary.name.toString())
+                    psSelectJoin.setString(++pIndex, notary.name.toString())
                 if (onlyFromIssuerParties.isNotEmpty())
-                    psSelectJoin.setObject(5, onlyFromIssuerParties.map { it.owningKey.toBase58String() as Any}.toTypedArray() )
+                    psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toBase58String() as Any}.toTypedArray() )
                 if (withIssuerRefs.isNotEmpty())
-                    psSelectJoin.setObject(6, withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray())
+                    psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray())
                 log.debug { psSelectJoin.toString() }
 
                 // Retrieve spendable state refs
