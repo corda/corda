@@ -5,10 +5,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
+import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
@@ -42,6 +39,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
         private val log = loggerFor<BFTNonValidatingNotaryService>()
     }
 
+    override val isValidating: Boolean = false
     private val client: BFTSMaRt.Client
     private val replicaHolder = SettableFuture.create<Replica>()
 
@@ -74,6 +72,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
     private class ServiceFlow(val otherSideSession: FlowSession, val service: BFTNonValidatingNotaryService) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
+            otherSideSession.send(service.isValidating)
             val stx = otherSideSession.receive<FilteredTransaction>().unwrap { it }
             val signatures = commit(stx)
             otherSideSession.send(signatures)

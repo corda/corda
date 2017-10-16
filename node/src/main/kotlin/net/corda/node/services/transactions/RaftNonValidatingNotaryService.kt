@@ -16,6 +16,7 @@ class RaftNonValidatingNotaryService(override val services: ServiceHubInternal,
         val id = constructId(validating = false, raft = true)
     }
 
+    override val isValidating: Boolean = false
     override val timeWindowChecker: TimeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider: RaftUniquenessProvider = RaftUniquenessProvider(services, raftConfig)
 

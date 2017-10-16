@@ -12,6 +12,8 @@ class SimpleNotaryService(override val services: ServiceHubInternal, override va
     override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = PersistentUniquenessProvider()
 
+    override val isValidating: Boolean = false
+
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryFlow.Service = NonValidatingNotaryFlow(otherPartySession, this)
 
     override fun start() {}
