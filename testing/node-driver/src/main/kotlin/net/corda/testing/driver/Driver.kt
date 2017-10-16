@@ -871,6 +871,10 @@ class DriverDSL(
     private fun startNodeInternal(config: Config, webAddress: NetworkHostAndPort, startInProcess: Boolean?, maximumHeapSize: String): CordaFuture<NodeHandle> {
         val nodeConfiguration = config.parseAs<FullNodeConfiguration>()
         nodeInfoFilesCopier.addConfig(nodeConfiguration.baseDirectory)
+        val onNodeExit: () -> Unit = {
+            nodeInfoFilesCopier.removeConfig(nodeConfiguration.baseDirectory)
+            countObservables.remove(nodeConfiguration.myLegalName)
+        }
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config, cordappPackages)
             shutdownManager.registerShutdown(
@@ -884,8 +888,7 @@ class DriverDSL(
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(nodeConfiguration, openFuture()).flatMap { rpc ->
                     waitForNodes(rpc).map {
-                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, nodeConfiguration, webAddress, node, thread,
-                                { countObservables.remove(nodeConfiguration.myLegalName) })
+                        NodeHandle.InProcess(rpc.nodeInfo(), rpc, nodeConfiguration, webAddress, node, thread, onNodeExit)
                     }
                 }
             }
@@ -910,7 +913,7 @@ class DriverDSL(
                         processDeathFuture.cancel(false)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: ${webAddress}")
                         NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, nodeConfiguration, webAddress, debugPort, process,
-                                { countObservables.remove(nodeConfiguration.myLegalName) })
+                                onNodeExit)
                     }
                 }
             }
