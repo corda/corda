@@ -1,5 +1,7 @@
 package net.corda.docs.java.tutorial.twoparty;
 
+// DOCSTART 01
+import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
 import net.corda.core.contracts.Command;
 import net.corda.core.contracts.StateAndContract;
@@ -7,22 +9,47 @@ import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
-import net.corda.docs.java.tutorial.helloworld.IOUContract;
-import net.corda.docs.java.tutorial.helloworld.IOUState;
+import net.corda.core.utilities.ProgressTracker;
 
 import java.security.PublicKey;
 import java.util.List;
+// DOCEND 01
 
-// START OF BOILERPLATE FOR CODE FRAGMENT TO COMPILE
-public class IOUFlow2 extends FlowLogic<Void> {
-    Integer iouValue = (Integer) new Object();
-    Party otherParty = (Party) new Object();
-    TransactionBuilder txBuilder = (TransactionBuilder) new Object();
+@InitiatingFlow
+@StartableByRPC
+public class IOUFlow extends FlowLogic<Void> {
+    private final Integer iouValue;
+    private final Party otherParty;
+
+    /**
+     * The progress tracker provides checkpoints indicating the progress of the flow to observers.
+     */
+    private final ProgressTracker progressTracker = new ProgressTracker();
+
+    public IOUFlow(Integer iouValue, Party otherParty) {
+        this.iouValue = iouValue;
+        this.otherParty = otherParty;
+    }
+
+    @Override
+    public ProgressTracker getProgressTracker() {
+        return progressTracker;
+    }
+
+    /**
+     * The flow logic is encapsulated within the call() method.
+     */
+    @Suspendable
+    @Override
     public Void call() throws FlowException {
-// END OF BOILERPLATE FOR CODE FRAGMENT TO COMPILE
+        // We retrieve the notary identity from the network map.
+        final Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
 
+        // We create a transaction builder.
+        final TransactionBuilder txBuilder = new TransactionBuilder();
+        txBuilder.setNotary(notary);
 
-        // DOCSTART 01
+        // DOCSTART 02
         // We create the transaction components.
         IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
         String outputContract = IOUContract.class.getName();
@@ -50,10 +77,6 @@ public class IOUFlow2 extends FlowLogic<Void> {
         subFlow(new FinalityFlow(fullySignedTx));
 
         return null;
-        // DOCEND 01
-
-
-// START OF BOILERPLATE FOR CODE FRAGMENT TO COMPILE
+        // DOCEND 02
     }
 }
-// END OF BOILERPLATE FOR CODE FRAGMENT TO COMPILE

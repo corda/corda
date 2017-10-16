@@ -21,7 +21,7 @@ by invoking a built-in flow called ``FinalityFlow`` as a subflow. We're going to
 We also need to add the borrower's public key to the transaction's command, making the borrower one of the required
 signers on the transaction.
 
-In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
+In ``IOUFlow.java``/``IOUFlow.kt``, change the imports block to the following:
 
 .. container:: codeset
 
@@ -29,12 +29,26 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
-        :dedent: 8
 
-    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUFlow2.java
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUFlow.java
         :language: java
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
+
+And update ``IOUFlow.call`` by changing the code following the creation of the ``TransactionBuilder`` as follows:
+
+.. container:: codeset
+
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/flow.kt
+        :language: kotlin
+        :start-after: DOCSTART 02
+        :end-before: DOCEND 02
+        :dedent: 8
+
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUFlow.java
+        :language: java
+        :start-after: DOCSTART 02
+        :end-before: DOCEND 02
         :dedent: 8
 
 To make the borrower a required signer, we simply add the borrower's public key to the list of signers on the command.

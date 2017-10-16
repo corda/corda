@@ -33,8 +33,8 @@ FlowLogic
 Flows are implemented as ``FlowLogic`` subclasses. You define the steps taken by the flow by overriding
 ``FlowLogic.call``.
 
-We'll write our flow in either ``TemplateFlow.java`` or ``App.kt``. Overwrite both the existing flows in the template
-with the following:
+We'll write our flow in either ``TemplateFlow.java`` or ``App.kt``. Delete both the existing flows in the template, and
+replace them with the following:
 
 .. container:: codeset
 

@@ -1,26 +1,34 @@
 package net.corda.docs.tutorial.twoparty
 
+// DOCSTART 01
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
-import net.corda.core.flows.CollectSignaturesFlow
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.docs.tutorial.helloworld.IOUContract
-import net.corda.docs.tutorial.helloworld.IOUState
+import net.corda.core.utilities.ProgressTracker
 import kotlin.reflect.jvm.jvmName
+// DOCEND 01
 
-// START OF BOILERPLATE FOR CODE FRAGMENT TO COMPILE
-object flow : FlowLogic<Unit>() {
-    val iouValue = Any() as Int
-    val otherParty = Any() as Party
-    val txBuilder = Any() as TransactionBuilder
+@InitiatingFlow
+@StartableByRPC
+class IOUFlow(val iouValue: Int,
+              val otherParty: Party) : FlowLogic<Unit>() {
+
+    /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */
+    override val progressTracker = ProgressTracker()
+
+    /** The flow logic is encapsulated within the call() method. */
+    @Suspendable
     override fun call() {
-// END OF BOILERPLATE FOR CODE FRAGMENT TO COMPILE
+        // We retrieve the notary identity from the network map.
+        val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
+        // We create a transaction builder
+        val txBuilder = TransactionBuilder(notary = notary)
 
-        // DOCSTART 01
+        // DOCSTART 02
         // We create the transaction components.
         val outputState = IOUState(iouValue, ourIdentity, otherParty)
         val outputContract = IOUContract::class.jvmName
@@ -44,10 +52,6 @@ object flow : FlowLogic<Unit>() {
 
         // Finalising the transaction.
         subFlow(FinalityFlow(fullySignedTx))
-        // DOCEND 01
-
-
-// START OF BOILERPLATE FOR CODE FRAGMENT TO COMPILE
+        // DOCEND 02
     }
 }
-// END OF BOILERPLATE FOR CODE FRAGMENT TO COMPILE
