@@ -1,6 +1,6 @@
 package net.corda.node.services.vault
 
-import net.corda.core.contracts.SoftLockableState
+import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -39,7 +39,7 @@ class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
         vault.rawUpdates.subscribe exit@ { (_, produced, flowId) ->
             registerSoftLocks(
                     flowId ?: return@exit,
-                    produced.stream().filter { (it.state.data as? SoftLockableState)?.softLockable ?: false }
+                    produced.stream().filter { it.state.data is FungibleAsset<*> }
                             .map { it.ref }
                             .toNonEmptySet() ?: return@exit)
         }

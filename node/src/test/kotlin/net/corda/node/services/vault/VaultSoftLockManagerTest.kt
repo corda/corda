@@ -48,31 +48,14 @@ class VaultSoftLockManagerTest {
     }
 
     private class PlainOldState(participant: StartedNode<*>) : SingleParticipantState(participant)
-    private class SoftLockableStateImpl(participant: StartedNode<*>) : SingleParticipantState(participant), SoftLockableState {
-        override val softLockable get() = true
-        override fun equals(other: Any?) = other is SoftLockableStateImpl && participants == other.participants
-        override fun hashCode() = participants.hashCode()
-    }
-
-    private abstract class AbstractFungibleAsset(participant: StartedNode<*>) : SingleParticipantState(participant), FungibleAsset<Unit> {
+    private class FungibleAssetImpl(participant: StartedNode<*>) : SingleParticipantState(participant), FungibleAsset<Unit> {
         override val owner get() = participants[0]
         override fun withNewOwner(newOwner: AbstractParty) = throw UnsupportedOperationException()
         override val amount get() = Amount(1, Issued(PartyAndReference(owner, OpaqueBytes.of(1)), Unit))
         override val exitKeys get() = throw UnsupportedOperationException()
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Unit>>, newOwner: AbstractParty) = throw UnsupportedOperationException()
-    }
-
-    private class FungibleAssetImpl(participant: StartedNode<*>) : AbstractFungibleAsset(participant) {
         override fun equals(other: Any?) = other is FungibleAssetImpl && participants == other.participants
         override fun hashCode() = participants.hashCode()
-    }
-
-    private class NonSoftLockableFungibleAsset(participant: StartedNode<*>) : AbstractFungibleAsset(participant) {
-        override val softLockable get() = false
-    }
-
-    private class NonSoftLockableState(participant: StartedNode<*>) : SingleParticipantState(participant), SoftLockableState {
-        override val softLockable get() = false
     }
 
     class ContractImpl : Contract {
@@ -90,13 +73,4 @@ class VaultSoftLockManagerTest {
 
     @Test
     fun `fungible asset is soft locked`() = run(true, FungibleAssetImpl(node))
-
-    @Test
-    fun `fungible asset soft locking can be overridden`() = run(false, NonSoftLockableFungibleAsset(node))
-
-    @Test
-    fun `custom state can be soft-lockable`() = run(true, SoftLockableStateImpl(node))
-
-    @Test
-    fun `it's not a marker interface`() = run(false, NonSoftLockableState(node))
 }

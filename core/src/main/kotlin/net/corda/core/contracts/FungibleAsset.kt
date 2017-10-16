@@ -20,8 +20,7 @@ class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException
  * @param T a type that represents the asset in question. This should describe the basic type of the asset
  * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.).
  */
-interface FungibleAsset<T : Any> : OwnableState, SoftLockableState {
-    override val softLockable get() = true
+interface FungibleAsset<T : Any> : OwnableState {
     /**
      * Amount represents a positive quantity of some issued product which can be cash, tokens, assets, or generally
      * anything else that's quantifiable with integer quantities. See [Issued] and [Amount] for more details.
