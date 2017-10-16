@@ -109,7 +109,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     fun keyExists(key: String) = nodes.keys.contains(key)
 
     fun nameExists(name: String) = keyExists(name.toKey())
-    
+
     fun hasNetworkMap(): Boolean = networkMapConfig != null
 
     fun runCorda(pty: R3Pty, config: NodeConfigWrapper): Boolean {
