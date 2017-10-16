@@ -11,31 +11,37 @@ Remember that each state references a contract. The contract imposes constraints
 If the transaction does not obey the constraints of all the contracts of all its states, it cannot become a valid
 ledger update.
 
-We need to modify our contract so that the borrower's signature is required in any IOU creation transaction. This will
-only require changing a single line of code. In ``IOUContract.java``/``IOUContract.kt``, update the final two lines of
-the ``requireThat`` block as follows:
+We need to modify our contract so that the borrower's signature is required in any IOU creation transaction.
+
+In ``IOUContract.java``/``IOUContract.kt``, change the imports block to the following:
 
 .. container:: codeset
 
-    .. code-block:: kotlin
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/contract.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
 
-        // Constraints on the signers.
-        "There must be two signers." using (command.signers.toSet().size == 2)
-        "The borrower and lender must be signers." using (command.signers.containsAll(listOf(
-            out.borrower.owningKey, out.lender.owningKey)))
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUContract.java
+        :language: java
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
 
-    .. code-block:: java
+And update the final block of constraints in the ``requireThat`` block as follows:
 
-        ...
+.. container:: codeset
 
-        import com.google.common.collect.ImmutableList;
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/contract.kt
+        :language: kotlin
+        :start-after: DOCSTART 02
+        :end-before: DOCEND 02
+        :dedent: 12
 
-        ...
-
-        // Constraints on the signers.
-        check.using("There must be two signers.", command.getSigners().size() == 2);
-        check.using("The borrower and lender must be signers.", command.getSigners().containsAll(
-            ImmutableList.of(borrower.getOwningKey(), lender.getOwningKey())));
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUContract.java
+        :language: java
+        :start-after: DOCSTART 02
+        :end-before: DOCEND 02
+        :dedent: 12
 
 Progress so far
 ---------------
