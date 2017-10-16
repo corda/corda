@@ -36,7 +36,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
             @Id
-            @Column(name = "public_key_hash")
+            @Column(name = "public_key_hash", length = 64)
             var publicKeyHash: String,
 
             @Lob

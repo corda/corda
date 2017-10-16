@@ -32,7 +32,7 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_nodes")
     class NetworkNode(
             @Id
-            @Column(name = "node_party_key_hash")
+            @Column(name = "node_party_key_hash", length = 64)
             var publicKeyHash: String,
 
             @Column

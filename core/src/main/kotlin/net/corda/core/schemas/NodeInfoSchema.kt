@@ -85,7 +85,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     @Table(name = "node_info_party_cert")
     data class DBPartyAndCertificate(
             @Id
-            @Column(name = "owning_key_hash")
+            @Column(name = "owning_key_hash", length = 64)
             val owningKeyHash: String,
 
             //@Id // TODO Do we assume that names are unique? Note: We can't have it as Id, because our toString on X500 is inconsistent.
