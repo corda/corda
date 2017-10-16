@@ -1,6 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.utilities.toBase58String
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.SingleMessageRecipient
@@ -31,8 +31,8 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_nodes")
     class NetworkNode(
-            @Id @Column(name = "node_party_key")
-            var publicKey: String = "",
+            @Id @Column(name = "node_party_key_hash")
+            var publicKeyHash: String = "",
 
             @Column
             var nodeParty: NodeParty = NodeParty(),
@@ -58,14 +58,14 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
 
         fun createNetworkNodesMap(): PersistentMap<PartyAndCertificate, NodeRegistrationInfo, NetworkNode, String> {
             return PersistentMap(
-                    toPersistentEntityKey = { it.owningKey.toBase58String() },
+                    toPersistentEntityKey = { SecureHash.sha256(it.owningKey.encoded).toString() },
                     fromPersistentEntity = {
                         Pair(PartyAndCertificate(factory.generateCertPath(ByteArrayInputStream(it.nodeParty.certPath))),
                                 it.registrationInfo.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { key: PartyAndCertificate, value: NodeRegistrationInfo ->
                         NetworkNode(
-                                publicKey = key.owningKey.toBase58String(),
+                                publicKeyHash = SecureHash.sha256(key.owningKey.encoded).toString(),
                                 nodeParty = NodeParty(
                                         key.name.toString(),
                                         key.certificate.encoded,
