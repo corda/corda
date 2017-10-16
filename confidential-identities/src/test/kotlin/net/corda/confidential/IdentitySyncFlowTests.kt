@@ -40,12 +40,12 @@ class IdentitySyncFlowTests {
     @Test
     fun `sync confidential identities`() {
         // Set up values we'll need
-        mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
-        val alice: Party = aliceNode.services.myInfo.chooseIdentity()
-        val bob: Party = bobNode.services.myInfo.chooseIdentity()
-        val notary = aliceNode.services.getDefaultNotary()
+        val notaryNode = mockNet.createNotaryNode()
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val alice: Party = aliceNode.info.singleIdentity()
+        val bob: Party = bobNode.info.singleIdentity()
+        val notary = notaryNode.services.getDefaultNotary()
         bobNode.internals.registerInitiatedFlow(Receive::class.java)
 
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
@@ -71,12 +71,12 @@ class IdentitySyncFlowTests {
     fun `don't offer other's identities confidential identities`() {
         // Set up values we'll need
         val notaryNode = mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val bobNode = mockNet.createPartyNode(BOB.name)
-        val charlieNode = mockNet.createPartyNode(CHARLIE.name)
-        val alice: Party = aliceNode.services.myInfo.chooseIdentity()
-        val bob: Party = bobNode.services.myInfo.chooseIdentity()
-        val charlie: Party = charlieNode.services.myInfo.chooseIdentity()
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
+        val alice: Party = aliceNode.info.singleIdentity()
+        val bob: Party = bobNode.info.singleIdentity()
+        val charlie: Party = charlieNode.info.singleIdentity()
         val notary = notaryNode.services.getDefaultNotary()
         bobNode.internals.registerInitiatedFlow(Receive::class.java)
 
