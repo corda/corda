@@ -31,8 +31,9 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_nodes")
     class NetworkNode(
-            @Id @Column(name = "node_party_key_hash")
-            var publicKeyHash: String = "",
+            @Id
+            @Column(name = "node_party_key_hash")
+            var publicKeyHash: String,
 
             @Column
             var nodeParty: NodeParty = NodeParty(),

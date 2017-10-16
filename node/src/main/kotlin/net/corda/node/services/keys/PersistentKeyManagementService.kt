@@ -8,6 +8,7 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.hexToBase58
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -34,29 +35,28 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
-
             @Id
-            @Column(length = 6000, name = "public_key")
-            var publicKey: String = "",
+            @Column(name = "public_key_hash")
+            var publicKeyHash: String,
 
             @Lob
             @Column(name = "private_key")
             var privateKey: ByteArray = ByteArray(0)
-    )
+    ) {
+        constructor(publicKey: PublicKey, privateKey: ByteArray)
+            : this(SecureHash.sha256(publicKey.encoded).toString(), privateKey)
+    }
 
     private companion object {
         fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toBase58String() },
                     fromPersistentEntity = {
-                        Pair(parsePublicKeyBase58(it.publicKey),
-                                it.privateKey.deserialize<PrivateKey>(context = SerializationDefaults.STORAGE_CONTEXT))
+                        Pair(parsePublicKeyBase58(it.publicKeyHash.hexToBase58()),
+                                it.privateKey.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
-                        PersistentKey().apply {
-                            publicKey = key.toBase58String()
-                            privateKey = value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                        }
+                        PersistentKey(key, value.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes)
                     },
                     persistentEntityClass = PersistentKey::class.java
             )
