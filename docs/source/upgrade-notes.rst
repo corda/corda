@@ -220,6 +220,8 @@ Miscellaneous
   apps would not typically select random, unknown counterparties from the network map based on self-declared capabilities.
   We will introduce a replacement for this functionality, business networks, in a future release.
 
+  For now, your should retrieve the service by legal name using ``NetworkMapCache.getNodeByLegalName``.
+
 Gotchas
 ^^^^^^^
 
