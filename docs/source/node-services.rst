@@ -209,10 +209,8 @@ NodeAttachmentService
 The ``NodeAttachmentService`` provides an implementation of the 
 ``AttachmentStorage`` interface exposed on the ``ServiceHub`` allowing 
 transactions to add documents, copies of the contract code and binary 
-data to transactions. The data is persisted to the local file system 
-inside the attachments subfolder of the node workspace. The service is 
-also interfaced to by the web server, which allows files to be uploaded 
-via an HTTP post request. 
+data to transactions. The service is also interfaced to by the web server,
+which allows files to be uploaded via an HTTP post request.
 
 Flow framework and event scheduling services
 --------------------------------------------
