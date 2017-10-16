@@ -8,8 +8,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ConfigurationTest {
-    private val validConfigPath = File(java.net.URLDecoder.decode(javaClass.getResource("/signing_service.conf").path, "UTF-8")).absolutePath
-    private val invalidConfigPath = File(java.net.URLDecoder.decode(javaClass.getResource("/signing_service_fail.conf").path, "UTF-8")).absolutePath
+    private val validConfigPath = File(javaClass.getResource("/signing_service.conf").toURI()).absolutePath
+    private val invalidConfigPath = File(javaClass.getResource("/signing_service_fail.conf").toURI()).absolutePath
 
     @Test
     fun `authMode is parsed correctly`() {
