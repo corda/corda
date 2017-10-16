@@ -27,7 +27,7 @@ abstract class SerializationFactory {
      * @param byteSequence The bytes to deserialize, including a format header prefix.
      * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
      * @param context A context that configures various parameters to deserialization.
-     * @return deserialized object along with [VersionHeader] to identify encoding used
+     * @return deserialized object along with [VersionHeader] to identify encoding used.
      */
     abstract fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): Pair<T, VersionHeader>
 
