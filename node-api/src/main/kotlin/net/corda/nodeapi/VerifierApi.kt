@@ -1,16 +1,8 @@
 package net.corda.nodeapi
 
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.sequence
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
-import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
-import net.corda.nodeapi.internal.serialization.obtainHeaderSignature
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.reader.MessageUtil
@@ -28,23 +20,16 @@ object VerifierApi {
             val responseAddress: SimpleString
     ) {
         companion object {
-            fun fromClientMessage(message: ClientMessage): Pair<VerificationRequest, SerializationContext> {
+            fun fromClientMessage(message: ClientMessage): Pair<VerificationRequest, VersionHeader> {
                 val bytes = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
                 val bytesSequence = bytes.sequence()
-                val context = establishSuitableContext(bytesSequence.obtainHeaderSignature())
+                val (transaction, versionHeader) = bytesSequence.deserializeWithVersionHeader<LedgerTransaction>()
                 val request = VerificationRequest(
                         message.getLongProperty(VERIFICATION_ID_FIELD_NAME),
-                        bytesSequence.deserialize(context = context),
+                        transaction,
                         MessageUtil.getJMSReplyTo(message))
-                return (request to context)
+                return (request to versionHeader)
             }
-
-            private fun establishSuitableContext(headerSignature: ByteSequence): SerializationContext =
-                    when (headerSignature) {
-                        KryoHeaderV0_1 -> KRYO_P2P_CONTEXT
-                        AmqpHeaderV1_0 -> AMQP_P2P_CONTEXT
-                        else -> throw IllegalArgumentException("Unrecognised header signature '$headerSignature'")
-                    }
         }
 
         fun writeToClientMessage(message: ClientMessage) {
@@ -67,10 +52,11 @@ object VerifierApi {
             }
         }
 
-        fun writeToClientMessage(message: ClientMessage, context: SerializationContext) {
+        fun writeToClientMessage(message: ClientMessage, versionHeader: VersionHeader) {
             message.putLongProperty(VERIFICATION_ID_FIELD_NAME, verificationId)
             if (exception != null) {
-                message.putBytesProperty(RESULT_EXCEPTION_FIELD_NAME, exception.serialize(context = context).bytes)
+                message.putBytesProperty(RESULT_EXCEPTION_FIELD_NAME,
+                        exception.serialize(context = SerializationFactory.defaultFactory.defaultContext.withPreferredSerializationVersion(versionHeader)).bytes)
             }
         }
     }

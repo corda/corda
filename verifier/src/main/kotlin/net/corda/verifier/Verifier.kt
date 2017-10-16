@@ -65,7 +65,7 @@ class Verifier {
             val consumer = session.createConsumer(VERIFICATION_REQUESTS_QUEUE_NAME)
             val replyProducer = session.createProducer()
             consumer.setMessageHandler {
-                val (request, context) = VerifierApi.VerificationRequest.fromClientMessage(it)
+                val (request, versionHeader) = VerifierApi.VerificationRequest.fromClientMessage(it)
                 log.debug { "Received verification request with id ${request.verificationId}" }
                 val error = try {
                     request.transaction.verify()
@@ -76,7 +76,7 @@ class Verifier {
                 }
                 val reply = session.createMessage(false)
                 val response = VerifierApi.VerificationResponse(request.verificationId, error)
-                response.writeToClientMessage(reply, context)
+                response.writeToClientMessage(reply, versionHeader)
                 replyProducer.send(request.responseAddress, reply)
                 it.acknowledge()
             }
@@ -90,6 +90,11 @@ class Verifier {
                 registerScheme(KryoVerifierSerializationScheme)
                 registerScheme(AMQPVerifierSerializationScheme)
             }
+            /**
+             * Even though default context is set to Kryo P2P the encoding will be adjusted depending on the incoming
+             * request received, see use of [versionHeader] in [main] method.
+             */
+            SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         }
     }
 

@@ -116,6 +116,10 @@ class CordaClassResolverTests {
         override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
             TODO("not implemented")
         }
+
+        override fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): Pair<T, VersionHeader> {
+            TODO("not implemented")
+        }
     }
 
     private val emptyWhitelistContext: SerializationContext = SerializationContextImpl(KryoHeaderV0_1, this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, SerializationContext.UseCase.P2P)

@@ -22,6 +22,16 @@ abstract class SerializationFactory {
     abstract fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
 
     /**
+     * Deserialize the bytes in to an object, using the prefixed bytes to determine the format.
+     *
+     * @param byteSequence The bytes to deserialize, including a format header prefix.
+     * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
+     * @param context A context that configures various parameters to deserialization.
+     * @return deserialized object along with [VersionHeader] to identify encoding used
+     */
+    abstract fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): Pair<T, VersionHeader>
+
+    /**
      * Serialize an object to bytes using the preferred serialization format version from the context.
      *
      * @param obj The object to be serialized.
@@ -86,6 +96,8 @@ abstract class SerializationFactory {
     }
 }
 
+typealias VersionHeader = ByteSequence
+
 /**
  * Parameters to serialization and deserialization.
  */
@@ -93,7 +105,7 @@ interface SerializationContext {
     /**
      * When serializing, use the format this header sequence represents.
      */
-    val preferredSerializationVersion: ByteSequence
+    val preferredSerializationVersion: VersionHeader
     /**
      * The class loader to use for deserialization.
      */
@@ -146,7 +158,7 @@ interface SerializationContext {
     /**
      * Helper method to return a new context based on this context but with serialization using the format this header sequence represents.
      */
-    fun withPreferredSerializationVersion(versionHeader: ByteSequence): SerializationContext
+    fun withPreferredSerializationVersion(versionHeader: VersionHeader): SerializationContext
 
     /**
      * The use case that we are serializing for, since it influences the implementations chosen.
@@ -171,6 +183,15 @@ object SerializationDefaults {
  */
 inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T {
     return serializationFactory.deserialize(this, T::class.java, context)
+}
+
+/**
+ * Additionally returns [VersionHeader] which was used to encoding.
+ * It might be helpful to know [VersionHeader] in case reply needs to be sent in the same encoding.
+ */
+inline fun <reified T : Any> ByteSequence.deserializeWithVersionHeader(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
+                                                                       context: SerializationContext = serializationFactory.defaultContext): Pair<T, VersionHeader> {
+    return serializationFactory.deserializeWithVersionHeader(this, T::class.java, context)
 }
 
 /**

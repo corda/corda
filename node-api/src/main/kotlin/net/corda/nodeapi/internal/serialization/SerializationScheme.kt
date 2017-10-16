@@ -38,7 +38,7 @@ object NotSupportedSerializationScheme : SerializationScheme {
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> = doThrow()
 }
 
-data class SerializationContextImpl(override val preferredSerializationVersion: ByteSequence,
+data class SerializationContextImpl(override val preferredSerializationVersion: VersionHeader,
                                     override val deserializationClassLoader: ClassLoader,
                                     override val whitelist: ClassWhitelist,
                                     override val properties: Map<Any, Any>,
@@ -89,12 +89,12 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
         })
     }
 
-    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferredSerializationVersion = versionHeader)
+    override fun withPreferredSerializationVersion(versionHeader: VersionHeader) = copy(preferredSerializationVersion = versionHeader)
 }
 
 private const val HEADER_SIZE: Int = 8
 
-fun ByteSequence.obtainHeaderSignature() = take(HEADER_SIZE).copy()
+fun ByteSequence.obtainHeaderSignature(): VersionHeader = take(HEADER_SIZE).copy()
 
 open class SerializationFactoryImpl : SerializationFactory() {
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
@@ -106,25 +106,37 @@ open class SerializationFactoryImpl : SerializationFactory() {
     // TODO: This is read-mostly. Probably a faster implementation to be found.
     private val schemes: ConcurrentHashMap<Pair<ByteSequence, SerializationContext.UseCase>, SerializationScheme> = ConcurrentHashMap()
 
-    private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): SerializationScheme {
+    private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): Pair<SerializationScheme, VersionHeader> {
         // truncate sequence to 8 bytes, and make sure it's a copy to avoid holding onto large ByteArrays
         val lookupKey = byteSequence.obtainHeaderSignature() to target
-        return schemes.computeIfAbsent(lookupKey) {
+        val scheme = schemes.computeIfAbsent(lookupKey) {
             registeredSchemes
                     .filter { scheme -> scheme.canDeserializeVersion(it.first, it.second) }
                     .forEach { return@computeIfAbsent it }
             logger.warn("Cannot find serialization scheme for: $lookupKey, registeredSchemes are: $registeredSchemes")
             NotSupportedSerializationScheme
         }
+        return scheme to lookupKey.first
     }
 
     @Throws(NotSerializableException::class)
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        return asCurrent { withCurrentContext(context) { schemeFor(byteSequence, context.useCase).deserialize(byteSequence, clazz, context) } }
+        return asCurrent { withCurrentContext(context) { schemeFor(byteSequence, context.useCase).first.deserialize(byteSequence, clazz, context) } }
+    }
+
+    @Throws(NotSerializableException::class)
+    override fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): Pair<T, VersionHeader> {
+        return asCurrent {
+            withCurrentContext(context) {
+                val (scheme, versionHeader) = schemeFor(byteSequence, context.useCase)
+                val deserializedObject = scheme.deserialize(byteSequence, clazz, context)
+                deserializedObject to versionHeader
+            }
+        }
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        return asCurrent { withCurrentContext(context) { schemeFor(context.preferredSerializationVersion, context.useCase).serialize(obj, context) } }
+        return asCurrent { withCurrentContext(context) { schemeFor(context.preferredSerializationVersion, context.useCase).first.serialize(obj, context) } }
     }
 
     fun registerScheme(scheme: SerializationScheme) {
