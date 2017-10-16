@@ -17,11 +17,9 @@ Kotlin) file. We won't be using it, and it will cause build errors unless we rem
 Deploying our CorDapp
 ---------------------
 Let's take a look at the nodes we're going to deploy. Open the project's ``build.gradle`` file and scroll down to the
-``task deployNodes`` section. This section defines three nodes - the Controller, NodeA, and NodeB:
+``task deployNodes`` section. This section defines three nodes - the Controller, PartyA, and PartyB:
 
-.. container:: codeset
-
-    .. code-block:: kotlin
+.. code:: bash
 
         task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             directory "./build/nodes"
@@ -64,7 +62,7 @@ We can run this ``deployNodes`` task using Gradle. For each node definition, Gra
 
 We can do that now by running the following commands from the root of the project:
 
-.. code:: python
+.. code:: bash
 
     // On Windows
     gradlew clean deployNodes
@@ -77,19 +75,18 @@ Running the nodes
 Running ``deployNodes`` will build the nodes under ``build/nodes``. If we navigate to one of these folders, we'll see
 the three node folders. Each node folder has the following structure:
 
-    .. code:: python
+    .. code:: bash
 
         .
         |____corda.jar                     // The runnable node
         |____corda-webserver.jar           // The node's webserver
-        |____dependencies
         |____node.conf                     // The node's configuration file
         |____plugins
           |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
 
 Let's start the nodes by running the following commands from the root of the project:
 
-.. code:: python
+.. code:: bash
 
     // On Windows
     build/nodes/runnodes.bat
@@ -138,7 +135,7 @@ will display a list of the available commands. We can examine the contents of a 
 
 The vaults of PartyA and PartyB should both display the following output:
 
-.. code:: python
+.. code:: bash
 
     states:
     - state:
@@ -194,11 +191,9 @@ There are a number of improvements we could make to this CorDapp:
 * We could add an API, to make it easier to interact with the CorDapp
 
 We will explore some of these improvements in future tutorials. But you should now be ready to develop your own
-CorDapps. There's `a more fleshed-out version of the IOU CorDapp <https://github.com/corda/cordapp-example>`_ with an
-API and web front-end, and a set of example CorDapps in `the main Corda repo <https://github.com/corda/corda>`_, under
-``samples``. An explanation of how to run these samples :doc:`here <running-the-demos>`.
+CorDapps. You can find a list of sample CorDapps `here <https://www.corda.net/samples/>`_.
 
-As you write CorDapps, you can learn more about the API available :doc:`here <api>`.
+As you write CorDapps, you can learn more about the Corda API :doc:`here <corda-api>`.
 
 If you get stuck at any point, please reach out on `Slack <https://slack.corda.net/>`_,
 `Discourse <https://discourse.corda.net/>`_, or `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_.
