@@ -3,11 +3,13 @@ package net.corda.node.services.schema
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
@@ -15,6 +17,7 @@ import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Test
 import javax.persistence.*
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NodeSchemaServiceTest {
@@ -23,11 +26,9 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `registering custom schemas for testing with MockNode`() {
-        val mockNet = MockNetwork()
+        val mockNet = MockNetwork(cordappPackages = listOf(DummyLinearStateSchemaV1::class.packageName))
         val mockNode = mockNet.createNode()
         mockNet.runNetwork()
-
-        mockNode.internals.registerCustomSchemas(setOf(DummyLinearStateSchemaV1))
         val schemaService = mockNode.services.schemaService
         assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))
 
@@ -48,6 +49,16 @@ class NodeSchemaServiceTest {
             val mappedSchemas = result.returnValue.getOrThrow()
             assertTrue(mappedSchemas.contains(TestSchema.name))
         }
+    }
+
+    @Test
+    fun `custom schemas are loaded eagerly`() {
+        val expected = setOf("PARENTS", "CHILDREN")
+        assertEquals<Set<*>>(expected, driver {
+            (startNode(startInSameProcess = true).getOrThrow() as NodeHandle.InProcess).node.database.transaction {
+                session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
+            }
+        }.toMutableSet().apply { retainAll(expected) })
     }
 
     @StartableByRPC
