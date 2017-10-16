@@ -63,7 +63,7 @@ class NotaryFlow {
             val response = try {
                 progressTracker.currentStep = DISCOVERING
                 val session = initiateFlow(notaryParty)
-                val isValidating: Boolean = session.receive<Boolean>().unwrap { it }
+                val isValidating = session.receive<Boolean>().unwrap { it }
                 progressTracker.currentStep = REQUESTING
                 if (isValidating) {
                     subFlow(SendTransactionWithRetry(session, stx))

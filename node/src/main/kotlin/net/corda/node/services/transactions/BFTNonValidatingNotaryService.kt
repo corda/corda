@@ -39,7 +39,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
         private val log = loggerFor<BFTNonValidatingNotaryService>()
     }
 
-    override val isValidating: Boolean = false
+    override val isValidating: Boolean get() = false
     private val client: BFTSMaRt.Client
     private val replicaHolder = SettableFuture.create<Replica>()
 
