@@ -12,18 +12,16 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.abbreviate
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.staticField
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DatabaseTransaction
@@ -32,16 +30,18 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
 import java.sql.SQLException
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 class FlowPermissionException(message: String) : FlowException(message)
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
-                              val logic: FlowLogic<R>,
+                              override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
                               override val flowInitiator: FlowInitiator,
-                              // Store the Party rather than the full cert path with PartyAndCertificate
+        // Store the Party rather than the full cert path with PartyAndCertificate
                               val ourIdentity: Party) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
 
     companion object {
@@ -52,23 +52,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
-
-        /**
-         * Provide a mechanism to sleep within a Strand without locking any transactional state
-         */
-        // TODO: inlined due to an intermittent Quasar error (to be fully investigated)
-        @Suppress("NOTHING_TO_INLINE")
-        @Suspendable
-        inline fun sleep(millis: Long) {
-            if (currentStateMachine() != null) {
-                val db = DatabaseTransactionManager.dataSource
-                DatabaseTransactionManager.current().commit()
-                DatabaseTransactionManager.current().close()
-                Strand.sleep(millis)
-                DatabaseTransactionManager.dataSource = db
-                DatabaseTransactionManager.newTransaction()
-            } else Strand.sleep(millis)
-        }
     }
 
     // These fields shouldn't be serialised, so they are marked @Transient.
@@ -174,8 +157,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                             "@${InitiatingFlow::class.java.simpleName} sub-flow."
             )
         }
-        createNewSession(otherParty, sessionFlow)
         val flowSession = FlowSessionImpl(otherParty)
+        createNewSession(otherParty, flowSession, sessionFlow)
         flowSession.stateMachine = this
         flowSession.sessionFlow = sessionFlow
         return flowSession
@@ -259,12 +242,16 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         throw IllegalStateException("We were resumed after waiting for $hash but it wasn't found in our local storage")
     }
 
+    // Provide a mechanism to sleep within a Strand without locking any transactional state.
+    // This checkpoints, since we cannot undo any database writes up to this point.
+    @Suspendable
+    override fun sleepUntil(until: Instant) {
+        suspend(Sleep(until, this))
+    }
+
     // TODO Dummy implementation of access to application specific permission controls and audit logging
     override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
-        // This is a hack to allow cash app access list of permitted issuer currency.
-        // TODO: replace this with cordapp configuration.
-        val config = serviceHub.configuration as? FullNodeConfiguration
-        val permissionGranted = config?.extraAdvertisedServiceIds?.contains(permissionName) ?: true
+        val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
         val checkPermissionEvent = FlowPermissionAuditEvent(
                 serviceHub.clock.instant(),
                 flowInitiator,
@@ -275,13 +262,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 permissionName,
                 permissionGranted)
         serviceHub.auditService.recordAuditEvent(checkPermissionEvent)
+        @Suppress("ConstantConditionIf")
         if (!permissionGranted) {
             throw FlowPermissionException("User $flowInitiator not permissioned for $permissionName on flow $id")
         }
     }
 
     // TODO Dummy implementation of access to application specific audit logging
-    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>): Unit {
+    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
         val flowAuditEvent = FlowAppAuditEvent(
                 serviceHub.clock.instant(),
                 flowInitiator,
@@ -300,6 +288,22 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     override fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>) {
         FlowStackSnapshotFactory.instance.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id)
+    }
+
+    @Suspendable
+    override fun receiveAll(sessions: Map<FlowSession, Class<out Any>>, sessionFlow: FlowLogic<*>): Map<FlowSession, UntrustworthyData<Any>> {
+        val requests = ArrayList<ReceiveOnly<SessionData>>()
+        for ((session, receiveType) in sessions) {
+            val sessionInternal = getConfirmedSession(session.counterparty, sessionFlow)
+            requests.add(ReceiveOnly(sessionInternal, SessionData::class.java, receiveType))
+        }
+        val receivedMessages = ReceiveAll(requests).suspendAndExpectReceive(suspend)
+        val result = LinkedHashMap<FlowSession, UntrustworthyData<Any>>()
+        for ((sessionInternal, requestAndMessage) in receivedMessages) {
+            val message = requestAndMessage.message.confirmReceiveType(requestAndMessage.request)
+            result[sessionInternal.flowSession] = message.checkPayloadIs(requestAndMessage.request.userReceiveType as Class<out Any>)
+        }
+        return result
     }
 
     /**
@@ -325,7 +329,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             is FlowSessionState.Initiated -> sessionState.peerSessionId
             else -> throw IllegalStateException("We've somehow held onto a non-initiated session: $session")
         }
-        return SessionData(peerSessionId, payload)
+        return SessionData(peerSessionId, payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
     }
 
     @Suspendable
@@ -365,10 +369,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun createNewSession(
             otherParty: Party,
+            flowSession: FlowSession,
             sessionFlow: FlowLogic<*>
     ) {
         logger.trace { "Creating a new session with $otherParty" }
-        val session = FlowSessionInternal(sessionFlow, random63BitValue(), null, FlowSessionState.Uninitiated(otherParty))
+        val session = FlowSessionInternal(sessionFlow, flowSession, random63BitValue(), null, FlowSessionState.Uninitiated(otherParty))
         openSessions[Pair(sessionFlow, otherParty)] = session
     }
 
@@ -380,19 +385,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             waitForConfirmation: Boolean,
             retryable: Boolean = false
     ): FlowSessionInternal {
-        val session = openSessions[Pair(sessionFlow, otherParty)]
-        if (session == null) {
-            throw IllegalStateException("Expected an Uninitiated session for $otherParty")
-        }
-        val state = session.state
-        if (state !is FlowSessionState.Uninitiated) {
-            throw IllegalStateException("Tried to initiate a session $session, but it's already initiating/initiated")
-        }
+        val session = openSessions[Pair(sessionFlow, otherParty)] ?: throw IllegalStateException("Expected an Uninitiated session for $otherParty")
+        val state = session.state as? FlowSessionState.Uninitiated ?: throw IllegalStateException("Tried to initiate a session $session, but it's already initiating/initiated")
         logger.trace { "Initiating a new session with ${state.otherParty}" }
         session.state = FlowSessionState.Initiating(state.otherParty)
         session.retryable = retryable
         val (version, initiatingFlowClass) = session.flow.javaClass.flowVersionAndInitiatingClass
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, firstPayload)
+        val payloadBytes = firstPayload?.serialize(context = SerializationDefaults.P2P_CONTEXT)
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, payloadBytes)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
@@ -405,11 +405,16 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         return receiveRequest.suspendAndExpectReceive().confirmReceiveType(receiveRequest)
     }
 
+    private val suspend : ReceiveAll.Suspend = object : ReceiveAll.Suspend {
+        @Suspendable
+        override fun invoke(request: FlowIORequest) {
+            suspend(request)
+        }
+    }
+
     @Suspendable
     private fun ReceiveRequest<*>.suspendAndExpectReceive(): ReceivedSessionMessage<*> {
-        fun pollForMessage() = session.receivedMessages.poll()
-
-        val polledMessage = pollForMessage()
+        val polledMessage = session.receivedMessages.poll()
         return if (polledMessage != null) {
             if (this is SendAndReceive) {
                 // Since we've already received the message, we downgrade to a send only to get the payload out and not
@@ -420,7 +425,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         } else {
             // Suspend while we wait for a receive
             suspend(this)
-            pollForMessage() ?:
+            session.receivedMessages.poll() ?:
                     throw IllegalStateException("Was expecting a ${receiveType.simpleName} but instead got nothing for $this")
         }
     }
@@ -430,8 +435,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val session = receiveRequest.session
         val receiveType = receiveRequest.receiveType
         if (receiveType.isInstance(message)) {
-            @Suppress("UNCHECKED_CAST")
-            return this as ReceivedSessionMessage<M>
+            return uncheckedCast(this)
         } else if (message is SessionEnd) {
             openSessions.values.remove(session)
             if (message is ErrorSessionEnd) {
@@ -460,7 +464,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun suspend(ioRequest: FlowIORequest) {
         // We have to pass the thread local database transaction across via a transient field as the fiber park
         // swaps them out.
-        txTrampoline =  DatabaseTransactionManager.setThreadLocalTx(null)
+        txTrampoline = DatabaseTransactionManager.setThreadLocalTx(null)
         if (ioRequest is WaitingRequest)
             waitingForResponse = ioRequest
 
@@ -481,6 +485,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         }
 
+        if (exceptionDuringSuspend == null && ioRequest is Sleep) {
+            // Sleep on the fiber.  This will not sleep if it's in the past.
+            Strand.sleep(Duration.between(Instant.now(), ioRequest.until).toNanos(), TimeUnit.NANOSECONDS)
+        }
         createTransaction()
         // TODO Now that we're throwing outside of the suspend the FlowLogic can catch it. We need Quasar to terminate
         // the fiber when exceptions occur inside a suspend.
@@ -519,29 +527,30 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out FlowLogic<*>>> get() {
-    var current: Class<*> = this
-    var found: Pair<Int, Class<out FlowLogic<*>>>? = null
-    while (true) {
-        val annotation = current.getDeclaredAnnotation(InitiatingFlow::class.java)
-        if (annotation != null) {
-            if (found != null) throw IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated once")
-            require(annotation.version > 0) { "Flow versions have to be greater or equal to 1" }
-            found = annotation.version to (current as Class<out FlowLogic<*>>)
+val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out FlowLogic<*>>>
+    get() {
+        var current: Class<*> = this
+        var found: Pair<Int, Class<out FlowLogic<*>>>? = null
+        while (true) {
+            val annotation = current.getDeclaredAnnotation(InitiatingFlow::class.java)
+            if (annotation != null) {
+                if (found != null) throw IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated once")
+                require(annotation.version > 0) { "Flow versions have to be greater or equal to 1" }
+                found = annotation.version to uncheckedCast(current)
+            }
+            current = current.superclass
+                    ?: return found
+                    ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
+                    "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
         }
-        current = current.superclass
-            ?: return found
-            ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
-                "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
     }
-}
 
-val Class<out FlowLogic<*>>.appName: String get() {
-    val jarFile = Paths.get(protectionDomain.codeSource.location.toURI())
-    return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
-        jarFile.fileName.toString().removeSuffix(".jar")
-    } else {
-        "<unknown>"
+val Class<out FlowLogic<*>>.appName: String
+    get() {
+        val jarFile = Paths.get(protectionDomain.codeSource.location.toURI())
+        return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
+            jarFile.fileName.toString().removeSuffix(".jar")
+        } else {
+            "<unknown>"
+        }
     }
-}

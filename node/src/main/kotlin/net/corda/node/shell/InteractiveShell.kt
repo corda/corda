@@ -23,6 +23,7 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.utilities.loggerFor
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.core.CordaException
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
@@ -233,8 +234,7 @@ object InteractiveShell {
             return
         }
 
-        @Suppress("UNCHECKED_CAST")
-        val clazz = matches.single() as Class<FlowLogic<*>>
+        val clazz: Class<FlowLogic<*>> = uncheckedCast(matches.single())
         try {
             // TODO Flow invocation should use startFlowDynamic.
             val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell) }, inputData, clazz)
@@ -247,11 +247,11 @@ object InteractiveShell {
                 // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
                 // the tracker is done with the screen.
                 latch.await()
-            } catch(e: InterruptedException) {
+            } catch (e: InterruptedException) {
                 ANSIProgressRenderer.progressTracker = null
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
-        } catch(e: NoApplicableConstructor) {
+        } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
         } finally {
@@ -259,7 +259,7 @@ object InteractiveShell {
         }
     }
 
-    class NoApplicableConstructor(val errors: List<String>) : Exception() {
+    class NoApplicableConstructor(val errors: List<String>) : CordaException(this.toString()) {
         override fun toString() = (listOf("No applicable constructor for flow. Problems were:") + errors).joinToString(System.lineSeparator())
     }
 
@@ -305,14 +305,14 @@ object InteractiveShell {
                     continue
                 }
                 return invoke(flow)
-            } catch(e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
+            } catch (e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
                 errors.add("${getPrototype()}: missing parameter ${e.paramName}")
-            } catch(e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
+            } catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
                 errors.add("${getPrototype()}: too many parameters")
-            } catch(e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
+            } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
                 errors.add("$argTypes: <constructor missing parameter reflection data>")
-            } catch(e: StringToMethodCallParser.UnparseableCallException) {
+            } catch (e: StringToMethodCallParser.UnparseableCallException) {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
                 errors.add("$argTypes: ${e.message}")
             }
@@ -434,8 +434,6 @@ object InteractiveShell {
         }
     }
 
-    // Kotlin bug: USELESS_CAST warning is generated below but the IDE won't let us remove it.
-    @Suppress("USELESS_CAST", "UNCHECKED_CAST")
     private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): OpenFuture<Unit>? {
         // Match on a couple of common patterns for "important" observables. It's tough to do this in a generic
         // way because observables can be embedded anywhere in the object graph, and can emit other arbitrary
@@ -454,7 +452,7 @@ object InteractiveShell {
         } ?: return null
 
         val subscriber = PrintingSubscriber(printerFun, toStream)
-        (observable as Observable<Any>).subscribe(subscriber)
+        uncheckedCast(observable).subscribe(subscriber)
         return subscriber.future
     }
 
@@ -508,7 +506,7 @@ object InteractiveShell {
             } finally {
                 try {
                     value.close()
-                } catch(e: IOException) {
+                } catch (e: IOException) {
                     // Ignore.
                 }
             }

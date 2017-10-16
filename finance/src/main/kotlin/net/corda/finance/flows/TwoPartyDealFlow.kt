@@ -43,6 +43,7 @@ object TwoPartyDealFlow {
         companion object {
             object GENERATING_ID : ProgressTracker.Step("Generating anonymous identities")
             object SENDING_PROPOSAL : ProgressTracker.Step("Handshaking and awaiting transaction proposal.")
+
             fun tracker() = ProgressTracker(GENERATING_ID, SENDING_PROPOSAL)
         }
 
@@ -50,12 +51,14 @@ object TwoPartyDealFlow {
         abstract val notaryParty: Party
         abstract val otherSideSession: FlowSession
 
+        // DOCSTART 2
         @Suspendable
         override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
             val txIdentities = subFlow(SwapIdentitiesFlow(otherSideSession.counterparty))
             val anonymousMe = txIdentities[ourIdentity] ?: ourIdentity.anonymise()
             val anonymousCounterparty = txIdentities[otherSideSession.counterparty] ?: otherSideSession.counterparty.anonymise()
+            // DOCEND 2
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
             val hello = Handshake(payload, anonymousMe, anonymousCounterparty)
@@ -146,6 +149,7 @@ object TwoPartyDealFlow {
 
         @Suspendable
         protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
+
         @Suspendable
         protected abstract fun assembleSharedTX(handshake: Handshake<U>): Triple<TransactionBuilder, List<PublicKey>, List<TransactionSignature>>
     }

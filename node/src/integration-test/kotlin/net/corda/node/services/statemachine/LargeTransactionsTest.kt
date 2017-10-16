@@ -21,7 +21,8 @@ import kotlin.test.assertEquals
  * transaction size limit (which should only consider the hashes).
  */
 class LargeTransactionsTest {
-    @StartableByRPC @InitiatingFlow
+    @StartableByRPC
+    @InitiatingFlow
     class SendLargeTransactionFlow(private val hash1: SecureHash,
                                    private val hash2: SecureHash,
                                    private val hash3: SecureHash,
@@ -44,7 +45,8 @@ class LargeTransactionsTest {
         }
     }
 
-    @InitiatedBy(SendLargeTransactionFlow::class) @Suppress("UNUSED")
+    @InitiatedBy(SendLargeTransactionFlow::class)
+    @Suppress("UNUSED")
     class ReceiveLargeTransactionFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {

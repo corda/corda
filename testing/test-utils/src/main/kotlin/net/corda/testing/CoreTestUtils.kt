@@ -1,4 +1,4 @@
-@file:Suppress("UNUSED_PARAMETER", "UNCHECKED_CAST")
+@file:Suppress("UNUSED_PARAMETER")
 @file:JvmName("CoreTestUtils")
 
 package net.corda.testing
@@ -17,7 +17,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.CertificateAndKeyPair
@@ -70,11 +69,11 @@ val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
 val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MiniCorp", locality = "London", country = "GB"), MINI_CORP_PUBKEY)
 val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
+val BOC_NAME: CordaX500Name = CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB")
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB"), BOC_PUBKEY)
+val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(BOC_NAME, BOC_PUBKEY)
 val BOC: Party get() = BOC_IDENTITY.party
-val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
@@ -117,8 +116,8 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  * to the Node, some other process else could allocate the returned ports.
  */
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
-    val freePort =  freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort .. freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
+    val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
+    return (freePort..freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
 }
 
 @JvmOverloads
@@ -146,16 +145,18 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey, trustR
     return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 }
 
-inline fun <reified T : Any> kryoSpecific(reason: String, function: () -> Unit) = if(!AMQP_ENABLED) {
+@Suppress("unused")
+inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
     function()
 } else {
-    loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason" )
+    loggerFor<T>().info("Ignoring Kryo specific test, reason: $reason")
 }
 
-inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) = if(AMQP_ENABLED) {
+@Suppress("unused")
+inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit) = if (AMQP_ENABLED) {
     function()
 } else {
-    loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason" )
+    loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
 }
 
 /**
@@ -163,21 +164,16 @@ inline fun <reified T : Any> amqpSpecific(reason: String, function: () -> Unit) 
  * TODO: Should be removed after multiple identities are introduced.
  */
 fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
+
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
+/**
+ * Extract a single identity from the node info. Throws an error if the node has multiple identities.
+ */
+fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.single()
+
+/**
+ * Extract a single identity from the node info. Throws an error if the node has multiple identities.
+ */
+fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
 /** Returns the identity of the first notary found on the network */
 fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
-
-/**
- * Set the package to scan for cordapps - this overrides the default behaviour of scanning the cordapps directory
- * @param packageName A package name that you wish to scan for cordapps
- */
-fun setCordappPackages(vararg packageNames: String) {
-    CordappLoader.testPackages = packageNames.toList()
-}
-
-/**
- * Unsets the default overriding behaviour of [setCordappPackage]
- */
-fun unsetCordappPackages() {
-    CordappLoader.testPackages = emptyList()
-}

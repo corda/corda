@@ -11,6 +11,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
@@ -56,7 +57,7 @@ import java.math.BigInteger
 import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.Principal
-import java.security.cert.X509Certificate
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService
@@ -96,7 +97,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     companion object {
         private val log = loggerFor<ArtemisMessagingServer>()
         /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
-        @JvmStatic val MAX_FILE_SIZE = 10485760
+        @JvmStatic
+        val MAX_FILE_SIZE = 10485760
 
         val ipDetectRequestProperty = "ip-request-id"
         val ipDetectResponseProperty = "ip-address"
@@ -390,10 +392,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             isUseDuplicateDetection = true // Enable the bridge's automatic deduplication logic
             // We keep trying until the network map deems the node unreachable and tells us it's been removed at which
             // point we destroy the bridge
-            // TODO Give some thought to the retry settings
-            retryInterval = 5.seconds.toMillis()
-            retryIntervalMultiplier = 1.5  // Exponential backoff
-            maxRetryInterval = 3.minutes.toMillis()
+            retryInterval = config.activeMQServer.bridge.retryIntervalMs
+            retryIntervalMultiplier = config.activeMQServer.bridge.retryIntervalMultiplier
+            maxRetryInterval = Duration.ofMinutes(config.activeMQServer.bridge.maxRetryIntervalMin).toMillis()
             // As a peer of the target node we must connect to it using the peer user. Actual authentication is done using
             // our TLS certificate.
             user = PEER_USER
@@ -478,8 +479,7 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
     override fun createConnection(): Connection? {
         val connection = super.createConnection() as? NettyConnection
         if (sslEnabled && connection != null) {
-            @Suppress("UNCHECKED_CAST")
-            val expectedLegalNames = (configuration[ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME] ?: emptySet<CordaX500Name>()) as Set<CordaX500Name>
+            val expectedLegalNames: Set<CordaX500Name> = uncheckedCast(configuration[ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME] ?: emptySet<CordaX500Name>())
             try {
                 val session = connection.channel
                         .pipeline()
@@ -608,12 +608,11 @@ class NodeLoginModule : LoginModule {
     private lateinit var verifierCertCheck: CertificateChainCheckPolicy.Check
     private val principals = ArrayList<Principal>()
 
-    @Suppress("UNCHECKED_CAST")
     override fun initialize(subject: Subject, callbackHandler: CallbackHandler, sharedState: Map<String, *>, options: Map<String, *>) {
         this.subject = subject
         this.callbackHandler = callbackHandler
         userService = options[RPCUserService::class.java.name] as RPCUserService
-        val certChainChecks = options[CERT_CHAIN_CHECKS_OPTION_NAME] as Map<String, CertificateChainCheckPolicy.Check>
+        val certChainChecks: Map<String, CertificateChainCheckPolicy.Check> = uncheckedCast(options[CERT_CHAIN_CHECKS_OPTION_NAME])
         peerCertCheck = certChainChecks[PEER_ROLE]!!
         nodeCertCheck = certChainChecks[NODE_ROLE]!!
         verifierCertCheck = certChainChecks[VERIFIER_ROLE]!!

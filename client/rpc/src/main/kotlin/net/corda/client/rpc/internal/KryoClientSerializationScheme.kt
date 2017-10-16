@@ -5,6 +5,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
     override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
@@ -23,7 +24,9 @@ class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
     override fun rpcServerKryoPool(context: SerializationContext): KryoPool = throw UnsupportedOperationException()
 
     companion object {
+        val isInitialised = AtomicBoolean(false)
         fun initialiseSerialization() {
+            if (!isInitialised.compareAndSet(false, true)) return
             try {
                 SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
                     registerScheme(KryoClientSerializationScheme())
@@ -31,10 +34,14 @@ class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
                 }
                 SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
                 SerializationDefaults.RPC_CLIENT_CONTEXT = KRYO_RPC_CLIENT_CONTEXT
-            } catch(e: IllegalStateException) {
+            } catch (e: IllegalStateException) {
                 // Check that it's registered as we expect
-                check(SerializationDefaults.SERIALIZATION_FACTORY is SerializationFactoryImpl) { "RPC client encountered conflicting configuration of serialization subsystem." }
-                check((SerializationDefaults.SERIALIZATION_FACTORY as SerializationFactoryImpl).alreadyRegisteredSchemes.any { it is KryoClientSerializationScheme }) { "RPC client encountered conflicting configuration of serialization subsystem." }
+                val factory = SerializationDefaults.SERIALIZATION_FACTORY
+                val checkedFactory = factory as? SerializationFactoryImpl
+                        ?: throw IllegalStateException("RPC client encountered conflicting configuration of serialization subsystem: $factory")
+                check(checkedFactory.alreadyRegisteredSchemes.any { it is KryoClientSerializationScheme }) {
+                    "RPC client encountered conflicting configuration of serialization subsystem."
+                }
             }
         }
     }

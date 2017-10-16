@@ -1,14 +1,17 @@
 package net.corda.cordform;
 
 import static java.util.Collections.emptyList;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigValueFactory;
+import com.typesafe.config.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class CordformNode implements NodeDefinition {
+    /**
+     * Path relative to the running node where the serialized NodeInfos are stored.
+     */
+    public static final String NODE_INFO_DIRECTORY = "additional-node-infos";
+
     protected static final String DEFAULT_HOST = "localhost";
 
     /**
@@ -21,16 +24,6 @@ public class CordformNode implements NodeDefinition {
     }
 
     /**
-     * A list of advertised services ID strings.
-     */
-    public List<String> advertisedServices = emptyList();
-
-    /**
-     * If running a Raft notary cluster, the address of at least one node in the cluster, or leave blank to start a new cluster.
-     * If running a BFT notary cluster, the addresses of all nodes in the cluster.
-     */
-    public List<String> notaryClusterAddresses = emptyList();
-    /**
      * Set the RPC users for this node. This configuration block allows arbitrary configuration.
      * The recommended current structure is:
      * [[['username': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
@@ -39,6 +32,14 @@ public class CordformNode implements NodeDefinition {
      * Incorrect configurations will not cause a DSL error.
      */
     public List<Map<String, Object>> rpcUsers = emptyList();
+
+    /**
+     * Apply the notary configuration if this node is a notary. The map is the config structure of
+     * net.corda.node.services.config.NotaryConfig
+     */
+    public Map<String, Object> notary = null;
+
+    public Map<String, Object> extraConfig = null;
 
     protected Config config = ConfigFactory.empty();
 
@@ -75,18 +76,11 @@ public class CordformNode implements NodeDefinition {
     }
 
     /**
-     * Set the port which to bind the Copycat (Raft) node to.
+     * Set the path to a file with optional properties, which are appended to the generated node.conf file.
      *
-     * @param notaryPort The Raft port.
+     * @param configFile The file path.
      */
-    public void notaryNodePort(Integer notaryPort) {
-        config = config.withValue("notaryNodeAddress", ConfigValueFactory.fromAnyRef(DEFAULT_HOST + ':' + notaryPort));
-    }
-
-    /**
-     * @param id The (0-based) BFT replica ID.
-     */
-    public void bftReplicaId(Integer id) {
-        config = config.withValue("bftSMaRt", ConfigValueFactory.fromMap(Collections.singletonMap("replicaId", id)));
+    public void configFile(String configFile) {
+        config = config.withValue("configFile", ConfigValueFactory.fromAnyRef(configFile));
     }
 }

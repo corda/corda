@@ -37,13 +37,13 @@ Profiles
 
     notary/
         node.conf
-        plugins/
+        cordapps/
     banka/
         node.conf
-        plugins/
+        cordapps/
     bankb/
         node.conf
-        plugins/
+        cordapps/
             example-cordapp.jar
     ...
 
@@ -133,7 +133,7 @@ current working directory of the JVM):
         corda-webserver.jar
     explorer/
         node-explorer.jar
-    plugins/
+    cordapps/
         bank-of-corda.jar
 
 ..

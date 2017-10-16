@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.toWireTransaction
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
@@ -44,6 +45,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
             whenever(serviceHub.attachments).thenReturn(attachmentStorage)
             return this.withServiceHub(serviceHub)
         }
+
         private fun SerializationContext.withServiceHub(serviceHub: ServiceHub): SerializationContext {
             return this.withTokenContext(SerializeAsTokenContextImpl(serviceHub) {}).withProperty(attachmentsClassLoaderEnabledPropertyName, true)
         }
@@ -53,8 +55,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     class DummyServiceHub : MockServices() {
         override val cordappProvider: CordappProviderImpl
-                = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH))).start(attachments)
-
+                = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
         private val cordapp get() = cordappProvider.cordapps.first()
         val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
         val appContext get() = cordappProvider.getAppContext(cordapp)
@@ -265,7 +266,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `test serialization of sub-sequence OpaqueBytes`() {
-        val bytesSequence = ByteSequence.of("0123456789".toByteArray(), 3 ,2)
+        val bytesSequence = ByteSequence.of("0123456789".toByteArray(), 3, 2)
         val bytes = bytesSequence.serialize()
         val copiedBytesSequence = bytes.deserialize()
 
@@ -300,7 +301,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     @Test
     fun `test deserialize of WireTransaction where contract cannot be found`() {
-        kryoSpecific<AttachmentsClassLoaderTests>("Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not") {
+        kryoSpecific("Kryo verifies/loads attachments on deserialization, whereas AMQP currently does not") {
             ClassLoaderForTests().use { child ->
                 val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, child)
                 val contract = contractClass.newInstance() as DummyContractBackdoor
@@ -309,8 +310,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
                 val attachmentRef = serviceHub.attachmentId
                 val bytes = run {
                     val outboundContext = SerializationFactory.defaultFactory.defaultContext
-                        .withServiceHub(serviceHub)
-                        .withClassLoader(child)
+                            .withServiceHub(serviceHub)
+                            .withClassLoader(child)
                     val wireTransaction = tx.toWireTransaction(serviceHub, outboundContext)
                     wireTransaction.serialize(context = outboundContext)
                 }

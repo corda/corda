@@ -7,7 +7,7 @@ import kotlin.annotation.AnnotationTarget.CLASS
 
 /**
  * Annotate any class that needs to be a long-lived service within the node, such as an oracle, with this annotation.
- * Such a class needs to have a constructor with a single parameter of type [ServiceHub]. This constructor will be invoked
+ * Such a class needs to have a constructor with a single parameter of type [AppServiceHub]. This constructor will be invoked
  * during node start to initialise the service. The service hub provided can be used to get information about the node
  * that may be necessary for the service. Corda services are created as singletons within the node and are available
  * to flows via [ServiceHub.cordaService].

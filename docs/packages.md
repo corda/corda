@@ -3,19 +3,6 @@
 Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
 the java.time API, some core types, and Kotlin data classes.
 
-# Package net.corda.client.jfx.model
-
-Data models for binding data feeds from Corda nodes into a JavaFX user interface, by presenting the data as [javafx.beans.Observable]
-types.
-
-# Package net.corda.client.jfx.utils
-
-Utility classes (i.e. data classes) used by the Corda JavaFX client.
-
-# Package net.corda.client.mock
-
-Tools used by the client to produce mock data for testing purposes.
-
 # Package net.corda.client.rpc
 
 RPC client interface to Corda, for use both by user-facing client and integration with external systems.
@@ -23,6 +10,10 @@ RPC client interface to Corda, for use both by user-facing client and integratio
 # Package net.corda.client.rpc.internal
 
 Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
+
+# Package net.corda.core
+
+Exception types and some utilities for working with observables and futures.
 
 # Package net.corda.core.concurrent
 
@@ -36,6 +27,12 @@ with [Contract], or see the examples in [net.corda.finance.contracts].
 
 Corda smart contracts are a combination of state held on the distributed ledger, and verification logic which defines
 which transformations of state are valid.
+
+# Package net.corda.core.cordapp
+
+This package contains the interface to CorDapps from within a node. A CorDapp can access it's own context by using
+the CordappProvider.getAppContext() class. These classes are not intended to be constructed manually and no interface
+to do this will be provided. 
 
 # Package net.corda.core.crypto
 
@@ -53,10 +50,6 @@ processes such as handling fixing of interest rate swaps.
 # Package net.corda.core.identity
 
 Data classes which model different forms of identity (potentially with supporting evidence) for legal entities and services.
-
-# Package net.corda.core.internal
-
-Internal, do not use. These APIs and implementations which are currently being revised and are subject to future change.
 
 # Package net.corda.core.messaging
 
@@ -93,12 +86,58 @@ actual states rather than state references).
 
 Corda utility classes, providing a broad range of functionality to help implement both Corda nodes and CorDapps.
 
+
 # Package net.corda.finance
 
-The finance module is a CorDapp containing sample cash and obligation contracts, as well as providing several
-useful data types such as [Amount].
+Some simple testing utilities like pre-defined top-level values for common currencies. Mostly useful for
+writing unit tests in Kotlin.
+
+WARNING: NOT API STABLE.
 
 # Package net.corda.finance.utils
 
 A collection of utilities for summing financial states, for example, summing obligations to get total debts.
 
+WARNING: NOT API STABLE.
+
+# Package net.corda.finance.contracts
+
+Various types for common financial concepts like day roll conventions, fixes, etc. 
+
+WARNING: NOT API STABLE.
+
+# net.corda.finance.contracts.asset
+
+Cash states, obligations and commodities. 
+
+WARNING: NOT API STABLE. 
+
+# net.corda.finance.contracts.asset.cash.selection
+
+Provisional support for pluggable cash selectors, needed for different database backends. 
+
+WARNING: NOT API STABLE. 
+
+# net.corda.finance.contracts.math
+
+Splines and interpolation.
+
+WARNING: NOT API STABLE. 
+
+# net.corda.finance.flows
+
+Cash payments and issuances. Two party "delivery vs payment" atomic asset swaps.
+
+WARNING: NOT API STABLE. 
+
+# net.corda.finance.plugin
+
+JSON/Jackson plugin for business calendars.
+
+WARNING: NOT API STABLE.
+
+# net.corda.finance.schemas
+
+JPA (Java Persistence Architecture) schemas for the financial state types.
+
+WARNING: NOT API STABLE.

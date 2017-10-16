@@ -22,8 +22,8 @@ Classes get onto the whitelist via one of three mechanisms:
 #. Via the ``@CordaSerializable`` annotation.  In order to whitelist a class, this annotation can be present on the
    class itself, on any of the super classes or on any interface implemented by the class or super classes or any
    interface extended by an interface implemented by the class or superclasses.
-#. By returning the class as part of a plugin via the method ``customizeSerialization``.  It's important to return
-   true from this method if you override it, otherwise the plugin will be excluded. See :doc:`writing-cordapps`.
+#. By implementing the ``SerializationWhitelist`` interface and specifying a list of `whitelist` classes.
+   See :doc:`writing-cordapps`.
 #. Via the built in Corda whitelist (see the class ``DefaultWhitelist``).  Whilst this is not user editable, it does list
    common JDK classes that have been whitelisted for your convenience.
 
@@ -39,8 +39,8 @@ It's reproduced here as an example of both ways you can do this for a couple of 
    them will automatically be whitelisted.  This includes `Contract`, `ContractState` and `CommandData`.
 
 .. warning:: Java 8 Lambda expressions are not serializable except in flow checkpoints, and then not by default. The syntax to declare a serializable Lambda
-expression that will work with Corda is ``Runnable r = (Runnable & Serializable) () -> System.out.println("Hello World");``, or
-``Callable<String> c = (Callable<String> & Serializable) () -> "Hello World";``.
+   expression that will work with Corda is ``Runnable r = (Runnable & Serializable) () -> System.out.println("Hello World");``, or
+   ``Callable<String> c = (Callable<String> & Serializable) () -> "Hello World";``.
 
 .. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are
    likely.
@@ -63,7 +63,7 @@ The long term goal is to migrate the current serialization format for everything
     #.  A desire to support open-ended polymorphism, where the number of subclasses of a superclass can expand over time
         and do not need to be defined in the schema *upfront*, which is key to many Corda concepts, such as contract states.
     #.  Increased security from deserialized objects being constructed through supported constructors rather than having
-        data poked directy into their fields without an opportunity to validate consistency or intercept attempts to manipulate
+        data poked directly into their fields without an opportunity to validate consistency or intercept attempts to manipulate
         supposed invariants.
 
 Documentation on that format, and how JVM classes are translated to AMQP, will be linked here when it is available.
@@ -259,9 +259,10 @@ Kotlin Objects
 ``````````````
 
     #.  Kotlin ``object`` s are singletons and treated differently.  They are recorded into the stream with no properties
-        and deserialize back to the singleton instance.
-
-Currently, the same is not true of Java singletons, and they will deserialize to new instances of the class.
+        and deserialize back to the singleton instance. Currently, the same is not true of Java singletons,
+        and they will deserialize to new instances of the class.
+    #.  Kotlin's anonymous ``object`` s are not currently supported. I.e. constructs like:
+        ``object : Contract {...}`` will not serialize correctly and need to be re-written as an explicit class declaration.
 
 The Carpenter
 `````````````

@@ -8,7 +8,7 @@ import com.google.common.util.concurrent.ListenableFuture
 
 class NonInvalidatingCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
-): LoadingCache<K, V> by cache {
+) : LoadingCache<K, V> by cache {
 
     constructor(bound: Long, concurrencyLevel: Int, loadFunction: (K) -> V) :
             this(buildCache(bound, concurrencyLevel, loadFunction))
@@ -25,9 +25,7 @@ class NonInvalidatingCache<K, V> private constructor(
         override fun reload(key: K, oldValue: V): ListenableFuture<V> {
             throw IllegalStateException("Non invalidating cache refreshed")
         }
+
         override fun load(key: K) = loadFunction(key)
-        override fun loadAll(keys: Iterable<K>): MutableMap<K, V> {
-            return super.loadAll(keys)
-        }
     }
 }

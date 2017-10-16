@@ -99,6 +99,10 @@ Nested objects can be created using curly braces, as in ``{ a: 1, b: 2}``. This 
 parser is defined for the type you need, for instance, if an API requires a ``Pair<String, Int>``
 which could be represented as ``{ first: foo, second: 123 }``.
 
+.. note:: If your CorDapp is written in Java,
+   named arguments won't work unless you compiled using the ``-parameters`` argument to javac.
+   See :doc:`deploying-a-node` for how to specify it via Gradle.
+
 The same syntax is also used to specify the parameters for RPCs, accessed via the ``run`` command, like this:
 
 ``run registeredFlows``
@@ -139,6 +143,6 @@ The shell will be enhanced over time. The currently known limitations include:
 * The ``jul`` command advertises access to logs, but it doesn't work with the logging framework we're using.
 
 .. _Yaml: http://www.yaml.org/spec/1.2/spec.html
-.. _the defined parsers: api/kotlin/corda/net.corda.jackson/-jackson-support/index.html
+.. _the defined parsers: api/kotlin/corda/net.corda.client.jackson/-jackson-support/index.html
 .. _Groovy: http://groovy-lang.org/
 .. _CRaSH: http://www.crashub.org/

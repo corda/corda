@@ -22,7 +22,7 @@ Downloading the template
 ------------------------
 Open a terminal window in the directory where you want to download the CorDapp template, and run the following commands:
 
-.. code-block:: text
+.. code-block:: bash
 
     # Clone the template from GitHub:
     git clone https://github.com/corda/cordapp-template-java.git ; cd cordapp-template-java
@@ -30,12 +30,6 @@ Open a terminal window in the directory where you want to download the CorDapp t
     *or*
 
     git clone https://github.com/corda/cordapp-template-kotlin.git ; cd cordapp-template-kotlin
-
-    # Retrieve a list of the stable Milestone branches using:
-    git branch -a --list *release-M*
-
-    # Check out the Milestone branch with the latest version number:
-    git checkout release-M[*version number*] ; git pull
 
 Template structure
 ------------------
@@ -48,17 +42,22 @@ implement our IOU CorDapp in Java, we'll need to modify three files. For Kotlin,
     .. code-block:: java
 
         // 1. The state
-        src/main/java/com/template/state/TemplateState.java
+        src/main/java/com/template/TemplateState.java
 
         // 2. The contract
-        src/main/java/com/template/contract/TemplateContract.java
+        src/main/java/com/template/TemplateContract.java
 
         // 3. The flow
-        src/main/java/com/template/flow/TemplateFlow.java
+        src/main/java/com/template/TemplateFlow.java
 
     .. code-block:: kotlin
 
         src/main/kotlin/com/template/App.kt
+
+To prevent build errors later on, you should delete the following file:
+
+* Java: ``src/test/java/com/template/FlowTests.java``
+* Kotlin: ``src/test/kotlin/com/template/FlowTests.kt``
 
 Progress so far
 ---------------

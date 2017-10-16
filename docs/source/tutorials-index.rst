@@ -15,8 +15,8 @@ Tutorials
    flow-state-machines
    flow-testing
    running-a-notary
-   using-a-notary
    oracles
+   tutorial-custom-notary
    tutorial-tear-offs
    tutorial-attachments
    event-scheduling

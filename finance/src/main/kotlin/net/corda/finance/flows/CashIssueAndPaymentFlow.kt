@@ -32,6 +32,7 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
                 recipient: Party,
                 anonymous: Boolean,
                 notary: Party) : this(amount, issueRef, recipient, anonymous, notary, tracker())
+
     constructor(request: IssueAndPaymentRequest) : this(request.amount, request.issueRef, request.recipient, request.anonymous, request.notary, tracker())
 
     @Suspendable

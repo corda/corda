@@ -11,9 +11,9 @@ import java.util.*
 /**
  * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
  */
-class PersistentMap<K, V, E, out EK> (
+class PersistentMap<K, V, E, out EK>(
         val toPersistentEntityKey: (K) -> EK,
-        val fromPersistentEntity: (E) -> Pair<K,V>,
+        val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
         val persistentEntityClass: Class<E>
 ) : MutableMap<K, V>, AbstractMap<K, V>() {
@@ -28,17 +28,17 @@ class PersistentMap<K, V, E, out EK> (
             removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass)
     ).apply {
         //preload to allow all() to take data only from the cache (cache is unbound)
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
         getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
     }
 
-    class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>): RemovalListener<K,V> {
+    class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, V> {
         override fun onRemoval(notification: RemovalNotification<K, V>?) {
             when (notification?.cause) {
                 RemovalCause.EXPLICIT -> {
-                    val session = DatabaseTransactionManager.current().session
+                    val session = currentDBSession()
                     val elem = session.find(persistentEntityClass, toPersistentEntityKey(notification.key))
                     if (elem != null) {
                         session.remove(elem)
@@ -47,7 +47,8 @@ class PersistentMap<K, V, E, out EK> (
                 RemovalCause.EXPIRED, RemovalCause.SIZE, RemovalCause.COLLECTED -> {
                     log.error("Entry was removed from cache!!!")
                 }
-                RemovalCause.REPLACED -> {}
+                RemovalCause.REPLACED -> {
+                }
             }
         }
     }
@@ -62,10 +63,11 @@ class PersistentMap<K, V, E, out EK> (
 
     override val size get() = cache.size().toInt()
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?, replace: (K, V) -> Unit) : Boolean {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K, V) -> V?, replace: (K, V) -> Unit): Boolean {
         var insertionAttempt = false
         var isUnique = true
-        val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
+        val existingInCache = cache.get(key) {
+            // Thread safe, if multiple threads may wait until the first one has loaded.
             insertionAttempt = true
             // Value wasn't in the cache and wasn't in DB (because the cache is unbound).
             // Store the value, depending on store implementation this may replace existing entry in DB.
@@ -98,8 +100,8 @@ class PersistentMap<K, V, E, out EK> (
     operator fun set(key: K, value: V) =
             set(key, value,
                     logWarning = false,
-                    store =  { k: K, v: V ->
-                        DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
+                    store = { k: K, v: V ->
+                        currentDBSession().save(toPersistentEntity(k, v))
                         null
                     },
                     replace = { _: K, _: V -> Unit }
@@ -113,9 +115,10 @@ class PersistentMap<K, V, E, out EK> (
     fun addWithDuplicatesAllowed(key: K, value: V) =
             set(key, value,
                     store = { k, v ->
-                        val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(k))
+                        val session = currentDBSession()
+                        val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
                         if (existingEntry == null) {
-                            DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
+                            session.save(toPersistentEntity(k, v))
                             null
                         } else {
                             fromPersistentEntity(existingEntry).second
@@ -143,18 +146,19 @@ class PersistentMap<K, V, E, out EK> (
     }
 
     private fun merge(key: K, value: V): V? {
-        val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+        val session = currentDBSession()
+        val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(key))
         return if (existingEntry != null) {
-            DatabaseTransactionManager.current().session.merge(toPersistentEntity(key,value))
+            session.merge(toPersistentEntity(key, value))
             fromPersistentEntity(existingEntry).second
         } else {
-            DatabaseTransactionManager.current().session.save(toPersistentEntity(key,value))
+            session.save(toPersistentEntity(key, value))
             null
         }
     }
 
     private fun loadValue(key: K): V? {
-        val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+        val result = currentDBSession().find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
@@ -193,56 +197,59 @@ class PersistentMap<K, V, E, out EK> (
         }
     }
 
-    override val keys: MutableSet<K> get() {
-        return object : AbstractSet<K>() {
-            override val size: Int get() = this@PersistentMap.size
-            override fun iterator(): MutableIterator<K> {
-                return object : MutableIterator<K> {
-                    private val entryIterator = EntryIterator()
+    override val keys: MutableSet<K>
+        get() {
+            return object : AbstractSet<K>() {
+                override val size: Int get() = this@PersistentMap.size
+                override fun iterator(): MutableIterator<K> {
+                    return object : MutableIterator<K> {
+                        private val entryIterator = EntryIterator()
 
-                    override fun hasNext(): Boolean = entryIterator.hasNext()
-                    override fun next(): K = entryIterator.next().key
-                    override fun remove() {
-                        entryIterator.remove()
+                        override fun hasNext(): Boolean = entryIterator.hasNext()
+                        override fun next(): K = entryIterator.next().key
+                        override fun remove() {
+                            entryIterator.remove()
+                        }
                     }
                 }
             }
         }
-    }
 
-    override val values: MutableCollection<V> get() {
-        return object : AbstractCollection<V>() {
-            override val size: Int get() = this@PersistentMap.size
-            override fun iterator(): MutableIterator<V> {
-                return object : MutableIterator<V> {
-                    private val entryIterator = EntryIterator()
+    override val values: MutableCollection<V>
+        get() {
+            return object : AbstractCollection<V>() {
+                override val size: Int get() = this@PersistentMap.size
+                override fun iterator(): MutableIterator<V> {
+                    return object : MutableIterator<V> {
+                        private val entryIterator = EntryIterator()
 
-                    override fun hasNext(): Boolean = entryIterator.hasNext()
-                    override fun next(): V = entryIterator.next().value
-                    override fun remove() {
-                        entryIterator.remove()
+                        override fun hasNext(): Boolean = entryIterator.hasNext()
+                        override fun next(): V = entryIterator.next().value
+                        override fun remove() {
+                            entryIterator.remove()
+                        }
                     }
                 }
             }
         }
-    }
 
-    override val entries: MutableSet<MutableMap.MutableEntry<K, V>> get() {
-        return object : AbstractSet<MutableMap.MutableEntry<K, V>>() {
-            override val size: Int get() = this@PersistentMap.size
-            override fun iterator(): MutableIterator<MutableMap.MutableEntry<K, V>> {
-                return object : MutableIterator<MutableMap.MutableEntry<K, V>> {
-                    private val entryIterator = EntryIterator()
+    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
+        get() {
+            return object : AbstractSet<MutableMap.MutableEntry<K, V>>() {
+                override val size: Int get() = this@PersistentMap.size
+                override fun iterator(): MutableIterator<MutableMap.MutableEntry<K, V>> {
+                    return object : MutableIterator<MutableMap.MutableEntry<K, V>> {
+                        private val entryIterator = EntryIterator()
 
-                    override fun hasNext(): Boolean = entryIterator.hasNext()
-                    override fun next(): MutableMap.MutableEntry<K, V> = entryIterator.next()
-                    override fun remove() {
-                        entryIterator.remove()
+                        override fun hasNext(): Boolean = entryIterator.hasNext()
+                        override fun next(): MutableMap.MutableEntry<K, V> = entryIterator.next()
+                        override fun remove() {
+                            entryIterator.remove()
+                        }
                     }
                 }
             }
         }
-    }
 
     override fun put(key: K, value: V): V? {
         val old = cache.get(key)
@@ -251,7 +258,7 @@ class PersistentMap<K, V, E, out EK> (
     }
 
     fun load() {
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
         cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())

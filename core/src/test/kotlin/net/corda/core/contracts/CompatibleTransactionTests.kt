@@ -45,11 +45,11 @@ class CompatibleTransactionTests : TestDependencyInjectionBase() {
     // Do not add attachments (empty list).
     private val componentGroupsA by lazy {
         listOf(
-            inputGroup,
-            outputGroup,
-            commandGroup,
-            notaryGroup,
-            timeWindowGroup
+                inputGroup,
+                outputGroup,
+                commandGroup,
+                notaryGroup,
+                timeWindowGroup
         )
     }
     private val wireTransactionA by lazy { WireTransaction(componentGroups = componentGroupsA, privacySalt = privacySalt) }
@@ -199,6 +199,7 @@ class CompatibleTransactionTests : TestDependencyInjectionBase() {
                 else -> false
             }
         }
+
         val ftxInputs = wireTransactionA.buildFilteredTransaction(Predicate(::filtering)) // Inputs only filtered.
         ftxInputs.verify()
         ftxInputs.checkAllComponentsVisible(INPUTS_GROUP)
@@ -210,6 +211,7 @@ class CompatibleTransactionTests : TestDependencyInjectionBase() {
 
         // Filter one input only.
         fun filteringOneInput(elem: Any) = elem == inputs[0]
+
         val ftxOneInput = wireTransactionA.buildFilteredTransaction(Predicate(::filteringOneInput)) // First input only filtered.
         ftxOneInput.verify()
         assertFailsWith<ComponentVisibilityException> { ftxOneInput.checkAllComponentsVisible(INPUTS_GROUP) }

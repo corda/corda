@@ -64,7 +64,7 @@ class StandaloneCordaRPClientTest {
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             webPort = port.andIncrement,
-            extraServices = listOf("corda.notary.validating"),
+            isNotary = true,
             users = listOf(user)
     )
 
@@ -89,12 +89,12 @@ class StandaloneCordaRPClientTest {
     }
 
     private fun copyFinanceCordapp() {
-        val pluginsDir = (factory.baseDirectory(notaryConfig) / "plugins").createDirectories()
+        val cordappsDir = (factory.baseDirectory(notaryConfig) / "cordapps").createDirectories()
         // Find the finance jar file for the smoke tests of this module
         val financeJar = Paths.get("build", "resources", "smokeTest").list {
             it.filter { "corda-finance" in it.toString() }.toList().single()
         }
-        financeJar.copyToDirectory(pluginsDir)
+        financeJar.copyToDirectory(cordappsDir)
     }
 
     @Test
@@ -114,14 +114,14 @@ class StandaloneCordaRPClientTest {
     @Test
     fun `test starting flow`() {
         rpcProxy.startFlow(::CashIssueFlow, 127.POUNDS, OpaqueBytes.of(0), notaryNodeIdentity)
-            .returnValue.getOrThrow(timeout)
+                .returnValue.getOrThrow(timeout)
     }
 
     @Test
     fun `test starting tracked flow`() {
         var trackCount = 0
         val handle = rpcProxy.startTrackedFlow(
-            ::CashIssueFlow, 429.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity
+                ::CashIssueFlow, 429.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity
         )
         val updateLatch = CountDownLatch(1)
         handle.progress.subscribe { msg ->
@@ -156,7 +156,7 @@ class StandaloneCordaRPClientTest {
 
         // Now issue some cash
         rpcProxy.startFlow(::CashIssueFlow, 513.SWISS_FRANCS, OpaqueBytes.of(0), notaryNodeIdentity)
-            .returnValue.getOrThrow(timeout)
+                .returnValue.getOrThrow(timeout)
         updateLatch.await()
         assertEquals(1, updateCount.get())
     }

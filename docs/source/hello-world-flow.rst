@@ -33,118 +33,20 @@ FlowLogic
 Flows are implemented as ``FlowLogic`` subclasses. You define the steps taken by the flow by overriding
 ``FlowLogic.call``.
 
-We'll write our flow in either ``TemplateFlow.java`` or ``App.kt``. Overwrite both the existing flows in the template
-with the following:
+We'll write our flow in either ``TemplateFlow.java`` or ``App.kt``. Delete both the existing flows in the template, and
+replace them with the following:
 
 .. container:: codeset
 
-    .. code-block:: kotlin
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/helloworld/flow.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
 
-        ...
-
-        import net.corda.core.utilities.ProgressTracker
-        import net.corda.core.transactions.TransactionBuilder
-        import net.corda.core.flows.*
-
-        ...
-
-        @InitiatingFlow
-        @StartableByRPC
-        class IOUFlow(val iouValue: Int,
-                      val otherParty: Party) : FlowLogic<Unit>() {
-
-            /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */
-            override val progressTracker = ProgressTracker()
-
-            /** The flow logic is encapsulated within the call() method. */
-            @Suspendable
-            override fun call() {
-                val notary = serviceHub.networkMapCache.getAnyNotary()
-
-                // We create a transaction builder
-                val txBuilder = TransactionBuilder(notary = notary)
-
-                // We add the items to the builder.
-                val state = IOUState(iouValue, me, otherParty)
-                val cmd = Command(IOUContract.Create(), me.owningKey)
-                txBuilder.withItems(state, cmd)
-
-                // Verifying the transaction.
-                txBuilder.verify(serviceHub)
-
-                // Signing the transaction.
-                val signedTx = serviceHub.signInitialTransaction(txBuilder)
-
-                // Finalising the transaction.
-                subFlow(FinalityFlow(signedTx))
-            }
-        }
-
-    .. code-block:: java
-
-        package com.template.flow;
-
-        import co.paralleluniverse.fibers.Suspendable;
-        import com.template.contract.IOUContract;
-        import com.template.state.IOUState;
-        import net.corda.core.contracts.Command;
-        import net.corda.core.flows.*;
-        import net.corda.core.identity.Party;
-        import net.corda.core.transactions.SignedTransaction;
-        import net.corda.core.transactions.TransactionBuilder;
-        import net.corda.core.utilities.ProgressTracker;
-
-        @InitiatingFlow
-        @StartableByRPC
-        public class IOUFlow extends FlowLogic<Void> {
-            private final Integer iouValue;
-            private final Party otherParty;
-
-            /**
-             * The progress tracker provides checkpoints indicating the progress of the flow to observers.
-             */
-            private final ProgressTracker progressTracker = new ProgressTracker();
-
-            public IOUFlow(Integer iouValue, Party otherParty) {
-                this.iouValue = iouValue;
-                this.otherParty = otherParty;
-            }
-
-            @Override
-            public ProgressTracker getProgressTracker() {
-                return progressTracker;
-            }
-
-            /**
-             * The flow logic is encapsulated within the call() method.
-             */
-            @Suspendable
-            @Override
-            public Void call() throws FlowException {
-                // We retrieve the required identities from the network map.
-                final Party notary = getServiceHub().getNetworkMapCache().getAnyNotary(null);
-
-                // We create a transaction builder.
-                final TransactionBuilder txBuilder = new TransactionBuilder();
-                txBuilder.setNotary(notary);
-
-                // We add the items to the builder.
-                IOUState state = new IOUState(iouValue, me, otherParty);
-                Command cmd = new Command(new IOUContract.Create(), me.getOwningKey());
-                txBuilder.withItems(state, cmd);
-
-                // Verifying the transaction.
-                txBuilder.verify(getServiceHub());
-
-                // Signing the transaction.
-                final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
-
-                // Finalising the transaction.
-                subFlow(new FinalityFlow(signedTx));
-
-                return null;
-            }
-        }
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/helloworld/IOUFlow.java
+        :language: java
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
 
 If you're following along in Java, you'll also need to rename ``TemplateFlow.java`` to ``IOUFlow.java``.
 
@@ -200,7 +102,7 @@ the following transaction:
 
 So we'll need the following:
 
-* The output ``IOUState``
+* The output ``IOUState`` and its associated contract
 * A ``Create`` command listing the IOU's lender as a signer
 
 The command we use pairs the ``IOUContract.Create`` command defined earlier with our public key. Including this command
@@ -208,8 +110,8 @@ in the transaction makes us one of the transaction's required signers.
 
 We add these items to the transaction using the ``TransactionBuilder.withItems`` method, which takes a ``vararg`` of:
 
-* ``ContractState`` or ``TransactionState`` objects, which are added to the builder as output states
-* ``StateRef`` objects (references to the outputs of previous transactions), which are added to the builder as input
+* ``StateAndContract`` or ``TransactionState`` objects, which are added to the builder as output states
+* ``StateAndRef`` objects (references to the outputs of previous transactions), which are added to the builder as input
   state references
 * ``Command`` objects, which are added to the builder as commands
 * ``SecureHash`` objects, which are added to the builder as attachments

@@ -15,7 +15,7 @@ import javax.servlet.http.HttpServletResponse
  * Dumps some data about the installed CorDapps.
  * TODO: Add registered flow initiators.
  */
-class CorDappInfoServlet(val plugins: List<WebServerPluginRegistry>, val rpc: CordaRPCOps): HttpServlet() {
+class CorDappInfoServlet(val plugins: List<WebServerPluginRegistry>, val rpc: CordaRPCOps) : HttpServlet() {
 
     @Throws(IOException::class)
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
@@ -73,7 +73,7 @@ class CorDappInfoServlet(val plugins: List<WebServerPluginRegistry>, val rpc: Co
 
         for (method in resource.allMethods) {
             if (method.type == ResourceMethod.JaxrsType.SUB_RESOURCE_LOCATOR) {
-                resources.add( Resource.from(resource.resourceLocator.invocable.definitionMethod.returnType))
+                resources.add(Resource.from(resource.resourceLocator.invocable.definitionMethod.returnType))
             } else {
                 endpoints.add(Endpoint(method.httpMethod, "api$path", resource.path))
             }

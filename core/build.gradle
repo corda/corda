@@ -2,6 +2,7 @@ apply plugin: 'kotlin'
 apply plugin: 'kotlin-jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda core'
@@ -92,6 +93,13 @@ artifacts {
 
 jar {
     baseName 'corda-core'
+}
+
+scanApi {
+    excludeClasses = [
+        // Kotlin should probably have declared this class as "synthetic".
+        "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
+    ]
 }
 
 publish {

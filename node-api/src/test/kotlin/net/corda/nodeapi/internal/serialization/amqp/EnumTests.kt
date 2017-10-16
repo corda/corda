@@ -1,5 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.CordaSerializable
 import org.junit.Test
 import java.time.DayOfWeek
 
@@ -10,9 +12,15 @@ import java.io.File
 import java.io.NotSerializableException
 
 import net.corda.core.serialization.SerializedBytes
+import org.assertj.core.api.Assertions
 
 class EnumTests {
     enum class Bras {
+        TSHIRT, UNDERWIRE, PUSHUP, BRALETTE, STRAPLESS, SPORTS, BACKLESS, PADDED
+    }
+
+    @CordaSerializable
+    enum class AnnotatedBras {
         TSHIRT, UNDERWIRE, PUSHUP, BRALETTE, STRAPLESS, SPORTS, BACKLESS, PADDED
     }
 
@@ -41,7 +49,7 @@ class EnumTests {
     }
 
 
-    enum class BrasWithInit (val someList: List<Int>) {
+    enum class BrasWithInit(val someList: List<Int>) {
         TSHIRT(emptyList()),
         UNDERWIRE(listOf(1, 2, 3)),
         PUSHUP(listOf(100, 200)),
@@ -82,7 +90,7 @@ class EnumTests {
         assertEquals(8, schema_bras.choices.size)
         Bras.values().forEach {
             val bra = it
-            assertNotNull (schema_bras.choices.find { it.name == bra.name })
+            assertNotNull(schema_bras.choices.find { it.name == bra.name })
         }
     }
 
@@ -107,7 +115,7 @@ class EnumTests {
         assertEquals(8, schema_bras.choices.size)
         Bras.values().forEach {
             val bra = it
-            assertNotNull (schema_bras.choices.find { it.name == bra.name })
+            assertNotNull(schema_bras.choices.find { it.name == bra.name })
         }
 
         // Test the actual deserialised object
@@ -116,13 +124,13 @@ class EnumTests {
 
     @Test
     fun multiEnum() {
-        data class Support (val top: Bras, val day : DayOfWeek)
-        data class WeeklySupport (val tops: List<Support>)
+        data class Support(val top: Bras, val day: DayOfWeek)
+        data class WeeklySupport(val tops: List<Support>)
 
-        val week = WeeklySupport (listOf(
-            Support (Bras.PUSHUP, DayOfWeek.MONDAY),
-            Support (Bras.UNDERWIRE, DayOfWeek.WEDNESDAY),
-            Support (Bras.PADDED, DayOfWeek.SUNDAY)))
+        val week = WeeklySupport(listOf(
+                Support(Bras.PUSHUP, DayOfWeek.MONDAY),
+                Support(Bras.UNDERWIRE, DayOfWeek.WEDNESDAY),
+                Support(Bras.PADDED, DayOfWeek.SUNDAY)))
 
         val obj = DeserializationInput(sf1).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(week))
 
@@ -138,7 +146,7 @@ class EnumTests {
     fun enumWithInit() {
         data class C(val c: BrasWithInit)
 
-        val c = C (BrasWithInit.PUSHUP)
+        val c = C(BrasWithInit.PUSHUP)
         val obj = DeserializationInput(sf1).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(c))
 
         assertEquals(c.c, obj.c)
@@ -149,7 +157,7 @@ class EnumTests {
         val path = EnumTests::class.java.getResource("EnumTests.changedEnum1")
         val f = File(path.toURI())
 
-        data class C (val a: OldBras)
+        data class C(val a: OldBras)
 
         // Original version of the class for the serialised version of this class
         //
@@ -169,7 +177,7 @@ class EnumTests {
         val path = EnumTests::class.java.getResource("EnumTests.changedEnum2")
         val f = File(path.toURI())
 
-        data class C (val a: OldBras2)
+        data class C(val a: OldBras2)
 
         // DO NOT CHANGE THIS, it's important we serialise with a value that doesn't
         // change position in the upated enum class
@@ -185,5 +193,75 @@ class EnumTests {
 
         // we expect this to throw
         DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
+    }
+
+    @Test
+    fun enumNotWhitelistedFails() {
+        data class C(val c: Bras)
+
+        class WL(val allowed: String) : ClassWhitelist {
+            override fun hasListed(type: Class<*>): Boolean {
+                return type.name == allowed
+            }
+        }
+
+        val factory = SerializerFactory(WL(classTestName("C")), ClassLoader.getSystemClassLoader())
+
+        Assertions.assertThatThrownBy {
+            TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
+        }.isInstanceOf(NotSerializableException::class.java)
+    }
+
+    @Test
+    fun enumWhitelisted() {
+        data class C(val c: Bras)
+
+        class WL : ClassWhitelist {
+            override fun hasListed(type: Class<*>): Boolean {
+                return type.name == "net.corda.nodeapi.internal.serialization.amqp.EnumTests\$enumWhitelisted\$C" ||
+                        type.name == "net.corda.nodeapi.internal.serialization.amqp.EnumTests\$Bras"
+            }
+        }
+
+        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+
+        // if it all works, this won't explode
+        TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
+    }
+
+    @Test
+    fun enumAnnotated() {
+        @CordaSerializable data class C(val c: AnnotatedBras)
+
+        class WL : ClassWhitelist {
+            override fun hasListed(type: Class<*>) = false
+        }
+
+        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+
+        // if it all works, this won't explode
+        TestSerializationOutput(VERBOSE, factory).serialize(C(AnnotatedBras.UNDERWIRE))
+    }
+
+    @Test
+    fun deserializeNonWhitlistedEnum() {
+        data class C(val c: Bras)
+
+        class WL(val allowed: List<String>) : ClassWhitelist {
+            override fun hasListed(type: Class<*>) = type.name in allowed
+        }
+
+        // first serialise the class using a context in which Bras are whitelisted
+        val factory = SerializerFactory(WL(listOf(classTestName("C"),
+                "net.corda.nodeapi.internal.serialization.amqp.EnumTests\$Bras")),
+                ClassLoader.getSystemClassLoader())
+        val bytes = TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
+
+        // then take that serialised object and attempt to deserialize it in a context that
+        // disallows the Bras enum
+        val factory2 = SerializerFactory(WL(listOf(classTestName("C"))), ClassLoader.getSystemClassLoader())
+        Assertions.assertThatThrownBy {
+            DeserializationInput(factory2).deserialize(bytes)
+        }.isInstanceOf(NotSerializableException::class.java)
     }
 }

@@ -6,24 +6,24 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
-import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.*
 import net.corda.testing.driver.NetworkMapStartStrategy
-import net.corda.testing.chooseIdentity
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertNotNull
 
 class VerifierTests {
     private fun generateTransactions(number: Int): List<LedgerTransaction> {
         var currentLedger = GeneratedLedger.empty
-        val transactions = ArrayList<WireTransaction>()
+        val transactions = arrayListOf<WireTransaction>()
         val random = SplittableRandom()
         for (i in 0 until number) {
             val (tx, ledger) = currentLedger.transactionGenerator.generateOrFail(random)
@@ -113,19 +113,23 @@ class VerifierTests {
     @Test
     fun `single verifier works with a node`() {
         verifierDriver(
-            networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
-            extraCordappPackagesToScan = listOf("net.corda.finance.contracts")
+                networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts")
         ) {
             val aliceFuture = startNode(providedName = ALICE.name)
-            val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)), verifierType = VerifierType.OutOfProcess)
-            val alice = aliceFuture.get()
-            val notary = notaryFuture.get()
-            val notaryIdentity = notary.nodeInfo.legalIdentities[1]
-            startVerifier(notary)
-            alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notaryIdentity).returnValue.get()
-            notary.waitUntilNumberOfVerifiers(1)
+            val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, verifierType = VerifierType.OutOfProcess)
+            val aliceNode = aliceFuture.get()
+            val notaryNode = notaryFuture.get()
+            val alice = aliceNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
+            val notary = notaryNode.rpc.notaryPartyFromX500Name(DUMMY_NOTARY_SERVICE_NAME)!!
+            startVerifier(notaryNode)
+            notaryNode.pollUntilKnowsAbout(aliceNode).getOrThrow()
+            aliceNode.pollUntilKnowsAbout(notaryNode).getOrThrow()
+            aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notary).returnValue.get()
+            notaryNode.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
-                alice.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice.nodeInfo.chooseIdentity()).returnValue.get()
+                val cashFlowResult = aliceNode.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice).returnValue.get()
+                assertNotNull(cashFlowResult)
             }
         }
     }

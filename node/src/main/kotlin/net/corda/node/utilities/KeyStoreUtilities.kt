@@ -147,7 +147,7 @@ fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): Certi
  */
 fun KeyStore.getX509Certificate(alias: String): X509Certificate {
     val certificate = getCertificate(alias) ?: throw IllegalArgumentException("No certificate under alias \"$alias\".")
-    return certificate as? X509Certificate  ?: throw IllegalArgumentException("Certificate under alias \"$alias\" is not an X.509 certificate.")
+    return certificate as? X509Certificate ?: throw IllegalArgumentException("Certificate under alias \"$alias\" is not an X.509 certificate.")
 }
 
 /**

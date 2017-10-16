@@ -17,7 +17,7 @@ class Node extends CordformNode {
     static final String WEBJAR_NAME = 'corda-webserver.jar'
 
     /**
-     * Set the list of CorDapps to install to the plugins directory. Each cordapp is a fully qualified Maven
+     * Set the list of CorDapps to install to the cordapps directory. Each cordapp is a fully qualified Maven
      * dependency name, eg: com.example:product-name:0.1
      *
      * @note Your app will be installed by default and does not need to be included here.
@@ -99,14 +99,15 @@ class Node extends CordformNode {
     }
 
     protected void build() {
-        configureRpcUsers()
+        configureProperties()
         installCordaJar()
         if (config.hasPath("webAddress")) {
             installWebserverJar()
         }
-        installBuiltPlugin()
+        installBuiltCordapp()
         installCordapps()
         installConfig()
+        appendOptionalConfig()
     }
 
     /**
@@ -118,11 +119,14 @@ class Node extends CordformNode {
         return config.getString("p2pAddress")
     }
 
-    /**
-     * Write the RPC users to the config
-     */
-    private void configureRpcUsers() {
+    private void configureProperties() {
         config = config.withValue("rpcUsers", ConfigValueFactory.fromIterable(rpcUsers))
+        if (notary) {
+            config = config.withValue("notary", ConfigValueFactory.fromMap(notary))
+        }
+        if (extraConfig) {
+            config = config.withFallback(ConfigFactory.parseMap(extraConfig))
+        }
     }
 
     /**
@@ -153,23 +157,23 @@ class Node extends CordformNode {
     /**
      * Installs this project's cordapp to this directory.
      */
-    private void installBuiltPlugin() {
-        def pluginsDir = new File(nodeDir, "plugins")
+    private void installBuiltCordapp() {
+        def cordappsDir = new File(nodeDir, "cordapps")
         project.copy {
             from project.jar
-            into pluginsDir
+            into cordappsDir
         }
     }
 
     /**
-     * Installs other cordapps to this node's plugins directory.
+     * Installs other cordapps to this node's cordapps directory.
      */
     private void installCordapps() {
-        def pluginsDir = new File(nodeDir, "plugins")
+        def cordappsDir = new File(nodeDir, "cordapps")
         def cordapps = getCordappList()
         project.copy {
             from cordapps
-            into pluginsDir
+            into cordappsDir
         }
     }
 
@@ -177,11 +181,6 @@ class Node extends CordformNode {
      * Installs the configuration file to this node's directory and detokenises it.
      */
     private void installConfig() {
-        // Adding required default values
-        config = config.withValue('extraAdvertisedServiceIds', ConfigValueFactory.fromIterable(advertisedServices*.toString()))
-        if (notaryClusterAddresses.size() > 0) {
-            config = config.withValue('notaryClusterAddresses', ConfigValueFactory.fromIterable(notaryClusterAddresses*.toString()))
-        }
         def configFileText = config.root().render(new ConfigRenderOptions(false, false, true, false)).split("\n").toList()
 
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
@@ -192,6 +191,29 @@ class Node extends CordformNode {
         project.copy {
             from tmpConfFile
             into nodeDir
+        }
+    }
+
+    /**
+     * Appends installed config file with properties from an optional file.
+     */
+    private void appendOptionalConfig() {
+        final configFileProperty = "configFile"
+        File optionalConfig
+        if (project.findProperty(configFileProperty)) { //provided by -PconfigFile command line property when running Gradle task
+            optionalConfig = new File(project.findProperty(configFileProperty))
+        } else if (config.hasPath(configFileProperty)) {
+            optionalConfig = new File(config.getString(configFileProperty))
+        }
+        if (optionalConfig) {
+            if (!optionalConfig.exists()) {
+               println "$configFileProperty '$optionalConfig' not found"
+            } else {
+                def confFile = new File(project.buildDir.getPath() + "/../" + nodeDir, 'node.conf')
+                optionalConfig.withInputStream {
+                    input -> confFile << input
+                }
+            }
         }
     }
 

@@ -2,6 +2,7 @@ package net.corda.client.rpc
 
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
@@ -19,14 +20,10 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.NodeBasedTest
-import net.corda.testing.setCordappPackages
-import net.corda.testing.unsetCordappPackages
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -36,7 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientTest : NodeBasedTest() {
+class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
     private val rpcUser = User("user1", "test", permissions = setOf(
             startFlowPermission<CashIssueFlow>(),
             startFlowPermission<CashPaymentFlow>()
@@ -51,16 +48,13 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.finance.contracts")
-        node = startNode(ALICE.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-        node.internals.registerCustomSchemas(setOf(CashSchemaV1))
-        client = CordaRPCClient(node.internals.configuration.rpcAddress!!, initialiseSerialization = false)
+        node = startNotaryNode(ALICE.name, rpcUsers = listOf(rpcUser)).getOrThrow()
+        client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }
 
     @After
     fun done() {
         connection?.close()
-        unsetCordappPackages()
     }
 
     @Test

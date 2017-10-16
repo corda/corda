@@ -4,8 +4,10 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
+import javafx.collections.FXCollections.observableArrayList
 import net.corda.finance.utils.CityDatabase
 import tornadofx.*
+import java.util.*
 
 object SuggestedDetails {
     val banks = listOf(
@@ -35,7 +37,7 @@ class NodeData {
     val rpcPort = SimpleIntegerProperty()
     val webPort = SimpleIntegerProperty()
     val h2Port = SimpleIntegerProperty()
-    val extraServices = SimpleListProperty(mutableListOf<String>().observable())
+    val extraServices = SimpleListProperty(observableArrayList<ExtraService>())
 }
 
 class NodeDataModel : ItemViewModel<NodeData>(NodeData()) {
@@ -45,4 +47,10 @@ class NodeDataModel : ItemViewModel<NodeData>(NodeData()) {
     val rpcPort = bind { item?.rpcPort }
     val webPort = bind { item?.webPort }
     val h2Port = bind { item?.h2Port }
+}
+
+interface ExtraService
+
+data class CurrencyIssuer(val currency: Currency) : ExtraService {
+    override fun toString(): String = "Issuer $currency"
 }

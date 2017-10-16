@@ -11,16 +11,15 @@ Cordform is the local node deployment system for CorDapps. The nodes generated a
 debugging, and testing node configurations, but not for production or testnet deployment.
 
 Here is an example Gradle task called ``deployNodes`` that uses the Cordform plugin to deploy three nodes, plus a
-notary/network map node:
+notary node:
 
 .. sourcecode:: groovy
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
-        networkMap "O=Controller,OU=corda,L=London,C=UK"
         node {
             name "O=Controller,OU=corda,L=London,C=UK"
-            advertisedServices = ["corda.notary.validating"]
+            notary = [validating : true]
             p2pPort 10002
             rpcPort 10003
             webPort 10004
@@ -28,7 +27,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeA,O=NodeA,L=London,C=UK"
-            advertisedServices = []
             p2pPort 10005
             rpcPort 10006
             webPort 10007
@@ -37,7 +35,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeB,O=NodeB,L=New York,C=US"
-            advertisedServices = []
             p2pPort 10008
             rpcPort 10009
             webPort 10010
@@ -46,7 +43,6 @@ notary/network map node:
         }
         node {
             name "CN=NodeC,O=NodeC,L=Paris,C=FR"
-            advertisedServices = []
             p2pPort 10011
             rpcPort 10012
             webPort 10013
@@ -55,11 +51,17 @@ notary/network map node:
         }
     }
 
-You can extend ``deployNodes`` to generate any number of nodes you like. The only requirement is that you must specify
-one node as running the network map service, by putting their name in the ``networkMap`` field. In our example, the
-``Controller`` is set as the network map service.
+You can extend ``deployNodes`` to generate any number of nodes you like.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
+
+If your CorDapp is written in Java, you should also add the following Gradle snippet so that you can pass named arguments to your flows via the Corda shell:
+
+.. sourcecode:: groovy
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-parameters"
+    }
 
 Any CorDapps defined in the project's source folders are also automatically registered with all the nodes defined in
 ``deployNodes``, even if the CorDapps are not listed in each node's ``cordapps`` entry.
@@ -80,9 +82,14 @@ run all the nodes at once. Each node in the ``nodes`` folder has the following s
 .. sourcecode:: none
 
     . nodeName
-    ├── corda.jar       // The Corda runtime
-    ├── node.conf       // The node's configuration
-    └── plugins         // Any installed CorDapps
+    ├── corda.jar               // The Corda runtime
+    ├── node.conf               // The node's configuration
+    ├── cordapps                // Any installed CorDapps
+    └── additional-node-infos   // Directory containing all the addresses and certificates of the other nodes.
+
+.. note:: During the build process each node generates a NodeInfo file which is written in its own root directory,
+the plug-in proceeds and copies each node NodeInfo to every other node ``additional-node-infos`` directory.
+The NodeInfo file contains a node hostname and port, legal name and security certificate.
 
 .. note:: Outside of development environments, do not store your node directories in the build folder.
 

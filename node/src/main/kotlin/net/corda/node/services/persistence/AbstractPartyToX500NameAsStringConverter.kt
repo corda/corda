@@ -32,7 +32,7 @@ class AbstractPartyToX500NameAsStringConverter(identitySvc: () -> IdentityServic
         if (dbData != null) {
             val party = identityService.wellKnownPartyFromX500Name(CordaX500Name.parse(dbData))
             if (party != null) return party
-            log.warn ("Identity service unable to resolve X500name: $dbData")
+            log.warn("Identity service unable to resolve X500name: $dbData")
         }
         return null // non resolvable anonymous parties are stored as nulls
     }

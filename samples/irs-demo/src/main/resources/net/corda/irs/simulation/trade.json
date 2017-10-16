@@ -1,6 +1,6 @@
 {
   "fixedLeg": {
-    "fixedRatePayer": "8Kqd4oWdx4KQGHGR7xcgpFf9JmP6HiXqTf85NpSgdSu431EGEhujA6ePaFD",
+    "fixedRatePayer": "MCowBQYDK2VwAyEAzswVB9wd3XKVlRwpCIjwla25BE0bc9aW5t8GXWg71Pw=",
     "notional": "$25000000",
     "paymentFrequency": "SemiAnnual",
     "effectiveDate": "2016-03-11",
@@ -22,7 +22,7 @@
     "interestPeriodAdjustment": "Adjusted"
   },
   "floatingLeg": {
-    "floatingRatePayer": "8Kqd4oWdx4KQGHGJSFTX4kdZukmHohBRN3gvPekticL4eHTdmbJTVZNZJUj",
+    "floatingRatePayer": "MCowBQYDK2VwAyEAa3nFfmoJUjkoLASBjpYRLz8DpAAbqXpWTCOFKj8epfw=",
     "notional": {
       "quantity": 2500000000,
       "token": "USD"
@@ -71,7 +71,7 @@
     "notificationTime": "2:00pm London",
     "resolutionTime": "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
     "interestRate": {
-      "oracle": "Rates Service Provider",
+      "oracle": "C=ES,L=Madrid,O=Rates Service Provider",
       "tenor": {
         "name": "6M"
       },

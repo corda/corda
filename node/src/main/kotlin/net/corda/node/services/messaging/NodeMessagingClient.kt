@@ -117,10 +117,12 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
             return PersistentMap(
                     toPersistentEntityKey = { it },
-                    fromPersistentEntity = { Pair(it.key,
-                            Pair(it.message.deserialize( context = SerializationDefaults.STORAGE_CONTEXT),
-                                    it.recipients.deserialize( context = SerializationDefaults.STORAGE_CONTEXT))
-                    ) },
+                    fromPersistentEntity = {
+                        Pair(it.key,
+                                Pair(it.message.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
+                                        it.recipients.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
+                        )
+                    },
                     toPersistentEntity = { _key: Long, (_message: Message, _recipient: MessageRecipients): Pair<Message, MessageRecipients> ->
                         RetryMessage().apply {
                             key = _key
@@ -130,6 +132,11 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     },
                     persistentEntityClass = RetryMessage::class.java
             )
+        }
+
+        private class NodeClientMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID) : Message {
+            override val debugTimestamp: Instant = Instant.now()
+            override fun toString() = "$topicSession#${String(data)}"
         }
     }
 
@@ -241,7 +248,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     log.info("Network map is complete, so removing filter from P2P consumer.")
                     try {
                         p2pConsumer!!.close()
-                    } catch(e: ActiveMQObjectClosedException) {
+                    } catch (e: ActiveMQObjectClosedException) {
                         // Ignore it: this can happen if the server has gone away before we do.
                     }
                     p2pConsumer = makeP2PConsumer(session, false)
@@ -283,8 +290,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private fun resumeMessageRedelivery() {
-        messagesToRedeliver.forEach {
-            retryId, (message, target) -> send(message, target, retryId)
+        messagesToRedeliver.forEach { retryId, (message, target) ->
+            send(message, target, retryId)
         }
     }
 
@@ -301,7 +308,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         // It's safe to call into receive simultaneous with other threads calling send on a producer.
         val artemisMessage: ClientMessage = try {
             consumer.receive()
-        } catch(e: ActiveMQObjectClosedException) {
+        } catch (e: ActiveMQObjectClosedException) {
             null
         } ?: return false
 
@@ -433,7 +440,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     }
                 }
             }
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             log.error("Caught exception whilst executing message handler for ${msg.topicSession}", e)
         }
         return true
@@ -454,7 +461,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             val c = p2pConsumer ?: throw IllegalStateException("stop can't be called twice")
             try {
                 c.close()
-            } catch(e: ActiveMQObjectClosedException) {
+            } catch (e: ActiveMQObjectClosedException) {
                 // Ignore it: this can happen if the server has gone away before we do.
             }
             p2pConsumer = null
@@ -597,13 +604,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
-        return object : Message {
-            override val topicSession: TopicSession = topicSession
-            override val data: ByteArray = data
-            override val debugTimestamp: Instant = Instant.now()
-            override val uniqueMessageId: UUID = uuid
-            override fun toString() = "$topicSession#${String(data)}"
-        }
+        return NodeClientMessage(topicSession, data, uuid)
     }
 
     private fun createOutOfProcessVerifierService(): TransactionVerifierService {

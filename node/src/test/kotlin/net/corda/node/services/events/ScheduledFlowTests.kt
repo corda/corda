@@ -5,7 +5,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.node.services.VaultQueryService
+import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.PageSpecification
@@ -15,10 +15,7 @@ import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
@@ -94,13 +91,10 @@ class ScheduledFlowTests {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.testing.contracts")
-        mockNet = MockNetwork(threadPerNode = true)
-        notaryNode = mockNet.createNode(
-                legalName = DUMMY_NOTARY.name,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
-        val a = mockNet.createUnstartedNode(notaryNode.network.myAddress)
-        val b = mockNet.createUnstartedNode(notaryNode.network.myAddress)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
+        notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        val a = mockNet.createUnstartedNode()
+        val b = mockNet.createUnstartedNode()
 
         notaryNode.internals.ensureRegistered()
 
@@ -112,7 +106,6 @@ class ScheduledFlowTests {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test
@@ -128,10 +121,10 @@ class ScheduledFlowTests {
         nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity()))
         mockNet.waitQuiescent()
         val stateFromA = nodeA.database.transaction {
-            nodeA.services.vaultQueryService.queryBy<ScheduledState>().states.single()
+            nodeA.services.vaultService.queryBy<ScheduledState>().states.single()
         }
         val stateFromB = nodeB.database.transaction {
-            nodeB.services.vaultQueryService.queryBy<ScheduledState>().states.single()
+            nodeB.services.vaultService.queryBy<ScheduledState>().states.single()
         }
         assertEquals(1, countScheduledFlows)
         assertEquals("Must be same copy on both nodes", stateFromA, stateFromB)
@@ -153,12 +146,12 @@ class ScheduledFlowTests {
 
         // Convert the states into maps to make error reporting easier
         val statesFromA: List<StateAndRef<ScheduledState>> = nodeA.database.transaction {
-            queryStatesWithPaging(nodeA.services.vaultQueryService)
+            queryStatesWithPaging(nodeA.services.vaultService)
         }
         val statesFromB: List<StateAndRef<ScheduledState>> = nodeB.database.transaction {
-            queryStatesWithPaging(nodeB.services.vaultQueryService)
+            queryStatesWithPaging(nodeB.services.vaultService)
         }
-        assertEquals("Expect all states to be present",2 * N, statesFromA.count())
+        assertEquals("Expect all states to be present", 2 * N, statesFromA.count())
         statesFromA.forEach { ref ->
             if (ref !in statesFromB) {
                 throw IllegalStateException("State $ref is only present on node A.")
@@ -179,13 +172,13 @@ class ScheduledFlowTests {
      *
      * @return states ordered by the transaction ID.
      */
-    private fun queryStatesWithPaging(vaultQueryService: VaultQueryService): List<StateAndRef<ScheduledState>> {
+    private fun queryStatesWithPaging(vaultService: VaultService): List<StateAndRef<ScheduledState>> {
         // DOCSTART VaultQueryExamplePaging
         var pageNumber = DEFAULT_PAGE_NUM
         val states = mutableListOf<StateAndRef<ScheduledState>>()
         do {
             val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
-            val results = vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, SORTING)
+            val results = vaultService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, SORTING)
             states.addAll(results.states)
             pageNumber++
         } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)

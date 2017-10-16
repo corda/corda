@@ -79,7 +79,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
     }
 
     @Test
-    fun `check ALL is implemented the correct way round` () {
+    fun `check ALL is implemented the correct way round`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
