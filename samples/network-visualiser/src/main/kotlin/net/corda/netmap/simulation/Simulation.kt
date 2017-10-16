@@ -12,7 +12,6 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
@@ -270,9 +269,3 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         mockNet.stopNodes()
     }
 }
-
-/**
- * Helper function for verifying that a service info contains the given type of advertised service. For non-simulation cases
- * this is a configuration matter rather than implementation.
- */
-fun Iterable<ServiceInfo>.containsType(type: ServiceType) = any { it.type == type }

@@ -36,7 +36,7 @@ The core elements of the architecture are:
 * A network interface for interacting with other nodes
 * An RPC interface for interacting with the node's owner
 * A service hub for allowing the node's flows to call upon the node's other services
-* A plugin registry for extending the node by installing CorDapps
+* A cordapp interface and provider for extending the node by installing CorDapps
 
 Persistence layer
 -----------------
@@ -68,11 +68,11 @@ updates. The key services provided are:
 * Information about the node itself
 * The current time, as tracked by the node
 
-The plugin registry
--------------------
-The plugin registry is where new CorDapps are installed to extend the behavior of the node.
+The CorDapp provider
+--------------------
+The CorDapp provider is where new CorDapps are installed to extend the behavior of the node.
 
-The node also has several plugins installed by default to handle common tasks such as:
+The node also has several CorDapps installed by default to handle common tasks such as:
 
 * Retrieving transactions and attachments from counterparties
 * Upgrading contracts

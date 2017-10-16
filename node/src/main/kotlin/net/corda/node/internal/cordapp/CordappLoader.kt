@@ -38,10 +38,10 @@ import kotlin.streams.toList
  *
  * @property cordappJarPaths The classpath of cordapp JARs
  */
-class CordappLoader private constructor(private val cordappJarPaths: List<URL>) {
+class CordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) {
     val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
 
-    internal val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
+    internal val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
     init {
         if (cordappJarPaths.isEmpty()) {
@@ -55,21 +55,29 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         private val logger = loggerFor<CordappLoader>()
 
         /**
+         * Default cordapp dir name
+         */
+        val CORDAPPS_DIR_NAME = "cordapps"
+
+        /**
          * Creates a default CordappLoader intended to be used in non-dev or non-test environments.
          *
-         * @param baseDir The directory that this node is running in. Will use this to resolve the plugins directory
+         * @param baseDir The directory that this node is running in. Will use this to resolve the cordapps directory
          *                  for classpath scanning.
          */
-        fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getPluginsPath(baseDir)))
+        fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getCordappsPath(baseDir)))
 
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
-         * and plugins directory. This is intended mostly for use by the driver.
+         * and cordapps directory. This is intended mostly for use by the driver.
+         *
+         * @param baseDir See [createDefault.baseDir]
+         * @param testPackages See [createWithTestPackages.testPackages]
          */
         @VisibleForTesting
         fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            return CordappLoader(getCordappsInDirectory(getPluginsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage))
+            return CordappLoader(getCordappsInDirectory(getCordappsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage))
         }
 
         /**
@@ -89,20 +97,22 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection
          */
         @VisibleForTesting
-        fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars)
+        fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars.map { RestrictedURL(it, null) })
 
-        private fun getPluginsPath(baseDir: Path): Path = baseDir / "plugins"
+        private fun getCordappsPath(baseDir: Path): Path = baseDir / CORDAPPS_DIR_NAME
 
-        private fun createScanPackage(scanPackage: String): List<URL> {
+        private fun createScanPackage(scanPackage: String): List<RestrictedURL> {
             val resource = scanPackage.replace('.', '/')
             return this::class.java.classLoader.getResources(resource)
                     .asSequence()
                     .map { path ->
                         if (path.protocol == "jar") {
-                            (path.openConnection() as JarURLConnection).jarFileURL.toURI()
+                            // When running tests from gradle this may be a corda module jar, so restrict to scanPackage:
+                            RestrictedURL((path.openConnection() as JarURLConnection).jarFileURL, scanPackage)
                         } else {
-                            createDevCordappJar(scanPackage, path, resource)
-                        }.toURL()
+                            // No need to restrict as createDevCordappJar has already done that:
+                            RestrictedURL(createDevCordappJar(scanPackage, path, resource).toURL(), null)
+                        }
                     }
                     .toList()
         }
@@ -135,12 +145,12 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
             return generatedCordapps[path]!!
         }
 
-        private fun getCordappsInDirectory(pluginsDir: Path): List<URL> {
-            return if (!pluginsDir.exists()) {
-                emptyList<URL>()
+        private fun getCordappsInDirectory(cordappsDir: Path): List<RestrictedURL> {
+            return if (!cordappsDir.exists()) {
+                emptyList()
             } else {
-                pluginsDir.list {
-                    it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
+                cordappsDir.list {
+                    it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.map { RestrictedURL(it.toUri().toURL(), null) }.toList()
                 }
             }
         }
@@ -179,15 +189,15 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
                     findServices(scanResult),
                     findPlugins(it),
                     findCustomSchemas(scanResult),
-                    it)
+                    it.url)
         }
     }
 
-    private fun findServices(scanResult: ScanResult): List<Class<out SerializeAsToken>> {
+    private fun findServices(scanResult: RestrictedScanResult): List<Class<out SerializeAsToken>> {
         return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
     }
 
-    private fun findInitiatedFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findInitiatedFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
                 // First group by the initiating flow class in case there are multiple mappings
                 .groupBy { it.requireAnnotation<InitiatedBy>().value.java }
@@ -206,35 +216,35 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         return Modifier.isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || Modifier.isStatic(modifiers))
     }
 
-    private fun findRPCFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findRPCFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() }
     }
 
-    private fun findServiceFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findServiceFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByService::class)
     }
 
-    private fun findSchedulableFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findSchedulableFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
     }
 
-    private fun findContractClassNames(scanResult: ScanResult): List<String> {
-        return (scanResult.getNamesOfClassesImplementing(Contract::class.java) + scanResult.getNamesOfClassesImplementing(UpgradedContract::class.java)).distinct()
+    private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
+        return (scanResult.getNamesOfClassesImplementing(Contract::class) + scanResult.getNamesOfClassesImplementing(UpgradedContract::class)).distinct()
     }
 
-    private fun findPlugins(cordappJarPath: URL): List<SerializationWhitelist> {
-        return ServiceLoader.load(SerializationWhitelist::class.java, URLClassLoader(arrayOf(cordappJarPath), appClassLoader)).toList().filter {
-            cordappJarPath == it.javaClass.protectionDomain.codeSource.location
+    private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
+        return ServiceLoader.load(SerializationWhitelist::class.java, URLClassLoader(arrayOf(cordappJarPath.url), appClassLoader)).toList().filter {
+            it.javaClass.protectionDomain.codeSource.location == cordappJarPath.url && it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix)
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
     }
 
-    private fun findCustomSchemas(scanResult: ScanResult): Set<MappedSchema> {
+    private fun findCustomSchemas(scanResult: RestrictedScanResult): Set<MappedSchema> {
         return scanResult.getClassesWithSuperclass(MappedSchema::class).toSet()
     }
 
-    private fun scanCordapp(cordappJarPath: URL): ScanResult {
+    private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in $cordappJarPath")
-        return FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath).scan()
+        return RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
     }
 
     private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
@@ -261,16 +271,30 @@ class CordappLoader private constructor(private val cordappJarPaths: List<URL>) 
         }
     }
 
-    private fun <T : Any> ScanResult.getClassesWithSuperclass(type: KClass<T>): List<T> {
-        return getNamesOfSubclassesOf(type.java)
-                .mapNotNull { loadClass(it, type) }
-                .filterNot { Modifier.isAbstract(it.modifiers) }
-                .map { it.kotlin.objectOrNewInstance() }
+    /** @param rootPackageName only this package and subpackages may be extracted from [url], or null to allow all packages. */
+    private class RestrictedURL(val url: URL, rootPackageName: String?) {
+        val qualifiedNamePrefix = rootPackageName?.let { it + '.' } ?: ""
     }
 
-    private fun <T : Any> ScanResult.getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
-        return getNamesOfClassesWithAnnotation(annotation.java)
-                .mapNotNull { loadClass(it, type) }
-                .filterNot { Modifier.isAbstract(it.modifiers) }
+    private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) {
+        fun getNamesOfClassesImplementing(type: KClass<*>): List<String> {
+            return scanResult.getNamesOfClassesImplementing(type.java)
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+        }
+
+        fun <T : Any> getClassesWithSuperclass(type: KClass<T>): List<T> {
+            return scanResult.getNamesOfSubclassesOf(type.java)
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+                    .mapNotNull { loadClass(it, type) }
+                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .map { it.kotlin.objectOrNewInstance() }
+        }
+
+        fun <T : Any> getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
+            return scanResult.getNamesOfClassesWithAnnotation(annotation.java)
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+                    .mapNotNull { loadClass(it, type) }
+                    .filterNot { Modifier.isAbstract(it.modifiers) }
+        }
     }
 }

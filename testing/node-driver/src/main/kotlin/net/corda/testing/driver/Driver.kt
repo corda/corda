@@ -67,6 +67,10 @@ import kotlin.concurrent.thread
 
 private val log: Logger = loggerFor<DriverDSL>()
 
+private val DEFAULT_POLL_INTERVAL = 500.millis
+
+private const val DEFAULT_WARN_COUNT = 120
+
 /**
  * This is the interface that's exposed to DSL users.
  */
@@ -102,13 +106,12 @@ interface DriverDSLExposedInterface : CordformContext {
                         validating: Boolean = true): CordaFuture<NodeHandle>
 
     /**
-     * Helper function for starting a [node] with custom parameters from Java.
+     * Helper function for starting a [Node] with custom parameters from Java.
      *
-     * @param defaultParameters The default parameters for the driver.
-     * @param dsl The dsl itself.
+     * @param parameters The default parameters for the driver.
      * @return The value returned in the [dsl] closure.
      */
-    fun <A> startNode(parameters: NodeParameters): CordaFuture<NodeHandle> {
+    fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> {
         return startNode(defaultParameters = parameters)
     }
 
@@ -165,14 +168,23 @@ interface DriverDSLExposedInterface : CordformContext {
      * @param check The function being polled.
      * @return A future that completes with the non-null value [check] has returned.
      */
-    fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> A?): CordaFuture<A>
+    fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = DEFAULT_POLL_INTERVAL, warnCount: Int = DEFAULT_WARN_COUNT, check: () -> A?): CordaFuture<A>
 
     /**
      * Polls the given function until it returns true.
      * @see pollUntilNonNull
      */
-    fun pollUntilTrue(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> Boolean): CordaFuture<Unit> {
+    fun pollUntilTrue(pollName: String, pollInterval: Duration = DEFAULT_POLL_INTERVAL, warnCount: Int = DEFAULT_WARN_COUNT, check: () -> Boolean): CordaFuture<Unit> {
         return pollUntilNonNull(pollName, pollInterval, warnCount) { if (check()) Unit else null }
+    }
+
+    /**
+     * Polls until a given node knows about presence of another node via its own NetworkMap
+     */
+    fun NodeHandle.pollUntilKnowsAbout(another: NodeHandle, pollInterval: Duration = DEFAULT_POLL_INTERVAL, warnCount: Int = DEFAULT_WARN_COUNT): CordaFuture<Unit> {
+        return pollUntilTrue("${nodeInfo.legalIdentities} knows about ${another.nodeInfo.legalIdentities}", pollInterval, warnCount) {
+            another.nodeInfo in rpc.networkMapSnapshot()
+        }
     }
 
     val shutdownManager: ShutdownManager
@@ -345,7 +357,7 @@ fun <A> driver(
 /**
  * Helper function for starting a [driver] with custom parameters from Java.
  *
- * @param defaultParameters The default parameters for the driver.
+ * @param parameters The default parameters for the driver.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
@@ -706,7 +718,7 @@ class DriverDSL(
                         "webAddress" to webAddress.toString(),
                         "networkMapService" to networkMapServiceConfigLookup(name),
                         "useTestClock" to useTestClock,
-                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers.map { it.toMap() },
+                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers.map { it.toConfig().root().unwrapped() },
                         "verifierType" to verifierType.name
                 ) + customOverrides
         )
@@ -883,14 +895,16 @@ class DriverDSL(
                 }
                 establishRpc(nodeConfiguration, processDeathFuture).flatMap { rpc ->
                     // Call waitUntilNetworkReady in background in case RPC is failing over:
-                    val networkMapFuture = executorService.fork {
+                    val forked = executorService.fork {
                         rpc.waitUntilNetworkReady()
-                    }.flatMap { it }
+                    }
+                    val networkMapFuture = forked.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
                             throw ListenProcessDeathException(nodeConfiguration.p2pAddress, process)
                         }
                         processDeathFuture.cancel(false)
+                        log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: ${webAddress}")
                         NodeHandle.OutOfProcess(rpc.nodeInfo(), rpc, nodeConfiguration, webAddress, debugPort, process)
                     }
                 }
@@ -905,7 +919,7 @@ class DriverDSL(
     }
 
     companion object {
-        private val defaultRpcUserList = listOf(User("default", "default", setOf("ALL")).toMap())
+        private val defaultRpcUserList = listOf(User("default", "default", setOf("ALL")).toConfig().root().unwrapped())
 
         private val names = arrayOf(
                 ALICE.name,

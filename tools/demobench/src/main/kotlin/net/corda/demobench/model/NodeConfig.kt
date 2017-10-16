@@ -31,6 +31,7 @@ data class NodeConfig(
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
         val defaultUser = user("guest")
+        val cordappDirName = "cordapps"
     }
 
     @Suppress("unused")
@@ -56,18 +57,18 @@ data class NotaryService(val validating: Boolean) : ExtraService {
 }
 
 // TODO Think of a better name
-data class NodeConfigWrapper(val baseDir: Path, val nodeConfig: NodeConfig) : HasPlugins {
+data class NodeConfigWrapper(val baseDir: Path, val nodeConfig: NodeConfig) : HasCordapps {
     val key: String = nodeConfig.myLegalName.organisation.toKey()
     val nodeDir: Path = baseDir / key
     val explorerDir: Path = baseDir / "$key-explorer"
-    override val pluginDir: Path = nodeDir / "plugins"
+    override val cordappsDir: Path = nodeDir / NodeConfig.cordappDirName
     var state: NodeState = NodeState.STARTING
 
     fun install(cordapps: Collection<Path>) {
         if (cordapps.isEmpty()) return
-        pluginDir.createDirectories()
+        cordappsDir.createDirectories()
         for (cordapp in cordapps) {
-            cordapp.copyToDirectory(pluginDir, StandardCopyOption.REPLACE_EXISTING)
+            cordapp.copyToDirectory(cordappsDir, StandardCopyOption.REPLACE_EXISTING)
         }
     }
 }

@@ -78,8 +78,8 @@ the three node folders. Each node folder has the following structure:
         |____corda.jar                     // The runnable node
         |____corda-webserver.jar           // The node's webserver
         |____node.conf                     // The node's configuration file
-        |____plugins
-          |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
+        |____cordapps
+        |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
 
 Let's start the nodes by running the following commands from the root of the project:
 
