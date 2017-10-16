@@ -117,7 +117,7 @@ class CordaClassResolverTests {
             TODO("not implemented")
         }
 
-        override fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): Pair<T, VersionHeader> {
+        override fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithVersionHeader<T> {
             TODO("not implemented")
         }
     }

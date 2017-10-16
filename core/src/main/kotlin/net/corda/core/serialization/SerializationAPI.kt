@@ -7,6 +7,8 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
 
+data class ObjectWithVersionHeader<out T : Any>(val obj: T, val versionHeader: VersionHeader)
+
 /**
  * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
  * a header / prefix in the bytes.
@@ -29,7 +31,7 @@ abstract class SerializationFactory {
      * @param context A context that configures various parameters to deserialization.
      * @return deserialized object along with [VersionHeader] to identify encoding used.
      */
-    abstract fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): Pair<T, VersionHeader>
+    abstract fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithVersionHeader<T>
 
     /**
      * Serialize an object to bytes using the preferred serialization format version from the context.
@@ -190,7 +192,7 @@ inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: Seri
  * It might be helpful to know [VersionHeader] in case reply needs to be sent in the same encoding.
  */
 inline fun <reified T : Any> ByteSequence.deserializeWithVersionHeader(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
-                                                                       context: SerializationContext = serializationFactory.defaultContext): Pair<T, VersionHeader> {
+                                                                       context: SerializationContext = serializationFactory.defaultContext): ObjectWithVersionHeader<T> {
     return serializationFactory.deserializeWithVersionHeader(this, T::class.java, context)
 }
 

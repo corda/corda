@@ -20,7 +20,7 @@ object VerifierApi {
             val responseAddress: SimpleString
     ) {
         companion object {
-            fun fromClientMessage(message: ClientMessage): Pair<VerificationRequest, VersionHeader> {
+            fun fromClientMessage(message: ClientMessage): ObjectWithVersionHeader<VerificationRequest> {
                 val bytes = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
                 val bytesSequence = bytes.sequence()
                 val (transaction, versionHeader) = bytesSequence.deserializeWithVersionHeader<LedgerTransaction>()
@@ -28,7 +28,7 @@ object VerifierApi {
                         message.getLongProperty(VERIFICATION_ID_FIELD_NAME),
                         transaction,
                         MessageUtil.getJMSReplyTo(message))
-                return (request to versionHeader)
+                return ObjectWithVersionHeader(request, versionHeader)
             }
         }
 

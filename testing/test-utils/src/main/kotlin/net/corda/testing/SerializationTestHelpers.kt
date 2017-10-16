@@ -103,7 +103,7 @@ class TestSerializationFactory : SerializationFactory() {
         return delegate!!.deserialize(byteSequence, clazz, context)
     }
 
-    override fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): Pair<T, VersionHeader> {
+    override fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithVersionHeader<T> {
         return delegate!!.deserializeWithVersionHeader(byteSequence, clazz, context)
     }
 

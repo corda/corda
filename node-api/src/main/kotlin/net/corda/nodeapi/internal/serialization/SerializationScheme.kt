@@ -125,12 +125,12 @@ open class SerializationFactoryImpl : SerializationFactory() {
     }
 
     @Throws(NotSerializableException::class)
-    override fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): Pair<T, VersionHeader> {
+    override fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithVersionHeader<T> {
         return asCurrent {
             withCurrentContext(context) {
                 val (scheme, versionHeader) = schemeFor(byteSequence, context.useCase)
                 val deserializedObject = scheme.deserialize(byteSequence, clazz, context)
-                deserializedObject to versionHeader
+                ObjectWithVersionHeader(deserializedObject, versionHeader)
             }
         }
     }
