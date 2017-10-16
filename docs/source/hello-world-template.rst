@@ -42,17 +42,22 @@ implement our IOU CorDapp in Java, we'll need to modify three files. For Kotlin,
     .. code-block:: java
 
         // 1. The state
-        src/main/java/com/template/state/TemplateState.java
+        src/main/java/com/template/TemplateState.java
 
         // 2. The contract
-        src/main/java/com/template/contract/TemplateContract.java
+        src/main/java/com/template/TemplateContract.java
 
         // 3. The flow
-        src/main/java/com/template/flow/TemplateFlow.java
+        src/main/java/com/template/TemplateFlow.java
 
     .. code-block:: kotlin
 
         src/main/kotlin/com/template/App.kt
+
+To prevent build errors later on, you should delete the following file:
+
+* Java: ``src/test/java/com/template/FlowTests.java``
+* Kotlin: ``src/test/kotlin/com/template/FlowTests.kt``
 
 Progress so far
 ---------------

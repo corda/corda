@@ -78,80 +78,15 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
 .. container:: codeset
 
-    .. code-block:: kotlin
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/helloworld/contract.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
 
-        ...
-
-        import net.corda.core.contracts.*
-
-        ...
-
-        class IOUContract : Contract {
-            // Our Create command.
-            class Create : CommandData
-
-            override fun verify(tx: LedgerTransaction) {
-                val command = tx.commands.requireSingleCommand<Create>()
-
-                requireThat {
-                    // Constraints on the shape of the transaction.
-                    "No inputs should be consumed when issuing an IOU." using (tx.inputs.isEmpty())
-                    "There should be one output state of type IOUState." using (tx.outputs.size == 1)
-
-                    // IOU-specific constraints.
-                    val out = tx.outputs.single().data as IOUState
-                    "The IOU's value must be non-negative." using (out.value > 0)
-                    "The lender and the borrower cannot be the same entity." using (out.lender != out.borrower)
-
-                    // Constraints on the signers.
-                    "There must only be one signer." using (command.signers.toSet().size == 1)
-                    "The signer must be the lender." using (command.signers.contains(out.lender.owningKey))
-                }
-            }
-        }
-
-    .. code-block:: java
-
-        package com.template.contract;
-
-        import com.template.state.IOUState;
-        import net.corda.core.contracts.CommandWithParties;
-        import net.corda.core.contracts.CommandData;
-        import net.corda.core.contracts.Contract;
-        import net.corda.core.transactions.LedgerTransaction;
-        import net.corda.core.identity.Party;
-
-        import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
-        import static net.corda.core.contracts.ContractsDSL.requireThat;
-
-        public class IOUContract implements Contract {
-            // Our Create command.
-            public static class Create implements CommandData {}
-
-            @Override
-            public void verify(LedgerTransaction tx) {
-                final CommandWithParties<Create> command = requireSingleCommand(tx.getCommands(), Create.class);
-
-                requireThat(check -> {
-                    // Constraints on the shape of the transaction.
-                    check.using("No inputs should be consumed when issuing an IOU.", tx.getInputs().isEmpty());
-                    check.using("There should be one output state of type IOUState.", tx.getOutputs().size() == 1);
-
-                    // IOU-specific constraints.
-                    final IOUState out = (IOUState) tx.getOutputs().get(0).getData();
-                    final Party lender = out.getLender();
-                    final Party borrower = out.getBorrower();
-                    check.using("The IOU's value must be non-negative.",out.getValue() > 0);
-                    check.using("The lender and the borrower cannot be the same entity.", lender != borrower);
-
-                    // Constraints on the signers.
-                    check.using("There must only be one signer.", command.getSigners().size() == 1);
-                    check.using("The signer must be the lender.", command.getSigners().contains(lender.getOwningKey()));
-
-                    return null;
-                });
-            }
-        }
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/helloworld/IOUContract.java
+        :language: java
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
 
 If you're following along in Java, you'll also need to rename ``TemplateContract.java`` to ``IOUContract.java``.
 
