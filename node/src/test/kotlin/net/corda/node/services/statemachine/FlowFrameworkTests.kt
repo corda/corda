@@ -82,9 +82,9 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
 
         // Extract identities
-        alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
-        bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
-        notaryIdentity = notary.services.myInfo.legalIdentities[1]
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+        notaryIdentity = notary.services.getDefaultNotary()
     }
 
     @After
@@ -202,10 +202,10 @@ class FlowFrameworkTests {
         val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
         val secondFlow = charlieNode.registerFlowFactory(PingPongFlow::class) { PingPongFlow(it, payload2) }
         mockNet.runNetwork()
-        val charlie = charlieNode.services.myInfo.identityFromX500Name(CHARLIE_NAME)
+        val charlie = charlieNode.info.singleIdentity()
 
         // Kick off first send and receive
-        bobNode.services.startFlow(PingPongFlow(charlie, payload)) 
+        bobNode.services.startFlow(PingPongFlow(charlie, payload))
         bobNode.database.transaction {
             assertEquals(1, bobNode.checkpointStorage.checkpoints().size)
         }
@@ -247,7 +247,7 @@ class FlowFrameworkTests {
     fun `sending to multiple parties`() {
         val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
         mockNet.runNetwork()
-        val charlie = charlieNode.services.myInfo.identityFromX500Name(CHARLIE_NAME)
+        val charlie = charlieNode.info.singleIdentity()
         bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         charlieNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         val payload = "Hello World"
@@ -280,7 +280,7 @@ class FlowFrameworkTests {
     fun `receiving from multiple parties`() {
         val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
         mockNet.runNetwork()
-        val charlie = charlieNode.services.myInfo.identityFromX500Name(CHARLIE_NAME)
+        val charlie = charlieNode.info.singleIdentity()
         val bobPayload = "Test 1"
         val charliePayload = "Test 2"
         bobNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(bobPayload, it) }
@@ -434,7 +434,7 @@ class FlowFrameworkTests {
     fun `FlowException propagated in invocation chain`() {
         val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
         mockNet.runNetwork()
-        val charlie = charlieNode.services.myInfo.identityFromX500Name(CHARLIE_NAME)
+        val charlie = charlieNode.info.singleIdentity()
 
         charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
         bobNode.registerFlowFactory(ReceiveFlow::class) { ReceiveFlow(charlie) }
@@ -449,7 +449,7 @@ class FlowFrameworkTests {
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
         val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
         mockNet.runNetwork()
-        val charlie = charlieNode.services.myInfo.identityFromX500Name(CHARLIE_NAME)
+        val charlie = charlieNode.info.singleIdentity()
 
         // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
         // onto Charlie which will throw the exception

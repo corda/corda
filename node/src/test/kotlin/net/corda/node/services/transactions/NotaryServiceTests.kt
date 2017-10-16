@@ -42,7 +42,7 @@ class NotaryServiceTests {
         notaryNode.internals.ensureRegistered()
         notaryServices = notaryNode.services
         notary = notaryServices.getDefaultNotary()
-        alice = aliceServices.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
+        alice = aliceServices.myInfo.singleIdentity()
     }
 
     @After

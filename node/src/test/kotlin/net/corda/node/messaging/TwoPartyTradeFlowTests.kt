@@ -31,7 +31,6 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.ownedBy
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
@@ -106,8 +105,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
             val bankNode = mockNet.createPartyNode(BOC_NAME)
-            val alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-            val bank = notaryNode.services.networkMapCache.getPeerByLegalName(BOC_NAME)!!
+            val alice = aliceNode.info.singleIdentity()
+            val bank = bankNode.info.singleIdentity()
             val notary = notaryNode.services.getDefaultNotary()
             val cashIssuer = bank.ref(1)
             val cpIssuer = bank.ref(1, 2, 3)
@@ -156,8 +155,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
             val bankNode = mockNet.createPartyNode(BOC_NAME)
-            val alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-            val bank = notaryNode.services.networkMapCache.getPeerByLegalName(BOC_NAME)!!
+            val alice = aliceNode.info.singleIdentity()
+            val bank = bankNode.info.singleIdentity()
             val issuer = bank.ref(1)
             val notary = aliceNode.services.getDefaultNotary()
 
@@ -219,8 +218,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             mockNet.runNetwork() // Clear network map registration messages
 
             val notary = notaryNode.services.getDefaultNotary()
-            val alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-            val bank = notaryNode.services.networkMapCache.getPeerByLegalName(BOC_NAME)!!
+            val alice = aliceNode.info.singleIdentity()
+            val bank = bankNode.info.singleIdentity()
             val issuer = bank.ref(1, 2, 3)
 
             bobNode.database.transaction {
@@ -335,9 +334,9 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         mockNet.runNetwork()
         notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
-        val alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-        val bob = notaryNode.services.networkMapCache.getPeerByLegalName(BOB_NAME)!!
-        val bank = notaryNode.services.networkMapCache.getPeerByLegalName(BOC_NAME)!!
+        val alice = aliceNode.info.singleIdentity()
+        val bob = bobNode.info.singleIdentity()
+        val bank = bankNode.info.singleIdentity()
         val issuer = bank.ref(1, 2, 3)
 
         ledger(aliceNode.services, initialiseSerialization = false) {
@@ -599,9 +598,9 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         mockNet.runNetwork()
         notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
-        val alice = notaryNode.services.networkMapCache.getPeerByLegalName(ALICE_NAME)!!
-        val bob = notaryNode.services.networkMapCache.getPeerByLegalName(BOB_NAME)!!
-        val bank = notaryNode.services.networkMapCache.getPeerByLegalName(BOC_NAME)!!
+        val alice = aliceNode.info.singleIdentity()
+        val bob = bobNode.info.singleIdentity()
+        val bank = bankNode.info.singleIdentity()
         val issuer = bank.ref(1, 2, 3)
 
         val bobsBadCash = bobNode.database.transaction {
