@@ -44,8 +44,13 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
     /** Returns true if [party] is one of the identities of this node, else false. */
     fun isLegalIdentity(party: Party): Boolean = party in legalIdentities
 
-    fun identityFromX500Name(name: CordaX500Name): Party  {
+    fun identityFromX500Name(name: CordaX500Name): Party {
         val identity = legalIdentitiesAndCerts.singleOrNull { it.name == name } ?: throw IllegalArgumentException("Node does not have an identity \"$name\"")
         return identity.party
+    }
+
+    fun identityAndCertFromX500Name(name: CordaX500Name): PartyAndCertificate {
+        val identity = legalIdentitiesAndCerts.singleOrNull { it.name == name } ?: throw IllegalArgumentException("Node does not have an identity \"$name\"")
+        return identity
     }
 }

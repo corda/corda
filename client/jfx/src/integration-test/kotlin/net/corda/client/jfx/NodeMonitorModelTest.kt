@@ -98,13 +98,13 @@ class NodeMonitorModelTest {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.chooseIdentity().name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.map(Party::name).contains(ALICE_NAME)) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.chooseIdentity().name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.map(Party::name).contains(BOB_NAME)) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.chooseIdentity().name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.map(Party::name).contains(CHARLIE.name)) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             }
                     )
                 }

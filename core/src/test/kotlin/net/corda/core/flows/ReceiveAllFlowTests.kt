@@ -5,8 +5,8 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.testing.chooseIdentity
 import net.corda.testing.node.network
+import net.corda.testing.singleIdentity
 import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -20,7 +20,7 @@ class ReceiveMultipleFlowTests {
             val stringValue = "Thriller"
             nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
 
-            val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
+            val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
             runNetwork()
 
             val result = flow.resultFuture.getOrThrow()
@@ -37,7 +37,7 @@ class ReceiveMultipleFlowTests {
             val value2 = 6.0
             nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
 
-            val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
+            val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
             runNetwork()
             val data = flow.resultFuture.getOrThrow()
 

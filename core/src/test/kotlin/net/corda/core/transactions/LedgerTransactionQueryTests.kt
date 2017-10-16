@@ -2,8 +2,10 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
-import net.corda.testing.*
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule

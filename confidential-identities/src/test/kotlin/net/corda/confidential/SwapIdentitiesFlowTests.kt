@@ -3,10 +3,12 @@ package net.corda.confidential
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
+import net.corda.testing.node.MockNodeParameters
 import org.junit.Test
 import kotlin.test.*
 
@@ -83,28 +85,30 @@ class SwapIdentitiesFlowTests {
         val notaryNode = mockNet.defaultNotaryNode
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
-        val bob: Party = bobNode.services.myInfo.singleIdentity()
+        val alice: PartyAndCertificate = aliceNode.info.singleIdentityAndCert()
+        val bob: PartyAndCertificate = bobNode.info.singleIdentityAndCert()
+        val notary: PartyAndCertificate = notaryNode.info.identityAndCertFromX500Name(DUMMY_NOTARY.name)
         // Check that the wrong signature is rejected
         notaryNode.database.transaction {
-            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
+            notaryNode.services.keyManagementService.freshKeyAndCert(notary, false)
         }.let { anonymousNotary ->
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousNotary)
             val signature = notaryNode.services.keyManagementService.sign(sigData, anonymousNotary.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousNotary, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob.party, anonymousNotary, signature.withoutKey())
             }
         }
         // Check that the right signing key, but wrong identity is rejected
-        val anonymousAlice = aliceNode.database.transaction {
-            aliceNode.services.keyManagementService.freshKeyAndCert(aliceNode.services.myInfo.chooseIdentityAndCert(), false)
+        val anonymousAlice: PartyAndCertificate = aliceNode.database.transaction {
+            aliceNode.services.keyManagementService.freshKeyAndCert(alice, false)
         }
         bobNode.database.transaction {
-            bobNode.services.keyManagementService.freshKeyAndCert(bobNode.services.myInfo.chooseIdentityAndCert(), false)
+            bobNode.services.keyManagementService.freshKeyAndCert(bob, false)
         }.let { anonymousBob ->
             val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAlice)
             val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
             assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, anonymousBob, signature.withoutKey())
+                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob.party, anonymousBob, signature.withoutKey())
             }
         }
 

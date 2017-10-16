@@ -53,7 +53,7 @@ class NodeInterestRatesTest {
     private val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
     private val services = MockServices(listOf("net.corda.finance.contracts.asset"), DUMMY_CASH_ISSUER.name, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
     // This is safe because MockServices only ever have a single identity
-    private val identity = services.myInfo.legalIdentitiesAndCerts.single().party
+    private val identity = services.myInfo.singleIdentity()
 
     private lateinit var oracle: NodeInterestRates.Oracle
     private lateinit var database: CordaPersistence

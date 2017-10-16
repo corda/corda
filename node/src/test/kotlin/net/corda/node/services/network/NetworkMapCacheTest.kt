@@ -3,7 +3,7 @@ package net.corda.node.services.network
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
-import net.corda.testing.chooseIdentity
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.singleIdentity
@@ -28,7 +28,7 @@ class NetworkMapCacheTest {
         val alice = aliceNode.info.singleIdentity()
 
         // Node A currently knows only about itself, so this returns node A
-        assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(aliceNode.info.chooseIdentity().owningKey).singleOrNull(), aliceNode.info)
+        assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(alice.owningKey).singleOrNull(), aliceNode.info)
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME, entropyRoot = entropy))
         val bob = bobNode.info.singleIdentity()
         assertEquals(alice, bob)
@@ -67,14 +67,14 @@ class NetworkMapCacheTest {
     fun `remove node from cache`() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
-        val bobLegalIdentity = bobNode.info.chooseIdentity()
-        val alice = aliceNode.info.chooseIdentity()
+        val bob = bobNode.info.singleIdentity()
+        val alice = aliceNode.info.singleIdentity()
         val bobCache = bobNode.services.networkMapCache
         bobNode.database.transaction {
             assertThat(bobCache.getNodeByLegalIdentity(alice) != null)
             bobCache.removeNode(aliceNode.info)
             assertThat(bobCache.getNodeByLegalIdentity(alice) == null)
-            assertThat(bobCache.getNodeByLegalIdentity(bobLegalIdentity) != null)
+            assertThat(bobCache.getNodeByLegalIdentity(bob) != null)
             assertThat(bobCache.getNodeByLegalName(alice.name) == null)
         }
     }
