@@ -1,28 +1,55 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
 import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
+import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.StateLoader
+import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.SoftLockingCondition
 import net.corda.core.node.services.vault.QueryCriteria.SoftLockingType.LOCKED_ONLY
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Test
+import java.math.BigInteger
+import java.security.KeyPair
+import java.util.*
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
 class VaultSoftLockManagerTest {
-    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.java.`package`.name))
+    private val mockVault: VaultServiceInternal = mock()
+    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.java.`package`.name), defaultFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
+        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
+            return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+                override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
+                    val realVault = super.makeVaultService(keyManagementService, stateLoader)
+                    return object : VaultServiceInternal by realVault {
+                        override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
+                            mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
+                        }
+                    }
+                }
+            }
+        }
+    })
     private val node = mockNet.createNotaryNode()
     @After
     fun tearDown() {
@@ -63,9 +90,16 @@ class VaultSoftLockManagerTest {
     }
 
     private fun run(expectSoftLock: Boolean, state: ContractState) {
-        val f = node.services.startFlow(FlowLogicImpl(state)).resultFuture
+        val fsm = node.services.startFlow(FlowLogicImpl(state))
         mockNet.runNetwork()
-        assertEquals(if (expectSoftLock) listOf(state) else emptyList(), f.getOrThrow())
+        if (expectSoftLock) {
+            assertEquals(listOf(state), fsm.resultFuture.getOrThrow())
+            verify(mockVault).softLockRelease(fsm.id.uuid, null)
+        } else {
+            assertEquals(emptyList(), fsm.resultFuture.getOrThrow())
+            // In this case we don't want softLockRelease called so that we avoid its expensive query.
+        }
+        verifyNoMoreInteractions(mockVault)
     }
 
     @Test

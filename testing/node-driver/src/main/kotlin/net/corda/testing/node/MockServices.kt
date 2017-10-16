@@ -173,7 +173,7 @@ open class MockServices(
 
     fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties(), { identityService })): VaultServiceInternal {
         val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, stateLoader, hibernateConfig)
-        hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
+        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
 
