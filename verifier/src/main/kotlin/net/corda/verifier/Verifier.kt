@@ -65,7 +65,7 @@ class Verifier {
             val consumer = session.createConsumer(VERIFICATION_REQUESTS_QUEUE_NAME)
             val replyProducer = session.createProducer()
             consumer.setMessageHandler {
-                val request = VerifierApi.VerificationRequest.fromClientMessage(it)
+                val (request, context) = VerifierApi.VerificationRequest.fromClientMessage(it)
                 log.debug { "Received verification request with id ${request.verificationId}" }
                 val error = try {
                     request.transaction.verify()
@@ -76,7 +76,7 @@ class Verifier {
                 }
                 val reply = session.createMessage(false)
                 val response = VerifierApi.VerificationResponse(request.verificationId, error)
-                response.writeToClientMessage(reply)
+                response.writeToClientMessage(reply, context)
                 replyProducer.send(request.responseAddress, reply)
                 it.acknowledge()
             }

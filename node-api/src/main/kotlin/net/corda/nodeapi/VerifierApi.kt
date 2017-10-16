@@ -28,15 +28,15 @@ object VerifierApi {
             val responseAddress: SimpleString
     ) {
         companion object {
-            fun fromClientMessage(message: ClientMessage): VerificationRequest {
+            fun fromClientMessage(message: ClientMessage): Pair<VerificationRequest, SerializationContext> {
                 val bytes = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
                 val bytesSequence = bytes.sequence()
                 val context = establishSuitableContext(bytesSequence.obtainHeaderSignature())
-                return VerificationRequest(
+                val request = VerificationRequest(
                         message.getLongProperty(VERIFICATION_ID_FIELD_NAME),
                         bytesSequence.deserialize(context = context),
-                        MessageUtil.getJMSReplyTo(message)
-                )
+                        MessageUtil.getJMSReplyTo(message))
+                return (request to context)
             }
 
             private fun establishSuitableContext(headerSignature: ByteSequence): SerializationContext =
@@ -67,10 +67,10 @@ object VerifierApi {
             }
         }
 
-        fun writeToClientMessage(message: ClientMessage) {
+        fun writeToClientMessage(message: ClientMessage, context: SerializationContext) {
             message.putLongProperty(VERIFICATION_ID_FIELD_NAME, verificationId)
             if (exception != null) {
-                message.putBytesProperty(RESULT_EXCEPTION_FIELD_NAME, exception.serialize().bytes)
+                message.putBytesProperty(RESULT_EXCEPTION_FIELD_NAME, exception.serialize(context = context).bytes)
             }
         }
     }
