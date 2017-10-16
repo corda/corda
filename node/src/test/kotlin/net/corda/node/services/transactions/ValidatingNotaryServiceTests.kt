@@ -42,8 +42,8 @@ class ValidatingNotaryServiceTests {
         notaryNode.internals.ensureRegistered()
         notaryServices = notaryNode.services
         aliceServices = aliceNode.services
-        notary = notaryServices.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
-        alice = aliceServices.myInfo.identityFromX500Name(ALICE_NAME)
+        notary = notaryServices.getDefaultNotary()
+        alice = aliceNode.info.singleIdentity()
     }
 
     @After
