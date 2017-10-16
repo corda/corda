@@ -11,27 +11,26 @@ allow the node to handle new business processes. Our flow will allow a node to i
 
 Flow outline
 ------------
-Our flow needs to take the following steps for a borrower to issue a new IOU onto the ledger:
+Our flow needs to take the following steps for a lender to issue a new IOU onto the ledger:
 
-  1. Create a valid transaction proposal for the creation of a new IOU
-  2. Verify the transaction
-  3. Sign the transaction ourselves
-  4. Record the transaction in our vault
-  5. Send the transaction to the IOU's lender so that they can record it too
+  1. Create a transaction proposal for the creation of a new IOU on ledger
+  2. Sign the transaction proposal
+  3. Record the transaction
+  4. Send the transaction to the IOU's borrower so that they can record it too
 
 Subflows
 ^^^^^^^^
-Although our flow requirements look complex, we can delegate to existing flows to handle many of these tasks. A flow
-that is invoked within the context of a larger flow to handle a repeatable task is called a *subflow*.
+Tasks like recording a transaction or sending a transaction to a counterparty are common tasks in Corda. Instead of
+forcing each developer to reimplement this logic, we can invoke existing flows to handle these tasks. A flow that is
+invoked within the context of a larger flow to handle a repeatable task is called a *subflow*.
 
-In our initiator flow, we can automate steps 4 and 5 using ``FinalityFlow``.
+In our case, we can automate steps 3 and 4 of the initiator's flow using ``FinalityFlow``.
 
 All we need to do is write the steps to handle the creation and signing of the proposed transaction.
 
 FlowLogic
 ---------
-Flows are implemented as ``FlowLogic`` subclasses. You define the steps taken by the flow by overriding
-``FlowLogic.call``.
+Flows must subclass ``FlowLogic``. You define the steps taken by the flow by overriding ``FlowLogic.call``.
 
 We'll write our flow in either ``TemplateFlow.java`` or ``App.kt``. Delete both the existing flows in the template, and
 replace them with the following:
@@ -68,33 +67,23 @@ We now have our own ``FlowLogic`` subclass that overrides ``FlowLogic.call``. Th
 
 Let's walk through the steps of ``FlowLogic.call`` one-by-one:
 
-Retrieving participant information
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The identity of our counterparty is passed in as a constructor argument. However, we need to use the ``ServiceHub`` to
-retrieve our identity, as well as the identity of the notary we'll be using for our transaction.
-
-You can see that the notary's identity is being retrieved from the node's ``ServiceHub``. Whenever we need
-information within a flow - whether it's about our own node, its contents, or the rest of the network - we use the
-node's ``ServiceHub``. In particular, ``ServiceHub.networkMapCache`` provides information about the other nodes on the
-network and the services that they offer.
+Choosing a notary
+^^^^^^^^^^^^^^^^^
+Every transaction requires a notary. The first thing we do in our flow is retrieve the identity of a notary from the
+node's ``ServiceHub``. Whenever we need information within a flow - whether it's about our own node, its contents, or
+the rest of the network - we use the node's ``ServiceHub``. In particular, ``ServiceHub.networkMapCache`` provides
+information about the other nodes on the network and the services that they offer.
 
 Building the transaction
 ^^^^^^^^^^^^^^^^^^^^^^^^
 We'll build our transaction proposal in two steps:
 
-* Creating a transaction builder
-* Adding the desired items to the builder
-
-Creating a transaction builder
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-To start building the proposed transaction, we need a ``TransactionBuilder``. This is a mutable transaction class to
-which we can add inputs, outputs, commands, and any other items the transaction needs. We create a
-``TransactionBuilder`` that uses the notary we retrieved earlier.
+* Creating the state and command for the transaction
+* Adding these components to a transaction builder
 
 Transaction items
 ~~~~~~~~~~~~~~~~~
-Now that we have our ``TransactionBuilder``, we need to add the desired items. Remember that we're trying to build
-the following transaction:
+Our transaction will have the following structure:
 
   .. image:: resources/simple-tutorial-transaction.png
      :scale: 15%
@@ -103,29 +92,30 @@ the following transaction:
 So we'll need the following:
 
 * The output ``IOUState`` and its associated contract
-* A ``Create`` command listing the IOU's lender as a signer
+* An ``Action`` command listing the IOU's lender as a signer
 
-The command we use pairs the ``IOUContract.Create`` command defined earlier with our public key. Including this command
-in the transaction makes us one of the transaction's required signers.
+We've already defined the ``IOUState``, but we haven't talked about commands yet. Commands serve two functions:
 
-We add these items to the transaction using the ``TransactionBuilder.withItems`` method, which takes a ``vararg`` of:
+* They indicate the transaction’s intent. This will be crucial when we discuss the concept of a ``Contract`` in a
+  future tutorial
+* They allow us to define the required signers for the transaction. For example, IOU creation might require signatures
+  from the lender only, whereas the transfer of an IOU might require signatures from both the IOU’s borrower and lender
 
-* ``StateAndContract`` or ``TransactionState`` objects, which are added to the builder as output states
-* ``StateAndRef`` objects (references to the outputs of previous transactions), which are added to the builder as input
-  state references
-* ``Command`` objects, which are added to the builder as commands
-* ``SecureHash`` objects, which are added to the builder as attachments
-* ``TimeWindow`` objects, which set the time-window of the transaction
+The command we use pairs the ``TemplateContract.Action`` command defined earlier with the public key of the lender.
+Including this command in the transaction makes us one of the transaction's required signers.
 
-It will modify the ``TransactionBuilder`` in-place to add these components to it.
+Creating a transaction builder
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To start building the proposed transaction, we need a ``TransactionBuilder``. This is a mutable transaction class to
+which we can add inputs, outputs, commands, and any other items the transaction needs. We create a
+``TransactionBuilder`` that uses the notary we retrieved earlier.
 
-Verifying the transaction
-^^^^^^^^^^^^^^^^^^^^^^^^^
-We've now built our proposed transaction. Before we sign it, we should check that it represents a valid ledger update
-proposal by verifying the transaction, which will execute each of the transaction's contracts.
+Once we have the ``TransactionBuilder``, we add our components:
 
-If the verification fails, we have built an invalid transaction. Our flow will then end, throwing a
-``TransactionVerificationException``.
+* The command is added directly using ``TransactionBuilder.addCommand``
+* The output ``IOUState`` is added using ``TransactionBuilder.addOutputState``. As well as the output state itself,
+  this method takes a reference to a contract. Here, we are passing in a reference to the ``TemplateContract``. We will
+  discuss contracts more fully in a future tutorial
 
 Signing the transaction
 ^^^^^^^^^^^^^^^^^^^^^^^

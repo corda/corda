@@ -12,8 +12,8 @@ represent an IOU.
 
 The ContractState interface
 ---------------------------
-In Corda, any JVM class that implements the ``ContractState`` interface is a valid state. ``ContractState`` is
-defined as follows:
+A Corda state is any instance of a class that implements the ``ContractState`` interface. The ``ContractState``
+interface is defined as follows:
 
 .. container:: codeset
 
@@ -29,7 +29,7 @@ common language. The core Corda platform, including the interface declaration ab
 
 Learning some Kotlin will be very useful for understanding how Corda works internally, and usually only takes an
 experienced Java developer a day or so to pick up. However, learning Kotlin isn't essential. Because Kotlin code
-compiles down to JVM bytecode, CorDapps written in other JVM languages can interoperate with Corda.
+compiles to JVM bytecode, CorDapps written in other JVM languages can interoperate with Corda.
 
 If you do want to dive into Kotlin, there's an official
 `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
@@ -39,27 +39,24 @@ We can see that the ``ContractState`` interface has a single field, ``participan
 entities for which this state is relevant.
 
 Beyond this, our state is free to define any fields, methods, helpers or inner classes it requires to accurately
-represent a given class of shared facts on the ledger.
-
-``ContractState`` also has several child interfaces that you may wish to implement depending on your state, such as
-``LinearState`` and ``OwnableState``. See :doc:`api-states` for more information.
+represent a given type of shared fact on the ledger.
 
 Modelling IOUs
 --------------
 How should we define the ``IOUState`` representing IOUs on the ledger? Beyond implementing the ``ContractState``
 interface, our ``IOUState`` will also need properties to track the relevant features of the IOU:
 
+* The value of the IOU
 * The lender of the IOU
 * The borrower of the IOU
-* The value of the IOU
 
-There are many more fields you could include, such as the IOU's currency. We'll abstract them away for now. If
-you wish to add them later, its as simple as adding an additional property to your class definition.
+There are many more fields you could include, such as the IOU's currency, but we'll ignore those for now. Adding them
+later is generally as simple as adding an additional property to your class definition.
 
 Defining IOUState
 -----------------
-Let's open ``TemplateState.java`` (for Java) or ``App.kt`` (for Kotlin) and update ``TemplateState`` to
-define an ``IOUState``:
+Let's get started by opening ``TemplateState.java`` (for Java) or ``App.kt`` (for Kotlin) and updating
+``TemplateState`` to define an ``IOUState``:
 
 .. container:: codeset
 
@@ -75,23 +72,28 @@ define an ``IOUState``:
 
 If you're following along in Java, you'll also need to rename ``TemplateState.java`` to ``IOUState.java``.
 
-We've made the following changes:
+To define ``IOUState``, we've made the following changes:
 
 * We've renamed ``TemplateState`` to ``IOUState``
-* We've added properties for ``value``, ``lender`` and ``borrower`` (along with any getters and setters in Java):
+* We've added properties for ``value``, ``lender`` and ``borrower``:
 
   * ``value`` is just a standard int (in Java)/Int (in Kotlin)
   * ``lender`` and ``borrower`` are of type ``Party``. ``Party`` is a built-in Corda type that represents an entity on
-    the network.
+    the network
+
+  We've also added the required getters and setters in Java
 
 * We've overridden ``participants`` to return a list of the ``lender`` and ``borrower``
 
-  * Actions such as changing a state's contract or notary will require approval from all the ``participants``
+  * ``participants`` is a list of all the parties who should be notified of the creation or consumption of this state
+
+Now that we've defined the ``IOUState`` class, the IOUs we create on the ledger will simply be instances of this class.
 
 Progress so far
 ---------------
 We've defined an ``IOUState`` that can be used to represent IOUs as shared facts on the ledger. As we've seen, states in
-Corda are simply JVM classes that implement the ``ContractState`` interface. They can have any additional properties and
+Corda are simply classes that implement the ``ContractState`` interface. They can have any additional properties and
 methods you like.
 
-Next, we'll be writing our ``IOUContract`` to control the evolution of these shared facts over time.
+All that's left to do is write the ``IOUFlow`` that will allow a node to orchestrate the creation of a new ``IOUState``
+on the ledger, while only sharing information on a need-to-know basis.
