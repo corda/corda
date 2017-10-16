@@ -26,7 +26,7 @@ import kotlin.test.assertEquals
 class InteractiveShellTest {
     @Before
     fun setup() {
-        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
+        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), ::makeTestIdentityService)
     }
 
     @After
