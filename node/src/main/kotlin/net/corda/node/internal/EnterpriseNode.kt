@@ -12,8 +12,8 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
 
-class EnterpriseNode(configuration: FullNodeConfiguration, advertisedServices: Set<ServiceInfo>,
-                     versionInfo: VersionInfo) : Node(configuration, advertisedServices, versionInfo) {
+class EnterpriseNode(configuration: FullNodeConfiguration,
+                     versionInfo: VersionInfo) : Node(configuration, versionInfo) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
     }
@@ -66,7 +66,7 @@ D""".trimStart()
             return tips[(Math.random() * tips.size).toInt()]
         }
 
-        override fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, services: Set<ServiceInfo>) = EnterpriseNode(conf, services, versionInfo)
+        override fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo) = EnterpriseNode(conf, versionInfo)
 
         private fun connectToRelay(config: RelayConfiguration, localBrokerPort: Int) {
             with(config) {
