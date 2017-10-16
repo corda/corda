@@ -1,9 +1,7 @@
 package net.corda.node.testing
 
 import com.codahale.metrics.MetricRegistry
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
@@ -17,7 +15,6 @@ import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.CordaPersistence
@@ -43,12 +40,11 @@ open class MockServiceHubInternal(
         override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage(),
         override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage(),
         val mapCache: NetworkMapCacheInternal? = null,
-        val scheduler: SchedulerService? = null,
         val overrideClock: Clock? = NodeClock(),
         val customContractUpgradeService: ContractUpgradeService? = null,
         val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2),
         override val cordappProvider: CordappProviderInternal = CordappProviderImpl(CordappLoader.createDefault(Paths.get(".")), attachments),
-        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
+        val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
 ) : ServiceHubInternal, StateLoader by stateLoader {
     override val transactionVerifierService: TransactionVerifierService
         get() = customTransactionVerifierService ?: throw UnsupportedOperationException()
@@ -64,8 +60,6 @@ open class MockServiceHubInternal(
         get() = network ?: throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCacheInternal
         get() = mapCache ?: MockNetworkMapCache(this)
-    override val schedulerService: SchedulerService
-        get() = scheduler ?: throw UnsupportedOperationException()
     override val clock: Clock
         get() = overrideClock ?: throw UnsupportedOperationException()
     override val myInfo: NodeInfo
@@ -79,11 +73,6 @@ open class MockServiceHubInternal(
     lateinit var smm: StateMachineManager
 
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T = throw UnsupportedOperationException()
-
-    override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party?): FlowStateMachineImpl<T> {
-        return smm.executor.fetchFrom { smm.add(logic, flowInitiator, ourIdentity) }
-    }
-
     override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? = null
 
     override fun jdbcSession(): Connection = database.createSession()
