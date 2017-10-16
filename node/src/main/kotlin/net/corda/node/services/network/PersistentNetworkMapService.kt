@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.SingleMessageRecipient
@@ -9,12 +10,13 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.utilities.*
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisMessagingComponent
 import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
-import javax.persistence.*
 import java.util.*
+import javax.persistence.*
 
 /**
  * A network map service backed by a database to survive restarts of the node hosting it.
@@ -66,7 +68,7 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
                     },
                     toPersistentEntity = { key: PartyAndCertificate, value: NodeRegistrationInfo ->
                         NetworkNode(
-                                publicKeyHash = SecureHash.sha256(key.owningKey.encoded).toString(),
+                                publicKeyHash = key.owningKey.encoded.sha256().toString(),
                                 nodeParty = NodeParty(
                                         key.name.toString(),
                                         key.certificate.encoded,

@@ -1,6 +1,6 @@
 package net.corda.core.schemas
 
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
@@ -102,7 +102,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
     ) {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
-                : this(SecureHash.sha256(partyAndCert.owningKey.encoded).toString(), partyAndCert.party.name.toString(), partyAndCert.serialize().bytes, isMain)
+                : this(partyAndCert.owningKey.encoded.sha256().toString(), partyAndCert.party.name.toString(), partyAndCert.serialize().bytes, isMain)
 
         fun toLegalIdentityAndCert(): PartyAndCertificate {
             return partyCertBinary.deserialize()

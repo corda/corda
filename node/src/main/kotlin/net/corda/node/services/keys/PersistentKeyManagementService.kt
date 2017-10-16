@@ -44,7 +44,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
             var privateKey: ByteArray = ByteArray(0)
     ) {
         constructor(publicKey: PublicKey, privateKey: ByteArray)
-            : this(SecureHash.sha256(publicKey.encoded).toString(), privateKey)
+            : this(publicKey.encoded.sha256().toString(), privateKey)
     }
 
     private companion object {
