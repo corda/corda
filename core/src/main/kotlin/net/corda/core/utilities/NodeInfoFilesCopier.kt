@@ -1,4 +1,4 @@
-package net.corda.demobench.model
+package net.corda.core.utilities
 
 import net.corda.cordform.CordformNode
 import net.corda.core.internal.createDirectories
@@ -7,7 +7,6 @@ import net.corda.core.internal.list
 import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
-import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -16,7 +15,6 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
-import java.util.logging.Level
 
 /**
  * Utility class which copies nodeInfo files across a set of running nodes.
@@ -24,7 +22,11 @@ import java.util.logging.Level
  * This class will create paths that it needs to poll and to where it needs to copy files in case those
  * don't exist yet.
  */
-class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() {
+class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
+
+    companion object {
+        private val log = loggerFor<NodeInfoFilesCopier>()
+    }
 
     private val nodeDataMap = mutableMapOf<Path, NodeData>()
 
@@ -34,20 +36,20 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() 
     }
 
     /**
-     * @param nodeConfig the configuration to be added.
-     * Add a [NodeConfig] for a node which is about to be started.
+     * @param nodeDir a path to be watched for NodeInfos
+     * Add a path of a node which is about to be started.
      * Its nodeInfo file will be copied to other nodes' additional-node-infos directory, and conversely,
      * other nodes' nodeInfo files will be copied to this node additional-node-infos directory.
      */
     @Synchronized
-    fun addConfig(nodeConfig: NodeConfigWrapper) {
-        val newNodeFile = NodeData(nodeConfig.nodeDir)
-        nodeDataMap[nodeConfig.nodeDir] = newNodeFile
+    fun addConfig(nodeDir: Path) {
+        val newNodeFile = NodeData(nodeDir)
+        nodeDataMap[nodeDir] = newNodeFile
 
         for (previouslySeenFile in allPreviouslySeenFiles()) {
             copy(previouslySeenFile, newNodeFile.destination.resolve(previouslySeenFile.fileName))
         }
-        log.info("Now watching: ${nodeConfig.nodeDir}")
+        log.info("Now watching: ${nodeDir}")
     }
 
     /**
@@ -57,9 +59,9 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() 
      * one.
      */
     @Synchronized
-    fun removeConfig(nodeConfig: NodeConfigWrapper) {
-        nodeDataMap.remove(nodeConfig.nodeDir) ?: return
-        log.info("Stopped watching: ${nodeConfig.nodeDir}")
+    fun removeConfig(nodeDir: Path) {
+        nodeDataMap.remove(nodeDir) ?: return
+        log.info("Stopped watching: $nodeDir")
     }
 
     @Synchronized
@@ -95,16 +97,16 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() 
 
     private fun copy(source: Path, destination: Path) {
         val tempDestination = try {
-            Files.createTempFile(destination.parent, ".", null)
+            Files.createTempFile(destination.parent, "", null)
         } catch (exception: IOException) {
-            log.log(Level.WARNING, "Couldn't create a temporary file to copy $source", exception)
+            log.warn("Couldn't create a temporary file to copy $source", exception)
             throw exception
         }
         try {
             // First copy the file to a temporary file within the appropriate directory.
             Files.copy(source, tempDestination, COPY_ATTRIBUTES, REPLACE_EXISTING)
         } catch (exception: IOException) {
-            log.log(Level.WARNING, "Couldn't copy $source to $tempDestination.", exception)
+            log.warn("Couldn't copy $source to $tempDestination.", exception)
             Files.delete(tempDestination)
             throw exception
         }
@@ -112,7 +114,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() 
             // Then rename it to the desired name. This way the file 'appears' on the filesystem as an atomic operation.
             Files.move(tempDestination, destination, REPLACE_EXISTING)
         } catch (exception: IOException) {
-            log.log(Level.WARNING, "Couldn't move $tempDestination to $destination.", exception)
+            log.warn("Couldn't move $tempDestination to $destination.", exception)
             Files.delete(tempDestination)
             throw exception
         }

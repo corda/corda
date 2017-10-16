@@ -555,8 +555,16 @@ abstract class AbstractNode(config: NodeConfiguration,
         }
     }
 
+    private fun setupInNodeNetworkMapService(networkMapCache: NetworkMapCacheInternal) {
+        inNodeNetworkMapService =
+                if (configuration.networkMapService == null && !configuration.noNetworkMapServiceMode)
+                    makeNetworkMapService(network, networkMapCache)
+                else
+                    NullNetworkMapService
+    }
+
     private fun makeNetworkServices(network: MessagingService, networkMapCache: NetworkMapCacheInternal, tokenizableServices: MutableList<Any>) {
-        inNodeNetworkMapService = if (configuration.networkMapService == null) makeNetworkMapService(network, networkMapCache) else NullNetworkMapService
+        setupInNodeNetworkMapService(networkMapCache)
         configuration.notary?.let {
             val notaryService = makeCoreNotaryService(it)
             tokenizableServices.add(notaryService)
@@ -615,7 +623,7 @@ abstract class AbstractNode(config: NodeConfiguration,
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
     protected open fun noNetworkMapConfigured(): CordaFuture<Unit> {
-        if (services.networkMapCache.loadDBSuccess) {
+        if (services.networkMapCache.loadDBSuccess || configuration.noNetworkMapServiceMode) {
             return doneFuture(Unit)
         } else {
             // TODO: There should be a consistent approach to configuration error exceptions.

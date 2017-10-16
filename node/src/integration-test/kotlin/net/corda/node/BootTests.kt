@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.ServiceType
 import net.corda.testing.ALICE
 import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.driver.ListenProcessDeathException
-import net.corda.testing.driver.NetworkMapStartStrategy
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -59,7 +58,7 @@ class BootTests {
     @Test
     fun `node quits on failure to register with network map`() {
         val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.notary.getSubType("$it")) }.toSet()
-        driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
+        driver {
             val future = startNode(providedName = ALICE.name)
             assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
         }

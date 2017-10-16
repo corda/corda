@@ -21,6 +21,9 @@ dependencies {
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:$guava_version"
 
+    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
+
+
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testCompile project(":node")
     testCompile project(":node-driver")
