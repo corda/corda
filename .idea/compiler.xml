@@ -77,6 +77,8 @@
       <module name="node_test" target="1.8" />
       <module name="notary-demo_main" target="1.8" />
       <module name="notary-demo_test" target="1.8" />
+      <module name="perftestflows_main" target="1.8" />
+      <module name="perftestflows_test" target="1.8" />
       <module name="publish-utils_main" target="1.8" />
       <module name="publish-utils_test" target="1.8" />
       <module name="quasar-hook_main" target="1.8" />
@@ -99,6 +101,9 @@
       <module name="sgx-jvm_test" target="1.8" />
       <module name="sgx-signtool_main" target="1.8" />
       <module name="sgx-signtool_test" target="1.8" />
+      <module name="signing-server_integrationTest" target="1.8" />
+      <module name="signing-server_main" target="1.8" />
+      <module name="signing-server_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
