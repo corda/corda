@@ -852,9 +852,7 @@ class DriverDSL(
         val smallestSeenNetworkMapSize = Observable.combineLatest(countObservables.values.toList()) {
             args : Array<Any> -> args.map { it as Int }.min() ?: 0
         }
-
-        smallestSeenNetworkMapSize.filter {it > requiredNodes} .toFuture()
-
+        
         smallestSeenNetworkMapSize.subscribe(object : Subscriber<Int>() {
             override fun onError(e: Throwable?) {  }
             override fun onCompleted() {  }
