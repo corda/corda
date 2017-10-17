@@ -137,6 +137,7 @@
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />
       <module name="trader-demo_main" target="1.8" />
+      <module name="trader-demo_systemTest" target="1.8" />
       <module name="trader-demo_test" target="1.8" />
       <module name="verifier_integrationTest" target="1.8" />
       <module name="verifier_main" target="1.8" />
