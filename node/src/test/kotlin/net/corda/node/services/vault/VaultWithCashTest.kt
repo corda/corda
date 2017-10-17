@@ -4,6 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.internal.packageName
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -35,7 +36,7 @@ import kotlin.test.assertEquals
 
 class VaultWithCashTest : TestDependencyInjectionBase() {
     companion object {
-        private val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
+        private val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
     }
 
     lateinit var services: MockServices
@@ -48,7 +49,6 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(DUMMY_CASH_ISSUER_KEY, DUMMY_NOTARY_KEY),
-                customSchemas = setOf(CashSchemaV1),
                 cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second

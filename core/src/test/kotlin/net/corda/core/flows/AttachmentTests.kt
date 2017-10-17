@@ -17,6 +17,7 @@ import net.corda.testing.ALICE
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -60,7 +61,7 @@ class AttachmentTests {
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
         aliceNode.internals.ensureRegistered()
-        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
+        val alice = aliceNode.info.singleIdentity()
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -105,7 +106,7 @@ class AttachmentTests {
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         mockNet.runNetwork()
-        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
+        val alice = aliceNode.info.singleIdentity()
         val bobFlow = bobNode.startAttachmentFlow(setOf(hash), alice)
         mockNet.runNetwork()
         val e = assertFailsWith<FetchDataFlow.HashNotFound> { bobFlow.resultFuture.getOrThrow() }

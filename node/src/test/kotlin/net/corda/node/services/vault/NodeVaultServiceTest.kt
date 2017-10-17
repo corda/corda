@@ -9,6 +9,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
@@ -46,7 +47,7 @@ import kotlin.test.assertTrue
 
 class NodeVaultServiceTest : TestDependencyInjectionBase() {
     companion object {
-        private val cordappPackages = listOf("net.corda.finance.contracts.asset")
+        private val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
     }
 
     lateinit var services: MockServices
@@ -58,7 +59,6 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(BOC_KEY, DUMMY_CASH_ISSUER_KEY),
-                customSchemas = setOf(CashSchemaV1),
                 cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second

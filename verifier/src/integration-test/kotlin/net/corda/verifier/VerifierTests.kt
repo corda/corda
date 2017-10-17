@@ -6,20 +6,19 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
-import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.driver.NetworkMapStartStrategy
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertNotNull
 
 class VerifierTests {
     private fun generateTransactions(number: Int): List<LedgerTransaction> {
@@ -121,13 +120,16 @@ class VerifierTests {
             val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, verifierType = VerifierType.OutOfProcess)
             val aliceNode = aliceFuture.get()
             val notaryNode = notaryFuture.get()
-            val alice = notaryNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
+            val alice = aliceNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
             val notary = notaryNode.rpc.notaryPartyFromX500Name(DUMMY_NOTARY_SERVICE_NAME)!!
             startVerifier(notaryNode)
+            notaryNode.pollUntilKnowsAbout(aliceNode).getOrThrow()
+            aliceNode.pollUntilKnowsAbout(notaryNode).getOrThrow()
             aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notary).returnValue.get()
             notaryNode.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
-                aliceNode.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice).returnValue.get()
+                val cashFlowResult = aliceNode.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice).returnValue.get()
+                assertNotNull(cashFlowResult)
             }
         }
     }

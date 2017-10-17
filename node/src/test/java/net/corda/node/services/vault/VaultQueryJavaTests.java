@@ -8,7 +8,6 @@ import net.corda.core.messaging.*;
 import net.corda.core.node.services.*;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.*;
-import net.corda.core.schemas.*;
 import net.corda.core.utilities.*;
 import net.corda.finance.contracts.*;
 import net.corda.finance.contracts.asset.*;
@@ -43,14 +42,13 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     @Before
     public void setUp() {
-        List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset");
+        List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
         keys.add(getDUMMY_NOTARY_KEY());
-        Set<MappedSchema> requiredSchemas = Collections.singleton(CashSchemaV1.INSTANCE);
         IdentityService identitySvc = makeTestIdentityService();
         @SuppressWarnings("unchecked")
-        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(requiredSchemas, keys, () -> identitySvc, cordappPackages);
+        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(keys, () -> identitySvc, cordappPackages);
         issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
