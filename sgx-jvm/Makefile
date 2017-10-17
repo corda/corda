@@ -29,7 +29,10 @@ jdk8u:
 	git clone -b deterministic-jvm8 --single-branch https://github.com/corda/openjdk $@
 
 $(JDK_IMAGE): jdk8u
-	cd jdk8u && $(SHELL) ./configure && $(MAKE) JOBS=2 images docs
+	cd jdk8u && \
+		ALSA_NOT_NEEDED=yes CUPS_NOT_NEEDED=yes FREETYPE_NOT_NEEDED=yes \
+		PULSE_NOT_NEEDED=yes X11_NOT_NEEDED=yes $(SHELL) ./configure && \
+		$(MAKE) JOBS=2 images docs
 
 linux-sgx/external/ippcp_internal/inc:
 	cd linux-sgx && $(SHELL) ./download_prebuilt.sh
