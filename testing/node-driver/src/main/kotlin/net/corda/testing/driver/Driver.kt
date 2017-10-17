@@ -609,6 +609,9 @@ class DriverDSL(
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
+    // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
+    // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
+    // Investigate whether we can avoid that.
     private val nodeInfoFilesCopier = NodeInfoFilesCopier()
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
@@ -824,14 +827,13 @@ class DriverDSL(
      */
     private fun nodeCountObservable(initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>):
             ConnectableObservable<Int> {
-        var count = initial
+        val count = AtomicInteger(initial)
         return networkMapCacheChangeObservable.map { it ->
             when (it) {
-                is NetworkMapCache.MapChange.Added -> count++
-                is NetworkMapCache.MapChange.Removed -> count--
-                is NetworkMapCache.MapChange.Modified -> Unit
+                is NetworkMapCache.MapChange.Added -> count.incrementAndGet()
+                is NetworkMapCache.MapChange.Removed -> count.decrementAndGet()
+                is NetworkMapCache.MapChange.Modified -> count.get()
             }
-            return@map count
         }.startWith(initial).replay()
     }
 
