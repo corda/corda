@@ -19,7 +19,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     class ContractConstraintRejection(txId: SecureHash, contractClass: String)
         : TransactionVerificationException(txId, "Contract constraints failed for $contractClass", null)
 
-    class MissingAttachmentRejection(txId: SecureHash, contractClass: String)
+    class MissingAttachmentRejection(txId: SecureHash, val contractClass: String)
         : TransactionVerificationException(txId, "Contract constraints failed, could not find attachment for: $contractClass", null)
 
     class ContractCreationError(txId: SecureHash, contractClass: String, cause: Throwable)
