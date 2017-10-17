@@ -84,7 +84,7 @@ class CashSelectionH2Impl : CashSelection {
                     // the softLockReserve update will detect whether we try to lock states locked by others
                     val selectJoin = """
                     SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
-                    FROM vault_states AS vs, contract_cash_states AS ccs
+                    FROM vault_states AS vs, contract_pt_cash_states AS ccs
                     WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
                     AND vs.state_status = 0
                     AND ccs.ccy_code = '${amount.token}' and @t < ${amount.quantity}

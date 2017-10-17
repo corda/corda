@@ -22,7 +22,7 @@ object CashSchema
 @CordaSerializable
 object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
-    @Table(name = "contract_cash_states",
+    @Table(name = "contract_pt_cash_states",
            indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),
                              Index(name = "pennies_idx", columnList = "pennies")))
     class PersistentCashState(
