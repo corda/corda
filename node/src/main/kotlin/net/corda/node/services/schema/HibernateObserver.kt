@@ -21,6 +21,7 @@ import rx.Observable
 class HibernateObserver private constructor(private val config: HibernateConfiguration) {
     companion object {
         private val log = loggerFor<HibernateObserver>()
+        @JvmStatic
         fun install(vaultUpdates: Observable<Vault.Update<ContractState>>, config: HibernateConfiguration): HibernateObserver {
             val observer = HibernateObserver(config)
             vaultUpdates.subscribe { observer.persist(it.produced) }

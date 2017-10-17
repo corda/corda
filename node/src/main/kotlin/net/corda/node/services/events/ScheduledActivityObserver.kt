@@ -14,6 +14,7 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
  */
 class ScheduledActivityObserver private constructor(private val schedulerService: SchedulerService) {
     companion object {
+        @JvmStatic
         fun install(vaultService: VaultService, schedulerService: SchedulerService) {
             val observer = ScheduledActivityObserver(schedulerService)
             vaultService.rawUpdates.subscribe { (consumed, produced) ->
