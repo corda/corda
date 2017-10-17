@@ -31,9 +31,9 @@ data class PartyAndAmount<T : Any>(val party: AbstractParty, val amount: Amount<
  * At the same time, other contracts that just want assets and don't care much who is currently holding it can ignore
  * the issuer/depositRefs and just examine the amount fields.
  */
-abstract class PtOnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : Contract {
+abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : Contract {
     companion object {
-        val log = loggerFor<PtOnLedgerAsset<*, *, *>>()
+        val log = loggerFor<OnLedgerAsset<*, *, *>>()
 
         /**
          * Generate a transaction that moves an amount of currency to the given pubkey.

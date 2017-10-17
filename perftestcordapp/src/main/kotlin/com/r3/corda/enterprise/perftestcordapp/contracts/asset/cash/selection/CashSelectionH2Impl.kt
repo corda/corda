@@ -3,8 +3,8 @@ package com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCashSelection
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.CashSelection
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -23,11 +23,11 @@ import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class PtCashSelectionH2Impl : PtCashSelection {
+class CashSelectionH2Impl : CashSelection {
 
     companion object {
         const val JDBC_DRIVER_NAME = "H2 JDBC Driver"
-        val log = loggerFor<PtCashSelectionH2Impl>()
+        val log = loggerFor<CashSelectionH2Impl>()
     }
 
     override fun isCompatible(metadata: DatabaseMetaData): Boolean {
@@ -59,12 +59,12 @@ class PtCashSelectionH2Impl : PtCashSelection {
                                                  onlyFromIssuerParties: Set<AbstractParty>,
                                                  notary: Party?,
                                                  lockId: UUID,
-                                                 withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<PtCash.State>> {
+                                                 withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
 
         val issuerKeysStr = onlyFromIssuerParties.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }.dropLast(1)
         val issuerRefsStr = withIssuerRefs.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }.dropLast(1)
 
-        val stateAndRefs = mutableListOf<StateAndRef<PtCash.State>>()
+        val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
 
         //       We are using an H2 specific means of selecting a minimum set of rows that match a request amount of coins:
         //       1) There is no standard SQL mechanism of calculating a cumulative total on a field and restricting row selection on the
@@ -106,7 +106,7 @@ class PtCashSelectionH2Impl : PtCashSelection {
                         val txHash = SecureHash.parse(rs.getString(1))
                         val index = rs.getInt(2)
                         val stateRef = StateRef(txHash, index)
-                        val state = rs.getBytes(3).deserialize<TransactionState<PtCash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
+                        val state = rs.getBytes(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
                         val pennies = rs.getLong(4)
                         totalPennies = rs.getLong(5)
                         val rowLockId = rs.getString(6)

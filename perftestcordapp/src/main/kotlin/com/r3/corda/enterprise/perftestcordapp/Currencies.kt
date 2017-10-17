@@ -1,4 +1,4 @@
-@file:JvmName("PtCurrencies")
+@file:JvmName("Currencies")
 
 package com.r3.corda.enterprise.perftestcordapp
 

@@ -8,10 +8,10 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.`issued by`
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import com.r3.corda.enterprise.perftestcordapp.flows.PtCashException
-import com.r3.corda.enterprise.perftestcordapp.flows.PtCashIssueFlow
-import com.r3.corda.enterprise.perftestcordapp.flows.PtCashPaymentFlow
+import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueFlow
+import com.r3.corda.enterprise.perftestcordapp.flows.CashPaymentFlow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
 import net.corda.testing.expect
@@ -45,7 +45,7 @@ class CashPaymentFlowTests {
         bankOfCordaNode = nodes.partyNodes[0]
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
         notary = notaryNode.services.getDefaultNotary()
-        val future = bankOfCordaNode.services.startFlow(PtCashIssueFlow(initialBalance, ref, notary)).resultFuture
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
     }
@@ -64,10 +64,10 @@ class CashPaymentFlowTests {
         bankOfCordaNode.database.transaction {
             // Register for vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<PtCash.State>(criteria)
-            val (_, vaultUpdatesBankClient) = notaryNode.services.vaultQueryService.trackBy<PtCash.State>(criteria)
+            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
+            val (_, vaultUpdatesBankClient) = notaryNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
 
-            val future = bankOfCordaNode.services.startFlow(PtCashPaymentFlow(expectedPayment,
+            val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
                     payTo)).resultFuture
             mockNet.runNetwork()
             future.getOrThrow()
@@ -99,7 +99,7 @@ class CashPaymentFlowTests {
     fun `pay more than we have`() {
         val payTo = notaryNode.info.chooseIdentity()
         val expected = 4000.DOLLARS
-        val future = bankOfCordaNode.services.startFlow(PtCashPaymentFlow(expected,
+        val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo)).resultFuture
         mockNet.runNetwork()
         assertFailsWith<PtCashException> {
@@ -111,7 +111,7 @@ class CashPaymentFlowTests {
     fun `pay zero cash`() {
         val payTo = notaryNode.info.chooseIdentity()
         val expected = 0.DOLLARS
-        val future = bankOfCordaNode.services.startFlow(PtCashPaymentFlow(expected,
+        val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo)).resultFuture
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {

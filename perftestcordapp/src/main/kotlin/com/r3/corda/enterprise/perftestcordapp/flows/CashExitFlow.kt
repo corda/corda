@@ -13,8 +13,8 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCashSelection
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.CashSelection
 import com.r3.corda.enterprise.perftestcordapp.issuedBy
 import java.util.*
 
@@ -26,9 +26,9 @@ import java.util.*
  * issuer.
  */
 @StartableByRPC
-class PtCashExitFlow(private val amount: Amount<Currency>,
+class CashExitFlow(private val amount: Amount<Currency>,
                    private val issuerRef: OpaqueBytes,
-                   progressTracker: ProgressTracker) : AbstractPtCashFlow<AbstractPtCashFlow.Result>(progressTracker) {
+                   progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
     constructor(request: ExitRequest) : this(request.amount, request.issueRef, tracker())
 
@@ -42,15 +42,15 @@ class PtCashExitFlow(private val amount: Amount<Currency>,
      */
     @Suspendable
     @Throws(PtCashException::class)
-    override fun call(): AbstractPtCashFlow.Result {
+    override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = null)
         val issuer = ourIdentity.ref(issuerRef)
-        val exitStates = PtCashSelection
+        val exitStates = CashSelection
                 .getInstance { serviceHub.jdbcSession().metaData }
                 .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
-            PtCash().generateExit(
+            Cash().generateExit(
                     builder,
                     amount.issuedBy(issuer),
                     exitStates)
@@ -59,7 +59,7 @@ class PtCashExitFlow(private val amount: Amount<Currency>,
         }
 
         // Work out who the owners of the burnt states were (specify page size so we don't silently drop any if > DEFAULT_PAGE_SIZE)
-        val inputStates = serviceHub.vaultQueryService.queryBy<PtCash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
+        val inputStates = serviceHub.vaultQueryService.queryBy<Cash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
                                                                            PageSpecification(pageNumber = DEFAULT_PAGE_NUM, pageSize = builder.inputStates().size)).states
 
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them

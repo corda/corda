@@ -19,7 +19,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
-import com.r3.corda.enterprise.perftestcordapp.schemas.PtCashSchemaV1
+import com.r3.corda.enterprise.perftestcordapp.schemas.CashSchemaV1
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCash
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashOrNull
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashOrZero
@@ -40,20 +40,20 @@ import java.util.concurrent.atomic.AtomicReference
  * Custom implementations must implement this interface and declare their implementation in
  * META-INF/services/net.corda.contracts.asset.CashSelection
  */
-interface PtCashSelection {
+interface CashSelection {
     companion object {
-        val instance = AtomicReference<PtCashSelection>()
+        val instance = AtomicReference<CashSelection>()
 
-        fun getInstance(metadata: () -> java.sql.DatabaseMetaData): PtCashSelection {
+        fun getInstance(metadata: () -> java.sql.DatabaseMetaData): CashSelection {
             return instance.get() ?: {
                 val _metadata = metadata()
-                val cashSelectionAlgos = ServiceLoader.load(PtCashSelection::class.java).toList()
+                val cashSelectionAlgos = ServiceLoader.load(CashSelection::class.java).toList()
                 val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
                 } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                        "\nPlease specify an implementation in META-INF/services/com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCashSelection")
+                        "\nPlease specify an implementation in META-INF/services/com.r3.corda.enterprise.perftestcordapp.contracts.asset.CashSelection")
             }.invoke()
         }
     }
@@ -86,7 +86,7 @@ interface PtCashSelection {
                                         onlyFromIssuerParties: Set<AbstractParty> = emptySet(),
                                         notary: Party? = null,
                                         lockId: UUID,
-                                        withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<PtCash.State>>
+                                        withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<Cash.State>>
 }
 
 /**
@@ -102,7 +102,7 @@ interface PtCashSelection {
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-class PtCash : PtOnLedgerAsset<Currency, PtCash.Commands, PtCash.State>() {
+class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<Commands>>
             = commands.select<Commands>()
 
@@ -134,7 +134,7 @@ class PtCash : PtOnLedgerAsset<Currency, PtCash.Commands, PtCash.State>() {
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
-                is PtCashSchemaV1 -> PtCashSchemaV1.PersistentCashState(
+                is CashSchemaV1 -> CashSchemaV1.PersistentCashState(
                         owner = this.owner,
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
@@ -147,7 +147,7 @@ class PtCash : PtOnLedgerAsset<Currency, PtCash.Commands, PtCash.State>() {
         }
 
         /** Object Relational Mapping support. */
-        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(PtCashSchemaV1)
+        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CashSchemaV1)
         /** Additional used schemas would be added here (eg. CashSchemaV2, CashSchemaV3, ...) */
     }
     // DOCEND 1
@@ -261,7 +261,7 @@ class PtCash : PtOnLedgerAsset<Currency, PtCash.Commands, PtCash.State>() {
     }
 
     companion object {
-        const val PROGRAM_ID: ContractClassName = "com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash"
+        const val PROGRAM_ID: ContractClassName = "com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash"
 
         /**
          * Generate a transaction that moves an amount of currency to the given party, and sends any change back to
@@ -381,27 +381,27 @@ class PtCash : PtOnLedgerAsset<Currency, PtCash.Commands, PtCash.State>() {
 
             // Retrieve unspent and unlocked cash states that meet our spending criteria.
             val totalAmount = payments.map { it.amount }.sumOrThrow()
-            val cashSelection = PtCashSelection.getInstance({ services.jdbcSession().metaData })
+            val cashSelection = CashSelection.getInstance({ services.jdbcSession().metaData })
             val acceptableCoins = cashSelection.unconsumedCashStatesForSpending(services, totalAmount, onlyFromParties, tx.notary, tx.lockId)
             val revocationEnabled = false // Revocation is currently unsupported
             // Generate a new identity that change will be sent to for confidentiality purposes. This means that a
             // third party with a copy of the transaction (such as the notary) cannot identify who the change was
             // sent to
             val changeIdentity = services.keyManagementService.freshKeyAndCert(ourIdentity, revocationEnabled)
-            return PtOnLedgerAsset.generateSpend(tx, payments, acceptableCoins,
+            return OnLedgerAsset.generateSpend(tx, payments, acceptableCoins,
                     changeIdentity.party.anonymise(),
                     { state, quantity, owner -> deriveState(state, quantity, owner) },
-                    { PtCash().generateMoveCommand() })
+                    { Cash().generateMoveCommand() })
         }
     }
 }
 
 // Small DSL extensions.
 
-/** @suppress */ infix fun PtCash.State.`owned by`(owner: AbstractParty) = ownedBy(owner)
-/** @suppress */ infix fun PtCash.State.`issued by`(party: AbstractParty) = issuedBy(party)
-/** @suppress */ infix fun PtCash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
-/** @suppress */ infix fun PtCash.State.`with deposit`(deposit: PartyAndReference): PtCash.State = withDeposit(deposit)
+/** @suppress */ infix fun Cash.State.`owned by`(owner: AbstractParty) = ownedBy(owner)
+/** @suppress */ infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
+/** @suppress */ infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
+/** @suppress */ infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
 
 // Unit testing helpers. These could go in a separate file but it's hardly worth it for just a few functions.
 
@@ -410,6 +410,6 @@ val DUMMY_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
 val DUMMY_CASH_ISSUER by lazy { Party(CordaX500Name(organisation = "Snake Oil Issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public).ref(1) }
 /** An extension property that lets you write 100.DOLLARS.CASH */
-val Amount<Currency>.CASH: PtCash.State get() = PtCash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NULL_PARTY)
+val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NULL_PARTY)
 /** An extension property that lets you get a cash state from an issued token, under the [NULL_PARTY] */
-val Amount<Issued<Currency>>.STATE: PtCash.State get() = PtCash.State(this, NULL_PARTY)
+val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NULL_PARTY)

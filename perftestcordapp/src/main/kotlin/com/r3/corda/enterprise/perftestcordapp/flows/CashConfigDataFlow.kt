@@ -15,7 +15,7 @@ import java.util.*
  * Flow to obtain cash cordapp app configuration.
  */
 @StartableByRPC
-class PtCashConfigDataFlow : FlowLogic<PtCashConfiguration>() {
+class CashConfigDataFlow : FlowLogic<PtCashConfiguration>() {
     companion object {
         private val supportedCurrencies = listOf(USD, GBP, CHF, EUR)
     }

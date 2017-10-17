@@ -10,7 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import java.util.*
 
 /**
@@ -23,12 +23,12 @@ import java.util.*
  * for testing purposes.
  */
 @StartableByRPC
-open class PtCashPaymentFlow(
+open class CashPaymentFlow(
         val amount: Amount<Currency>,
         val recipient: Party,
         val anonymous: Boolean,
         progressTracker: ProgressTracker,
-        val issuerConstraint: Set<Party> = emptySet()) : AbstractPtCashFlow<AbstractPtCashFlow.Result>(progressTracker) {
+        val issuerConstraint: Set<Party> = emptySet()) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, true, tracker())
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
@@ -36,7 +36,7 @@ open class PtCashPaymentFlow(
     constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint)
 
     @Suspendable
-    override fun call(): AbstractPtCashFlow.Result {
+    override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
             subFlow(SwapIdentitiesFlow(recipient))
@@ -48,7 +48,7 @@ open class PtCashPaymentFlow(
         val builder = TransactionBuilder(notary = null)
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
-            PtCash.generateSpend(serviceHub,
+            Cash.generateSpend(serviceHub,
                     builder,
                     amount,
                     ourIdentityAndCert,

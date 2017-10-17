@@ -21,12 +21,12 @@ import java.util.*
  * @param notary the notary to set on the output states.
  */
 @StartableByRPC
-class PtCashIssueAndPaymentFlow(val amount: Amount<Currency>,
+class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
                               val issueRef: OpaqueBytes,
                               val recipient: Party,
                               val anonymous: Boolean,
                               val notary: Party,
-                              progressTracker: ProgressTracker) : AbstractPtCashFlow<AbstractPtCashFlow.Result>(progressTracker) {
+                              progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>,
                 issueRef: OpaqueBytes,
                 recipient: Party,
@@ -36,8 +36,8 @@ class PtCashIssueAndPaymentFlow(val amount: Amount<Currency>,
 
     @Suspendable
     override fun call(): Result {
-        subFlow(PtCashIssueFlow(amount, issueRef, notary))
-        return subFlow(PtCashPaymentFlow(amount, recipient, anonymous))
+        subFlow(CashIssueFlow(amount, issueRef, notary))
+        return subFlow(CashPaymentFlow(amount, recipient, anonymous))
     }
 
     @CordaSerializable

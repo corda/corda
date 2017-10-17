@@ -26,8 +26,8 @@ import kotlin.test.assertTrue
 
 // TODO: The generate functions aren't tested by these tests: add them.
 
-interface PtCommercialPaperTestTemplate {
-    fun getPaper(): PtCommercialPaper.State
+interface CommercialPaperTestTemplate {
+    fun getPaper(): CommercialPaper.State
     fun getIssueCommand(notary: Party): CommandData
     fun getRedeemCommand(notary: Party): CommandData
     fun getMoveCommand(): CommandData
@@ -35,32 +35,32 @@ interface PtCommercialPaperTestTemplate {
 }
 
 
-class KotlinCommercialPaperTest : PtCommercialPaperTestTemplate {
-    override fun getPaper(): PtCommercialPaper.State = PtCommercialPaper.State(
+class KotlinCommercialPaperTest : CommercialPaperTestTemplate {
+    override fun getPaper(): CommercialPaper.State = CommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP,
             faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
             maturityDate = TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(notary: Party): CommandData = PtCommercialPaper.Commands.Issue()
-    override fun getRedeemCommand(notary: Party): CommandData = PtCommercialPaper.Commands.Redeem()
-    override fun getMoveCommand(): CommandData = PtCommercialPaper.Commands.Move()
-    override fun getContract() = PtCommercialPaper.CP_PROGRAM_ID
+    override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue()
+    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaper.Commands.Redeem()
+    override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
+    override fun getContract() = CommercialPaper.CP_PROGRAM_ID
 }
 
-class KotlinCommercialPaperLegacyTest : PtCommercialPaperTestTemplate {
-    override fun getPaper(): PtCommercialPaper.State = PtCommercialPaper.State(
+class KotlinCommercialPaperLegacyTest : CommercialPaperTestTemplate {
+    override fun getPaper(): CommercialPaper.State = CommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP,
             faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
             maturityDate = TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(notary: Party): CommandData = PtCommercialPaper.Commands.Issue()
-    override fun getRedeemCommand(notary: Party): CommandData = PtCommercialPaper.Commands.Redeem()
-    override fun getMoveCommand(): CommandData = PtCommercialPaper.Commands.Move()
-    override fun getContract() = PtCommercialPaper.CP_PROGRAM_ID
+    override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue()
+    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaper.Commands.Redeem()
+    override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
+    override fun getContract() = CommercialPaper.CP_PROGRAM_ID
 }
 
 @RunWith(Parameterized::class)
@@ -71,7 +71,7 @@ class CommercialPaperTestsGeneric {
     }
 
     @Parameterized.Parameter
-    lateinit var thisTest: PtCommercialPaperTestTemplate
+    lateinit var thisTest: CommercialPaperTestTemplate
 
     val issuer = MEGA_CORP.ref(123)
 
@@ -80,14 +80,14 @@ class CommercialPaperTestsGeneric {
         val someProfits = 1200.DOLLARS `issued by` issuer
         ledger {
             unverifiedTransaction {
-                attachment(PtCash.PROGRAM_ID)
-                output(PtCash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
-                output(PtCash.PROGRAM_ID, "some profits", someProfits.STATE `owned by` MEGA_CORP)
+                attachment(Cash.PROGRAM_ID)
+                output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
+                output(Cash.PROGRAM_ID, "some profits", someProfits.STATE `owned by` MEGA_CORP)
             }
 
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
-                attachments(CP_PROGRAM_ID, PtCommercialPaper.CP_PROGRAM_ID)
+                attachments(CP_PROGRAM_ID, CommercialPaper.CP_PROGRAM_ID)
                 output(thisTest.getContract(), "paper") { thisTest.getPaper() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
                 timeWindow(TEST_TX_TIME)
@@ -97,12 +97,12 @@ class CommercialPaperTestsGeneric {
             // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
             // that sounds a bit too good to be true!
             transaction("Trade") {
-                attachments(PtCash.PROGRAM_ID, PtCommercialPaper.CP_PROGRAM_ID)
+                attachments(Cash.PROGRAM_ID, CommercialPaper.CP_PROGRAM_ID)
                 input("paper")
                 input("alice's $900")
-                output(PtCash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
-                output(thisTest.getContract(), "alice's paper") { "paper".output<PtCommercialPaper.State>().withOwner(ALICE) }
-                command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
+                output(thisTest.getContract(), "alice's paper") { "paper".output<CommercialPaper.State>().withOwner(ALICE) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
                 this.verifies()
             }
@@ -110,16 +110,16 @@ class CommercialPaperTestsGeneric {
             // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
             // as a single payment from somewhere and uses it to pay Alice off, keeping the remaining $200 as change.
             transaction("Redemption") {
-                attachments(CP_PROGRAM_ID, PtCommercialPaper.CP_PROGRAM_ID)
+                attachments(CP_PROGRAM_ID, CommercialPaper.CP_PROGRAM_ID)
                 input("alice's paper")
                 input("some profits")
 
                 fun TransactionDSL<TransactionDSLInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
-                    output(PtCash.PROGRAM_ID, "Alice's profit") { aliceGetsBack.STATE `owned by` ALICE }
-                    output(PtCash.PROGRAM_ID, "Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP }
+                    output(Cash.PROGRAM_ID, "Alice's profit") { aliceGetsBack.STATE `owned by` ALICE }
+                    output(Cash.PROGRAM_ID, "Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP }
                 }
 
-                command(MEGA_CORP_PUBKEY) { PtCash.Commands.Move() }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                 command(ALICE_PUBKEY) { thisTest.getRedeemCommand(DUMMY_NOTARY) }
 
                 tweak {
@@ -137,7 +137,7 @@ class CommercialPaperTestsGeneric {
                 timeWindow(TEST_TX_TIME + 8.days)
 
                 tweak {
-                    output(thisTest.getContract()) { "paper".output<PtCommercialPaper.State>() }
+                    output(thisTest.getContract()) { "paper".output<CommercialPaper.State>() }
                     this `fails with` "must be destroyed"
                 }
 
@@ -245,7 +245,7 @@ class CommercialPaperTestsGeneric {
         // BigCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
         val issuance = bigCorpServices.myInfo.chooseIdentity().ref(1)
-        val issueBuilder = PtCommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY)
+        val issueBuilder = CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY)
         issueBuilder.setTimeWindow(TEST_TX_TIME, 30.seconds)
         val issuePtx = bigCorpServices.signInitialTransaction(issueBuilder)
         val issueTx = notaryServices.addSignature(issuePtx)
@@ -254,8 +254,8 @@ class CommercialPaperTestsGeneric {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val builder = TransactionBuilder(DUMMY_NOTARY)
-                PtCash.generateSpend(aliceServices, builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
-                PtCommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(aliceServices.key.public))
+                Cash.generateSpend(aliceServices, builder, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
+                CommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(aliceServices.key.public))
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = bigCorpServices.addSignature(ptx)
                 val stx = notaryServices.addSignature(ptx2)
@@ -276,7 +276,7 @@ class CommercialPaperTestsGeneric {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
                 val builder = TransactionBuilder(DUMMY_NOTARY)
                 builder.setTimeWindow(time, 30.seconds)
-                PtCommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpServices, bigCorpServices.myInfo.chooseIdentityAndCert())
+                CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpServices, bigCorpServices.myInfo.chooseIdentityAndCert())
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = bigCorpServices.addSignature(ptx)
                 val stx = notaryServices.addSignature(ptx2)

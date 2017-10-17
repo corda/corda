@@ -15,8 +15,8 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash
-import com.r3.corda.enterprise.perftestcordapp.schemas.PtCommercialPaperSchemaV1
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
+import com.r3.corda.enterprise.perftestcordapp.schemas.CommercialPaperSchemaV1
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashBy
 import java.time.Instant
 import java.util.*
@@ -43,12 +43,12 @@ import java.util.*
  *    to do this in the Apache BVal project).
  */
 
-val CP_PROGRAM_ID = "com.r3.corda.enterprise.perftestcordapp.contracts.PtCommercialPaper"
+val CP_PROGRAM_ID = "com.r3.corda.enterprise.perftestcordapp.contracts.CommercialPaper"
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
-class PtCommercialPaper : Contract {
+class CommercialPaper : Contract {
     companion object {
-        const val CP_PROGRAM_ID: ContractClassName = "com.r3.corda.enterprise.perftestcordapp.contracts.PtCommercialPaper"
+        const val CP_PROGRAM_ID: ContractClassName = "com.r3.corda.enterprise.perftestcordapp.contracts.CommercialPaper"
     }
     data class State(
             val issuance: PartyAndReference,
@@ -69,13 +69,13 @@ class PtCommercialPaper : Contract {
         fun withMaturityDate(newMaturityDate: Instant): State = copy(maturityDate = newMaturityDate)
 
         /** Object Relational Mapping support. */
-        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(PtCommercialPaperSchemaV1)
+        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
         /** Additional used schemas would be added here (eg. CommercialPaperV2, ...) */
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
-                is PtCommercialPaperSchemaV1 -> PtCommercialPaperSchemaV1.PersistentCommercialPaperState(
+                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommercialPaperState(
                         issuanceParty = this.issuance.party.owningKey.toBase58String(),
                         issuanceRef = this.issuance.reference.bytes,
                         owner = this.owner.owningKey.toBase58String(),
@@ -108,7 +108,7 @@ class PtCommercialPaper : Contract {
 
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
-        val command = tx.commands.requireSingleCommand<PtCommercialPaper.Commands>()
+        val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
         val timeWindow: TimeWindow? = tx.timeWindow
 
         // Suppress compiler warning as 'key' is an unused variable when destructuring 'groups'.
@@ -190,7 +190,7 @@ class PtCommercialPaper : Contract {
     @Suspendable
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub, ourIdentity: PartyAndCertificate) {
         // Add the cash movement using the states in our vault.
-        PtCash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), ourIdentity, paper.state.data.owner)
+        Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), ourIdentity, paper.state.data.owner)
         tx.addInputState(paper)
         tx.addCommand(Commands.Redeem(), paper.state.data.owner.owningKey)
     }

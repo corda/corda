@@ -53,14 +53,14 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     rng: Random = Random(),
                                     ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
                                     ownedBy: AbstractParty? = null,
-                                    issuedBy: PartyAndReference = DUMMY_CASH_ISSUER): Vault<PtCash.State> {
+                                    issuedBy: PartyAndReference = DUMMY_CASH_ISSUER): Vault<Cash.State> {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
     val myKey = ownedBy?.owningKey ?: myInfo.chooseIdentity().owningKey
     val anonParty = AnonymousParty(myKey)
 
     // We will allocate one state to one transaction, for simplicities sake.
-    val cash = PtCash()
+    val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
         val issuance = TransactionBuilder(null as Party?)
         cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), anonParty, outputNotary)
@@ -72,17 +72,17 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
 
     // Get all the StateRefs of all the generated transactions.
     val states = transactions.flatMap { stx ->
-        stx.tx.outputs.indices.map { i -> stx.tx.outRef<PtCash.State>(i) }
+        stx.tx.outputs.indices.map { i -> stx.tx.outRef<Cash.State>(i) }
     }
 
     return Vault(states)
 }
 
 
-class PtCashTests : TestDependencyInjectionBase() {
+class CashTests : TestDependencyInjectionBase() {
     val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
-    val inState = PtCash.State(
+    val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
             owner = AnonymousParty(ALICE_PUBKEY)
     )
@@ -90,7 +90,7 @@ class PtCashTests : TestDependencyInjectionBase() {
     val issuerInState = inState.copy(owner = defaultIssuer.party)
     val outState = issuerInState.copy(owner = AnonymousParty(BOB_PUBKEY))
 
-    fun PtCash.State.editDepositRef(ref: Byte) = copy(
+    fun Cash.State.editDepositRef(ref: Byte) = copy(
             amount = Amount(amount.quantity, token = amount.token.copy(amount.token.issuer.copy(reference = OpaqueBytes.of(ref))))
     )
 
@@ -98,7 +98,7 @@ class PtCashTests : TestDependencyInjectionBase() {
     lateinit var megaCorpServices: MockServices
     val vault: VaultService get() = miniCorpServices.vaultService
     lateinit var database: CordaPersistence
-    lateinit var vaultStatesUnconsumed: List<StateAndRef<PtCash.State>>
+    lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
 
     @Before
     fun setUp() {
@@ -120,7 +120,7 @@ class PtCashTests : TestDependencyInjectionBase() {
                     ownedBy = OUR_IDENTITY_1, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
         }
         database.transaction {
-            vaultStatesUnconsumed = miniCorpServices.vaultQueryService.queryBy<PtCash.State>().states
+            vaultStatesUnconsumed = miniCorpServices.vaultQueryService.queryBy<Cash.State>().states
         }
         resetTestSerialization()
     }
@@ -133,35 +133,35 @@ class PtCashTests : TestDependencyInjectionBase() {
     @Test
     fun trivial() {
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
 
             tweak {
-                output(PtCash.PROGRAM_ID) { outState.copy(amount = 2000.DOLLARS `issued by` defaultIssuer) }
-                command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+                output(Cash.PROGRAM_ID) { outState.copy(amount = 2000.DOLLARS `issued by` defaultIssuer) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
             tweak {
-                output(PtCash.PROGRAM_ID) { outState }
+                output(Cash.PROGRAM_ID) { outState }
                 command(ALICE_PUBKEY) { DummyCommandData }
                 // Invalid command
-                this `fails with` "required com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash.Commands.Move command"
+                this `fails with` "required com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash.Commands.Move command"
             }
             tweak {
-                output(PtCash.PROGRAM_ID) { outState }
-                command(BOB_PUBKEY) { PtCash.Commands.Move() }
+                output(Cash.PROGRAM_ID) { outState }
+                command(BOB_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "the owning keys are a subset of the signing keys"
             }
             tweak {
-                output(PtCash.PROGRAM_ID) { outState }
-                output(PtCash.PROGRAM_ID) { outState `issued by` MINI_CORP }
-                command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+                output(Cash.PROGRAM_ID) { outState }
+                output(Cash.PROGRAM_ID) { outState `issued by` MINI_CORP }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "at least one cash input"
             }
             // Simple reallocation works.
             tweak {
-                output(PtCash.PROGRAM_ID) { outState }
-                command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+                output(Cash.PROGRAM_ID) { outState }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this.verifies()
             }
         }
@@ -171,10 +171,10 @@ class PtCashTests : TestDependencyInjectionBase() {
     fun `issue by move`() {
         // Check we can't "move" money into existence.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { DummyState() }
-            output(PtCash.PROGRAM_ID) { outState }
-            command(MINI_CORP_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { DummyState() }
+            output(Cash.PROGRAM_ID) { outState }
+            command(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 
             this `fails with` "there is at least one cash input for this group"
         }
@@ -185,20 +185,20 @@ class PtCashTests : TestDependencyInjectionBase() {
         // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
         // institution is allowed to issue as much cash as they want.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            output(PtCash.PROGRAM_ID) { outState }
-            command(ALICE_PUBKEY) { PtCash.Commands.Issue() }
+            attachment(Cash.PROGRAM_ID)
+            output(Cash.PROGRAM_ID) { outState }
+            command(ALICE_PUBKEY) { Cash.Commands.Issue() }
             this `fails with` "output states are issued by a command signer"
         }
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            output(PtCash.PROGRAM_ID) {
-                PtCash.State(
+            attachment(Cash.PROGRAM_ID)
+            output(Cash.PROGRAM_ID) {
+                Cash.State(
                         amount = 1000.DOLLARS `issued by` MINI_CORP.ref(12, 34),
                         owner = AnonymousParty(ALICE_PUBKEY)
                 )
             }
-            command(MINI_CORP_PUBKEY) { PtCash.Commands.Issue() }
+            command(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
             this.verifies()
         }
     }
@@ -208,14 +208,14 @@ class PtCashTests : TestDependencyInjectionBase() {
         initialiseTestSerialization()
         // Test generation works.
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
-            PtCash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
+            Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
         }.toWireTransaction(miniCorpServices)
         assertTrue(tx.inputs.isEmpty())
-        val s = tx.outputsOfType<PtCash.State>().single()
+        val s = tx.outputsOfType<Cash.State>().single()
         assertEquals(100.DOLLARS `issued by` MINI_CORP.ref(12, 34), s.amount)
         assertEquals(MINI_CORP as AbstractParty, s.amount.token.issuer.party)
         assertEquals(AnonymousParty(ALICE_PUBKEY), s.owner)
-        assertTrue(tx.commands[0].value is PtCash.Commands.Issue)
+        assertTrue(tx.commands[0].value is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
     }
 
@@ -225,7 +225,7 @@ class PtCashTests : TestDependencyInjectionBase() {
         // Test issuance from an issued amount
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
-            PtCash().generateIssue(this, amount, owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
+            Cash().generateIssue(this, amount, owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
         }.toWireTransaction(miniCorpServices)
         assertTrue(tx.inputs.isEmpty())
         assertEquals(tx.outputs[0], tx.outputs[0])
@@ -235,49 +235,49 @@ class PtCashTests : TestDependencyInjectionBase() {
     fun `extended issue examples`() {
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { issuerInState }
-            output(PtCash.PROGRAM_ID) { inState.copy(amount = inState.amount * 2) }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { issuerInState }
+            output(Cash.PROGRAM_ID) { inState.copy(amount = inState.amount * 2) }
 
             // Move fails: not allowed to summon money.
             tweak {
-                command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
 
             // Issue works.
             tweak {
-                command(MEGA_CORP_PUBKEY) { PtCash.Commands.Issue() }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
                 this.verifies()
             }
         }
 
         // Can't use an issue command to lower the amount.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            output(PtCash.PROGRAM_ID) { inState.copy(amount = inState.amount.splitEvenly(2).first()) }
-            command(MEGA_CORP_PUBKEY) { PtCash.Commands.Issue() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            output(Cash.PROGRAM_ID) { inState.copy(amount = inState.amount.splitEvenly(2).first()) }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             this `fails with` "output values sum to more than the inputs"
         }
 
         // Can't have an issue command that doesn't actually issue money.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            output(PtCash.PROGRAM_ID) { inState }
-            command(MEGA_CORP_PUBKEY) { PtCash.Commands.Issue() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            output(Cash.PROGRAM_ID) { inState }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             this `fails with` "output values sum to more than the inputs"
         }
 
         // Can't have any other commands if we have an issue command (because the issue command overrules them)
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            output(PtCash.PROGRAM_ID) { inState.copy(amount = inState.amount * 2) }
-            command(MEGA_CORP_PUBKEY) { PtCash.Commands.Issue() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            output(Cash.PROGRAM_ID) { inState.copy(amount = inState.amount * 2) }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             tweak {
-                command(MEGA_CORP_PUBKEY) { PtCash.Commands.Issue() }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
                 this `fails with` "there is only a single issue command"
             }
             this.verifies()
@@ -294,40 +294,40 @@ class PtCashTests : TestDependencyInjectionBase() {
         // Issue some cash
         var ptx = TransactionBuilder(DUMMY_NOTARY)
 
-        PtCash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
+        Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
         val tx = miniCorpServices.signInitialTransaction(ptx)
 
         // Include the previously issued cash in a new issuance command
         ptx = TransactionBuilder(DUMMY_NOTARY)
-        ptx.addInputState(tx.tx.outRef<PtCash.State>(0))
-        PtCash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
+        ptx.addInputState(tx.tx.outRef<Cash.State>(0))
+        Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
     }
 
     @Test
     fun testMergeSplit() {
         // Splitting value works.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             tweak {
-                input(PtCash.PROGRAM_ID) { inState }
+                input(Cash.PROGRAM_ID) { inState }
                 val splits4 = inState.amount.splitEvenly(4)
-                for (i in 0..3) output(PtCash.PROGRAM_ID) { inState.copy(amount = splits4[i]) }
+                for (i in 0..3) output(Cash.PROGRAM_ID) { inState.copy(amount = splits4[i]) }
                 this.verifies()
             }
             // Merging 4 inputs into 2 outputs works.
             tweak {
                 val splits2 = inState.amount.splitEvenly(2)
                 val splits4 = inState.amount.splitEvenly(4)
-                for (i in 0..3) input(PtCash.PROGRAM_ID) { inState.copy(amount = splits4[i]) }
-                for (i in 0..1) output(PtCash.PROGRAM_ID) { inState.copy(amount = splits2[i]) }
+                for (i in 0..3) input(Cash.PROGRAM_ID) { inState.copy(amount = splits4[i]) }
+                for (i in 0..1) output(Cash.PROGRAM_ID) { inState.copy(amount = splits2[i]) }
                 this.verifies()
             }
             // Merging 2 inputs into 1 works.
             tweak {
                 val splits2 = inState.amount.splitEvenly(2)
-                for (i in 0..1) input(PtCash.PROGRAM_ID) { inState.copy(amount = splits2[i]) }
-                output(PtCash.PROGRAM_ID) { inState }
+                for (i in 0..1) input(Cash.PROGRAM_ID) { inState.copy(amount = splits2[i]) }
+                output(Cash.PROGRAM_ID) { inState }
                 this.verifies()
             }
         }
@@ -336,18 +336,18 @@ class PtCashTests : TestDependencyInjectionBase() {
     @Test
     fun zeroSizedValues() {
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            input(PtCash.PROGRAM_ID) { inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer) }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            input(Cash.PROGRAM_ID) { inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "zero sized inputs"
         }
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            output(PtCash.PROGRAM_ID) { inState }
-            output(PtCash.PROGRAM_ID) { inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer) }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            output(Cash.PROGRAM_ID) { inState }
+            output(Cash.PROGRAM_ID) { inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "zero sized outputs"
         }
     }
@@ -356,59 +356,59 @@ class PtCashTests : TestDependencyInjectionBase() {
     fun trivialMismatches() {
         // Can't change issuer.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            output(PtCash.PROGRAM_ID) { outState `issued by` MINI_CORP }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            output(Cash.PROGRAM_ID) { outState `issued by` MINI_CORP }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't change deposit reference when splitting.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
+            attachment(Cash.PROGRAM_ID)
             val splits2 = inState.amount.splitEvenly(2)
-            input(PtCash.PROGRAM_ID) { inState }
-            for (i in 0..1) output(PtCash.PROGRAM_ID) { outState.copy(amount = splits2[i]).editDepositRef(i.toByte()) }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            input(Cash.PROGRAM_ID) { inState }
+            for (i in 0..1) output(Cash.PROGRAM_ID) { outState.copy(amount = splits2[i]).editDepositRef(i.toByte()) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't mix currencies.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            output(PtCash.PROGRAM_ID) { outState.copy(amount = 800.DOLLARS `issued by` defaultIssuer) }
-            output(PtCash.PROGRAM_ID) { outState.copy(amount = 200.POUNDS `issued by` defaultIssuer) }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            output(Cash.PROGRAM_ID) { outState.copy(amount = 800.DOLLARS `issued by` defaultIssuer) }
+            output(Cash.PROGRAM_ID) { outState.copy(amount = 200.POUNDS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            input(PtCash.PROGRAM_ID) {
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            input(Cash.PROGRAM_ID) {
                 inState.copy(
                         amount = 150.POUNDS `issued by` defaultIssuer,
                         owner = AnonymousParty(BOB_PUBKEY)
                 )
             }
-            output(PtCash.PROGRAM_ID) { outState.copy(amount = 1150.DOLLARS `issued by` defaultIssuer) }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            output(Cash.PROGRAM_ID) { outState.copy(amount = 1150.DOLLARS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't have superfluous input states from different issuers.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            input(PtCash.PROGRAM_ID) { inState `issued by` MINI_CORP }
-            output(PtCash.PROGRAM_ID) { outState }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            input(Cash.PROGRAM_ID) { inState `issued by` MINI_CORP }
+            output(Cash.PROGRAM_ID) { outState }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
         // Can't combine two different deposits at the same issuer.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            input(PtCash.PROGRAM_ID) { inState.editDepositRef(3) }
-            output(PtCash.PROGRAM_ID) { outState.copy(amount = inState.amount * 2).editDepositRef(3) }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            input(Cash.PROGRAM_ID) { inState.editDepositRef(3) }
+            output(Cash.PROGRAM_ID) { outState.copy(amount = inState.amount * 2).editDepositRef(3) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "for reference [01]"
         }
     }
@@ -417,22 +417,22 @@ class PtCashTests : TestDependencyInjectionBase() {
     fun exitLedger() {
         // Single input/output straightforward case.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { issuerInState }
-            output(PtCash.PROGRAM_ID) { issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { issuerInState }
+            output(Cash.PROGRAM_ID) { issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
 
             tweak {
-                command(MEGA_CORP_PUBKEY) { PtCash.Commands.Exit(100.DOLLARS `issued by` defaultIssuer) }
-                command(MEGA_CORP_PUBKEY) { PtCash.Commands.Move() }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(100.DOLLARS `issued by` defaultIssuer) }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
 
             tweak {
-                command(MEGA_CORP_PUBKEY) { PtCash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
-                this `fails with` "required com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash.Commands.Move command"
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
+                this `fails with` "required com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash.Commands.Move command"
 
                 tweak {
-                    command(MEGA_CORP_PUBKEY) { PtCash.Commands.Move() }
+                    command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                     this.verifies()
                 }
             }
@@ -443,21 +443,21 @@ class PtCashTests : TestDependencyInjectionBase() {
     fun `exit ledger with multiple issuers`() {
         // Multi-issuer case.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { issuerInState }
-            input(PtCash.PROGRAM_ID) { issuerInState.copy(owner = MINI_CORP) `issued by` MINI_CORP }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { issuerInState }
+            input(Cash.PROGRAM_ID) { issuerInState.copy(owner = MINI_CORP) `issued by` MINI_CORP }
 
-            output(PtCash.PROGRAM_ID) { issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) `issued by` MINI_CORP }
-            output(PtCash.PROGRAM_ID) { issuerInState.copy(owner = MINI_CORP, amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
+            output(Cash.PROGRAM_ID) { issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) `issued by` MINI_CORP }
+            output(Cash.PROGRAM_ID) { issuerInState.copy(owner = MINI_CORP, amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
 
-            command(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY) { PtCash.Commands.Move() }
+            command(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 
             this `fails with` "the amounts balance"
 
-            command(MEGA_CORP_PUBKEY) { PtCash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
             this `fails with` "the amounts balance"
 
-            command(MINI_CORP_PUBKEY) { PtCash.Commands.Exit(200.DOLLARS `issued by` MINI_CORP.ref(defaultRef)) }
+            command(MINI_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` MINI_CORP.ref(defaultRef)) }
             this.verifies()
         }
     }
@@ -466,11 +466,11 @@ class PtCashTests : TestDependencyInjectionBase() {
     fun `exit cash not held by its issuer`() {
         // Single input/output straightforward case.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            input(PtCash.PROGRAM_ID) { inState }
-            output(PtCash.PROGRAM_ID) { outState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
-            command(MEGA_CORP_PUBKEY) { PtCash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            input(Cash.PROGRAM_ID) { inState }
+            output(Cash.PROGRAM_ID) { outState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
     }
@@ -478,27 +478,27 @@ class PtCashTests : TestDependencyInjectionBase() {
     @Test
     fun multiIssuer() {
         transaction {
-            attachment(PtCash.PROGRAM_ID)
+            attachment(Cash.PROGRAM_ID)
             // Gather 2000 dollars from two different issuers.
-            input(PtCash.PROGRAM_ID) { inState }
-            input(PtCash.PROGRAM_ID) { inState `issued by` MINI_CORP }
-            command(ALICE_PUBKEY) { PtCash.Commands.Move() }
+            input(Cash.PROGRAM_ID) { inState }
+            input(Cash.PROGRAM_ID) { inState `issued by` MINI_CORP }
+            command(ALICE_PUBKEY) { Cash.Commands.Move() }
 
             // Can't merge them together.
             tweak {
-                output(PtCash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY), amount = 2000.DOLLARS `issued by` defaultIssuer) }
+                output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY), amount = 2000.DOLLARS `issued by` defaultIssuer) }
                 this `fails with` "the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
-                output(PtCash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
-                output(PtCash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
+                output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
+                output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
                 this `fails with` "the amounts balance"
             }
 
             // This works.
-            output(PtCash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
-            output(PtCash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP }
+            output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) }
+            output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP }
             this.verifies()
         }
     }
@@ -507,13 +507,13 @@ class PtCashTests : TestDependencyInjectionBase() {
     fun multiCurrency() {
         // Check we can do an atomic currency trade tx.
         transaction {
-            attachment(PtCash.PROGRAM_ID)
-            val pounds = PtCash.State(658.POUNDS `issued by` MINI_CORP.ref(3, 4, 5), AnonymousParty(BOB_PUBKEY))
-            input(PtCash.PROGRAM_ID) { inState `owned by` AnonymousParty(ALICE_PUBKEY) }
-            input(PtCash.PROGRAM_ID) { pounds }
-            output(PtCash.PROGRAM_ID) { inState `owned by` AnonymousParty(BOB_PUBKEY) }
-            output(PtCash.PROGRAM_ID) { pounds `owned by` AnonymousParty(ALICE_PUBKEY) }
-            command(ALICE_PUBKEY, BOB_PUBKEY) { PtCash.Commands.Move() }
+            attachment(Cash.PROGRAM_ID)
+            val pounds = Cash.State(658.POUNDS `issued by` MINI_CORP.ref(3, 4, 5), AnonymousParty(BOB_PUBKEY))
+            input(Cash.PROGRAM_ID) { inState `owned by` AnonymousParty(ALICE_PUBKEY) }
+            input(Cash.PROGRAM_ID) { pounds }
+            output(Cash.PROGRAM_ID) { inState `owned by` AnonymousParty(BOB_PUBKEY) }
+            output(Cash.PROGRAM_ID) { pounds `owned by` AnonymousParty(ALICE_PUBKEY) }
+            command(ALICE_PUBKEY, BOB_PUBKEY) { Cash.Commands.Move() }
 
             this.verifies()
         }
@@ -531,7 +531,7 @@ class PtCashTests : TestDependencyInjectionBase() {
 
     fun makeCash(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1) =
             StateAndRef(
-                    TransactionState<PtCash.State>(PtCash.State(amount `issued by` corp.ref(depositRef), OUR_IDENTITY_1), PtCash.PROGRAM_ID, DUMMY_NOTARY),
+                    TransactionState<Cash.State>(Cash.State(amount `issued by` corp.ref(depositRef), OUR_IDENTITY_1), Cash.PROGRAM_ID, DUMMY_NOTARY),
                     StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 
@@ -547,14 +547,14 @@ class PtCashTests : TestDependencyInjectionBase() {
      */
     private fun makeExit(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
-        PtCash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), WALLET)
+        Cash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), WALLET)
         return tx.toWireTransaction(miniCorpServices)
     }
 
     private fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            PtCash.generateSpend(miniCorpServices, tx, amount, dest)
+            Cash.generateSpend(miniCorpServices, tx, amount, dest)
         }
         return tx.toWireTransaction(miniCorpServices)
     }
@@ -569,8 +569,8 @@ class PtCashTests : TestDependencyInjectionBase() {
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(0, wtx.outputs.size)
 
-        val expectedMove = PtCash.Commands.Move()
-        val expectedExit = PtCash.Commands.Exit(Amount(10000, Issued(MEGA_CORP.ref(1), USD)))
+        val expectedMove = Cash.Commands.Move()
+        val expectedExit = Cash.Commands.Exit(Amount(10000, Issued(MEGA_CORP.ref(1), USD)))
 
         assertEquals(listOf(expectedMove, expectedExit), wtx.commands.map { it.value })
     }
@@ -631,7 +631,7 @@ class PtCashTests : TestDependencyInjectionBase() {
         initialiseTestSerialization()
         assertFailsWith<InsufficientBalanceException> {
             val tx = TransactionBuilder(DUMMY_NOTARY)
-            PtCash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList())
+            Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList())
         }
     }
 
@@ -647,7 +647,7 @@ class PtCashTests : TestDependencyInjectionBase() {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             assertEquals(vaultState.ref, wtx.inputs[0])
             assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1), wtx.getOutput(0))
-            assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is PtCash.Commands.Move }.signers[0])
+            assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
 
@@ -657,7 +657,7 @@ class PtCashTests : TestDependencyInjectionBase() {
         database.transaction {
 
             val tx = TransactionBuilder(DUMMY_NOTARY)
-            PtCash.generateSpend(miniCorpServices, tx, 80.DOLLARS, ALICE, setOf(MINI_CORP))
+            Cash.generateSpend(miniCorpServices, tx, 80.DOLLARS, ALICE, setOf(MINI_CORP))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -675,18 +675,18 @@ class PtCashTests : TestDependencyInjectionBase() {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             val changeAmount = 90.DOLLARS `issued by` defaultIssuer
             val likelyChangeState = wtx.outputs.map(TransactionState<*>::data).filter { state ->
-                if (state is PtCash.State) {
+                if (state is Cash.State) {
                     state.amount == changeAmount
                 } else {
                     false
                 }
             }.single()
-            val changeOwner = (likelyChangeState as PtCash.State).owner
+            val changeOwner = (likelyChangeState as Cash.State).owner
             assertEquals(1, miniCorpServices.keyManagementService.filterMyKeys(setOf(changeOwner.owningKey)).toList().size)
             assertEquals(vaultState.ref, wtx.inputs[0])
             assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1, amount = 10.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
             assertEquals(vaultState.state.data.copy(amount = changeAmount, owner = changeOwner), wtx.outputs[1].data)
-            assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is PtCash.Commands.Move }.signers[0])
+            assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
 
@@ -704,7 +704,7 @@ class PtCashTests : TestDependencyInjectionBase() {
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
             assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.getOutput(0))
-            assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is PtCash.Commands.Move }.signers[0])
+            assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
 
@@ -718,15 +718,15 @@ class PtCashTests : TestDependencyInjectionBase() {
                     wtx
                 }
         database.transaction {
-            val vaultState0: StateAndRef<PtCash.State> = vaultStatesUnconsumed.elementAt(0)
-            val vaultState1: StateAndRef<PtCash.State> = vaultStatesUnconsumed.elementAt(1)
-            val vaultState2: StateAndRef<PtCash.State> = vaultStatesUnconsumed.elementAt(2)
+            val vaultState0: StateAndRef<Cash.State> = vaultStatesUnconsumed.elementAt(0)
+            val vaultState1: StateAndRef<Cash.State> = vaultStatesUnconsumed.elementAt(1)
+            val vaultState2: StateAndRef<Cash.State> = vaultStatesUnconsumed.elementAt(2)
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
             assertEquals(vaultState2.ref, wtx.inputs[2])
             assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
             assertEquals(vaultState2.state.data.copy(owner = THEIR_IDENTITY_1), wtx.outputs[0].data)
-            assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is PtCash.Commands.Move }.signers[0])
+            assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
 
@@ -751,9 +751,9 @@ class PtCashTests : TestDependencyInjectionBase() {
      */
     @Test
     fun aggregation() {
-        val fiveThousandDollarsFromMega = PtCash.State(5000.DOLLARS `issued by` MEGA_CORP.ref(2), MEGA_CORP)
-        val twoThousandDollarsFromMega = PtCash.State(2000.DOLLARS `issued by` MEGA_CORP.ref(2), MINI_CORP)
-        val oneThousandDollarsFromMini = PtCash.State(1000.DOLLARS `issued by` MINI_CORP.ref(3), MEGA_CORP)
+        val fiveThousandDollarsFromMega = Cash.State(5000.DOLLARS `issued by` MEGA_CORP.ref(2), MEGA_CORP)
+        val twoThousandDollarsFromMega = Cash.State(2000.DOLLARS `issued by` MEGA_CORP.ref(2), MINI_CORP)
+        val oneThousandDollarsFromMini = Cash.State(1000.DOLLARS `issued by` MINI_CORP.ref(3), MEGA_CORP)
 
         // Obviously it must be possible to aggregate states with themselves
         assertEquals(fiveThousandDollarsFromMega.amount.token, fiveThousandDollarsFromMega.amount.token)
@@ -767,7 +767,7 @@ class PtCashTests : TestDependencyInjectionBase() {
 
         // States cannot be aggregated if the currency differs
         assertNotEquals(oneThousandDollarsFromMini.amount.token,
-                PtCash.State(1000.POUNDS `issued by` MINI_CORP.ref(3), MEGA_CORP).amount.token)
+                Cash.State(1000.POUNDS `issued by` MINI_CORP.ref(3), MEGA_CORP).amount.token)
 
         // States cannot be aggregated if the reference differs
         assertNotEquals(fiveThousandDollarsFromMega.amount.token, (fiveThousandDollarsFromMega `with deposit` defaultIssuer).amount.token)
@@ -777,9 +777,9 @@ class PtCashTests : TestDependencyInjectionBase() {
     @Test
     fun `summing by owner`() {
         val states = listOf(
-                PtCash.State(1000.DOLLARS `issued by` defaultIssuer, MINI_CORP),
-                PtCash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                PtCash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
+                Cash.State(1000.DOLLARS `issued by` defaultIssuer, MINI_CORP),
+                Cash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
+                Cash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
         )
         assertEquals(6000.DOLLARS `issued by` defaultIssuer, states.sumCashBy(MEGA_CORP))
     }
@@ -787,31 +787,31 @@ class PtCashTests : TestDependencyInjectionBase() {
     @Test(expected = UnsupportedOperationException::class)
     fun `summing by owner throws`() {
         val states = listOf(
-                PtCash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                PtCash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
+                Cash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
+                Cash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
         )
         states.sumCashBy(MINI_CORP)
     }
 
     @Test
     fun `summing no currencies`() {
-        val states = emptyList<PtCash.State>()
+        val states = emptyList<Cash.State>()
         assertEquals(0.POUNDS `issued by` defaultIssuer, states.sumCashOrZero(GBP `issued by` defaultIssuer))
         assertNull(states.sumCashOrNull())
     }
 
     @Test(expected = UnsupportedOperationException::class)
     fun `summing no currencies throws`() {
-        val states = emptyList<PtCash.State>()
+        val states = emptyList<Cash.State>()
         states.sumCash()
     }
 
     @Test
     fun `summing a single currency`() {
         val states = listOf(
-                PtCash.State(1000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                PtCash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                PtCash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
+                Cash.State(1000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
+                Cash.State(2000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
+                Cash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP)
         )
         // Test that summing everything produces the total number of dollars
         val expected = 7000.DOLLARS `issued by` defaultIssuer
@@ -822,8 +822,8 @@ class PtCashTests : TestDependencyInjectionBase() {
     @Test(expected = IllegalArgumentException::class)
     fun `summing multiple currencies`() {
         val states = listOf(
-                PtCash.State(1000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
-                PtCash.State(4000.POUNDS `issued by` defaultIssuer, MEGA_CORP)
+                Cash.State(1000.DOLLARS `issued by` defaultIssuer, MEGA_CORP),
+                Cash.State(4000.POUNDS `issued by` defaultIssuer, MEGA_CORP)
         )
         // Test that summing everything fails because we're mixing units
         states.sumCash()
@@ -836,9 +836,9 @@ class PtCashTests : TestDependencyInjectionBase() {
 
         ledger(mockService) {
             unverifiedTransaction {
-                attachment(PtCash.PROGRAM_ID)
-                output(PtCash.PROGRAM_ID, "MEGA_CORP cash") {
-                    PtCash.State(
+                attachment(Cash.PROGRAM_ID)
+                output(Cash.PROGRAM_ID, "MEGA_CORP cash") {
+                    Cash.State(
                             amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
                             owner = MEGA_CORP
                     )
@@ -846,20 +846,20 @@ class PtCashTests : TestDependencyInjectionBase() {
             }
 
             transaction {
-                attachment(PtCash.PROGRAM_ID)
+                attachment(Cash.PROGRAM_ID)
                 input("MEGA_CORP cash")
-                output(PtCash.PROGRAM_ID, "MEGA_CORP cash 2", "MEGA_CORP cash".output<PtCash.State>().copy(owner = AnonymousParty(ALICE_PUBKEY)) )
-                command(MEGA_CORP_PUBKEY) { PtCash.Commands.Move() }
+                output(Cash.PROGRAM_ID, "MEGA_CORP cash 2", "MEGA_CORP cash".output<Cash.State>().copy(owner = AnonymousParty(ALICE_PUBKEY)) )
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                 this.verifies()
             }
 
             tweak {
                 transaction {
-                    attachment(PtCash.PROGRAM_ID)
+                    attachment(Cash.PROGRAM_ID)
                     input("MEGA_CORP cash")
                     // We send it to another pubkey so that the transaction is not identical to the previous one
-                    output(PtCash.PROGRAM_ID, "MEGA_CORP cash 3", "MEGA_CORP cash".output<PtCash.State>().copy(owner = ALICE))
-                    command(MEGA_CORP_PUBKEY) { PtCash.Commands.Move() }
+                    output(Cash.PROGRAM_ID, "MEGA_CORP cash 3", "MEGA_CORP cash".output<Cash.State>().copy(owner = ALICE))
+                    command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                     this.verifies()
                 }
                 this.fails()
@@ -878,10 +878,10 @@ class PtCashTests : TestDependencyInjectionBase() {
                     PartyAndAmount(THEIR_IDENTITY_1, 400.DOLLARS),
                     PartyAndAmount(THEIR_IDENTITY_2, 150.DOLLARS)
             )
-            PtCash.generateSpend(miniCorpServices, tx, payments)
+            Cash.generateSpend(miniCorpServices, tx, payments)
         }
         val wtx = tx.toWireTransaction(miniCorpServices)
-        fun out(i: Int) = wtx.getOutput(i) as PtCash.State
+        fun out(i: Int) = wtx.getOutput(i) as Cash.State
         assertEquals(4, wtx.outputs.size)
         assertEquals(80.DOLLARS, out(0).amount.withoutIssuer())
         assertEquals(320.DOLLARS, out(1).amount.withoutIssuer())

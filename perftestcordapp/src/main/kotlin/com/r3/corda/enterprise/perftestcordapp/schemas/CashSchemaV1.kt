@@ -13,14 +13,14 @@ import javax.persistence.Table
 /**
  * An object used to fully qualify the [CashSchema] family name (i.e. independent of version).
  */
-object PtCashSchema
+object CashSchema
 
 /**
  * First version of a cash contract ORM schema that maps all fields of the [Cash] contract state as it stood
  * at the time of writing.
  */
 @CordaSerializable
-object PtCashSchemaV1 : MappedSchema(schemaFamily = PtCashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
+object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
     @Table(name = "contract_cash_states",
            indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),

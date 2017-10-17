@@ -11,14 +11,14 @@ import javax.persistence.Table
 /**
  * An object used to fully qualify the [CommercialPaperSchema] family name (i.e. independent of version).
  */
-object PtCommercialPaperSchema
+object CommercialPaperSchema
 
 /**
  * First version of a commercial paper contract ORM schema that maps all fields of the [CommercialPaper] contract state
  * as it stood at the time of writing.
  */
 @CordaSerializable
-object PtCommercialPaperSchemaV1 : MappedSchema(schemaFamily = PtCommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
+object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
     @Table(name = "cp_states",
            indexes = arrayOf(Index(name = "ccy_code_index", columnList = "ccy_code"),

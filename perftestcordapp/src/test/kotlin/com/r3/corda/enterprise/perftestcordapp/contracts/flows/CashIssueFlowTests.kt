@@ -5,9 +5,9 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.`issued by`
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
-import com.r3.corda.enterprise.perftestcordapp.flows.PtCashIssueFlow
+import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueFlow
 import net.corda.testing.chooseIdentity
 import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
@@ -49,10 +49,10 @@ class CashIssueFlowTests {
     fun `issue some cash`() {
         val expected = 500.DOLLARS
         val ref = OpaqueBytes.of(0x01)
-        val future = bankOfCordaNode.services.startFlow(PtCashIssueFlow(expected, ref, notary)).resultFuture
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(expected, ref, notary)).resultFuture
         mockNet.runNetwork()
         val issueTx = future.getOrThrow().stx
-        val output = issueTx.tx.outputsOfType<PtCash.State>().single()
+        val output = issueTx.tx.outputsOfType<Cash.State>().single()
         assertEquals(expected.`issued by`(bankOfCorda.ref(ref)), output.amount)
     }
 
@@ -60,7 +60,7 @@ class CashIssueFlowTests {
     fun `issue zero cash`() {
         val expected = 0.DOLLARS
         val ref = OpaqueBytes.of(0x01)
-        val future = bankOfCordaNode.services.startFlow(PtCashIssueFlow(expected, ref, notary)).resultFuture
+        val future = bankOfCordaNode.services.startFlow(CashIssueFlow(expected, ref, notary)).resultFuture
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
             future.getOrThrow()

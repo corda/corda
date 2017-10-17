@@ -8,7 +8,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PtCash
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import com.r3.corda.enterprise.perftestcordapp.issuedBy
 import java.util.*
 
@@ -24,21 +24,21 @@ import java.util.*
  * @param notary the notary to set on the output states.
  */
 @StartableByRPC
-class PtCashIssueFlow(private val amount: Amount<Currency>,
+class CashIssueFlow(private val amount: Amount<Currency>,
                     private val issuerBankPartyRef: OpaqueBytes,
                     private val notary: Party,
-                    progressTracker: ProgressTracker) : AbstractPtCashFlow<AbstractPtCashFlow.Result>(progressTracker) {
+                    progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>,
                 issuerBankPartyRef: OpaqueBytes,
                 notary: Party) : this(amount, issuerBankPartyRef, notary, tracker())
     constructor(request: IssueRequest) : this(request.amount, request.issueRef, request.notary, tracker())
 
     @Suspendable
-    override fun call(): AbstractPtCashFlow.Result {
+    override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary)
         val issuer = ourIdentity.ref(issuerBankPartyRef)
-        val signers = PtCash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity, notary)
+        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity, notary)
         progressTracker.currentStep = SIGNING_TX
         val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = FINALISING_TX
