@@ -9,6 +9,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.NODE_INFO_FILE_NAME_PREFIX
 import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
@@ -55,7 +56,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                 val serializedBytes = nodeInfo.serialize()
                 val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
                 val signedData = SignedData(serializedBytes, regSig)
-                signedData.serialize().open().copyTo(path / "nodeInfo-${serializedBytes.hash}")
+                signedData.serialize().open().copyTo(path / "$NODE_INFO_FILE_NAME_PREFIX${serializedBytes.hash}")
             } catch (e: Exception) {
                 logger.warn("Couldn't write node info to file", e)
             }

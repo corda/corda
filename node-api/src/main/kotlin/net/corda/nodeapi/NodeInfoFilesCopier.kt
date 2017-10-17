@@ -1,9 +1,10 @@
-package net.corda.core.utilities
+package net.corda.nodeapi
 
 import net.corda.cordform.CordformNode
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
+import net.corda.core.utilities.loggerFor
 import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
@@ -15,6 +16,8 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
+
+const val NODE_INFO_FILE_NAME_PREFIX = "nodeInfo-"
 
 /**
  * Utility class which copies nodeInfo files across a set of running nodes.
@@ -47,9 +50,9 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
         nodeDataMap[nodeDir] = newNodeFile
 
         for (previouslySeenFile in allPreviouslySeenFiles()) {
-            copy(previouslySeenFile, newNodeFile.destination.resolve(previouslySeenFile.fileName))
+            copy(previouslySeenFile, newNodeFile.additionalNodeInfoDirectory.resolve(previouslySeenFile.fileName))
         }
-        log.info("Now watching: ${nodeDir}")
+        log.info("Now watching: $nodeDir")
     }
 
     /**
@@ -69,14 +72,14 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
         nodeDataMap.clear()
     }
 
-    private fun allPreviouslySeenFiles() = nodeDataMap.values.map { it.previouslySeenFiles.keys }.flatten()
+    private fun allPreviouslySeenFiles() = nodeDataMap.values.flatMap { it.previouslySeenFiles.keys }
 
     @Synchronized
     private fun poll() {
         for (nodeData in nodeDataMap.values) {
             nodeData.nodeDir.list { paths ->
                 paths.filter { it.isRegularFile() }
-                        .filter { it.fileName.toString().startsWith("nodeInfo-") }
+                        .filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }
                         .forEach { path -> processPath(nodeData, path) }
             }
         }
@@ -88,7 +91,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
         val newTimestamp = Files.readAttributes(path, BasicFileAttributes::class.java).lastModifiedTime()
         val previousTimestamp = nodeData.previouslySeenFiles.put(path, newTimestamp) ?: FileTime.fromMillis(-1)
         if (newTimestamp > previousTimestamp) {
-            for (destination in nodeDataMap.values.filter { it.nodeDir != nodeData.nodeDir }.map { it.destination }) {
+            for (destination in nodeDataMap.values.filter { it.nodeDir != nodeData.nodeDir }.map { it.additionalNodeInfoDirectory }) {
                 val fullDestinationPath = destination.resolve(path.fileName)
                 copy(path, fullDestinationPath)
             }
@@ -124,12 +127,12 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
      * Convenience holder for all the paths and files relative to a single node.
      */
     private class NodeData(val nodeDir: Path) {
-        val destination: Path = nodeDir.resolve(CordformNode.NODE_INFO_DIRECTORY)
+        val additionalNodeInfoDirectory: Path = nodeDir.resolve(CordformNode.NODE_INFO_DIRECTORY)
         // Map from Path to its lastModifiedTime.
         val previouslySeenFiles = mutableMapOf<Path, FileTime>()
 
         init {
-            destination.createDirectories()
+            additionalNodeInfoDirectory.createDirectories()
         }
     }
 }
