@@ -36,7 +36,10 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?: "")
     val sessionFactoryForRegisteredSchemas = schemaService.schemaOptions.keys.let {
         logger.info("Init HibernateConfiguration for schemas: $it")
-        // Register the AbstractPartyDescriptor so Hibernate doesn't warn
+        // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
+        // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
+        // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
+        // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
         JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(createIdentityService))
         sessionFactoryForSchemas(it)
     }
