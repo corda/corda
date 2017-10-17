@@ -3,7 +3,6 @@ package net.corda.nodeapi
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.network.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.testing.eventually
 import org.junit.Before
 import org.junit.Rule
