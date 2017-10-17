@@ -49,6 +49,7 @@ class CommercialPaper : Contract {
     companion object {
         const val CP_PROGRAM_ID: ContractClassName = "net.corda.finance.contracts.CommercialPaper"
     }
+
     data class State(
             val issuance: PartyAndReference,
             override val owner: AbstractParty,
@@ -89,7 +90,8 @@ class CommercialPaper : Contract {
             }
         }
 
-        /** @suppress */ infix fun `owned by`(owner: AbstractParty) = copy(owner = owner)
+        /** @suppress */
+        infix fun `owned by`(owner: AbstractParty) = copy(owner = owner)
     }
 
     interface Commands : CommandData {

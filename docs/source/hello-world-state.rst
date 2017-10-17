@@ -20,9 +20,6 @@ defined as follows:
     .. code-block:: kotlin
 
         interface ContractState {
-            // The contract that imposes constraints on how this state can evolve over time.
-            val contract: Contract
-
             // The list of entities considered to have a stake in this state.
             val participants: List<AbstractParty>
         }
@@ -38,13 +35,10 @@ If you do want to dive into Kotlin, there's an official
 `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
 `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
 
-We can see that the ``ContractState`` interface declares two properties:
+We can see that the ``ContractState`` interface has a single field, ``participants``. ``participants`` is a list of
+the entities for which this state is relevant.
 
-* ``contract``: the contract controlling transactions involving this state
-* ``participants``: the list of entities that have to approve state changes such as changing the state's notary or
-  upgrading the state's contract
-
-Beyond this, our state is free to define any properties, methods, helpers or inner classes it requires to accurately
+Beyond this, our state is free to define any fields, methods, helpers or inner classes it requires to accurately
 represent a given class of shared facts on the ledger.
 
 ``ContractState`` also has several child interfaces that you may wish to implement depending on your state, such as
@@ -69,62 +63,15 @@ define an ``IOUState``:
 
 .. container:: codeset
 
-    .. code-block:: kotlin
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/helloworld/state.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
 
-        class IOUState(val value: Int,
-                       val lender: Party,
-                       val borrower: Party) : ContractState {
-            override val contract = "net.corda.contract.TemplateContract"
-            override val participants get() = listOf(lender, borrower)
-        }
-
-    .. code-block:: java
-
-        package com.template.state;
-
-        import com.google.common.collect.ImmutableList;
-        import com.template.contract.TemplateContract;
-        import net.corda.core.contracts.ContractState;
-        import net.corda.core.identity.AbstractParty;
-        import net.corda.core.identity.Party;
-
-        import java.util.List;
-
-        public class IOUState implements ContractState {
-            private final int value;
-            private final Party lender;
-            private final Party borrower;
-            private final TemplateContract contract = new TemplateContract();
-
-            public IOUState(int value, Party lender, Party borrower) {
-                this.value = value;
-                this.lender = lender;
-                this.borrower = borrower;
-            }
-
-            public int getValue() {
-                return value;
-            }
-
-            public Party getLender() {
-                return lender;
-            }
-
-            public Party getBorrower() {
-                return borrower;
-            }
-
-            @Override
-            // TODO: Once we've defined IOUContract, come back and update this.
-            public TemplateContract getContract() {
-                return contract;
-            }
-
-            @Override
-            public List<AbstractParty> getParticipants() {
-                return ImmutableList.of(lender, borrower);
-            }
-        }
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/helloworld/IOUState.java
+        :language: java
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
 
 If you're following along in Java, you'll also need to rename ``TemplateState.java`` to ``IOUState.java``.
 
@@ -140,9 +87,6 @@ We've made the following changes:
 * We've overridden ``participants`` to return a list of the ``lender`` and ``borrower``
 
   * Actions such as changing a state's contract or notary will require approval from all the ``participants``
-
-We've left ``IOUState``'s contract as ``TemplateContract`` for now. We'll update this once we've defined the
-``IOUContract``.
 
 Progress so far
 ---------------

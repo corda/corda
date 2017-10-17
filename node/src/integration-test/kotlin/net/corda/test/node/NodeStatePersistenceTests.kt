@@ -18,8 +18,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
@@ -38,8 +36,7 @@ class NodeStatePersistenceTests {
         val user = User("mark", "dadada", setOf(FlowPermissions.startFlowPermission<SendMessageFlow>()))
         val message = Message("Hello world!")
         driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
-
-            startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+            startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()
             var nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
             val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
             nodeHandle.rpcClientToNode().start(user.username, user.password).use {

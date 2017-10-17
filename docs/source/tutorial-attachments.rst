@@ -68,57 +68,22 @@ RPC, which returns both a snapshot and an observable of changes. The observable 
 transaction the node verifies is retrieved. That transaction is checked to see if it has the expected attachment
 and if so, printed out.
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-   fun recipient(rpc: CordaRPCOps) {
-       println("Waiting to receive transaction ...")
-       val stx = rpc.verifiedTransactions().second.toBlocking().first()
-       val wtx = stx.tx
-       if (wtx.attachments.isNotEmpty()) {
-           assertEquals(PROSPECTUS_HASH, wtx.attachments.first())
-           require(rpc.attachmentExists(PROSPECTUS_HASH))
-           println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
-       } else {
-           println("Error: no attachments found in ${wtx.id}")
-       }
-   }
+    .. literalinclude:: ../../samples/attachment-demo/src/main/kotlin/net/corda/attachmentdemo/AttachmentDemo.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
 
 The sender correspondingly builds a transaction with the attachment, then calls ``FinalityFlow`` to complete the
 transaction and send it to the recipient node:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-   fun sender(rpc: CordaRPCOps) {
-       // Get the identity key of the other side (the recipient).
-       val otherSide: Party = rpc.wellKnownPartyFromName("Bank B")!!
-
-       // Make sure we have the file in storage
-       // TODO: We should have our own demo file, not share the trader demo file
-       if (!rpc.attachmentExists(PROSPECTUS_HASH)) {
-           Thread.currentThread().contextClassLoader.getResourceAsStream("bank-of-london-cp.jar").use {
-               val id = rpc.uploadAttachment(it)
-               assertEquals(PROSPECTUS_HASH, id)
-           }
-       }
-
-       // Create a trivial transaction that just passes across the attachment - in normal cases there would be
-       // inputs, outputs and commands that refer to this attachment.
-       val ptx = TransactionBuilder(notary = null)
-       require(rpc.attachmentExists(PROSPECTUS_HASH))
-       ptx.addAttachment(PROSPECTUS_HASH)
-       // TODO: Add a dummy state and specify a notary, so that the tx hash is randomised each time and the demo can be repeated.
-
-       // Despite not having any states, we have to have at least one signature on the transaction
-       ptx.signWith(ALICE_KEY)
-
-       // Send the transaction to the other recipient
-       val stx = ptx.toSignedTransaction()
-       println("Sending ${stx.id}")
-       val protocolHandle = rpc.startFlow(::FinalityFlow, stx, setOf(otherSide))
-       protocolHandle.progress.subscribe(::println)
-       protocolHandle.returnValue.toBlocking().first()
-   }
-
+    .. literalinclude:: ../../samples/attachment-demo/src/main/kotlin/net/corda/attachmentdemo/AttachmentDemo.kt
+        :language: kotlin
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
 
 This side is a bit more complex. Firstly it looks up its counterparty by name in the network map. Then, if the node
 doesn't already have the attachment in its storage, we upload it from a JAR resource and check the hash was what

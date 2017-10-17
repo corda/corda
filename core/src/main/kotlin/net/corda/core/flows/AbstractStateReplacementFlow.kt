@@ -70,15 +70,7 @@ abstract class AbstractStateReplacementFlow {
             val finalTx = stx + signatures
             serviceHub.recordTransactions(finalTx)
 
-            val newOutput = run {
-                if (stx.isNotaryChangeTransaction()) {
-                    stx.resolveNotaryChangeTransaction(serviceHub).outRef<T>(0)
-                } else {
-                    stx.tx.outRef<T>(0)
-                }
-            }
-
-            return newOutput
+            return stx.resolveBaseTransaction(serviceHub).outRef<T>(0)
         }
 
         /**
@@ -136,7 +128,8 @@ abstract class AbstractStateReplacementFlow {
     // We use Void? instead of Unit? as that's what you'd use in Java.
     abstract class Acceptor<in T>(val initiatingSession: FlowSession,
                                   override val progressTracker: ProgressTracker = Acceptor.tracker()) : FlowLogic<Void?>() {
-            constructor(initiatingSession: FlowSession) : this(initiatingSession, Acceptor.tracker())
+        constructor(initiatingSession: FlowSession) : this(initiatingSession, Acceptor.tracker())
+
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
             object APPROVING : ProgressTracker.Step("State replacement approved")
@@ -173,11 +166,7 @@ abstract class AbstractStateReplacementFlow {
             }
 
             val finalTx = stx + allSignatures
-            if (finalTx.isNotaryChangeTransaction()) {
-                finalTx.resolveNotaryChangeTransaction(serviceHub).verifyRequiredSignatures()
-            } else {
-                finalTx.verifyRequiredSignatures()
-            }
+            finalTx.resolveTransactionWithSignatures(serviceHub).verifyRequiredSignatures()
             serviceHub.recordTransactions(finalTx)
         }
 
@@ -194,11 +183,7 @@ abstract class AbstractStateReplacementFlow {
             // TODO Check the set of multiple identities?
             val myKey = ourIdentity.owningKey
 
-            val requiredKeys = if (stx.isNotaryChangeTransaction()) {
-                stx.resolveNotaryChangeTransaction(serviceHub).requiredSigningKeys
-            } else {
-                stx.tx.requiredSigningKeys
-            }
+            val requiredKeys = stx.resolveTransactionWithSignatures(serviceHub).requiredSigningKeys
 
             require(myKey in requiredKeys) { "Party is not a participant for any of the input states of transaction ${stx.id}" }
         }

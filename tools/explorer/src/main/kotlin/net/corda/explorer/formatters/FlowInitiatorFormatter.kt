@@ -10,6 +10,7 @@ object FlowInitiatorFormatter : Formatter<FlowInitiator> {
             is FlowInitiator.Shell -> "Shell" // TODO We don't have much information about that user.
             is FlowInitiator.Peer -> PartyNameFormatter.short.format(value.party.name)
             is FlowInitiator.RPC -> value.username
+            is FlowInitiator.Service -> value.name
         }
     }
 
@@ -20,7 +21,7 @@ object FlowInitiatorFormatter : Formatter<FlowInitiator> {
             is FlowInitiator.Shell -> Pair(FontAwesomeIcon.TERMINAL, text)
             is FlowInitiator.Peer -> Pair(FontAwesomeIcon.GROUP, text)
             is FlowInitiator.RPC -> Pair(FontAwesomeIcon.SHARE, text)
-
+            is FlowInitiator.Service -> Pair(FontAwesomeIcon.SERVER, text)
         }
     }
 }

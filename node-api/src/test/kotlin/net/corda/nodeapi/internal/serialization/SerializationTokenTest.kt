@@ -12,7 +12,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 
-class SerializationTokenTest  : TestDependencyInjectionBase() {
+class SerializationTokenTest : TestDependencyInjectionBase() {
 
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
@@ -58,7 +58,7 @@ class SerializationTokenTest  : TestDependencyInjectionBase() {
         val testContext = this.context.withTokenContext(context)
         val serializedBytes = tokenizableBefore.serialize(factory, testContext)
         val tokenizableAfter = serializedBytes.deserialize(factory, testContext)
-            assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
+        assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
     }
 
     @Test(expected = UnsupportedOperationException::class)
@@ -92,11 +92,11 @@ class SerializationTokenTest  : TestDependencyInjectionBase() {
 
         val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(this.context)))
         val stream = ByteArrayOutputStream()
-            Output(stream).use {
-                it.write(KryoHeaderV0_1.bytes)
-                kryo.writeClass(it, SingletonSerializeAsToken::class.java)
-                kryo.writeObject(it, emptyList<Any>())
-            }
+        Output(stream).use {
+            it.write(KryoHeaderV0_1.bytes)
+            kryo.writeClass(it, SingletonSerializeAsToken::class.java)
+            kryo.writeObject(it, emptyList<Any>())
+        }
         val serializedBytes = SerializedBytes<Any>(stream.toByteArray())
         serializedBytes.deserialize(factory, testContext)
     }
@@ -105,6 +105,7 @@ class SerializationTokenTest  : TestDependencyInjectionBase() {
         object UnitSerializationToken : SerializationToken {
             override fun fromToken(context: SerializeAsTokenContext): Any = UnitSerializeAsToken()
         }
+
         override fun toToken(context: SerializeAsTokenContext): SerializationToken = UnitSerializationToken
     }
 

@@ -71,3 +71,11 @@ task(runFlowTriageNodes, dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     args '-F'
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.tools.explorer'
+        )
+    }
+}

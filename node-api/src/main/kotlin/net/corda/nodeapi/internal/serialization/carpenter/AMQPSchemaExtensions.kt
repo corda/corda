@@ -132,5 +132,10 @@ fun AMQPField.validateType(classloader: ClassLoader) = when (type) {
 }
 
 private fun ClassLoader.exists(clazz: String) = run {
-    try { this.loadClass(clazz); true } catch (e: ClassNotFoundException) { false } }
+    try {
+        this.loadClass(clazz); true
+    } catch (e: ClassNotFoundException) {
+        false
+    }
+}
 

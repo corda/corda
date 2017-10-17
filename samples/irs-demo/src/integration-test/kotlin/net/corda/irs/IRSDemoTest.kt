@@ -21,9 +21,7 @@ import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.uploadFile
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
@@ -50,9 +48,7 @@ class IRSDemoTest : IntegrationTestCategory {
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
             val (controller, nodeA, nodeB) = listOf(
-                    startNode(
-                            providedName = DUMMY_NOTARY.name,
-                            advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type))),
+                    startNotaryNode(DUMMY_NOTARY.name, validating = false),
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
                     startNode(providedName = DUMMY_BANK_B.name))
                     .map { it.getOrThrow() }
@@ -98,7 +94,7 @@ class IRSDemoTest : IntegrationTestCategory {
     }
 
     private fun getFixingDateObservable(config: FullNodeConfiguration): Observable<LocalDate?> {
-        val client = CordaRPCClient(config.rpcAddress!!, initialiseSerialization = false)
+        val client = CordaRPCClient(config.rpcAddress!!)
         val proxy = client.start("user", "password").proxy
         val vaultUpdates = proxy.vaultTrackBy<InterestRateSwap.State>().updates
 

@@ -20,10 +20,12 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import java.security.PublicKey
 import javax.persistence.Entity
+import javax.persistence.Table
 import kotlin.concurrent.thread
 
 /**
@@ -33,24 +35,19 @@ import kotlin.concurrent.thread
  */
 class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                                     override val notaryIdentityKey: PublicKey,
-                                    cluster: BFTSMaRt.Cluster = distributedCluster) : NotaryService() {
+                                    private val bftSMaRtConfig: BFTSMaRtConfiguration,
+                                    cluster: BFTSMaRt.Cluster) : NotaryService() {
     companion object {
-        val type = SimpleNotaryService.type.getSubType("bft")
+        val id = constructId(validating = false, bft = true)
         private val log = loggerFor<BFTNonValidatingNotaryService>()
-        private val distributedCluster = object : BFTSMaRt.Cluster {
-            override fun waitUntilAllReplicasHaveInitialized() {
-                log.warn("A replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
-            }
-        }
     }
 
     private val client: BFTSMaRt.Client
     private val replicaHolder = SettableFuture.create<Replica>()
 
     init {
-        require(services.configuration.bftSMaRt.isValid()) { "bftSMaRt replicaId must be specified in the configuration" }
-        client = BFTSMaRtConfig(services.configuration.notaryClusterAddresses, services.configuration.bftSMaRt.debug, services.configuration.bftSMaRt.exposeRaces).use {
-            val replicaId = services.configuration.bftSMaRt.replicaId
+        client = BFTSMaRtConfig(bftSMaRtConfig.clusterAddresses, bftSMaRtConfig.debug, bftSMaRtConfig.exposeRaces).use {
+            val replicaId = bftSMaRtConfig.replicaId
             val configHandle = it.handle()
             // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
             thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
@@ -66,7 +63,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
     }
 
     fun waitUntilReplicaHasInitialized() {
-        log.debug { "Waiting for replica ${services.configuration.bftSMaRt.replicaId} to initialize." }
+        log.debug { "Waiting for replica ${bftSMaRtConfig.replicaId} to initialize." }
         replicaHolder.getOrThrow() // It's enough to wait for the ServiceReplica constructor to return.
     }
 
@@ -96,36 +93,37 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}bft_smart_notary_committed_states")
+    @Table(name = "${NODE_DATABASE_PREFIX}bft_smart_notary_committed_states")
     class PersistedCommittedState(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
         : PersistentUniquenessProvider.PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
 
-    fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef> =
-            AppendOnlyPersistentMap(
-                    toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
-                    fromPersistentEntity = {
-                        //TODO null check will become obsolete after making DB/JPA columns not nullable
-                        val txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                        val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
-                        Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
+    private fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef> {
+        return AppendOnlyPersistentMap(
+                toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
+                fromPersistentEntity = {
+                    //TODO null check will become obsolete after making DB/JPA columns not nullable
+                    val txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                    val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                    Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
                             UniquenessProvider.ConsumingTx(
                                     id = SecureHash.parse(it.consumingTxHash),
                                     inputIndex = it.consumingIndex,
                                     requestingParty = Party(
                                             name = CordaX500Name.parse(it.party.name),
                                             owningKey = parsePublicKeyBase58(it.party.owningKey))))
-                    },
-                    toPersistentEntity = { (txHash, index) : StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
-                        PersistedCommittedState(
-                                id = PersistentStateRef(txHash.toString(), index),
-                                consumingTxHash = id.toString(),
-                                consumingIndex = inputIndex,
-                                party = PersistentUniquenessProvider.PersistentParty(requestingParty.name.toString(),
-                                        requestingParty.owningKey.toBase58String())
-                        )
-                    },
-                    persistentEntityClass = PersistedCommittedState::class.java
-            )
+                },
+                toPersistentEntity = { (txHash, index): StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
+                    PersistedCommittedState(
+                            id = PersistentStateRef(txHash.toString(), index),
+                            consumingTxHash = id.toString(),
+                            consumingIndex = inputIndex,
+                            party = PersistentUniquenessProvider.PersistentParty(requestingParty.name.toString(),
+                                    requestingParty.owningKey.toBase58String())
+                    )
+                },
+                persistentEntityClass = PersistedCommittedState::class.java
+        )
+    }
 
     private class Replica(config: BFTSMaRtConfig,
                           replicaId: Int,

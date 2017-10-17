@@ -40,7 +40,7 @@ class SellerFlow(private val otherParty: Party,
         progressTracker.currentStep = SELF_ISSUING
 
         val cpOwner = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
-        val commercialPaper = serviceHub.vaultQueryService.queryBy(CommercialPaper.State::class.java).states.first()
+        val commercialPaper = serviceHub.vaultService.queryBy(CommercialPaper.State::class.java).states.first()
 
         progressTracker.currentStep = TRADING
 

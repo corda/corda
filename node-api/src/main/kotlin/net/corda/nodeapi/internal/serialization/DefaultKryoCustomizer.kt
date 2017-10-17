@@ -15,7 +15,7 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.NotaryChangeWireTransaction
@@ -49,8 +49,8 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 object DefaultKryoCustomizer {
-    private val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        ServiceLoader.load(CordaPluginRegistry::class.java, this.javaClass.classLoader).toList()
+    private val serializationWhitelists: List<SerializationWhitelist> by lazy {
+        ServiceLoader.load(SerializationWhitelist::class.java, this.javaClass.classLoader).toList() + DefaultWhitelist
     }
 
     fun customize(kryo: Kryo): Kryo {
@@ -88,10 +88,10 @@ object DefaultKryoCustomizer {
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
             noReferencesWithin<WireTransaction>()
-            register(ECPublicKeyImpl::class.java, ECPublicKeyImplSerializer)
-            register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
-            register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
-            register(CompositeKey::class.java, CompositeKeySerializer)  // Using a custom serializer for compactness
+            register(ECPublicKeyImpl::class.java, PublicKeySerializer)
+            register(EdDSAPublicKey::class.java, PublicKeySerializer)
+            register(EdDSAPrivateKey::class.java, PrivateKeySerializer)
+            register(CompositeKey::class.java, PublicKeySerializer)  // Using a custom serializer for compactness
             // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
             register(Array<StackTraceElement>::class, read = { _, _ -> emptyArray() }, write = { _, _, _ -> })
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
@@ -109,7 +109,6 @@ object DefaultKryoCustomizer {
             register(BCRSAPublicKey::class.java, PublicKeySerializer)
             register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
             register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
-            register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
             register(NotaryChangeWireTransaction::class.java, NotaryChangeWireTransactionSerializer)
             register(PartyAndCertificate::class.java, PartyAndCertificateSerializer)
 
@@ -122,8 +121,17 @@ object DefaultKryoCustomizer {
             register(java.lang.invoke.SerializedLambda::class.java)
             register(ClosureSerializer.Closure::class.java, CordaClosureBlacklistSerializer)
 
-            val customization = KryoSerializationCustomization(this)
-            pluginRegistries.forEach { it.customizeSerialization(customization) }
+            for (whitelistProvider in serializationWhitelists) {
+                val types = whitelistProvider.whitelist
+                require(types.toSet().size == types.size) {
+                    val duplicates = types.toMutableList()
+                    types.toSet().forEach { duplicates -= it }
+                    "Cannot add duplicate classes to the whitelist ($duplicates)."
+                }
+                for (type in types) {
+                    ((kryo.classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
+                }
+            }
         }
     }
 
@@ -132,6 +140,7 @@ object DefaultKryoCustomizer {
         // Use this to allow construction of objects using a JVM backdoor that skips invoking the constructors, if there
         // is no no-arg constructor available.
         private val defaultStrategy = Kryo.DefaultInstantiatorStrategy(fallbackStrategy)
+
         override fun <T> newInstantiatorOf(type: Class<T>): ObjectInstantiator<T> {
             // However this doesn't work for non-public classes in the java. namespace
             val strat = if (type.name.startsWith("java.") && !isPublic(type.modifiers)) fallbackStrategy else defaultStrategy
@@ -143,6 +152,7 @@ object DefaultKryoCustomizer {
         override fun write(kryo: Kryo, output: Output, obj: PartyAndCertificate) {
             kryo.writeClassAndObject(output, obj.certPath)
         }
+
         override fun read(kryo: Kryo, input: Input, type: Class<PartyAndCertificate>): PartyAndCertificate {
             return PartyAndCertificate(kryo.readClassAndObject(input) as CertPath)
         }

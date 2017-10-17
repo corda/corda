@@ -1,13 +1,6 @@
 Troubleshooting
 ===============
 
-Milestone releases
-------------------
-
-When you clone the corda or cordapp-template repos, they will default to the master branch. The master branch is being continuously developed upon, and its features may not align with the state of Corda as described in the docs. Additionally, the master branch of the CorDapp template may break in response to changes in the main corda repo.
-
-When developing on Corda, you should always check out the latest milestone (i.e. stable) branch instead. For example, to check out milestone 0, you'd run ``git checkout release-M0``.
-
 Java issues
 -----------
 
@@ -29,6 +22,11 @@ If you have APT installed and OpenJFX is part of your Unix distribution's packag
 Some of the unit tests, and our serialization framework in general, rely on the constructor parameter names being visible
 to Java reflection.  Make sure you have specified the ``-parameters`` option to the Java compiler.  We attempt to set this globally
 for gradle and IntelliJ, but it's possible this option is not present in your environment for some reason.
+
+"No matching constructor found: - [arg0: int, arg1: Party]: missing parameter arg0"
+***********************************************************************************
+
+Your CorDapp is written in Java and you haven't specified the ``-parameters`` compiler argument. See :doc:`deploying-a-node` for how it can be done using Gradle.
 
 IDEA issues
 -----------

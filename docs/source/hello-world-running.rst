@@ -17,41 +17,36 @@ Kotlin) file. We won't be using it, and it will cause build errors unless we rem
 Deploying our CorDapp
 ---------------------
 Let's take a look at the nodes we're going to deploy. Open the project's ``build.gradle`` file and scroll down to the
-``task deployNodes`` section. This section defines three nodes - the Controller, NodeA, and NodeB:
+``task deployNodes`` section. This section defines three nodes - the Controller, PartyA, and PartyB:
 
-.. container:: codeset
+.. code:: bash
 
-    .. code-block:: kotlin
-
-        task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-            directory "./build/nodes"
-            networkMap "O=Controller,OU=corda,L=London,C=UK"
-            node {
-                name "O=Controller,OU=corda,L=London,C=UK"
-                advertisedServices = ["corda.notary.validating"]
-                p2pPort 10002
-                rpcPort 10003
-                cordapps = []
-            }
-            node {
-                name "CN=NodeA,O=NodeA,L=London,C=UK"
-                advertisedServices = []
-                p2pPort 10005
-                rpcPort 10006
-                webPort 10007
-                cordapps = []
-                rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
-            }
-            node {
-                name "CN=NodeB,O=NodeB,L=New York,C=US"
-                advertisedServices = []
-                p2pPort 10008
-                rpcPort 10009
-                webPort 10010
-                cordapps = []
-                rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
-            }
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        directory "./build/nodes"
+        node {
+            name "O=Controller,L=London,C=GB"
+            advertisedServices = ["corda.notary.validating"]
+            p2pPort 10002
+            rpcPort 10003
+            cordapps = ["net.corda:corda-finance:$corda_release_version"]
         }
+        node {
+            name "O=PartyA,L=London,C=GB"
+            p2pPort 10005
+            rpcPort 10006
+            webPort 10007
+            cordapps = ["net.corda:corda-finance:$corda_release_version"]
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
+        }
+        node {
+            name "O=PartyB,L=New York,C=US"
+            p2pPort 10008
+            rpcPort 10009
+            webPort 10010
+            cordapps = ["net.corda:corda-finance:$corda_release_version"]
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
+        }
+    }
 
 We have three standard nodes, plus a special Controller node that is running the network map service, and is also
 advertising a validating notary service. Feel free to add additional node definitions here to expand the size of the
@@ -64,7 +59,7 @@ We can run this ``deployNodes`` task using Gradle. For each node definition, Gra
 
 We can do that now by running the following commands from the root of the project:
 
-.. code:: python
+.. code:: bash
 
     // On Windows
     gradlew clean deployNodes
@@ -77,19 +72,18 @@ Running the nodes
 Running ``deployNodes`` will build the nodes under ``build/nodes``. If we navigate to one of these folders, we'll see
 the three node folders. Each node folder has the following structure:
 
-    .. code:: python
+    .. code:: bash
 
         .
         |____corda.jar                     // The runnable node
         |____corda-webserver.jar           // The node's webserver
-        |____dependencies
         |____node.conf                     // The node's configuration file
-        |____plugins
-          |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
+        |____cordapps
+        |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
 
 Let's start the nodes by running the following commands from the root of the project:
 
-.. code:: python
+.. code:: bash
 
     // On Windows
     build/nodes/runnodes.bat
@@ -111,57 +105,66 @@ Now that our nodes are running, let's order one of them to create an IOU by kick
 app, we'd generally provide a web API sitting on top of our node. Here, for simplicity, we'll be interacting with the
 node via its built-in CRaSH shell.
 
-Go to the terminal window displaying the CRaSH shell of Node A. Typing ``help`` will display a list of the available
+Go to the terminal window displaying the CRaSH shell of PartyA. Typing ``help`` will display a list of the available
 commands.
 
-We want to create an IOU of 100 with Node B. We start the ``IOUFlow`` by typing:
+We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
+
+.. code:: bash
+
+    start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
+
+PartyA and PartyB will automatically agree an IOU. If the flow worked, it should have led to the recording of a new IOU
+in the vaults of both PartyA and PartyB.
+
+We can check the flow has worked by using an RPC operation to check the contents of each node's vault. Typing ``run``
+will display a list of the available commands. We can examine the contents of a node's vault by running:
 
 .. container:: codeset
 
     .. code-block:: java
 
-        start IOUFlow arg0: 99, arg1: "NodeB"
+        run vaultQuery contractStateType: com.template.state.IOUState
 
     .. code-block:: kotlin
 
-        start IOUFlow iouValue: 99, otherParty: "NodeB"
+        run vaultQuery contractStateType: com.template.IOUState
 
-Node A and Node B will automatically agree an IOU. If the flow worked, it should have led to the recording of a new IOU
-in the vaults of both Node A and Node B.
+The vaults of PartyA and PartyB should both display the following output:
 
-We can check the flow has worked by using an RPC operation to check the contents of each node's vault. Typing ``run``
-will display a list of the available commands. We can examine the contents of a node's vault by running:
+.. code:: bash
 
-.. code:: python
-
-     run vaultAndUpdates
-
-And we can also examine a node's transaction storage, by running:
-
-.. code:: python
-
-     run verifiedTransactions
-
-The vaults of Node A and Node B should both display the following output:
-
-.. code:: python
-
-    first:
+    states:
     - state:
         data:
           value: 99
-          lender: "CN=NodeA,O=NodeA,L=London,C=GB"
-          borrower: "CN=NodeB,O=NodeB,L=New York,C=US"
-          contract: {}
+          lender: "C=GB,L=London,O=PartyA"
+          borrower: "C=US,L=New York,O=PartyB"
           participants:
-          - "CN=NodeA,O=NodeA,L=London,C=GB"
-          - "CN=NodeB,O=NodeB,L=New York,C=US"
-        notary: "O=Controller,OU=corda,L=London,C=GB,OU=corda.notary.validating"
+          - "C=GB,L=London,O=PartyA"
+          - "C=US,L=New York,O=PartyB"
+        contract: "com.template.contract.IOUContract"
+        notary: "C=GB,L=London,O=Controller,CN=corda.notary.validating"
         encumbrance: null
+        constraint:
+          attachmentId: "F578320232CAB87BB1E919F3E5DB9D81B7346F9D7EA6D9155DC0F7BA8E472552"
       ref:
-        txhash: "656A1BF64D5AEEC6F6C944E287F34EF133336F5FC2C5BFB9A0BFAE25E826125F"
+        txhash: "5CED068E790A347B0DD1C6BB5B2B463406807F95E080037208627565E6A2103B"
         index: 0
-    second: "(observable)"
+    statesMetadata:
+    - ref:
+        txhash: "5CED068E790A347B0DD1C6BB5B2B463406807F95E080037208627565E6A2103B"
+        index: 0
+      contractStateClassName: "com.template.state.IOUState"
+      recordedTime: 1506415268.875000000
+      consumedTime: null
+      status: "UNCONSUMED"
+      notary: "C=GB,L=London,O=Controller,CN=corda.notary.validating"
+      lockId: null
+      lockUpdateTime: 1506415269.548000000
+    totalStatesAvailable: -1
+    stateTypes: "UNCONSUMED"
+    otherResults: []
 
 Conclusion
 ----------
@@ -185,11 +188,9 @@ There are a number of improvements we could make to this CorDapp:
 * We could add an API, to make it easier to interact with the CorDapp
 
 We will explore some of these improvements in future tutorials. But you should now be ready to develop your own
-CorDapps. There's `a more fleshed-out version of the IOU CorDapp <https://github.com/corda/cordapp-tutorial>`_ with an
-API and web front-end, and a set of example CorDapps in `the main Corda repo <https://github.com/corda/corda>`_, under
-``samples``. An explanation of how to run these samples :doc:`here <running-the-demos>`.
+CorDapps. You can find a list of sample CorDapps `here <https://www.corda.net/samples/>`_.
 
-As you write CorDapps, you can learn more about the API available :doc:`here <api>`.
+As you write CorDapps, you can learn more about the Corda API :doc:`here <corda-api>`.
 
 If you get stuck at any point, please reach out on `Slack <https://slack.corda.net/>`_,
 `Discourse <https://discourse.corda.net/>`_, or `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_.

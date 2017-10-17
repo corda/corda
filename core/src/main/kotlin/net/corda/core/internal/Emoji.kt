@@ -13,22 +13,38 @@ object Emoji {
                 (System.getenv("TERM_PROGRAM") == "JediTerm" && System.getProperty("java.vendor") == "JetBrains s.r.o")
     }
 
-    @JvmStatic val CODE_SANTA_CLAUS: String = codePointsString(0x1F385)
-    @JvmStatic val CODE_DIAMOND: String = codePointsString(0x1F537)
-    @JvmStatic val CODE_BAG_OF_CASH: String = codePointsString(0x1F4B0)
-    @JvmStatic val CODE_NEWSPAPER: String = codePointsString(0x1F4F0)
-    @JvmStatic val CODE_RIGHT_ARROW: String = codePointsString(0x27A1, 0xFE0F)
-    @JvmStatic val CODE_LEFT_ARROW: String = codePointsString(0x2B05, 0xFE0F)
-    @JvmStatic val CODE_GREEN_TICK: String = codePointsString(0x2705)
-    @JvmStatic val CODE_PAPERCLIP: String = codePointsString(0x1F4CE)
-    @JvmStatic val CODE_COOL_GUY: String = codePointsString(0x1F60E)
-    @JvmStatic val CODE_NO_ENTRY: String = codePointsString(0x1F6AB)
-    @JvmStatic val CODE_SKULL_AND_CROSSBONES: String = codePointsString(0x2620)
-    @JvmStatic val CODE_BOOKS: String = codePointsString(0x1F4DA)
-    @JvmStatic val CODE_SLEEPING_FACE: String = codePointsString(0x1F634)
-    @JvmStatic val CODE_LIGHTBULB: String = codePointsString(0x1F4A1)
-    @JvmStatic val CODE_FREE: String = codePointsString(0x1F193)
-    @JvmStatic val CODE_SOON: String = codePointsString(0x1F51C)
+    @JvmStatic
+    val CODE_SANTA_CLAUS: String = codePointsString(0x1F385)
+    @JvmStatic
+    val CODE_DIAMOND: String = codePointsString(0x1F537)
+    @JvmStatic
+    val CODE_BAG_OF_CASH: String = codePointsString(0x1F4B0)
+    @JvmStatic
+    val CODE_NEWSPAPER: String = codePointsString(0x1F4F0)
+    @JvmStatic
+    val CODE_RIGHT_ARROW: String = codePointsString(0x27A1, 0xFE0F)
+    @JvmStatic
+    val CODE_LEFT_ARROW: String = codePointsString(0x2B05, 0xFE0F)
+    @JvmStatic
+    val CODE_GREEN_TICK: String = codePointsString(0x2705)
+    @JvmStatic
+    val CODE_PAPERCLIP: String = codePointsString(0x1F4CE)
+    @JvmStatic
+    val CODE_COOL_GUY: String = codePointsString(0x1F60E)
+    @JvmStatic
+    val CODE_NO_ENTRY: String = codePointsString(0x1F6AB)
+    @JvmStatic
+    val CODE_SKULL_AND_CROSSBONES: String = codePointsString(0x2620)
+    @JvmStatic
+    val CODE_BOOKS: String = codePointsString(0x1F4DA)
+    @JvmStatic
+    val CODE_SLEEPING_FACE: String = codePointsString(0x1F634)
+    @JvmStatic
+    val CODE_LIGHTBULB: String = codePointsString(0x1F4A1)
+    @JvmStatic
+    val CODE_FREE: String = codePointsString(0x1F193)
+    @JvmStatic
+    val CODE_SOON: String = codePointsString(0x1F51C)
 
 
     /**

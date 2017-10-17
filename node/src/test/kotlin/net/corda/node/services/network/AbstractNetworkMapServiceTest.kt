@@ -7,7 +7,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
@@ -21,16 +21,11 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.CHARLIE
-import net.corda.testing.DUMMY_MAP
-import net.corda.testing.chooseIdentity
-import net.corda.testing.chooseIdentityAndCert
+import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
@@ -49,17 +44,14 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     lateinit var alice: StartedNode<MockNode>
 
     companion object {
-        val subscriberLegalName = CordaX500Name(organisation ="Subscriber", locality ="New York", country ="US")
+        val subscriberLegalName = CordaX500Name(organisation = "Subscriber", locality = "New York", country = "US")
     }
 
     @Before
     fun setup() {
         mockNet = MockNetwork(defaultFactory = nodeFactory)
-        mapServiceNode = mockNet.createNode(
-                nodeFactory = nodeFactory,
-                legalName = DUMMY_MAP.name,
-                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
-        alice = mockNet.createNode(mapServiceNode.network.myAddress, nodeFactory = nodeFactory, legalName = ALICE.name)
+        mapServiceNode = mockNet.networkMapNode
+        alice = mockNet.createNode(nodeFactory = nodeFactory, legalName = ALICE.name)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
     }
@@ -213,7 +205,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     private var lastSerial = Long.MIN_VALUE
 
     private fun StartedNode<*>.registration(addOrRemove: AddOrRemove,
-                                      serial: Long? = null): CordaFuture<RegistrationResponse> {
+                                            serial: Long? = null): CordaFuture<RegistrationResponse> {
         val distinctSerial = if (serial == null) {
             ++lastSerial
         } else {
@@ -254,7 +246,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun addNewNodeToNetworkMap(legalName: CordaX500Name): StartedNode<MockNode> {
-        val node = mockNet.createNode(mapServiceNode.network.myAddress, legalName = legalName)
+        val node = mockNet.createNode(legalName = legalName)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node
@@ -278,12 +270,11 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         override fun create(config: NodeConfiguration,
                             network: MockNetwork,
                             networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceInfo>,
                             id: Int,
-                            overrideServices: Map<ServiceInfo, KeyPair>?,
+                            notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNode {
-            return object : MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
-                override fun makeNetworkMapService() = NullNetworkMapService
+            return object : MockNode(config, network, null, id, notaryIdentity, entropyRoot) {
+                override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = NullNetworkMapService
             }
         }
     }

@@ -68,7 +68,7 @@ object RPCApi {
 
     val RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_REMOVED.name}' AND " +
-            "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
+                    "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
     val RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_ADDED.name}' AND " +
                     "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
@@ -97,20 +97,20 @@ object RPCApi {
          * @param clientAddress return address to contact the client at.
          * @param id a unique ID for the request, which the server will use to identify its response with.
          * @param methodName name of the method (procedure) to be called.
-         * @param arguments arguments to pass to the method, if any.
+         * @param serialisedArguments Serialised arguments to pass to the method, if any.
          */
         data class RpcRequest(
                 val clientAddress: SimpleString,
                 val id: RpcRequestId,
                 val methodName: String,
-                val arguments: List<Any?>
+                val serialisedArguments: ByteArray
         ) : ClientToServer() {
-            fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
+            fun writeToClientMessage(message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REQUEST.ordinal)
                 message.putLongProperty(RPC_ID_FIELD_NAME, id.toLong)
                 message.putStringProperty(METHOD_NAME_FIELD_NAME, methodName)
-                message.bodyBuffer.writeBytes(arguments.serialize(context = context).bytes)
+                message.bodyBuffer.writeBytes(serialisedArguments)
             }
         }
 
@@ -128,20 +128,20 @@ object RPCApi {
         }
 
         companion object {
-            fun fromClientMessage(context: SerializationContext, message: ClientMessage): ClientToServer {
+            fun fromClientMessage(message: ClientMessage): ClientToServer {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
                     RPCApi.ClientToServer.Tag.RPC_REQUEST -> RpcRequest(
                             clientAddress = MessageUtil.getJMSReplyTo(message),
                             id = RpcRequestId(message.getLongProperty(RPC_ID_FIELD_NAME)),
                             methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
-                            arguments = message.getBodyAsByteArray().deserialize(context = context)
+                            serialisedArguments = message.getBodyAsByteArray()
                     )
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
                         val ids = ArrayList<ObservableId>()
                         val buffer = message.bodyBuffer
                         val numberOfIds = buffer.readInt()
-                        for (i in 1 .. numberOfIds) {
+                        for (i in 1..numberOfIds) {
                             ids.add(ObservableId(buffer.readLong()))
                         }
                         ObservablesClosed(ids)

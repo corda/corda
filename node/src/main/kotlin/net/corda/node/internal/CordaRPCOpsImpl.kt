@@ -56,7 +56,7 @@ class CordaRPCOpsImpl(
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): Vault.Page<T> {
         return database.transaction {
-            services.vaultQueryService._queryBy(criteria, paging, sorting, contractStateType)
+            services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
         }
     }
 
@@ -66,7 +66,7 @@ class CordaRPCOpsImpl(
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return database.transaction {
-            services.vaultQueryService._trackBy(criteria, paging, sorting, contractStateType)
+            services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
         }
     }
 
@@ -176,11 +176,7 @@ class CordaRPCOpsImpl(
 
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
 
-    override fun waitUntilNetworkReady(): CordaFuture<Void?> {
-        return database.transaction {
-            services.networkMapCache.nodeReady
-        }
-    }
+    override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         return database.transaction {
@@ -199,6 +195,8 @@ class CordaRPCOpsImpl(
             services.identityService.wellKnownPartyFromX500Name(x500Name)
         }
     }
+
+    override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? = services.networkMapCache.getNotary(x500Name)
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {

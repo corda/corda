@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.nodeapi.internal.addShutdownHook
 import java.io.Closeable
 import java.nio.file.Path
@@ -31,8 +32,7 @@ open class PathManager<T : PathManager<T>>(path: Path) : Closeable {
 
     fun handle(): T {
         handleCounter.incrementAndGet()
-        @Suppress("UNCHECKED_CAST")
-        return this as T
+        return uncheckedCast(this)
     }
 
     override fun close() {

@@ -2,10 +2,7 @@ package net.corda.testing
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.jackson.JacksonSupport
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStackSnapshot
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.read
@@ -14,11 +11,13 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
+import net.corda.testing.node.MockNetwork
 import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path
 import java.time.LocalDate
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @CordaSerializable
@@ -178,6 +177,31 @@ class MultiplePersistingSideEffectFlow(val persistCallCount: Int) : FlowLogic<St
     }
 }
 
+/**
+ * Flow that tests whether the serialization works correctly.
+ */
+@StartableByRPC
+@InitiatingFlow
+class FlowStackSnapshotSerializationTestingFlow : FlowLogic<Unit>() {
+
+    @Suspendable
+    override fun call() {
+        val flowStackSnapshot = flowStackSnapshot()
+        val mySession = initiateFlow(ourIdentity)
+        mySession.sendAndReceive<String>("Ping")
+    }
+}
+
+@InitiatedBy(FlowStackSnapshotSerializationTestingFlow::class)
+class DummyFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+
+    @Suspendable
+    override fun call() {
+        val message = otherSideSession.receive<String>()
+        otherSideSession.send("$message Pong")
+    }
+}
+
 fun readFlowStackSnapshotFromDir(baseDir: Path, flowId: StateMachineRunId): FlowStackSnapshot {
     val snapshotFile = flowSnapshotDir(baseDir, flowId) / "flowStackSnapshot.json"
     return snapshotFile.read {
@@ -261,6 +285,22 @@ class FlowStackSnapshotTest {
                 assertEquals(numberOfFlowSnapshots, fileCount)
             }
         }
+    }
+
+    @Test
+    fun `flowStackSnapshot object is serializable`() {
+        val mockNet = MockNetwork(threadPerNode = true)
+        mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        val node = mockNet.createPartyNode()
+        node.internals.registerInitiatedFlow(DummyFlow::class.java)
+        node.services.startFlow(FlowStackSnapshotSerializationTestingFlow()).resultFuture.get()
+        val thrown = try {
+            mockNet.stopNodes()
+            null
+        } catch (exception: Exception) {
+            exception
+        }
+        assertNull(thrown)
     }
 
     @Test

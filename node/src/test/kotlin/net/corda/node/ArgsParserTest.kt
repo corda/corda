@@ -23,7 +23,8 @@ class ArgsParserTest {
                 isRegistration = false,
                 isVersion = false,
                 noLocalShell = false,
-                sshdServer = false))
+                sshdServer = false,
+                justGenerateNodeInfo = false))
     }
 
     @Test
@@ -116,5 +117,11 @@ class ArgsParserTest {
     fun version() {
         val cmdLineOptions = parser.parse("--version")
         assertThat(cmdLineOptions.isVersion).isTrue()
+    }
+
+    @Test
+    fun `generate node infos`() {
+        val cmdLineOptions = parser.parse("--just-generate-node-info")
+        assertThat(cmdLineOptions.justGenerateNodeInfo).isTrue()
     }
 }

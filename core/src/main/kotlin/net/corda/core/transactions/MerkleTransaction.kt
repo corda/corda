@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -47,7 +48,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * - list of each attachment that is present
      * - The notary [Party], if present (list with one element)
      * - The time-window of the transaction, if present (list with one element)
-    */
+     */
     val availableComponentGroups: List<List<Any>>
         get() {
             val result = mutableListOf(inputs, outputs, commands, attachments)
@@ -104,7 +105,7 @@ class FilteredTransaction private constructor(
          * Construction of partial transaction from [WireTransaction] based on filtering.
          * Note that list of nonces to be sent is updated on the fly, based on the index of the filtered tx component.
          * @param filtering filtering over the whole WireTransaction.
-         * @returns a list of [FilteredComponentGroup] used in PartialMerkleTree calculation and verification.
+         * @return a list of [FilteredComponentGroup] used in PartialMerkleTree calculation and verification.
          */
         private fun filterWithFun(wtx: WireTransaction, filtering: Predicate<Any>): List<FilteredComponentGroup> {
             val filteredSerialisedComponents: MutableMap<Int, MutableList<OpaqueBytes>> = hashMapOf()
@@ -137,7 +138,7 @@ class FilteredTransaction private constructor(
             fun updateFilteredComponents() {
                 wtx.inputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.INPUTS_GROUP.ordinal, internalIndex) }
                 wtx.outputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.OUTPUTS_GROUP.ordinal, internalIndex) }
-                wtx.commands.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.COMMANDS_GROUP.ordinal, internalIndex)  }
+                wtx.commands.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.COMMANDS_GROUP.ordinal, internalIndex) }
                 wtx.attachments.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.ATTACHMENTS_GROUP.ordinal, internalIndex) }
                 if (wtx.notary != null) filter(wtx.notary, ComponentGroupEnum.NOTARY_GROUP.ordinal, 0)
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, ComponentGroupEnum.TIMEWINDOW_GROUP.ordinal, 0)
@@ -146,7 +147,7 @@ class FilteredTransaction private constructor(
                 // we decide to filter and attach this field to a FilteredTransaction.
                 // An example would be to redact certain contract state types, but otherwise leave a transaction alone,
                 // including the unknown new components.
-                wtx.componentGroups.filter { it.groupIndex >= ComponentGroupEnum.values().size }.forEach { componentGroup -> componentGroup.components.forEachIndexed { internalIndex, component-> filter(component, componentGroup.groupIndex, internalIndex) }}
+                wtx.componentGroups.filter { it.groupIndex >= ComponentGroupEnum.values().size }.forEach { componentGroup -> componentGroup.components.forEachIndexed { internalIndex, component -> filter(component, componentGroup.groupIndex, internalIndex) } }
             }
 
             fun createPartialMerkleTree(componentGroupIndex: Int) = PartialMerkleTree.build(MerkleTree.getMerkleTree(wtx.availableComponentHashes[componentGroupIndex]!!), filteredComponentHashes[componentGroupIndex]!!)
@@ -155,7 +156,7 @@ class FilteredTransaction private constructor(
                 updateFilteredComponents()
                 val filteredComponentGroups: MutableList<FilteredComponentGroup> = mutableListOf()
                 filteredSerialisedComponents.forEach { (groupIndex, value) ->
-                    filteredComponentGroups.add(FilteredComponentGroup(groupIndex, value, filteredComponentNonces[groupIndex]!!, createPartialMerkleTree(groupIndex) ))
+                    filteredComponentGroups.add(FilteredComponentGroup(groupIndex, value, filteredComponentNonces[groupIndex]!!, createPartialMerkleTree(groupIndex)))
                 }
                 return filteredComponentGroups
             }
@@ -182,7 +183,7 @@ class FilteredTransaction private constructor(
 
         // Compute partial Merkle roots for each filtered component and verify each of the partial Merkle trees.
         filteredComponentGroups.forEach { (groupIndex, components, nonces, groupPartialTree) ->
-            verificationCheck(groupIndex < groupHashes.size ) { "There is no matching component group hash for group $groupIndex" }
+            verificationCheck(groupIndex < groupHashes.size) { "There is no matching component group hash for group $groupIndex" }
             val groupMerkleRoot = groupHashes[groupIndex]
             verificationCheck(groupMerkleRoot == PartialMerkleTree.rootAndUsedHashes(groupPartialTree.root, mutableListOf())) { "Partial Merkle tree root and advertised full Merkle tree root for component group $groupIndex do not match" }
             verificationCheck(groupPartialTree.verify(groupMerkleRoot, components.mapIndexed { index, component -> componentHash(nonces[index], component) })) { "Visible components in group $groupIndex cannot be verified against their partial Merkle tree" }
@@ -196,7 +197,7 @@ class FilteredTransaction private constructor(
      * over a transaction with the attachment that wasn't verified. Of course it depends on how you implement it, but else -> false
      * should solve a problem with possible later extensions to WireTransaction.
      * @param checkingFun function that performs type checking on the structure fields and provides verification logic accordingly.
-     * @returns false if no elements were matched on a structure or checkingFun returned false.
+     * @return false if no elements were matched on a structure or checkingFun returned false.
      */
     fun checkWithFun(checkingFun: (Any) -> Boolean): Boolean {
         val checkList = availableComponentGroups.flatten().map { checkingFun(it) }
@@ -225,7 +226,7 @@ class FilteredTransaction private constructor(
                 "Did not receive components for group ${componentGroupEnum.ordinal} and cannot verify they didn't exist in the original wire transaction"
             }
         } else {
-            visibilityCheck(group.groupIndex < groupHashes.size ) { "There is no matching component group hash for group ${group.groupIndex}" }
+            visibilityCheck(group.groupIndex < groupHashes.size) { "There is no matching component group hash for group ${group.groupIndex}" }
             val groupPartialRoot = groupHashes[group.groupIndex]
             val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }).hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "The partial Merkle tree root does not match with the received root for group ${group.groupIndex}" }
@@ -252,7 +253,7 @@ class FilteredTransaction private constructor(
  * This is similar to [ComponentGroup], but it also includes the corresponding nonce per component.
  */
 @CordaSerializable
-data class FilteredComponentGroup(override val groupIndex: Int, override val components: List<OpaqueBytes>, val nonces: List<SecureHash>, val partialMerkleTree: PartialMerkleTree): ComponentGroup(groupIndex, components) {
+data class FilteredComponentGroup(override val groupIndex: Int, override val components: List<OpaqueBytes>, val nonces: List<SecureHash>, val partialMerkleTree: PartialMerkleTree) : ComponentGroup(groupIndex, components) {
     init {
         check(components.size == nonces.size) { "Size of transaction components and nonces do not match" }
     }
@@ -263,11 +264,11 @@ data class FilteredComponentGroup(override val groupIndex: Int, override val com
  * @param reason information about the exception.
  */
 @CordaSerializable
-class ComponentVisibilityException(val id: SecureHash, val reason: String) : Exception("Component visibility error for transaction with id:$id. Reason: $reason")
+class ComponentVisibilityException(val id: SecureHash, val reason: String) : CordaException("Component visibility error for transaction with id:$id. Reason: $reason")
 
 /** Thrown when [FilteredTransaction.verify] fails.
  * @param id transaction's id.
  * @param reason information about the exception.
  */
 @CordaSerializable
-class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : Exception("Transaction with id:$id cannot be verified. Reason: $reason")
+class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : CordaException("Transaction with id:$id cannot be verified. Reason: $reason")

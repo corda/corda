@@ -1,10 +1,13 @@
 package net.corda.sandbox;
 
 import static org.junit.Assert.*;
+
 import org.junit.Test;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.*;
 
 public class WhitelistClassLoaderTest {
@@ -123,8 +126,8 @@ public class WhitelistClassLoaderTest {
         final Class<?> clz = wlcl.loadClass("resource.ThrowExceptions");
         assertNotNull("ThrowExceptions class could not be transformed and loaded", clz);
     }
-  
-    
+
+
     // TODO Test cases that terminate when other resource limits are broken
     @Test
     public void when_too_much_memory_is_allocated_then_thread_dies() throws Exception {

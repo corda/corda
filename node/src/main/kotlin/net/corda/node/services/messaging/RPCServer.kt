@@ -19,6 +19,7 @@ import net.corda.core.internal.LifeCycle
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -85,6 +86,7 @@ class RPCServer(
     private companion object {
         val log = loggerFor<RPCServer>()
     }
+
     private enum class State {
         UNSTARTED,
         STARTED,
@@ -260,16 +262,26 @@ class RPCServer(
 
     private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
         lifeCycle.requireState(State.STARTED)
-        val clientToServer = RPCApi.ClientToServer.fromClientMessage(RPC_SERVER_CONTEXT, artemisMessage)
+        val clientToServer = RPCApi.ClientToServer.fromClientMessage(artemisMessage)
         log.debug { "-> RPC -> $clientToServer" }
         when (clientToServer) {
             is RPCApi.ClientToServer.RpcRequest -> {
-                val rpcContext = RpcContext(
-                        currentUser = getUser(artemisMessage)
-                )
-                rpcExecutor!!.submit {
-                    val result = invokeRpc(rpcContext, clientToServer.methodName, clientToServer.arguments)
-                    sendReply(clientToServer.id, clientToServer.clientAddress, result)
+                val arguments = Try.on {
+                    clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
+                }
+                when (arguments) {
+                    is Try.Success -> {
+                        val rpcContext = RpcContext(currentUser = getUser(artemisMessage))
+                        rpcExecutor!!.submit {
+                            val result = invokeRpc(rpcContext, clientToServer.methodName, arguments.value)
+                            sendReply(clientToServer.id, clientToServer.clientAddress, result)
+                        }
+                    }
+                    is Try.Failure -> {
+                        // We failed to deserialise the arguments, route back the error
+                        log.warn("Inbound RPC failed", arguments.exception)
+                        sendReply(clientToServer.id, clientToServer.clientAddress, arguments)
+                    }
                 }
             }
             is RPCApi.ClientToServer.ObservablesClosed -> {
@@ -339,6 +351,7 @@ class RPCServer(
 
     // TODO remove this User once webserver doesn't need it
     private val nodeUser = User(NODE_USER, NODE_USER, setOf())
+
     private fun getUser(message: ClientMessage): User {
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
         val rpcUser = userService.getUser(validatedUser)
@@ -354,6 +367,7 @@ class RPCServer(
 
 @JvmField
 internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcContext> = ThreadLocal()
+
 /**
  * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
  * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
@@ -411,6 +425,7 @@ class ObservableContext(
 
 object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     private object RpcObservableContextKey
+
     private val log = loggerFor<RpcServerObservableSerializer>()
 
     fun createContext(observableContext: ObservableContext): SerializationContext {
@@ -437,9 +452,11 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
                                     }
                                 }
                             }
+
                             override fun onError(exception: Throwable) {
                                 log.error("onError called in materialize()d RPC Observable", exception)
                             }
+
                             override fun onCompleted() {
                             }
                         }

@@ -3,6 +3,7 @@ package net.corda.finance.contracts.universal
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.BusinessCalendar
@@ -124,19 +125,18 @@ class UniversalContract : Contract {
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun <T> replaceStartEnd(p: Perceivable<T>, start: Instant, end: Instant): Perceivable<T> =
             when (p) {
                 is Const -> p
-                is TimePerceivable -> TimePerceivable(p.cmp, replaceStartEnd(p.instant, start, end)) as Perceivable<T>
-                is EndDate -> const(end) as Perceivable<T>
-                is StartDate -> const(start) as Perceivable<T>
+                is TimePerceivable -> uncheckedCast(TimePerceivable(p.cmp, replaceStartEnd(p.instant, start, end)))
+                is EndDate -> uncheckedCast(const(end))
+                is StartDate -> uncheckedCast(const(start))
                 is UnaryPlus -> UnaryPlus(replaceStartEnd(p.arg, start, end))
                 is PerceivableOperation -> PerceivableOperation<T>(replaceStartEnd(p.left, start, end), p.op, replaceStartEnd(p.right, start, end))
-                is Interest -> Interest(replaceStartEnd(p.amount, start, end), p.dayCountConvention, replaceStartEnd(p.interest, start, end), replaceStartEnd(p.start, start, end), replaceStartEnd(p.end, start, end)) as Perceivable<T>
-                is Fixing -> Fixing(p.source, replaceStartEnd(p.date, start, end), p.tenor) as Perceivable<T>
-                is PerceivableAnd -> (replaceStartEnd(p.left, start, end) and replaceStartEnd(p.right, start, end)) as Perceivable<T>
-                is PerceivableOr -> (replaceStartEnd(p.left, start, end) or replaceStartEnd(p.right, start, end)) as Perceivable<T>
+                is Interest -> uncheckedCast(Interest(replaceStartEnd(p.amount, start, end), p.dayCountConvention, replaceStartEnd(p.interest, start, end), replaceStartEnd(p.start, start, end), replaceStartEnd(p.end, start, end)))
+                is Fixing -> uncheckedCast(Fixing(p.source, replaceStartEnd(p.date, start, end), p.tenor))
+                is PerceivableAnd -> uncheckedCast(replaceStartEnd(p.left, start, end) and replaceStartEnd(p.right, start, end))
+                is PerceivableOr -> uncheckedCast(replaceStartEnd(p.left, start, end) or replaceStartEnd(p.right, start, end))
                 is ActorPerceivable -> p
                 else -> throw NotImplementedError("replaceStartEnd " + p.javaClass.name)
             }
@@ -276,7 +276,6 @@ class UniversalContract : Contract {
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun <T> replaceFixing(tx: LedgerTransaction, perceivable: Perceivable<T>,
                           fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>): Perceivable<T> =
             when (perceivable) {
@@ -284,14 +283,14 @@ class UniversalContract : Contract {
                 is UnaryPlus -> UnaryPlus(replaceFixing(tx, perceivable.arg, fixings, unusedFixings))
                 is PerceivableOperation -> PerceivableOperation(replaceFixing(tx, perceivable.left, fixings, unusedFixings),
                         perceivable.op, replaceFixing(tx, perceivable.right, fixings, unusedFixings))
-                is Interest -> Interest(replaceFixing(tx, perceivable.amount, fixings, unusedFixings),
+                is Interest -> uncheckedCast(Interest(replaceFixing(tx, perceivable.amount, fixings, unusedFixings),
                         perceivable.dayCountConvention, replaceFixing(tx, perceivable.interest, fixings, unusedFixings),
-                        perceivable.start, perceivable.end) as Perceivable<T>
+                        perceivable.start, perceivable.end))
                 is Fixing -> {
                     val dt = eval(tx, perceivable.date)
                     if (dt != null && fixings.containsKey(FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor))) {
                         unusedFixings.remove(FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor))
-                        Const(fixings[FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor)]!!) as Perceivable<T>
+                        uncheckedCast(Const(fixings[FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor)]!!))
                     } else perceivable
                 }
                 else -> throw NotImplementedError("replaceFixing - " + perceivable.javaClass.name)

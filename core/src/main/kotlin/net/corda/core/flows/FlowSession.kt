@@ -5,7 +5,18 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 
 /**
- * To port existing flows:
+ *
+ * A [FlowSession] is a handle on a communication sequence between two paired flows, possibly running on separate nodes.
+ *   It is used to send and receive messages between the flows as well as to query information about the counter-flow.
+ *
+ * There are two ways of obtaining such a session:
+ *
+ * 1.  Calling [FlowLogic.initiateFlow]. This will create a [FlowSession] object on which the first send/receive
+ *   operation will attempt to kick off a corresponding [InitiatedBy] flow on the counterparty's node.
+ * 2.  As constructor parameter to [InitiatedBy] flows. This session is the one corresponding to the initiating flow and
+ *   may be used for replies.
+ *
+ * To port flows using the old Party-based API:
  *
  * Look for [Deprecated] usages of send/receive/sendAndReceive/getFlowInfo.
  *
@@ -31,6 +42,10 @@ import net.corda.core.utilities.UntrustworthyData
  *     otherSideSession.send(something)
  */
 abstract class FlowSession {
+    /**
+     * The [Party] on the other side of this session. In the case of a session created by [FlowLogic.initiateFlow]
+     *   [counterparty] is the same Party as the one passed to that function.
+     */
     abstract val counterparty: Party
 
     /**
@@ -54,12 +69,13 @@ abstract class FlowSession {
      * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
      * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
     inline fun <reified R : Any> sendAndReceive(payload: Any): UntrustworthyData<R> {
         return sendAndReceive(R::class.java, payload)
     }
+
     /**
      * Serializes and queues the given [payload] object for sending to the [counterparty]. Suspends until a response
      * is received, which must be of the given [receiveType]. Remember that when receiving data from other parties the data
@@ -69,7 +85,7 @@ abstract class FlowSession {
      * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
      * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
     abstract fun <R : Any> sendAndReceive(receiveType: Class<R>, payload: Any): UntrustworthyData<R>
@@ -85,6 +101,7 @@ abstract class FlowSession {
     inline fun <reified R : Any> receive(): UntrustworthyData<R> {
         return receive(R::class.java)
     }
+
     /**
      * Suspends until [counterparty] sends us a message of type [receiveType].
      *
@@ -92,7 +109,7 @@ abstract class FlowSession {
      * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
      * corrupted data in order to exploit your code.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Suspendable
     abstract fun <R : Any> receive(receiveType: Class<R>): UntrustworthyData<R>

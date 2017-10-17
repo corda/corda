@@ -143,7 +143,8 @@ class InMemoryMessagingNetwork(
     }
 
     /** This can be set to an object which can inject artificial latency between sender/recipient pairs. */
-    @Volatile var latencyCalculator: LatencyCalculator? = null
+    @Volatile
+    var latencyCalculator: LatencyCalculator? = null
     private val timer = Timer()
 
     @Synchronized
@@ -278,7 +279,6 @@ class InMemoryMessagingNetwork(
         _sentMessages.onNext(transfer)
     }
 
-    @CordaSerializable
     private data class InMemoryMessage(override val topicSession: TopicSession,
                                        override val data: ByteArray,
                                        override val uniqueMessageId: UUID,
@@ -286,7 +286,6 @@ class InMemoryMessagingNetwork(
         override fun toString() = "$topicSession#${String(data)}"
     }
 
-    @CordaSerializable
     private data class InMemoryReceivedMessage(override val topicSession: TopicSession,
                                                override val data: ByteArray,
                                                override val platformVersion: Int,
@@ -327,7 +326,7 @@ class InMemoryMessagingNetwork(
                 while (!Thread.currentThread().isInterrupted) {
                     try {
                         pumpReceiveInternal(true)
-                    } catch(e: InterruptedException) {
+                    } catch (e: InterruptedException) {
                         break
                     }
                 }
@@ -452,7 +451,7 @@ class InMemoryMessagingNetwork(
                         for (handler in deliverTo) {
                             try {
                                 handler.callback(transfer.toReceivedMessage(), handler)
-                            } catch(e: Exception) {
+                            } catch (e: Exception) {
                                 log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                             }
                         }

@@ -10,7 +10,7 @@ object ProcessUtilities {
             arguments: List<String>,
             jdwpPort: Int? = null
     ): Process {
-        return startJavaProcessImpl(C::class.java.name, arguments, defaultClassPath, jdwpPort, emptyList(), null, null)
+        return startJavaProcessImpl(C::class.java.name, arguments, defaultClassPath, jdwpPort, emptyList(), null, null, null)
     }
 
     fun startCordaProcess(
@@ -19,11 +19,12 @@ object ProcessUtilities {
             jdwpPort: Int?,
             extraJvmArguments: List<String>,
             errorLogPath: Path?,
-            workingDirectory: Path? = null
+            workingDirectory: Path?,
+            maximumHeapSize: String
     ): Process {
         // FIXME: Instead of hacking our classpath, use the correct classpath for className.
         val classpath = defaultClassPath.split(pathSeparator).filter { !(it / "log4j2-test.xml").exists() }.joinToString(pathSeparator)
-        return startJavaProcessImpl(className, arguments, classpath, jdwpPort, extraJvmArguments, errorLogPath, workingDirectory)
+        return startJavaProcessImpl(className, arguments, classpath, jdwpPort, extraJvmArguments, errorLogPath, workingDirectory, maximumHeapSize)
     }
 
     fun startJavaProcessImpl(
@@ -33,12 +34,13 @@ object ProcessUtilities {
             jdwpPort: Int?,
             extraJvmArguments: List<String>,
             errorLogPath: Path?,
-            workingDirectory: Path?
+            workingDirectory: Path?,
+            maximumHeapSize: String?
     ): Process {
         val command = mutableListOf<String>().apply {
             add((System.getProperty("java.home") / "bin" / "java").toString())
             (jdwpPort != null) && add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
-            add("-Xmx200m")
+            if (maximumHeapSize != null) add("-Xmx$maximumHeapSize")
             add("-XX:+UseG1GC")
             addAll(extraJvmArguments)
             add("-cp")

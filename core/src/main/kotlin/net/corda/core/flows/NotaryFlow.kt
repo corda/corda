@@ -13,7 +13,6 @@ import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -55,11 +54,7 @@ class NotaryFlow {
             }
 
             try {
-                if (stx.isNotaryChangeTransaction()) {
-                    stx.resolveNotaryChangeTransaction(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
-                } else {
-                    stx.verifySignaturesExcept(notaryParty.owningKey)
-                }
+                stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
             } catch (ex: SignatureException) {
                 throw NotaryException(NotaryError.TransactionInvalid(ex))
             }
@@ -138,8 +133,11 @@ class NotaryFlow {
         // Check if transaction is intended to be signed by this notary.
         @Suspendable
         protected fun checkNotary(notary: Party?) {
-            if (notary !in serviceHub.myInfo.legalIdentities)
+            // TODO This check implies that it's OK to use the node's main identity. Shouldn't it be just limited to the
+            // notary identities?
+            if (notary !in serviceHub.myInfo.legalIdentities) {
                 throw NotaryException(NotaryError.WrongNotary)
+            }
         }
 
         @Suspendable
@@ -171,5 +169,5 @@ sealed class NotaryError {
         override fun toString() = cause.toString()
     }
 
-    object WrongNotary: NotaryError()
+    object WrongNotary : NotaryError()
 }

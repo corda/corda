@@ -1,3 +1,2 @@
-# Register a ServiceLoader service extending from net.corda.core.node.CordaPluginRegistry
 net.corda.irs.plugin.IRSPlugin
 net.corda.irs.plugin.IRSDemoPlugin

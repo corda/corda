@@ -61,6 +61,7 @@ class InternalUtilsTest {
         assertArrayEquals(intArrayOf(1, 2, 3, 4), (1 until 5).stream().toArray())
         assertArrayEquals(intArrayOf(1, 3), (1..4 step 2).stream().toArray())
         assertArrayEquals(intArrayOf(1, 3), (1..3 step 2).stream().toArray())
+        @Suppress("EmptyRange") // It's supposed to be empty.
         assertArrayEquals(intArrayOf(), (1..0).stream().toArray())
         assertArrayEquals(intArrayOf(1, 0), (1 downTo 0).stream().toArray())
         assertArrayEquals(intArrayOf(3, 1), (3 downTo 0 step 2).stream().toArray())

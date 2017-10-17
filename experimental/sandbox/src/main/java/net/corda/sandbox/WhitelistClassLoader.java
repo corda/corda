@@ -2,6 +2,7 @@ package net.corda.sandbox;
 
 import net.corda.sandbox.visitors.CostInstrumentingMethodVisitor;
 import net.corda.sandbox.visitors.WhitelistCheckingClassVisitor;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -9,13 +10,13 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.*;
+
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author ben
  */
 public final class WhitelistClassLoader extends ClassLoader {
@@ -61,8 +62,8 @@ public final class WhitelistClassLoader extends ClassLoader {
     }
 
     /**
-     * Static factory method. Throws URISyntaxException currently, as this method is 
-     * called with user data, so a checked exception is not unreasonable. Could use a 
+     * Static factory method. Throws URISyntaxException currently, as this method is
+     * called with user data, so a checked exception is not unreasonable. Could use a
      * runtime exception instead.
      *
      * @param auxiliaryClassPath
@@ -70,7 +71,7 @@ public final class WhitelistClassLoader extends ClassLoader {
      *                              methods to be deterministic, instead the classloader
      *                              will remove all non-deterministic methods.
      * @return a suitably constructed whitelisting classloader
-     * @throws URISyntaxException 
+     * @throws URISyntaxException
      */
     public static WhitelistClassLoader of(final String auxiliaryClassPath, final boolean stripNonDeterministic) throws URISyntaxException {
         final WhitelistClassLoader out = new WhitelistClassLoader(stripNonDeterministic);
@@ -96,10 +97,10 @@ public final class WhitelistClassLoader extends ClassLoader {
 
     /**
      * Static factory method. Used for recursive classloading
-     * 
+     *
      * @param other
      * @return a suitably constructed whitelisting classloader based on the state
-     *         of the passed classloader
+     * of the passed classloader
      */
     public static WhitelistClassLoader of(final WhitelistClassLoader other) {
         final WhitelistClassLoader out = new WhitelistClassLoader(other);
@@ -110,7 +111,7 @@ public final class WhitelistClassLoader extends ClassLoader {
     /**
      * Helper method that adds a jar to the path to be searched
      *
-     * @param knownGoodJar 
+     * @param knownGoodJar
      */
     void addJarToSandbox(final Path knownGoodJar) {
         fileSystemSearchPath.add(knownGoodJar);
@@ -120,9 +121,9 @@ public final class WhitelistClassLoader extends ClassLoader {
      * Setup the auxiliary classpath so that classes that are not on the original
      * classpath can be scanned for.
      * Note that this this method hardcodes Unix conventions, so won't work on e.g. Windows
-     * 
+     *
      * @param auxiliaryClassPath
-     * @throws URISyntaxException 
+     * @throws URISyntaxException
      */
     void setupClasspath(final String auxiliaryClassPath) throws URISyntaxException {
         for (String entry : auxiliaryClassPath.split(":")) {
@@ -136,11 +137,10 @@ public final class WhitelistClassLoader extends ClassLoader {
     }
 
     /**
-     * 
      * @param qualifiedClassName
      * @return a class object that has been whitelist checked and is known to be
-     *         deterministic
-     * @throws ClassNotFoundException 
+     * deterministic
+     * @throws ClassNotFoundException
      */
     @Override
     public Class<?> findClass(final String qualifiedClassName) throws ClassNotFoundException {
@@ -244,10 +244,10 @@ public final class WhitelistClassLoader extends ClassLoader {
      * around a limitation of the ASM library that does not integrate cleanly with Java 7
      * NIO.2 Path APIs. This method also performs a couple of basic sanity check on the
      * class file (e.g. that it exists, is a regular file and is readable).
-     * 
+     *
      * @param internalClassName
      * @return a path object that corresponds to a class that has been found
-     * @throws ClassNotFoundException 
+     * @throws ClassNotFoundException
      */
     Path locateClassfileDir(final String internalClassName) throws ClassNotFoundException {
         // Check the primaryClasspathSearchPath
@@ -300,7 +300,7 @@ public final class WhitelistClassLoader extends ClassLoader {
     /**
      * Creates a jar archive of all the transformed classes that this classloader
      * has loaded.
-     * 
+     *
      * @return true on success, false on failure
      * @throws java.io.IOException
      * @throws java.net.URISyntaxException
@@ -328,7 +328,8 @@ public final class WhitelistClassLoader extends ClassLoader {
 
     /**
      * Getter method for the reason for failure
-     * @return 
+     *
+     * @return
      */
     public WhitelistClassloadingException reason() {
         return candidacyStatus.getReason();
@@ -336,7 +337,8 @@ public final class WhitelistClassLoader extends ClassLoader {
 
     /**
      * Getter method for the method candidacy status
-     * @return 
+     *
+     * @return
      */
     public CandidacyStatus getCandidacyStatus() {
         return candidacyStatus;

@@ -1,6 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.internal.concurrent.get
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -101,14 +102,13 @@ private class TransientProperty<out T> internal constructor(private val initiali
     @Transient private var initialised = false
     @Transient private var value: T? = null
 
-    @Suppress("UNCHECKED_CAST")
     @Synchronized
     override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
         if (!initialised) {
             value = initialiser()
             initialised = true
         }
-        return value as T
+        return uncheckedCast(value)
     }
 }
 

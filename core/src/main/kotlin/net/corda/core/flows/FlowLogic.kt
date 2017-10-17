@@ -1,11 +1,13 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.abbreviate
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -15,6 +17,8 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import org.slf4j.Logger
+import java.time.Duration
+import java.time.Instant
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -42,6 +46,34 @@ abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
 
+    companion object {
+        /**
+         * Return the outermost [FlowLogic] instance, or null if not in a flow.
+         */
+        @JvmStatic
+        val currentTopLevel: FlowLogic<*>? get() = (Strand.currentStrand() as? FlowStateMachine<*>)?.logic
+
+        /**
+         * If on a flow, suspends the flow and only wakes it up after at least [duration] time has passed.  Otherwise,
+         * just sleep for [duration].  This sleep function is not designed to aid scheduling, for which you should
+         * consider using [SchedulableState].  It is designed to aid with managing contention for which you have not
+         * managed via another means.
+         *
+         * Warning: long sleeps and in general long running flows are highly discouraged, as there is currently no
+         * support for flow migration! This method will throw an exception if you attempt to sleep for longer than
+         * 5 minutes.
+         */
+        @Suspendable
+        @JvmStatic
+        @Throws(FlowException::class)
+        fun sleep(duration: Duration) {
+            if (duration.compareTo(Duration.ofMinutes(5)) > 0) {
+                throw FlowException("Attempt to sleep for longer than 5 minutes is not supported.  Consider using SchedulableState.")
+            }
+            (Strand.currentStrand() as? FlowStateMachine<*>)?.sleepUntil(Instant.now() + duration) ?: Strand.sleep(duration.toMillis())
+        }
+    }
+
     /**
      * Returns a wrapped [java.util.UUID] object that identifies this state machine run (i.e. subflows have the same
      * identifier as their parents).
@@ -55,6 +87,10 @@ abstract class FlowLogic<out T> {
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
+    /**
+     * Creates a communication session with [party]. Subsequently you may send/receive using this session object. Note
+     * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
+     */
     @Suspendable
     fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, flowUsedForSessions)
 
@@ -100,7 +136,7 @@ abstract class FlowLogic<out T> {
      * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
      * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<R> {
@@ -116,7 +152,7 @@ abstract class FlowLogic<out T> {
      * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
      * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     @Suspendable
@@ -165,12 +201,44 @@ abstract class FlowLogic<out T> {
      * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
      * corrupted data in order to exploit your code.
      *
-     * @returns an [UntrustworthyData] wrapper around the received object.
+     * @return an [UntrustworthyData] wrapper around the received object.
      */
     @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
     @Suspendable
     open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
         return stateMachine.receive(receiveType, otherParty, flowUsedForSessions)
+    }
+
+    /** Suspends until a message has been received for each session in the specified [sessions].
+     *
+     * Consider [receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>] when the same type is expected from all sessions.
+     *
+     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
+     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
+     * corrupted data in order to exploit your code.
+     *
+     * @returns a [Map] containing the objects received, wrapped in an [UntrustworthyData], by the [FlowSession]s who sent them.
+     */
+    @Suspendable
+    open fun receiveAll(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
+        return stateMachine.receiveAll(sessions, this)
+    }
+
+    /**
+     * Suspends until a message has been received for each session in the specified [sessions].
+     *
+     * Consider [sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>] when sessions are expected to receive different types.
+     *
+     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
+     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
+     * corrupted data in order to exploit your code.
+     *
+     * @returns a [List] containing the objects received, wrapped in an [UntrustworthyData], with the same order of [sessions].
+     */
+    @Suspendable
+    open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>> {
+        enforceNoDuplicates(sessions)
+        return castMapValuesToKnownType(receiveAll(associateSessionsToReceiveType(receiveType, sessions)))
     }
 
     /**
@@ -226,7 +294,6 @@ abstract class FlowLogic<out T> {
     fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
         stateMachine.checkFlowPermission(permissionName, extraAuditData)
     }
-
 
     /**
      * Flows can call this method to record application level flow audit events
@@ -329,6 +396,18 @@ abstract class FlowLogic<out T> {
             }
             ours.setChildProgressTracker(ours.currentStep, theirs)
         }
+    }
+
+    private fun enforceNoDuplicates(sessions: List<FlowSession>) {
+        require(sessions.size == sessions.toSet().size) { "A flow session can only appear once as argument." }
+    }
+
+    private fun <R> associateSessionsToReceiveType(receiveType: Class<R>, sessions: List<FlowSession>): Map<FlowSession, Class<R>> {
+        return sessions.associateByTo(LinkedHashMap(), { it }, { receiveType })
+    }
+
+    private fun <R> castMapValuesToKnownType(map: Map<FlowSession, UntrustworthyData<Any>>): List<UntrustworthyData<R>> {
+        return map.values.map { uncheckedCast<Any, UntrustworthyData<R>>(it) }
     }
 }
 

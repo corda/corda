@@ -3,8 +3,8 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -16,7 +16,6 @@ import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
 import net.corda.irs.flows.RatesFixFlow.FixOutOfRange
 import java.math.BigDecimal
-import java.util.*
 import java.util.function.Predicate
 
 // This code is unit tested in NodeInterestRates.kt
@@ -44,8 +43,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         fun tracker(fixName: String) = ProgressTracker(QUERYING(fixName), WORKING, SIGNING)
     }
 
-    @CordaSerializable
-    class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : Exception("Fix out of range by $byAmount")
+    class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : FlowException("Fix out of range by $byAmount")
 
     @CordaSerializable
     data class QueryRequest(val queries: List<FixOf>)
@@ -100,7 +98,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         override fun call(): Fix {
             val oracleSession = initiateFlow(oracle)
             // TODO: add deadline to receive
-            val resp = oracleSession.sendAndReceive<ArrayList<Fix>>(QueryRequest(listOf(fixOf)))
+            val resp = oracleSession.sendAndReceive<List<Fix>>(QueryRequest(listOf(fixOf)))
 
             return resp.unwrap {
                 val fix = it.first()

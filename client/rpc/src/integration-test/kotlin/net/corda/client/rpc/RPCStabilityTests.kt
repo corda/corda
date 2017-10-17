@@ -7,6 +7,7 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
@@ -75,10 +76,12 @@ class RPCStabilityTests {
             rpcDriver {
                 Try.on { startRpcClient<RPCOps>(NetworkHostAndPort("localhost", 9999)).get() }
                 val server = startRpcServer<RPCOps>(ops = DummyOps)
-                Try.on { startRpcClient<RPCOps>(
-                        server.get().broker.hostAndPort!!,
-                        configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)
-                ).get() }
+                Try.on {
+                    startRpcClient<RPCOps>(
+                            server.get().broker.hostAndPort!!,
+                            configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)
+                    ).get()
+                }
             }
         }
         repeat(5) {
@@ -172,7 +175,7 @@ class RPCStabilityTests {
         }
     }
 
-    interface LeakObservableOps: RPCOps {
+    interface LeakObservableOps : RPCOps {
         fun leakObservable(): Observable<Nothing>
     }
 
@@ -248,6 +251,7 @@ class RPCStabilityTests {
                 val trackSubscriberCountObservable = UnicastSubject.create<Unit>().share().
                         doOnSubscribe { subscriberCount.incrementAndGet() }.
                         doOnUnsubscribe { subscriberCount.decrementAndGet() }
+
                 override fun subscribe(): Observable<Unit> {
                     return trackSubscriberCountObservable
                 }
@@ -260,7 +264,7 @@ class RPCStabilityTests {
             ).get()
 
             val numberOfClients = 4
-            val clients = (1 .. numberOfClients).map {
+            val clients = (1..numberOfClients).map {
                 startRandomRpcClient<TrackSubscriberOps>(server.broker.hostAndPort!!)
             }.transpose().get()
 
@@ -271,7 +275,7 @@ class RPCStabilityTests {
             clients[0].destroyForcibly()
             pollUntilClientNumber(server, numberOfClients - 1)
             // Kill the rest
-            (1 .. numberOfClients - 1).forEach {
+            (1..numberOfClients - 1).forEach {
                 clients[it].destroyForcibly()
             }
             pollUntilClientNumber(server, 0)
@@ -283,6 +287,7 @@ class RPCStabilityTests {
     interface SlowConsumerRPCOps : RPCOps {
         fun streamAtInterval(interval: Duration, size: Int): Observable<ByteArray>
     }
+
     class SlowConsumerRPCOpsImpl : SlowConsumerRPCOps {
         override val protocolVersion = 0
 
@@ -291,6 +296,7 @@ class RPCStabilityTests {
             return Observable.interval(interval.toMillis(), TimeUnit.MILLISECONDS).map { chunk }
         }
     }
+
     @Test
     fun `slow consumers are kicked`() {
         rpcDriver {
@@ -315,9 +321,9 @@ class RPCStabilityTests {
                     clientAddress = SimpleString(myQueue),
                     id = RPCApi.RpcRequestId(random63BitValue()),
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
-                    arguments = listOf(10.millis, 123456)
+                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT).bytes
             )
-            request.writeToClientMessage(SerializationDefaults.RPC_SERVER_CONTEXT, message)
+            request.writeToClientMessage(message)
             producer.send(message)
             session.commit()
 

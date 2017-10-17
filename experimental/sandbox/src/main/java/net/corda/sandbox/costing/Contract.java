@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class is the runtime representation of a running contract.
- * 
+ *
  * @author ben
  */
 public class Contract {

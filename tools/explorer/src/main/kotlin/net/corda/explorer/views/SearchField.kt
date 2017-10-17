@@ -38,7 +38,7 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
             (text.isNullOrBlank() && textField.isVisible) || if (category == ALL) {
                 filterCriteria.any { it.second(data, text) }
             } else {
-                filterCriteria.toMap()[category]?.invoke(data, text) ?: false
+                filterCriteria.toMap()[category]?.invoke(data, text) == true
             }
         }
     }, arrayOf<Observable>(textField.textProperty(), searchCategory.valueProperty(), textField.visibleProperty())))

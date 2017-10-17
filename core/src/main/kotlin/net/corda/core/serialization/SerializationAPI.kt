@@ -6,6 +6,7 @@ import net.corda.core.internal.WriteOnceProperty
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
+import java.sql.Blob
 
 /**
  * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
@@ -115,6 +116,7 @@ interface SerializationContext {
      * The use case we are serializing or deserializing for.  See [UseCase].
      */
     val useCase: UseCase
+
     /**
      * Helper method to return a new context based on this context with the property added.
      */
@@ -185,6 +187,11 @@ inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory
 inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T = this.sequence().deserialize(serializationFactory, context)
 
 /**
+ * Convenience extension method for deserializing a JDBC Blob, utilising the defaults.
+ */
+inline fun <reified T : Any> Blob.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T = this.getBytes(1, this.length().toInt()).deserialize(serializationFactory, context)
+
+/**
  * Convenience extension method for serializing an object of type T, utilising the defaults.
  */
 fun <T : Any> T.serialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): SerializedBytes<T> {
@@ -195,7 +202,6 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = Serializa
  * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
  * to get the original object back.
  */
-@Suppress("unused") // Type parameter is just for documentation purposes.
 class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }

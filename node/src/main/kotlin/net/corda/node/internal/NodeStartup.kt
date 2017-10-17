@@ -9,7 +9,6 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
@@ -77,7 +76,7 @@ open class NodeStartup(val args: Array<String>) {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: Exception) {
-            if (e.message?.startsWith("Unknown named curve:") ?: false) {
+            if (e.message?.startsWith("Unknown named curve:") == true) {
                 logger.error("Exception during node startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             } else
@@ -90,33 +89,36 @@ open class NodeStartup(val args: Array<String>) {
 
     open protected fun preNetworkRegistration(conf: FullNodeConfiguration) = Unit
 
-    open protected fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, services: Set<ServiceInfo>): Node {
-        return Node(conf, services, versionInfo)
-    }
+    open protected fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
     open protected fun startNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
-        val advertisedServices = conf.calculateServices()
-        val node = createNode(conf, versionInfo, advertisedServices).start()
-        printPluginsAndServices(node.internals)
-        node.internals.nodeReadyFuture.thenMatch({
+        val node = createNode(conf, versionInfo)
+        if (cmdlineOptions.justGenerateNodeInfo) {
+            // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
+            node.generateNodeInfo()
+            return
+        }
+        val startedNode = node.start()
+        Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
+        startedNode.internals.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            val name = node.info.legalIdentitiesAndCerts.first().name.organisation
+            val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
-            node.internals.startupComplete.then {
+            startedNode.internals.startupComplete.then {
                 try {
-                    InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
-                } catch(e: Throwable) {
+                    InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, startedNode)
+                } catch (e: Throwable) {
                     logger.error("Shell failed to start", e)
                 }
             }
         },
-        {
-            th -> logger.error("Unexpected exception during registration", th)
-        })
-        node.internals.run()
+                { th ->
+                    logger.error("Unexpected exception during registration", th)
+                })
+        startedNode.internals.run()
     }
 
     open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: FullNodeConfiguration) {
@@ -154,30 +156,28 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): FullNodeConfiguration {
-        val conf = try {
-            cmdlineOptions.loadConfig()
+        try {
+            return cmdlineOptions.loadConfig()
         } catch (e: ConfigException) {
             println("Unable to load the configuration file: ${e.rootCause.message}")
             exitProcess(2)
         }
-        return conf
     }
 
     open protected fun banJavaSerialisation(conf: FullNodeConfiguration) {
-        SerialFilter.install(if (conf.bftSMaRt.isValid()) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
+        SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     }
 
     open protected fun getVersionInfo(): VersionInfo {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
-        val versionInfo = VersionInfo(
+        return VersionInfo(
                 manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
                 manifestValue("Corda-Release-Version") ?: "Unknown",
                 manifestValue("Corda-Revision") ?: "Unknown",
                 manifestValue("Corda-Vendor") ?: "Unknown"
         )
-        return versionInfo
     }
 
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
@@ -261,18 +261,6 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: ArrayIndexOutOfBoundsException) {
             Node.failStartUp("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
         }
-    }
-
-    private fun printPluginsAndServices(node: Node) {
-        node.configuration.extraAdvertisedServiceIds.let {
-            if (it.isNotEmpty()) Node.printBasicNodeInfo("Providing network services", it.joinToString())
-        }
-        val plugins = node.pluginRegistries
-                .map { it.javaClass.name }
-                .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.") }
-                .map { it.substringBefore('$') }
-        if (plugins.isNotEmpty())
-            Node.printBasicNodeInfo("Loaded plugins", plugins.joinToString())
     }
 
     open fun drawBanner(versionInfo: VersionInfo) {

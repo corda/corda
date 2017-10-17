@@ -14,8 +14,6 @@ import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.`issued by`
-import net.corda.finance.contracts.asset.`owned by`
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -25,6 +23,7 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import net.corda.testing.node.createMockCordaService
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -63,17 +62,16 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.finance.contracts")
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         database.transaction {
-            oracle = NodeInterestRates.Oracle(services).apply { knownFixes = TEST_DATA }
+            oracle = createMockCordaService(services, NodeInterestRates::Oracle)
+            oracle.knownFixes = TEST_DATA
         }
     }
 
     @After
     fun tearDown() {
         database.close()
-        unsetCordappPackages()
     }
 
     @Test
@@ -202,9 +200,9 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Test
     fun `network tearoff`() {
-        val mockNet = MockNetwork(initialiseSerialization = false)
+        val mockNet = MockNetwork(initialiseSerialization = false, cordappPackages = listOf("net.corda.finance.contracts"))
         val n1 = mockNet.createNotaryNode()
-        val oracleNode = mockNet.createNode(n1.network.myAddress).apply {
+        val oracleNode = mockNet.createNode().apply {
             internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
@@ -242,7 +240,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
     }
 
     private fun makePartialTX() = TransactionBuilder(DUMMY_NOTARY).withItems(
-        TransactionState(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE, Cash.PROGRAM_ID, DUMMY_NOTARY))
+            TransactionState(1000.DOLLARS.CASH issuedBy DUMMY_CASH_ISSUER ownedBy ALICE, Cash.PROGRAM_ID, DUMMY_NOTARY))
 
     private fun makeFullTx() = makePartialTX().withItems(dummyCommand())
 }

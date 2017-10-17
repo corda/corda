@@ -80,7 +80,8 @@ class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
 @RunWith(Parameterized::class)
 class CommercialPaperTestsGeneric {
     companion object {
-        @Parameterized.Parameters @JvmStatic
+        @Parameterized.Parameters
+        @JvmStatic
         fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest(), KotlinCommercialPaperLegacyTest())
     }
 
@@ -95,8 +96,8 @@ class CommercialPaperTestsGeneric {
         ledger {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
-                output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
-                output(Cash.PROGRAM_ID, "some profits", someProfits.STATE `owned by` MEGA_CORP)
+                output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH issuedBy issuer ownedBy ALICE)
+                output(Cash.PROGRAM_ID, "some profits", someProfits.STATE ownedBy MEGA_CORP)
             }
 
             // Some CP is issued onto the ledger by MegaCorp.
@@ -114,7 +115,7 @@ class CommercialPaperTestsGeneric {
                 attachments(Cash.PROGRAM_ID, JavaCommercialPaper.JCP_PROGRAM_ID)
                 input("paper")
                 input("alice's $900")
-                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
+                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP }
                 output(thisTest.getContract(), "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
@@ -129,8 +130,8 @@ class CommercialPaperTestsGeneric {
                 input("some profits")
 
                 fun TransactionDSL<TransactionDSLInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
-                    output(Cash.PROGRAM_ID, "Alice's profit") { aliceGetsBack.STATE `owned by` ALICE }
-                    output(Cash.PROGRAM_ID, "Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP }
+                    output(Cash.PROGRAM_ID, "Alice's profit") { aliceGetsBack.STATE ownedBy ALICE }
+                    output(Cash.PROGRAM_ID, "Change") { (someProfits - aliceGetsBack).STATE ownedBy MEGA_CORP }
                 }
 
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
@@ -227,10 +228,9 @@ class CommercialPaperTestsGeneric {
 
     private lateinit var moveTX: SignedTransaction
 
-//    @Test
+    //    @Test
     @Ignore
     fun `issue move and then redeem`() {
-        setCordappPackages("net.corda.finance.contracts")
         initialiseTestSerialization()
         val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(ALICE_KEY))
         val databaseAlice = aliceDatabaseAndServices.first

@@ -6,4 +6,6 @@ Release process
 
    release-notes
    changelog
+   upgrade-notes
+   codestyle
    testing

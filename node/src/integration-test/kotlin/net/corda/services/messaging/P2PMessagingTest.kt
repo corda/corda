@@ -17,9 +17,6 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
@@ -32,8 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.type.id, "DistributedService", "London", "GB")
-        val SERVICE_2_NAME = CordaX500Name(organisation = "Service 2", locality = "London", country = "GB")
+        val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
     }
 
     @Test
@@ -47,46 +43,6 @@ class P2PMessagingTest : NodeBasedTest() {
         clearAllNodeInfoDb() // Clear network map data from nodes databases.
         stopAllNodes()
         startNodes().getOrThrow(timeout = startUpDuration * 3)
-    }
-
-    // https://github.com/corda/corda/issues/71
-    @Test
-    fun `communicating with a service running on the network map node`() {
-        startNetworkMapNode(advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        networkMapNode.respondWith("Hello")
-        val alice = startNode(ALICE.name).getOrThrow()
-        val serviceAddress = alice.services.networkMapCache.run {
-            val notaryParty = notaryIdentities.randomOrNull()!!
-            alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
-        }
-        val received = alice.receiveFrom(serviceAddress).getOrThrow(10.seconds)
-        assertThat(received).isEqualTo("Hello")
-    }
-
-    // TODO Use a dummy distributed service
-    @Test
-    fun `communicating with a distributed service which the network map node is part of`() {
-        ServiceIdentityGenerator.generateToDisk(
-                listOf(DUMMY_MAP.name, SERVICE_2_NAME).map { baseDirectory(it) },
-                DISTRIBUTED_SERVICE_NAME)
-
-        val distributedService = ServiceInfo(RaftValidatingNotaryService.type, DISTRIBUTED_SERVICE_NAME)
-        val notaryClusterAddress = freeLocalHostAndPort()
-        startNetworkMapNode(
-                DUMMY_MAP.name,
-                advertisedServices = setOf(distributedService),
-                configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
-        val (serviceNode2, alice) = listOf(
-                startNode(
-                        SERVICE_2_NAME,
-                        advertisedServices = setOf(distributedService),
-                        configOverrides = mapOf(
-                                "notaryNodeAddress" to freeLocalHostAndPort().toString(),
-                                "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
-                startNode(ALICE.name)
-        ).transpose().getOrThrow()
-
-        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), DISTRIBUTED_SERVICE_NAME, alice)
     }
 
     @Ignore

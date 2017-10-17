@@ -114,8 +114,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     protected abstract fun load(txid: SecureHash): T?
 
-    @Suppress("UNCHECKED_CAST")
-    protected open fun convert(wire: W): T = wire as T
+    protected open fun convert(wire: W): T = uncheckedCast(wire)
 
     private fun validateFetchResponse(maybeItems: UntrustworthyData<ArrayList<W>>,
                                       requests: List<SecureHash>): List<T> {
