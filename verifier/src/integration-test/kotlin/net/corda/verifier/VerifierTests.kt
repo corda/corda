@@ -12,9 +12,9 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
 import net.corda.testing.ALICE
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.*
-import net.corda.testing.driver.NetworkMapStartStrategy
+import net.corda.testing.DUMMY_NOTARY_SERVICE_NAME
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -112,10 +112,7 @@ class VerifierTests {
 
     @Test
     fun `single verifier works with a node`() {
-        verifierDriver(
-                networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts")
-        ) {
+        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
             val aliceFuture = startNode(providedName = ALICE.name)
             val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, verifierType = VerifierType.OutOfProcess)
             val aliceNode = aliceFuture.get()
