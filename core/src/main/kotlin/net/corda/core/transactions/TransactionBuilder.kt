@@ -38,8 +38,8 @@ open class TransactionBuilder(
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt()
-    ) {
-    constructor(notary: Party) : this (notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
+) {
+    constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     /**
      * Creates a copy of the builder.
@@ -81,9 +81,10 @@ open class TransactionBuilder(
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      */
-    @JvmOverloads
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
+
+    internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints for convenience. The AutomaticHashConstraint
         // allows for less boiler plate when constructing transactions since for the typical case the named contract
         // will be available when building the transaction. In exceptional cases the TransactionStates must be created
@@ -103,7 +104,9 @@ open class TransactionBuilder(
     }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext? = null) = toWireTransaction(services, serializationContext).toLedgerTransaction(services)
+    fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
+
+    internal fun toLedgerTransactionWithContext(services: ServiceHub, serializationContext: SerializationContext) = toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {
@@ -122,7 +125,6 @@ open class TransactionBuilder(
         return this
     }
 
-    @JvmOverloads
     fun addOutputState(state: TransactionState<*>): TransactionBuilder {
         outputs.add(state)
         return this
@@ -176,6 +178,7 @@ open class TransactionBuilder(
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)
+
     fun attachments(): List<SecureHash> = ArrayList(attachments)
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
     fun commands(): List<Command<*>> = ArrayList(commands)

@@ -6,6 +6,7 @@ import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.Vault
 import net.corda.finance.contracts.asset.Cash
 import rx.Observable
@@ -37,10 +38,9 @@ class ContractStateModel {
     companion object {
         private fun Collection<StateAndRef<ContractState>>.filterCashStateAndRefs(): List<StateAndRef<Cash.State>> {
             return this.map { stateAndRef ->
-                @Suppress("UNCHECKED_CAST")
                 if (stateAndRef.state.data is Cash.State) {
                     // Kotlin doesn't unify here for some reason
-                    stateAndRef as StateAndRef<Cash.State>
+                    uncheckedCast(stateAndRef)
                 } else {
                     null
                 }

@@ -1,6 +1,7 @@
 package net.corda.demobench.model
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
 import org.junit.Test
@@ -51,7 +52,7 @@ class NodeControllerTest {
     fun `test first validated node becomes network map`() {
         val data = NodeData()
         data.legalName.value = node1Name
-        data.p2pPort.value = 100000
+        data.p2pPort.value = 10000
 
         assertFalse(controller.hasNetworkMap())
         controller.validate(data)
@@ -90,7 +91,7 @@ class NodeControllerTest {
     @Test
     fun `test register network map node`() {
         val config = createConfig(commonName = "Organisation is Network Map")
-        assertTrue(config.isNetworkMap())
+        assertTrue(config.nodeConfig.isNetworkMap)
 
         assertFalse(controller.hasNetworkMap())
         controller.register(config)
@@ -99,9 +100,10 @@ class NodeControllerTest {
 
     @Test
     fun `test register non-network-map node`() {
-        val config = createConfig(commonName = "Organisation is not Network Map")
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 10000)
-        assertFalse(config.isNetworkMap())
+        val config = createConfig(
+                commonName = "Organisation is not Network Map",
+                networkMap = NetworkMapConfig(DUMMY_NOTARY.name, localPort(10000)))
+        assertFalse(config.nodeConfig.isNetworkMap)
 
         assertFalse(controller.hasNetworkMap())
         controller.register(config)
@@ -146,7 +148,7 @@ class NodeControllerTest {
     @Test
     fun `test H2 port is max`() {
         val portNumber = NodeController.firstPort + 3478
-        val config = createConfig(h2Port = portNumber)
+        val config = createConfig(h2port = portNumber)
         assertEquals(NodeController.firstPort, controller.nextPort)
         controller.register(config)
         assertEquals(portNumber + 1, controller.nextPort)
@@ -166,25 +168,30 @@ class NodeControllerTest {
 
     private fun createConfig(
             commonName: String = "Unknown",
-            p2pPort: Int = -1,
-            rpcPort: Int = -1,
-            webPort: Int = -1,
-            h2Port: Int = -1,
-            services: MutableList<String> = mutableListOf("extra.service"),
+            p2pPort: Int = 0,
+            rpcPort: Int = 0,
+            webPort: Int = 0,
+            h2port: Int = 0,
+            notary: NotaryService? = null,
+            networkMap: NetworkMapConfig? = null,
             users: List<User> = listOf(user("guest"))
-    ) = NodeConfig(
-            baseDir,
-            legalName = CordaX500Name(
-                    organisation = commonName,
-                    locality = "New York",
-                    country = "US"
-            ),
-            p2pPort = p2pPort,
-            rpcPort = rpcPort,
-            webPort = webPort,
-            h2Port = h2Port,
-            extraServices = services,
-            users = users
-    )
+    ): NodeConfigWrapper {
+        val nodeConfig = NodeConfig(
+                myLegalName = CordaX500Name(
+                        organisation = commonName,
+                        locality = "New York",
+                        country = "US"
+                ),
+                p2pAddress = localPort(p2pPort),
+                rpcAddress = localPort(rpcPort),
+                webAddress = localPort(webPort),
+                h2port = h2port,
+                notary = notary,
+                networkMapService = networkMap,
+                rpcUsers = users
+        )
+        return NodeConfigWrapper(baseDir, nodeConfig)
+    }
 
+    private fun localPort(port: Int) = NetworkHostAndPort("localhost", port)
 }

@@ -79,3 +79,11 @@ task graphs {
         }
     }
 }
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.tools.graphs'
+        )
+    }
+}

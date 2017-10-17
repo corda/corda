@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -14,17 +15,22 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
-import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectRequestProperty
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectResponseProperty
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.TestClock
@@ -46,6 +52,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Clock
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
 
@@ -54,14 +61,12 @@ import kotlin.system.exitProcess
  * loads important data off disk and starts listening for connections.
  *
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
- * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
- * but nodes are not required to advertise services they run (hence subset).
  */
-open class Node(override val configuration: FullNodeConfiguration,
-                advertisedServices: Set<ServiceInfo>,
-                private val versionInfo: VersionInfo,
-                val initialiseSerialization: Boolean = true
-) : AbstractNode(configuration, advertisedServices, createClock(configuration)) {
+open class Node(configuration: FullNodeConfiguration,
+                versionInfo: VersionInfo,
+                val initialiseSerialization: Boolean = true,
+                cordappLoader: CordappLoader = makeCordappLoader(configuration)
+) : AbstractNode(configuration, createClock(configuration), versionInfo, cordappLoader) {
     companion object {
         private val logger = loggerFor<Node>()
         var renderBasicInfoToConsole = true
@@ -82,12 +87,23 @@ open class Node(override val configuration: FullNodeConfiguration,
         private fun createClock(configuration: FullNodeConfiguration): Clock {
             return if (configuration.useTestClock) TestClock() else NodeClock()
         }
+
+        private val sameVmNodeCounter = AtomicInteger()
+        val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
+        val scanPackagesSeparator = ","
+        private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
+            return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
+                CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
+            } ?: CordappLoader.createDefault(configuration.baseDirectory)
+        }
     }
 
     override val log: Logger get() = logger
-    override val platformVersion: Int get() = versionInfo.platformVersion
+    override val configuration get() = super.configuration as FullNodeConfiguration // Necessary to avoid init order NPE.
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
+
+    private val sameVmNodeNumber = sameVmNodeCounter.incrementAndGet() // Under normal (non-test execution) it will always be "1"
 
     // DISCUSSION
     //
@@ -126,7 +142,7 @@ open class Node(override val configuration: FullNodeConfiguration,
     //
     // The primary work done by the server thread is execution of flow logics, and related
     // serialisation/deserialisation work.
-    override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
+    override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread-$sameVmNodeNumber", 1)
 
     private var messageBroker: ArtemisMessagingServer? = null
 
@@ -274,6 +290,10 @@ open class Node(override val configuration: FullNodeConfiguration,
         return listOf(address.hostAndPort)
     }
 
+    override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
+        return PersistentNetworkMapService(network, networkMapCache, configuration.minimumPlatformVersion)
+    }
+
     /**
      * If the node is persisting to an embedded H2 database, then expose this via TCP with a JDBC URL of the form:
      * jdbc:h2:tcp://<host>:<port>/node
@@ -284,7 +304,7 @@ open class Node(override val configuration: FullNodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun <T> initialiseDatabasePersistence(insideTransaction: () -> T): T {
+    override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T): T {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -301,11 +321,16 @@ open class Node(override val configuration: FullNodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
-        return super.initialiseDatabasePersistence(insideTransaction)
+        return super.initialiseDatabasePersistence(schemaService, insideTransaction)
     }
 
     private val _startupComplete = openFuture<Unit>()
     val startupComplete: CordaFuture<Unit> get() = _startupComplete
+
+    override fun generateNodeInfo() {
+        initialiseSerialization()
+        super.generateNodeInfo()
+    }
 
     override fun start(): StartedNode<Node> {
         if (initialiseSerialization) {
@@ -335,7 +360,7 @@ open class Node(override val configuration: FullNodeConfiguration,
                 _startupComplete.set(Unit)
             }
         },
-        { th -> logger.error("Unexpected exception", th)}
+                { th -> logger.error("Unexpected exception", th) }
         )
         shutdownHook = addShutdownHook {
             stop()
@@ -344,14 +369,15 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 
     private fun initialiseSerialization() {
+        val classloader = cordappLoader.appClassLoader
         SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
             registerScheme(KryoServerSerializationScheme())
             registerScheme(AMQPServerSerializationScheme())
         }
-        SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
-        SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
-        SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
-        SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
+        SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT.withClassLoader(classloader)
+        SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader)
+        SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT.withClassLoader(classloader)
+        SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
     }
 
     /** Starts a blocking event loop for message dispatch. */
@@ -381,6 +407,6 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 }
 
-class ConfigurationException(message: String) : Exception(message)
+class ConfigurationException(message: String) : CordaException(message)
 
 data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: CordaX500Name)

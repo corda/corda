@@ -26,9 +26,11 @@ import java.util.concurrent.TimeUnit
 @RunWith(Parameterized::class)
 class RPCPerformanceTests : AbstractRPCTest() {
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "Mode = {0}")
+        @JvmStatic
+        @Parameterized.Parameters(name = "Mode = {0}")
         fun modes() = modes(RPCTestMode.Netty)
     }
+
     private interface TestOps : RPCOps {
         fun simpleReply(input: ByteArray, sizeOfReply: Int): ByteArray
     }
@@ -60,7 +62,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
             val executor = Executors.newFixedThreadPool(4)
             val N = 10000
             val latch = CountDownLatch(N)
-            for (i in 1 .. N) {
+            for (i in 1..N) {
                 executor.submit {
                     proxy.ops.simpleReply(ByteArray(1024), 1024)
                     latch.countDown()
@@ -155,10 +157,12 @@ class RPCPerformanceTests : AbstractRPCTest() {
     data class BigMessagesResult(
             val Mbps: Double
     )
+
     @Test
     fun `big messages`() {
         warmup()
-        measure(listOf(1)) { clientParallelism -> // TODO this hangs with more parallelism
+        measure(listOf(1)) { clientParallelism ->
+            // TODO this hangs with more parallelism
             rpcDriver {
                 val proxy = testProxy(
                         RPCClientConfiguration.default,

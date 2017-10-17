@@ -60,7 +60,7 @@ class ObligationTests {
             output(Obligation.PROGRAM_ID, "Alice's $1,000,000 obligation to Bob", oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
             output(Obligation.PROGRAM_ID, "Bob's $1,000,000 obligation to Alice", oneMillionDollars.OBLIGATION between Pair(BOB, ALICE))
             output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Bob", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, BOB))
-            output(Obligation.PROGRAM_ID, "Alice's $1,000,000", 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE)
+            output(Obligation.PROGRAM_ID, "Alice's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy ALICE)
         }
     }
 
@@ -286,7 +286,7 @@ class ObligationTests {
         assertEquals(expected, actual)
     }
 
-    private inline fun <reified T: ContractState> getStateAndRef(state: T, contractClassName: ContractClassName): StateAndRef<T> {
+    private inline fun <reified T : ContractState> getStateAndRef(state: T, contractClassName: ContractClassName): StateAndRef<T> {
         val txState = TransactionState(state, contractClassName, DUMMY_NOTARY)
         return StateAndRef(txState, StateRef(SecureHash.randomSHA256(), 0))
 
@@ -418,7 +418,7 @@ class ObligationTests {
     @Test
     fun `payment netting`() {
         // Try netting out two obligations
-        ledger(mockService)  {
+        ledger(mockService) {
             cashObligationTestRoots(this)
             transaction("Issuance") {
                 attachments(Obligation.PROGRAM_ID)
@@ -484,7 +484,7 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
-                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
+                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
                 attachment(attachment(cashContractBytes.inputStream()))
@@ -498,9 +498,9 @@ class ObligationTests {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID, Cash.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
-                input(Cash.PROGRAM_ID, 500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE)
+                input(Cash.PROGRAM_ID, 500000.DOLLARS.CASH issuedBy defaultIssuer ownedBy ALICE)
                 output(Obligation.PROGRAM_ID, "Alice's $500,000 obligation to Bob") { halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB) }
-                output(Obligation.PROGRAM_ID, "Bob's $500,000") { 500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
+                output(Obligation.PROGRAM_ID, "Bob's $500,000") { 500000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
                 attachment(attachment(cashContractBytes.inputStream()))
@@ -514,8 +514,8 @@ class ObligationTests {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID, Cash.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, defaultedObligation) // Alice's defaulted $1,000,000 obligation to Bob
-                input(Cash.PROGRAM_ID, 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE)
-                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
+                input(Cash.PROGRAM_ID, 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy ALICE)
+                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
                 this `fails with` "all inputs are in the normal state"
@@ -529,7 +529,7 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
-                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB }
+                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
                 attachment(attachment(cashContractBytes.inputStream()))
@@ -593,7 +593,6 @@ class ObligationTests {
         }
 
         // Try defaulting an obligation that is now in the past
-        unsetCordappPackages()
         ledger {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)

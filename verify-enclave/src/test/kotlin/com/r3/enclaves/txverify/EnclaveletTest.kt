@@ -44,7 +44,7 @@ class EnclaveletTest {
             val cashContract = MockContractAttachment(interpreter.services.cordappProvider.getContractAttachmentID(Cash.PROGRAM_ID)!!, Cash.PROGRAM_ID)
             val req = TransactionVerificationRequest(wtx3.serialize(), arrayOf(wtx1.serialize(), wtx2.serialize()), arrayOf(cashContract.serialize().bytes))
             val serialized = req.serialize()
-            Files.write(Paths.get("/tmp/req"), serialized.bytes)
+            Files.write(Paths.get(System.getProperty("java.io.tmpdir"), "req"), serialized.bytes)
             verifyInEnclave(serialized.bytes)
         }
     }

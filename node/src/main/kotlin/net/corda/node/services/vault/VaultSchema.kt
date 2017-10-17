@@ -3,13 +3,12 @@ package net.corda.node.services.vault
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
-import org.hibernate.annotations.Generated
-import org.hibernate.annotations.GenerationTime
 import java.io.Serializable
 import java.time.Instant
 import java.util.*
@@ -25,14 +24,14 @@ object VaultSchema
  */
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
-                                    mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
+        mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
     @Entity
     @Table(name = "vault_states",
             indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
     class VaultStates(
             /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name")
-            var notary: AbstractParty,
+            var notary: Party,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name")
@@ -90,8 +89,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     ) : PersistentState() {
         constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
                 this(externalId = uid.externalId,
-                     uuid = uid.id,
-                     participants = _participants.toMutableSet())
+                        uuid = uid.id,
+                        participants = _participants.toMutableSet())
     }
 
     @Entity
@@ -131,27 +130,27 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
                 this(owner = _owner,
-                     quantity = _quantity,
-                     issuer = _issuerParty,
-                     issuerRef = _issuerRef.bytes,
-                     participants = _participants.toMutableSet())
+                        quantity = _quantity,
+                        issuer = _issuerParty,
+                        issuerRef = _issuerRef.bytes,
+                        participants = _participants.toMutableSet())
     }
 
     @Entity
     @Table(name = "vault_transaction_notes",
-           indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
-                             Index(name = "transaction_id_index", columnList = "transaction_id")))
+            indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
+                    Index(name = "transaction_id_index", columnList = "transaction_id")))
     class VaultTxnNote(
-        @Id
-        @GeneratedValue
-        @Column(name = "seq_no")
-        var seqNo: Int,
+            @Id
+            @GeneratedValue
+            @Column(name = "seq_no")
+            var seqNo: Int,
 
-        @Column(name = "transaction_id", length = 64)
-        var txId: String,
+            @Column(name = "transaction_id", length = 64)
+            var txId: String,
 
-        @Column(name = "note")
-        var note: String
+            @Column(name = "note")
+            var note: String
     ) : Serializable {
         constructor(txId: String, note: String) : this(0, txId, note)
     }

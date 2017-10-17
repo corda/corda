@@ -31,6 +31,7 @@ class CashIssueFlow(private val amount: Amount<Currency>,
     constructor(amount: Amount<Currency>,
                 issuerBankPartyRef: OpaqueBytes,
                 notary: Party) : this(amount, issuerBankPartyRef, notary, tracker())
+
     constructor(request: IssueRequest) : this(request.amount, request.issueRef, request.notary, tracker())
 
     @Suspendable

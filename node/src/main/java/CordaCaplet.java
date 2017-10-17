@@ -24,26 +24,27 @@ public class CordaCaplet extends Capsule {
         // defined as public static final fields on the Capsule class, therefore referential equality is safe.
         if (ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
-            return (T) augmentClasspath((List<Path>) cp, "plugins");
+
+            (new File("cordapps")).mkdir();
+            augmentClasspath((List<Path>) cp, "cordapps");
+            augmentClasspath((List<Path>) cp, "plugins");
+            return cp;
         }
         return super.attribute(attr);
     }
 
     // TODO: Make directory configurable via the capsule manifest.
     // TODO: Add working directory variable to capsules string replacement variables.
-    private List<Path> augmentClasspath(List<Path> classpath, String dirName) {
+    private void augmentClasspath(List<Path> classpath, String dirName) {
         File dir = new File(dirName);
-        if (!dir.exists()) {
-            dir.mkdir();
-        }
-
-        File[] files = dir.listFiles();
-        for (File file : files) {
-            if (file.isFile() && isJAR(file)) {
-                classpath.add(file.toPath().toAbsolutePath());
+        if (dir.exists()) {
+            File[] files = dir.listFiles();
+            for (File file : files) {
+                if (file.isFile() && isJAR(file)) {
+                    classpath.add(file.toPath().toAbsolutePath());
+                }
             }
         }
-        return classpath;
     }
 
     @Override

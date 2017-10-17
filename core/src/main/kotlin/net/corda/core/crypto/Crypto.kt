@@ -2,7 +2,10 @@ package net.corda.core.crypto
 
 import net.corda.core.internal.X509EdDSAEngine
 import net.corda.core.serialization.serialize
-import net.i2p.crypto.eddsa.*
+import net.i2p.crypto.eddsa.EdDSAEngine
+import net.i2p.crypto.eddsa.EdDSAPrivateKey
+import net.i2p.crypto.eddsa.EdDSAPublicKey
+import net.i2p.crypto.eddsa.EdDSASecurityProvider
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
@@ -39,8 +42,6 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.*
-import java.security.KeyFactory
-import java.security.KeyPairGenerator
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -148,7 +149,7 @@ object Crypto {
                     "at the cost of larger key sizes and loss of compatibility."
     )
 
-    /** Corda composite key type */
+    /** Corda composite key type. */
     @JvmField
     val COMPOSITE_KEY = SignatureScheme(
             6,
@@ -774,9 +775,10 @@ object Crypto {
         // it forms, by itself, the new private key, which in turn is used to compute the new public key.
         val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
         // This is unlikely to happen, but we should check for point at infinity.
-        if (pointQ.isInfinity)
+        if (pointQ.isInfinity) {
             // Instead of throwing an exception, we retry with SHA256(seed).
             return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
+        }
         val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
         val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)
 
@@ -822,7 +824,7 @@ object Crypto {
     @JvmStatic
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
-    // custom key pair generator from entropy.
+    // Custom key pair generator from entropy.
     private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
         val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
         val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
@@ -849,6 +851,7 @@ object Crypto {
         override fun generatePublic(keyInfo: SubjectPublicKeyInfo?): PublicKey? {
             return keyInfo?.let { decodePublicKey(signatureScheme, it.encoded) }
         }
+
         override fun generatePrivate(keyInfo: PrivateKeyInfo?): PrivateKey? {
             return keyInfo?.let { decodePrivateKey(signatureScheme, it.encoded) }
         }
@@ -880,7 +883,7 @@ object Crypto {
         }
     }
 
-    // return true if EdDSA publicKey is point at infinity.
+    // Return true if EdDSA publicKey is point at infinity.
     // For EdDSA a custom function is required as it is not supported by the I2P implementation.
     private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey): Boolean {
         return publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
@@ -892,7 +895,7 @@ object Crypto {
         return signatureScheme.schemeCodeName in signatureSchemeMap
     }
 
-    // validate a key, by checking its algorithmic params.
+    // Validate a key, by checking its algorithmic params.
     private fun validateKey(signatureScheme: SignatureScheme, key: Key): Boolean {
         return when (key) {
             is PublicKey -> validatePublicKey(signatureScheme, key)
@@ -901,7 +904,7 @@ object Crypto {
         }
     }
 
-    // check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
+    // Check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
     private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
         return when (key) {
             is BCECPublicKey, is EdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
@@ -910,7 +913,7 @@ object Crypto {
         }
     }
 
-    // check if a private key satisfies algorithm specs.
+    // Check if a private key satisfies algorithm specs.
     private fun validatePrivateKey(signatureScheme: SignatureScheme, key: PrivateKey): Boolean {
         return when (key) {
             is BCECPrivateKey -> key.parameters == signatureScheme.algSpec
@@ -922,7 +925,6 @@ object Crypto {
 
     /**
      * Convert a public key to a supported implementation.
-     *
      * @param key a public key.
      * @return a supported implementation of the input public key.
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
@@ -941,7 +943,16 @@ object Crypto {
      * is inappropriate for a supported key factory to produce a private key.
      */
     @JvmStatic
-    fun toSupportedPublicKey(key: PublicKey): PublicKey = decodePublicKey(key.encoded)
+    fun toSupportedPublicKey(key: PublicKey): PublicKey {
+        return when (key) {
+            is BCECPublicKey -> key
+            is BCRSAPublicKey -> key
+            is BCSphincs256PublicKey -> key
+            is EdDSAPublicKey -> key
+            is CompositeKey -> key
+            else -> decodePublicKey(key.encoded)
+        }
+    }
 
     /**
      * Convert a private key to a supported implementation. This can be used to convert a SUN's EC key to an BC key.
@@ -952,5 +963,13 @@ object Crypto {
      * is inappropriate for a supported key factory to produce a private key.
      */
     @JvmStatic
-    fun toSupportedPrivateKey(key: PrivateKey): PrivateKey = decodePrivateKey(key.encoded)
+    fun toSupportedPrivateKey(key: PrivateKey): PrivateKey {
+        return when (key) {
+            is BCECPrivateKey -> key
+            is BCRSAPrivateKey -> key
+            is BCSphincs256PrivateKey -> key
+            is EdDSAPrivateKey -> key
+            else -> decodePrivateKey(key.encoded)
+        }
+    }
 }

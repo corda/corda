@@ -8,8 +8,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.VerifierType
-import net.corda.testing.node.MockCordappProvider
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
@@ -20,7 +20,8 @@ import java.nio.file.Path
  * Creates and tests a ledger built by the passed in dsl. The provided services can be customised, otherwise a default
  * of a freshly built [MockServices] is used.
  */
-@JvmOverloads fun ledger(
+@JvmOverloads
+fun ledger(
         services: ServiceHub = MockServices(),
         initialiseSerialization: Boolean = true,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
@@ -40,19 +41,23 @@ import java.nio.file.Path
  *
  * @see LedgerDSLInterpreter._transaction
  */
-@JvmOverloads fun transaction(
+@JvmOverloads
+fun transaction(
         transactionLabel: String? = null,
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         initialiseSerialization: Boolean = true,
+        cordappPackages: List<String> = emptyList(),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(initialiseSerialization = initialiseSerialization) {
+) = ledger(services = MockServices(cordappPackages), initialiseSerialization = initialiseSerialization) {
     dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
 }
 
 fun testNodeConfiguration(
         baseDirectory: Path,
-        myLegalName: CordaX500Name): NodeConfiguration {
+        myLegalName: CordaX500Name,
+        notaryConfig: NotaryConfig? = null): NodeConfiguration {
     abstract class MockableNodeConfiguration : NodeConfiguration // Otherwise Mockito is defeated by val getters.
+
     val nc = spy<MockableNodeConfiguration>()
     whenever(nc.baseDirectory).thenReturn(baseDirectory)
     whenever(nc.myLegalName).thenReturn(myLegalName)
@@ -60,6 +65,7 @@ fun testNodeConfiguration(
     whenever(nc.keyStorePassword).thenReturn("cordacadevpass")
     whenever(nc.trustStorePassword).thenReturn("trustpass")
     whenever(nc.rpcUsers).thenReturn(emptyList())
+    whenever(nc.notary).thenReturn(notaryConfig)
     whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.organisation))
     whenever(nc.database).thenReturn(makeTestDatabaseProperties())
     whenever(nc.emailAddress).thenReturn("")

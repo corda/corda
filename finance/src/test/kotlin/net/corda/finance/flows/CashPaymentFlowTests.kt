@@ -10,14 +10,10 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
-import net.corda.testing.chooseIdentity
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
-import net.corda.testing.getDefaultNotary
+import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.setCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -25,7 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashPaymentFlowTests {
-    private lateinit var mockNet : MockNetwork
+    private lateinit var mockNet: MockNetwork
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
     private lateinit var bankOfCordaNode: StartedNode<MockNode>
@@ -35,11 +31,9 @@ class CashPaymentFlowTests {
 
     @Before
     fun start() {
-        setCordappPackages("net.corda.finance.contracts.asset")
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
-        val nodes = mockNet.createSomeNodes(1)
-        notaryNode = nodes.notaryNode
-        bankOfCordaNode = nodes.partyNodes[0]
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        notaryNode = mockNet.createNotaryNode()
+        bankOfCordaNode = mockNet.createPartyNode(BOC.name)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
         notary = notaryNode.services.getDefaultNotary()
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
@@ -61,8 +55,8 @@ class CashPaymentFlowTests {
         bankOfCordaNode.database.transaction {
             // Register for vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
-            val (_, vaultUpdatesBankClient) = notaryNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
+            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultService.trackBy<Cash.State>(criteria)
+            val (_, vaultUpdatesBankClient) = notaryNode.services.vaultService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
                     payTo)).resultFuture

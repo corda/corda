@@ -1,10 +1,8 @@
 package net.corda.node.messaging
 
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.node.services.messaging.createMessage
-import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.resetTestSerialization
 import org.junit.After
@@ -49,9 +47,9 @@ class InMemoryMessagingTests {
 
     @Test
     fun basics() {
-        val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
-        val node3 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
+        val node1 = mockNet.networkMapNode
+        val node2 = mockNet.createNode()
+        val node3 = mockNet.createNode()
 
         val bits = "test-content".toByteArray()
         var finalDelivery: Message? = null
@@ -78,9 +76,9 @@ class InMemoryMessagingTests {
 
     @Test
     fun broadcast() {
-        val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
-        val node3 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
+        val node1 = mockNet.networkMapNode
+        val node2 = mockNet.createNode()
+        val node3 = mockNet.createNode()
 
         val bits = "test-content".toByteArray()
 
@@ -97,9 +95,9 @@ class InMemoryMessagingTests {
      */
     @Test
     fun `skip unhandled messages`() {
-        val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = mockNet.createNode(networkMapAddress = node1.network.myAddress)
-        var received: Int = 0
+        val node1 = mockNet.networkMapNode
+        val node2 = mockNet.createNode()
+        var received = 0
 
         node1.network.addMessageHandler("valid_message") { _, _ ->
             received++

@@ -4,7 +4,6 @@ import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import org.apache.tools.ant.filters.FixCrLfFilter
-import org.bouncycastle.asn1.x500.X500Name
 import org.gradle.api.DefaultTask
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.TaskAction
@@ -23,7 +22,6 @@ class Cordform extends DefaultTask {
     String definitionClass
     protected def directory = Paths.get("build", "nodes")
     private def nodes = new ArrayList<Node>()
-    protected String networkMapNodeName
 
     /**
      * Set the directory to install nodes into.
@@ -33,16 +31,6 @@ class Cordform extends DefaultTask {
      */
     void directory(String directory) {
         this.directory = Paths.get(directory)
-    }
-
-    /**
-     * Set the network map node.
-     *
-     * @warning Ensure the node name is one of the configured nodes.
-     * @param nodeName The name of the node that will host the network map.
-     */
-    void networkMap(String nodeName) {
-        networkMapNodeName = nodeName
     }
 
     /**
@@ -61,8 +49,8 @@ class Cordform extends DefaultTask {
      * @return A node instance.
      */
     private Node getNodeByName(String name) {
-        for(Node node : nodes) {
-            if(node.name == name) {
+        for (Node node : nodes) {
+            if (node.name == name) {
                 return node
             }
         }
@@ -109,10 +97,17 @@ class Cordform extends DefaultTask {
      */
     @TaskAction
     void build() {
-        String networkMapNodeName
+        initializeConfiguration()
+        installRunScript()
+        nodes.each {
+            it.build()
+        }
+        generateNodeInfos()
+    }
+
+    private initializeConfiguration() {
         if (null != definitionClass) {
             def cd = loadCordformDefinition()
-            networkMapNodeName = cd.networkMapNodeName.toString()
             cd.nodeConfigurers.each { nc ->
                 node { Node it ->
                     nc.accept it
@@ -125,20 +120,34 @@ class Cordform extends DefaultTask {
                 }
             }
         } else {
-            networkMapNodeName = this.networkMapNodeName
             nodes.each {
                 it.rootDir directory
             }
         }
-        installRunScript()
-        def networkMapNode = getNodeByName(networkMapNodeName)
-        if (networkMapNode == null)
-            throw new IllegalStateException("The networkMap property refers to a node that isn't configured ($networkMapNodeName)")
-        nodes.each {
-            if(it != networkMapNode) {
-                it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
+    }
+
+    Path fullNodePath(Node node) {
+        return project.projectDir.toPath().resolve(node.nodeDir.toPath())
+    }
+
+    private generateNodeInfos() {
+        nodes.each { Node node ->
+            def process = new ProcessBuilder("java", "-jar", Node.NODEJAR_NAME, "--just-generate-node-info")
+                    .directory(fullNodePath(node).toFile())
+                    .redirectErrorStream(true)
+                    .start()
+                    .waitFor()
+        }
+        for (source in nodes) {
+            for (destination in nodes) {
+                if (source.nodeDir != destination.nodeDir) {
+                    project.copy {
+                        from fullNodePath(source).toString()
+                        include 'nodeInfo-*'
+                        into fullNodePath(destination).resolve(Node.NODE_INFO_DIRECTORY).toString()
+                    }
+                }
             }
-            it.build()
         }
     }
 }

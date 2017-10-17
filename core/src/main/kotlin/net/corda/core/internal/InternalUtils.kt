@@ -1,7 +1,14 @@
+@file:JvmName("InternalUtils")
+
 package net.corda.core.internal
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.WireTransaction
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.slf4j.Logger
@@ -44,6 +51,7 @@ operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multipl
  * separator problems.
  */
 operator fun Path.div(other: String): Path = resolve(other)
+
 operator fun String.div(other: String): Path = Paths.get(this) / other
 
 /**
@@ -99,6 +107,7 @@ fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
     Files.copy(this, targetFile, *options)
     return targetFile
 }
+
 fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(this, target, *options)
 fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
 fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
@@ -226,25 +235,29 @@ private fun IntProgression.toSpliterator(): Spliterator.OfInt {
 
 fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.intStream(toSpliterator(), parallel)
 
-@Suppress("UNCHECKED_CAST") // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable).
-inline fun <reified T> Stream<out T>.toTypedArray() = toArray { size -> arrayOfNulls<T>(size) } as Array<T>
+// When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
+inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
 fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
+
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
-/** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
+
+/** @suppress Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
+
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
+ * @suppress
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
 /** creates a new instance if not a Kotlin object */
-fun <T: Any> KClass<T>.objectOrNewInstance(): T {
+fun <T : Any> KClass<T>.objectOrNewInstance(): T {
     return this.objectInstance ?: this.createInstance()
 }
 
@@ -255,8 +268,7 @@ fun <T: Any> KClass<T>.objectOrNewInstance(): T {
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
     private val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
     var value: T
-        @Suppress("UNCHECKED_CAST")
-        get() = javaField.get(receiver) as T
+        get() = uncheckedCast<Any?, T>(javaField.get(receiver))
         set(value) = javaField.set(receiver, value)
 }
 
@@ -274,3 +286,20 @@ annotation class VisibleForTesting
 fun <T, U : T> uncheckedCast(obj: T) = obj as U
 
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
+
+/**
+ * Provide access to internal method for AttachmentClassLoaderTests
+ * @suppress
+ */
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+    return toWireTransactionWithContext(services, serializationContext)
+}
+
+/**
+ * Provide access to internal method for AttachmentClassLoaderTests
+ * @suppress
+ */
+fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+
+/** Convenience method to get the package name of a class literal. */
+val KClass<*>.packageName get() = java.`package`.name

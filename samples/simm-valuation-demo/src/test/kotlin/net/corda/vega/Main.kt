@@ -1,12 +1,10 @@
 package net.corda.vega
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_BANK_C
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.driver.driver
 
 /**
@@ -16,7 +14,7 @@ import net.corda.testing.driver.driver
  */
 fun main(args: Array<String>) {
     driver(dsl = {
-        val notaryFuture = startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, validating = false)
         val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name)
         val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name)
         val nodeCFuture = startNode(providedName = DUMMY_BANK_C.name)

@@ -1,6 +1,7 @@
 package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.PermissionException
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
@@ -24,13 +25,9 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
-import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.client.rpc.PermissionException
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
@@ -65,12 +62,9 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.finance.contracts.asset")
-
-        mockNet = MockNetwork()
-        val networkMap = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        aliceNode = mockNet.createNode(networkMapAddress = networkMap.network.myAddress)
-        notaryNode = mockNet.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.network.myAddress)
+        mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        aliceNode = mockNet.createNode()
+        notaryNode = mockNet.createNotaryNode(validating = false)
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
@@ -78,14 +72,13 @@ class CordaRPCOpsImplTest {
         ))))
 
         mockNet.runNetwork()
-        networkMap.internals.ensureRegistered()
+        mockNet.networkMapNode.internals.ensureRegistered()
         notary = rpc.notaryIdentities().first()
     }
 
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        unsetCordappPackages()
     }
 
     @Test
@@ -100,11 +93,10 @@ class CordaRPCOpsImplTest {
 
         // Check the monitoring service wallet is empty
         aliceNode.database.transaction {
-            assertFalse(aliceNode.services.vaultQueryService.queryBy<ContractState>().totalStatesAvailable > 0)
+            assertFalse(aliceNode.services.vaultService.queryBy<ContractState>().totalStatesAvailable > 0)
         }
 
         // Tell the monitoring service node to issue some cash
-        val recipient = aliceNode.info.chooseIdentity()
         val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notary)
         mockNet.runNetwork()
 
@@ -276,6 +268,6 @@ class CordaRPCOpsImplTest {
     @StartableByRPC
     class VoidRPCFlow : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() : Void? = null
+        override fun call(): Void? = null
     }
 }

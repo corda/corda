@@ -22,9 +22,9 @@ open class RatioUnit(val value: BigDecimal) { // TODO: Discuss this type
 }
 
 /**
- * A class to reprecent a percentage in an unambiguous way.
+ * A class to represent a percentage in an unambiguous way.
  */
-open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecimal(percentageAsString).divide(BigDecimal("100"))) {
+open class PercentageRatioUnit(val percentageAsString: String) : RatioUnit(BigDecimal(percentageAsString).divide(BigDecimal("100"))) {
     override fun toString() = value.times(BigDecimal(100)).toString() + "%"
 }
 
@@ -39,6 +39,7 @@ val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
  * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@CordaSerializable
 open class Rate(val ratioUnit: RatioUnit? = null) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -52,7 +53,7 @@ open class Rate(val ratioUnit: RatioUnit? = null) {
     }
 
     /**
-     * @returns the hash code of the ratioUnit or zero if the ratioUnit is null, as is the case for floating rate fixings
+     * @return the hash code of the ratioUnit or zero if the ratioUnit is null, as is the case for floating rate fixings
      * that have not yet happened.  Yet-to-be fixed floating rates need to be equal such that schedules can be tested
      * for equality.
      */
@@ -70,7 +71,6 @@ class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
     fun isPositive(): Boolean = ratioUnit!!.value > BigDecimal("0.0")
 
     override fun equals(other: Any?) = other?.javaClass == javaClass && super.equals(other)
-    override fun hashCode() = super.hashCode()
 }
 
 /**

@@ -8,8 +8,6 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -22,7 +20,7 @@ class BankOfCordaRPCClientTest {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlowPermission<CashIssueAndPaymentFlow>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
-            val nodeBankOfCordaFuture = startNode(providedName = BOC.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)), rpcUsers = listOf(bocManager))
+            val nodeBankOfCordaFuture = startNotaryNode(BOC.name, rpcUsers = listOf(bocManager), validating = false)
             val nodeBigCorporationFuture = startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(nodeBankOfCordaFuture, nodeBigCorporationFuture).map { it.getOrThrow() }
 
@@ -33,8 +31,8 @@ class BankOfCordaRPCClientTest {
             // Big Corporation RPC Client
             val bigCorpClient = nodeBigCorporation.rpcClientToNode()
             val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
-            bocProxy.waitUntilNetworkReady()
-            bigCorpProxy.waitUntilNetworkReady()
+            bocProxy.waitUntilNetworkReady().getOrThrow()
+            bigCorpProxy.waitUntilNetworkReady().getOrThrow()
 
             // Register for Bank of Corda Vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
@@ -43,12 +41,14 @@ class BankOfCordaRPCClientTest {
             // Register for Big Corporation Vault updates
             val vaultUpdatesBigCorp = bigCorpProxy.vaultTrackByCriteria(Cash.State::class.java, criteria).updates
 
+            val bigCorporation = bigCorpProxy.wellKnownPartyFromX500Name(BIGCORP_LEGAL_NAME)!!
+
             // Kick-off actual Issuer Flow
             val anonymous = true
             val notary = bocProxy.notaryIdentities().first()
             bocProxy.startFlow(::CashIssueAndPaymentFlow,
                     1000.DOLLARS, BIG_CORP_PARTY_REF,
-                    nodeBigCorporation.nodeInfo.chooseIdentity(),
+                    bigCorporation,
                     anonymous,
                     notary).returnValue.getOrThrow()
 

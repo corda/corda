@@ -9,7 +9,9 @@ import net.corda.core.utilities.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.DOLLARS
@@ -24,8 +26,6 @@ import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -73,40 +73,38 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
-        issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
+        val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
-        val createSchemaService = { NodeSchemaService() }
-        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, createSchemaService, ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, ::makeTestIdentityService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
-            services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
-                override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
-
+            services = object : MockServices(cordappPackages, BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
+                override val vaultService = makeVaultService(database.hibernateConfig)
                 override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    (vaultService as NodeVaultService).notifyAll(txs.map { it.tx })
+                    vaultService.notifyAll(txs.map { it.tx })
                 }
+
                 override fun jdbcSession() = database.createSession()
             }
             hibernatePersister = services.hibernatePersister
         }
         setUpDb()
-
-        val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
-        sessionFactory = hibernateConfig.sessionFactoryForSchemas(*customSchemas.toTypedArray())
+        sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
         entityManager = sessionFactory.createEntityManager()
         criteriaBuilder = sessionFactory.criteriaBuilder
     }
 
+    private fun sessionFactoryForSchemas(vararg schemas: MappedSchema) = hibernateConfig.sessionFactoryForSchemas(schemas.toSet())
+
     @After
     fun cleanUp() {
         database.close()
-        unsetCordappPackages()
     }
 
     private fun setUpDb() {
@@ -141,17 +139,17 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
-        val coins = queryResults.map { it.contractState.deserialize<TransactionState<Cash.State>>().data }.sumCash()
+        val coins = queryResults.map { it.contractState.deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT).data }.sumCash()
         assertThat(coins.toDecimal() >= BigDecimal("50.00"))
     }
 
     @Test
     fun `select by composite primary key`() {
         val issuedStates =
-            database.transaction {
-                services.fillWithSomeTestLinearStates(8)
-                services.fillWithSomeTestLinearStates(2)
-            }
+                database.transaction {
+                    services.fillWithSomeTestLinearStates(8)
+                    services.fillWithSomeTestLinearStates(2)
+                }
         val persistentStateRefs = issuedStates.states.map { PersistentStateRef(it.ref) }.toList()
 
         // structure query
@@ -385,7 +383,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
         // aggregate function
         criteriaQuery.multiselect(cashStates.get<String>("currency"),
-                                  criteriaBuilder.sum(cashStates.get<Long>("pennies")))
+                criteriaBuilder.sum(cashStates.get<Long>("pennies")))
         // group by
         criteriaQuery.groupBy(cashStates.get<String>("currency"))
 
@@ -538,8 +536,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             services.fillWithSomeTestLinearStates(2)
         }
-
-        val sessionFactory = hibernateConfig.sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV1)
+        val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV1)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
 
@@ -570,8 +567,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             services.fillWithSomeTestLinearStates(2)
         }
-
-        val sessionFactory = hibernateConfig.sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV2)
+        val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV2)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
 
@@ -629,7 +625,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L), ownedBy = ALICE)
             val cashStates = services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L),
-                                            issuedBy = BOB.ref(0), ownedBy = (BOB)).states
+                    issuedBy = BOB.ref(0), ownedBy = (BOB)).states
             // persist additional cash states explicitly with V3 schema
             cashStates.forEach {
                 val cashState = it.state.data
@@ -637,8 +633,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
                 hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
             }
         }
-
-        val sessionFactory = hibernateConfig.sessionFactoryForSchemas(VaultSchemaV1, CommonSchemaV1, SampleCashSchemaV3)
+        val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, CommonSchemaV1, SampleCashSchemaV3)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
 
@@ -662,9 +657,10 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
 
         queryResults.forEach {
-            val contractState = it.contractState.deserialize<TransactionState<ContractState>>()
+            val contractState = it.contractState.deserialize<TransactionState<ContractState>>(context = SerializationDefaults.STORAGE_CONTEXT)
             val cashState = contractState.data as Cash.State
-            println("${it.stateRef} with owner: ${cashState.owner.owningKey.toBase58String()}") }
+            println("${it.stateRef} with owner: ${cashState.owner.owningKey.toBase58String()}")
+        }
 
         assertThat(queryResults).hasSize(12)
     }
@@ -699,32 +695,32 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     @Test
     fun `query fungible states by participants`() {
         val firstCashState =
-            database.transaction {
-                // persist original cash states explicitly with V3 schema
-                cashStates.forEach {
-                    val cashState = it.state.data
-                    val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                    hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
-                }
+                database.transaction {
+                    // persist original cash states explicitly with V3 schema
+                    cashStates.forEach {
+                        val cashState = it.state.data
+                        val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
+                        hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
+                    }
 
-                val moreCash = services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L),
-                        issuedBy = BOB.ref(0), ownedBy = BOB).states
-                // persist additional cash states explicitly with V3 schema
-                moreCash.forEach {
-                    val cashState = it.state.data
-                    val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                    hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
-                }
+                    val moreCash = services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L),
+                            issuedBy = BOB.ref(0), ownedBy = BOB).states
+                    // persist additional cash states explicitly with V3 schema
+                    moreCash.forEach {
+                        val cashState = it.state.data
+                        val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
+                        hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
+                    }
 
-                val cashStates = services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L), ownedBy = (ALICE)).states
-                // persist additional cash states explicitly with V3 schema
-                cashStates.forEach {
-                    val cashState = it.state.data
-                    val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
-                    hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
+                    val cashStates = services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L), ownedBy = (ALICE)).states
+                    // persist additional cash states explicitly with V3 schema
+                    cashStates.forEach {
+                        val cashState = it.state.data
+                        val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
+                        hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
+                    }
+                    cashStates.first()
                 }
-                cashStates.first()
-            }
 
         // structure query
         val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
@@ -746,7 +742,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         queryResults.forEach {
-            val contractState = it.contractState.deserialize<TransactionState<ContractState>>()
+            val contractState = it.contractState.deserialize<TransactionState<ContractState>>(context = SerializationDefaults.STORAGE_CONTEXT)
             val cashState = contractState.data as Cash.State
             println("${it.stateRef} with owner ${cashState.owner.owningKey.toBase58String()} and participants ${cashState.participants.map { it.owningKey.toBase58String() }}")
         }
@@ -765,8 +761,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(2, externalId = "222")
             services.fillWithSomeTestLinearStates(3, externalId = "333")
         }
-
-        val sessionFactory = hibernateConfig.sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV2)
+        val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV2)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
 
@@ -818,8 +813,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(2, externalId = "222")
             services.fillWithSomeTestLinearStates(3, externalId = "333")
         }
-
-        val sessionFactory = hibernateConfig.sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV1)
+        val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV1)
         val criteriaBuilder = sessionFactory.criteriaBuilder
         val entityManager = sessionFactory.createEntityManager()
 
@@ -876,7 +870,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             val jdbcSession = services.jdbcSession()
             val prepStatement = jdbcSession.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
-        // DOCEND JdbcSession
+            // DOCEND JdbcSession
             var count = 0
             while (rs.next()) {
                 val stateRef = StateRef(SecureHash.parse(rs.getString(1)), rs.getInt(2))

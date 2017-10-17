@@ -19,6 +19,7 @@ class SerializeAndReturnSchemaTest {
     @Test
     fun getSchema() {
         data class C(val a: Int, val b: Int)
+
         val a = 1
         val b = 2
 

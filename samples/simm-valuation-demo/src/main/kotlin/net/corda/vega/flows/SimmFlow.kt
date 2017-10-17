@@ -70,6 +70,7 @@ object SimmFlow {
                     private val existing: StateAndRef<PortfolioState>?)
         : FlowLogic<RevisionedState<PortfolioState.Update>>() {
         constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
+
         lateinit var notary: Party
         lateinit var otherPartySession: FlowSession
 
@@ -80,7 +81,7 @@ object SimmFlow {
             notary = serviceHub.networkMapCache.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
 
             val criteria = LinearStateQueryCriteria(participants = listOf(otherParty))
-            val trades = serviceHub.vaultQueryService.queryBy<IRSState>(criteria).states
+            val trades = serviceHub.vaultService.queryBy<IRSState>(criteria).states
 
             val portfolio = Portfolio(trades, valuationDate)
             otherPartySession = initiateFlow(otherParty)
@@ -89,7 +90,7 @@ object SimmFlow {
             } else {
                 updatePortfolio(portfolio, existing)
             }
-            val portfolioStateRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(criteria).states.first()
+            val portfolioStateRef = serviceHub.vaultService.queryBy<PortfolioState>(criteria).states.first()
 
             val state = updateValuation(portfolioStateRef)
             logger.info("SimmFlow done")
@@ -126,7 +127,7 @@ object SimmFlow {
         private fun updateValuation(stateRef: StateAndRef<PortfolioState>): RevisionedState<PortfolioState.Update> {
             logger.info("Agreeing valuations")
             val state = stateRef.state.data
-            val portfolio = serviceHub.vaultQueryService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = state.portfolio)).states.toPortfolio()
+            val portfolio = serviceHub.vaultService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = state.portfolio)).states.toPortfolio()
 
             val valuer = serviceHub.identityService.wellKnownPartyFromAnonymous(state.valuer)
             require(valuer != null) { "Valuer party must be known to this node" }
@@ -211,7 +212,7 @@ object SimmFlow {
         @Suspendable
         override fun call() {
             val criteria = LinearStateQueryCriteria(participants = listOf(replyToSession.counterparty))
-            val trades = serviceHub.vaultQueryService.queryBy<IRSState>(criteria).states
+            val trades = serviceHub.vaultService.queryBy<IRSState>(criteria).states
             val portfolio = Portfolio(trades)
             logger.info("SimmFlow receiver started")
             offer = replyToSession.receive<OfferMessage>().unwrap { it }
@@ -220,7 +221,7 @@ object SimmFlow {
             } else {
                 updatePortfolio(portfolio)
             }
-            val portfolioStateRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(criteria).states.first()
+            val portfolioStateRef = serviceHub.vaultService.queryBy<PortfolioState>(criteria).states.first()
             updateValuation(portfolioStateRef)
         }
 
@@ -318,7 +319,7 @@ object SimmFlow {
             logger.info("Handshake finished, awaiting Simm update")
             replyToSession.send(Ack) // Hack to state that this party is ready.
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToSession) {
-                override fun verifyProposal(stx:SignedTransaction, proposal: Proposal<PortfolioState.Update>) {
+                override fun verifyProposal(stx: SignedTransaction, proposal: Proposal<PortfolioState.Update>) {
                     super.verifyProposal(stx, proposal)
                     if (proposal.modification.portfolio != portfolio.refs) throw StateReplacementException()
                 }
@@ -327,7 +328,7 @@ object SimmFlow {
 
         @Suspendable
         private fun updateValuation(stateRef: StateAndRef<PortfolioState>) {
-            val portfolio = serviceHub.vaultQueryService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = stateRef.state.data.portfolio)).states.toPortfolio()
+            val portfolio = serviceHub.vaultService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = stateRef.state.data.portfolio)).states.toPortfolio()
             val valuer = serviceHub.identityService.wellKnownPartyFromAnonymous(stateRef.state.data.valuer) ?: throw IllegalStateException("Unknown valuer party ${stateRef.state.data.valuer}")
             val valuation = agreeValuation(portfolio, offer.valuationDate, valuer)
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToSession) {

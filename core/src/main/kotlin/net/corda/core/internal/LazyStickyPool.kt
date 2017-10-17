@@ -18,6 +18,7 @@ class LazyStickyPool<A : Any>(
     private class InstanceBox<A> {
         var instance: LinkedBlockingQueue<A>? = null
     }
+
     private val random = Random()
     private val boxes = Array(size) { InstanceBox<A>() }
 

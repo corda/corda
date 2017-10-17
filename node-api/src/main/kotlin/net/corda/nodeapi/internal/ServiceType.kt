@@ -27,7 +27,6 @@ class ServiceType private constructor(val id: String) {
             }
 
         val notary: ServiceType = corda.getSubType("notary")
-        val networkMap: ServiceType = corda.getSubType("network_map")
 
         fun parse(id: String): ServiceType = ServiceType(id)
 

@@ -129,7 +129,7 @@ class SubmitCompletionFlow(private val ref: StateRef, private val verdict: Workf
     override fun call(): StateAndRef<TradeApprovalContract.State> {
         // DOCSTART 1
         val criteria = VaultQueryCriteria(stateRefs = listOf(ref))
-        val latestRecord = serviceHub.vaultQueryService.queryBy<TradeApprovalContract.State>(criteria).states.single()
+        val latestRecord = serviceHub.vaultService.queryBy<TradeApprovalContract.State>(criteria).states.single()
         // DOCEND 1
 
         // Check the protocol hasn't already been run

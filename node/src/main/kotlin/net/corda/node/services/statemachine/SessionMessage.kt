@@ -5,7 +5,10 @@ import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.castIfPossible
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.UntrustworthyData
+import java.io.IOException
 
 @CordaSerializable
 interface SessionMessage
@@ -25,7 +28,7 @@ data class SessionInit(val initiatorSessionId: Long,
                        val initiatingFlowClass: String,
                        val flowVersion: Int,
                        val appName: String,
-                       val firstPayload: Any?) : SessionMessage
+                       val firstPayload: SerializedBytes<Any>?) : SessionMessage
 
 data class SessionConfirm(override val initiatorSessionId: Long,
                           val initiatedSessionId: Long,
@@ -34,7 +37,7 @@ data class SessionConfirm(override val initiatorSessionId: Long,
 
 data class SessionReject(override val initiatorSessionId: Long, val errorMessage: String) : SessionInitResponse
 
-data class SessionData(override val recipientSessionId: Long, val payload: Any) : ExistingSessionMessage
+data class SessionData(override val recipientSessionId: Long, val payload: SerializedBytes<Any>) : ExistingSessionMessage
 
 data class NormalSessionEnd(override val recipientSessionId: Long) : SessionEnd
 
@@ -42,8 +45,15 @@ data class ErrorSessionEnd(override val recipientSessionId: Long, val errorRespo
 
 data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party, val message: M)
 
-fun <T> ReceivedSessionMessage<SessionData>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
-    return type.castIfPossible(message.payload)?.let { UntrustworthyData(it) } ?:
+fun <T : Any> ReceivedSessionMessage<SessionData>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
+    val payloadData: T = try {
+        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
+        serializer.deserialize<T>(message.payload, type, SerializationDefaults.P2P_CONTEXT)
+    } catch (ex: Exception) {
+        throw IOException("Payload invalid", ex)
+    }
+    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) } ?:
             throw UnexpectedFlowEndException("We were expecting a ${type.name} from $sender but we instead got a " +
-                    "${message.payload.javaClass.name} (${message.payload})")
+                    "${payloadData.javaClass.name} (${payloadData})")
+
 }

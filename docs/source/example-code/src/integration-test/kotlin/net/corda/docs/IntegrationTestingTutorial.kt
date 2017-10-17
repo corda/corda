@@ -11,8 +11,6 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -24,7 +22,7 @@ class IntegrationTestingTutorial {
     fun `alice bob cash exchange example`() {
         // START 1
         driver(startNodesInProcess = true,
-               extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlowPermission<CashIssueFlow>(),
                     startFlowPermission<CashPaymentFlow>()
@@ -32,10 +30,10 @@ class IntegrationTestingTutorial {
             val bobUser = User("bobUser", "testPassword2", permissions = setOf(
                     startFlowPermission<CashPaymentFlow>()
             ))
-            val (alice, bob, notary) = listOf(
+            val (alice, bob) = listOf(
                     startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
                     startNode(providedName = BOB.name, rpcUsers = listOf(bobUser)),
-                    startNode(providedName = DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+                    startNotaryNode(DUMMY_NOTARY.name)
             ).transpose().getOrThrow()
             // END 1
 
@@ -104,7 +102,7 @@ class IntegrationTestingTutorial {
                         }
                 )
             }
+            // END 5
         }
     }
 }
-// END 5

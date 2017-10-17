@@ -14,7 +14,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.CashSelection
+import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.issuedBy
 import java.util.*
 
@@ -46,7 +46,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = null)
         val issuer = ourIdentity.ref(issuerRef)
-        val exitStates = CashSelection
+        val exitStates = AbstractCashSelection
                 .getInstance { serviceHub.jdbcSession().metaData }
                 .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
@@ -59,8 +59,8 @@ class CashExitFlow(private val amount: Amount<Currency>,
         }
 
         // Work out who the owners of the burnt states were (specify page size so we don't silently drop any if > DEFAULT_PAGE_SIZE)
-        val inputStates = serviceHub.vaultQueryService.queryBy<Cash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
-                                                                           PageSpecification(pageNumber = DEFAULT_PAGE_NUM, pageSize = builder.inputStates().size)).states
+        val inputStates = serviceHub.vaultService.queryBy<Cash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
+                PageSpecification(pageNumber = DEFAULT_PAGE_NUM, pageSize = builder.inputStates().size)).states
 
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
         //       count as a reason to fail?

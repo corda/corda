@@ -11,6 +11,8 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.lang.reflect.TypeVariable
+import java.lang.reflect.WildcardType
 import java.nio.ByteBuffer
 
 data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
@@ -58,7 +60,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
             deserializeAndReturnEnvelope(bytes, T::class.java)
 
     @Throws(NotSerializableException::class)
-    private fun getEnvelope(bytes: ByteSequence): Envelope {
+    internal fun getEnvelope(bytes: ByteSequence): Envelope {
         // Check that the lead bytes match expected header
         val headerSize = AmqpHeaderV1_0.size
         if (bytes.take(headerSize) != AmqpHeaderV1_0) {
@@ -78,9 +80,9 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     private fun <R> des(generator: () -> R): R {
         try {
             return generator()
-        } catch(nse: NotSerializableException) {
+        } catch (nse: NotSerializableException) {
             throw nse
-        } catch(t: Throwable) {
+        } catch (t: Throwable) {
             throw NotSerializableException("Unexpected throwable: ${t.message} ${t.getStackTraceAsString()}")
         } finally {
             objectHistory.clear()
@@ -142,10 +144,18 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
             }
 
     /**
-     * TODO: Currently performs rather basic checks aimed in particular at [java.util.List<Command<?>>] and
-     * [java.lang.Class<? extends net.corda.core.contracts.Contract>]
+     * Currently performs checks aimed at:
+     *  * [java.util.List<Command<?>>] and [java.lang.Class<? extends net.corda.core.contracts.Contract>]
+     *  * [T : Parent] and [Parent]
+     *  * [? extends Parent] and [Parent]
+     *
      * In the future tighter control might be needed
      */
     private fun Type.materiallyEquivalentTo(that: Type): Boolean =
-            asClass() == that.asClass() && that is ParameterizedType
+            when (that) {
+                is ParameterizedType -> asClass() == that.asClass()
+                is TypeVariable<*> -> isSubClassOf(that.bounds.first())
+                is WildcardType -> isSubClassOf(that.upperBounds.first())
+                else -> false
+            }
 }

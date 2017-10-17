@@ -40,7 +40,9 @@ import kotlin.test.assertNull
 
 //TODO This needs to be merged into P2PMessagingTest as that creates a more realistic environment
 class ArtemisMessagingTests : TestDependencyInjectionBase() {
-    @Rule @JvmField val temporaryFolder = TemporaryFolder()
+    @Rule
+    @JvmField
+    val temporaryFolder = TemporaryFolder()
 
     val serverPort = freePort()
     val rpcPort = freePort()
@@ -69,7 +71,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
         networkMapCache = PersistentNetworkMapCache(serviceHub = object : MockServiceHubInternal(database, config) {})
     }

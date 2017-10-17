@@ -1,18 +1,26 @@
 @file:JvmName("ConfigUtilities")
+
 package net.corda.nodeapi.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigUtil
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.noneOrSingle
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import org.slf4j.LoggerFactory
+import java.lang.reflect.Field
+import java.lang.reflect.Modifier.isStatic
+import java.lang.reflect.ParameterizedType
 import java.net.Proxy
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
 import java.time.LocalDate
+import java.time.temporal.Temporal
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -25,7 +33,7 @@ import kotlin.reflect.jvm.jvmErasure
 annotation class OldConfig(val value: String)
 
 // TODO Move other config parsing to use parseAs and remove this
-operator fun <T> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
+operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
     return getValueInternal(metadata.name, metadata.returnType)
 }
 
@@ -52,9 +60,8 @@ fun Config.toProperties(): Properties {
             { it.value.unwrapped().toString() })
 }
 
-@Suppress("UNCHECKED_CAST")
-private fun <T> Config.getValueInternal(path: String, type: KType): T {
-    return (if (type.arguments.isEmpty()) getSingleValue(path, type) else getCollectionValue(path, type)) as T
+private fun <T : Any> Config.getValueInternal(path: String, type: KType): T {
+    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type) else getCollectionValue(path, type))
 }
 
 private fun Config.getSingleValue(path: String, type: KType): Any? {
@@ -71,8 +78,8 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         NetworkHostAndPort::class -> NetworkHostAndPort.parse(getString(path))
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
-        Properties::class -> getConfig(path).toProperties()
         CordaX500Name::class -> CordaX500Name.parse(getString(path))
+        Properties::class -> getConfig(path).toProperties()
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {
@@ -122,9 +129,69 @@ private fun Config.defaultToOldPath(property: KProperty<*>): String {
     return property.name
 }
 
-@Suppress("UNCHECKED_CAST")
-private fun parseEnum(enumType: Class<*>, name: String): Enum<*> = enumBridge(enumType as Class<Proxy.Type>, name) // Any enum will do
+private fun parseEnum(enumType: Class<*>, name: String): Enum<*> = enumBridge<Proxy.Type>(uncheckedCast(enumType), name) // Any enum will do
 
 private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T = java.lang.Enum.valueOf(clazz, name)
+
+/**
+ * Convert the receiver object into a [Config]. This does the inverse action of [parseAs].
+ */
+fun Any.toConfig(): Config = ConfigValueFactory.fromMap(toConfigMap()).toConfig()
+
+@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+// Reflect over the fields of the receiver and generate a value Map that can use to create Config object.
+private fun Any.toConfigMap(): Map<String, Any> {
+    val values = HashMap<String, Any>()
+    for (field in javaClass.declaredFields) {
+        if (isStatic(field.modifiers) || field.isSynthetic) continue
+        field.isAccessible = true
+        val value = field.get(this) ?: continue
+        val configValue = if (value is String || value is Boolean || value is Number) {
+            // These types are supported by Config as use as is
+            value
+        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL) {
+            // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
+            value.toString()
+        } else if (value is Enum<*>) {
+            // Expicitly use the Enum's name in case the toString is overridden, which would make parsing problematic.
+            value.name
+        } else if (value is Properties) {
+            // For Properties we treat keys with . as nested configs
+            ConfigFactory.parseMap(uncheckedCast(value)).root()
+        } else if (value is Iterable<*>) {
+            value.toConfigIterable(field)
+        } else {
+            // Else this is a custom object recursed over
+            value.toConfigMap()
+        }
+        values[field.name] = configValue
+    }
+    return values
+}
+
+// For Iterables figure out the type parameter and apply the same logic as above on the individual elements.
+private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
+    val elementType = (field.genericType as ParameterizedType).actualTypeArguments[0] as Class<*>
+    return when (elementType) {
+        // For the types already supported by Config we can use the Iterable as is
+        String::class.java -> this
+        Integer::class.java -> this
+        java.lang.Long::class.java -> this
+        java.lang.Double::class.java -> this
+        java.lang.Boolean::class.java -> this
+        LocalDate::class.java -> map(Any?::toString)
+        Instant::class.java -> map(Any?::toString)
+        NetworkHostAndPort::class.java -> map(Any?::toString)
+        Path::class.java -> map(Any?::toString)
+        URL::class.java -> map(Any?::toString)
+        CordaX500Name::class.java -> map(Any?::toString)
+        Properties::class.java -> map { ConfigFactory.parseMap(uncheckedCast(it)).root() }
+        else -> if (elementType.isEnum) {
+            map { (it as Enum<*>).name }
+        } else {
+            map { it?.toConfigMap() }
+        }
+    }
+}
 
 private val logger = LoggerFactory.getLogger("net.corda.nodeapi.config")

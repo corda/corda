@@ -20,20 +20,6 @@ Any object that needs to be identified by its hash should implement the ``NamedB
 ``SecureHash`` is a sealed class that only defines a single subclass, ``SecureHash.SHA256``. There are utility methods
 to create and parse ``SecureHash.SHA256`` objects.
 
-Party
------
-Identities on the network are represented by ``AbstractParty``. There are two types of ``AbstractParty``:
-
-* ``Party``, identified by a ``PublicKey`` and a ``CordaX500Name``
-
-* ``AnonymousParty``, identified by a ``PublicKey``
-
-For example, in a transaction sent to your node as part of a chain of custody it is important you can convince yourself
-of the transaction's validity, but equally important that you don't learn anything about who was involved in that
-transaction. In these cases ``AnonymousParty`` should be used. In contrast, for internal processing where extended
-details of a party are required, the ``Party`` class should be used. The identity service provides functionality for
-resolving anonymous parties to full parties.
-
 CompositeKey
 ------------
 Corda supports scenarios where more than one signature is required to authorise a state object transition. For example:

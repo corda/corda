@@ -13,7 +13,7 @@ import java.security.SignatureException
  * This flow is a combination of [FlowSession.receive], resolve and [SignedTransaction.verify]. This flow will receive the
  * [SignedTransaction] and perform the resolution back-and-forth required to check the dependencies and download any missing
  * attachments. The flow will return the [SignedTransaction] after it is resolved and then verified using [SignedTransaction.verify].
- * 
+ *
  * @param otherSideSession session to the other side which is calling [SendTransactionFlow].
  * @param checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
  */

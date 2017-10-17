@@ -59,7 +59,7 @@ An input state is added to a transaction as a ``StateAndRef``, which combines:
         :language: kotlin
         :start-after: DOCSTART 21
         :end-before: DOCEND 21
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -78,7 +78,7 @@ A ``StateRef`` uniquely identifies an input state, allowing the notary to mark i
         :language: kotlin
         :start-after: DOCSTART 20
         :end-before: DOCEND 20
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -102,7 +102,7 @@ add them to the transaction directly:
         :language: kotlin
         :start-after: DOCSTART 22
         :end-before: DOCEND 22
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -119,7 +119,7 @@ it on the input state:
         :language: kotlin
         :start-after: DOCSTART 23
         :end-before: DOCEND 23
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -139,7 +139,7 @@ wrapping the output state in a ``StateAndContract``, which combines:
         :language: kotlin
         :start-after: DOCSTART 47
         :end-before: DOCEND 47
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -160,7 +160,7 @@ A command is added to the transaction as a ``Command``, which combines:
         :language: kotlin
         :start-after: DOCSTART 24
         :end-before: DOCEND 24
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -178,7 +178,7 @@ Attachments are identified by their hash:
         :language: kotlin
         :start-after: DOCSTART 25
         :end-before: DOCEND 25
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -199,7 +199,7 @@ time, or be open at either end:
         :language: kotlin
         :start-after: DOCSTART 26
         :end-before: DOCEND 26
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -215,7 +215,7 @@ We can also define a time window as an ``Instant`` plus/minus a time tolerance (
         :language: kotlin
         :start-after: DOCSTART 42
         :end-before: DOCEND 42
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -231,7 +231,7 @@ Or as a start-time plus a duration:
         :language: kotlin
         :start-after: DOCSTART 43
         :end-before: DOCEND 43
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -255,7 +255,7 @@ that will notarise the inputs and verify the time-window:
        :language: kotlin
        :start-after: DOCSTART 19
        :end-before: DOCEND 19
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -274,7 +274,7 @@ instantiated without one:
         :language: kotlin
         :start-after: DOCSTART 46
         :end-before: DOCEND 46
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -317,7 +317,7 @@ Here's an example usage of ``TransactionBuilder.withItems``:
        :language: kotlin
        :start-after: DOCSTART 27
        :end-before: DOCEND 27
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -335,7 +335,7 @@ Here are the methods for adding inputs and attachments:
         :language: kotlin
         :start-after: DOCSTART 28
         :end-before: DOCEND 28
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -351,7 +351,7 @@ An output state can be added as a ``ContractState``, contract class name and not
         :language: kotlin
         :start-after: DOCSTART 49
         :end-before: DOCEND 49
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -367,7 +367,7 @@ We can also leave the notary field blank, in which case the transaction's defaul
         :language: kotlin
         :start-after: DOCSTART 50
         :end-before: DOCEND 50
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -383,7 +383,7 @@ Or we can add the output state as a ``TransactionState``, which already specifie
         :language: kotlin
         :start-after: DOCSTART 51
         :end-before: DOCEND 51
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -399,7 +399,7 @@ Commands can be added as a ``Command``:
         :language: kotlin
         :start-after: DOCSTART 52
         :end-before: DOCEND 52
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -415,7 +415,7 @@ Or as ``CommandData`` and a ``vararg PublicKey``:
         :language: kotlin
         :start-after: DOCSTART 53
         :end-before: DOCEND 53
-        :dedent: 12
+        :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
         :language: java
@@ -431,7 +431,7 @@ For the time-window, we can set a time-window directly:
        :language: kotlin
        :start-after: DOCSTART 44
        :end-before: DOCEND 44
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -447,7 +447,7 @@ Or define the time-window as a time plus a duration (e.g. 45 seconds):
        :language: kotlin
        :start-after: DOCSTART 45
        :end-before: DOCEND 45
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -467,7 +467,7 @@ We can either sign with our legal identity key:
        :language: kotlin
        :start-after: DOCSTART 29
        :end-before: DOCEND 29
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -483,7 +483,7 @@ Or we can also choose to use another one of our public keys:
        :language: kotlin
        :start-after: DOCSTART 30
        :end-before: DOCEND 30
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -527,13 +527,13 @@ and output states:
        :language: kotlin
        :start-after: DOCSTART 33
        :end-before: DOCEND 33
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
        :start-after: DOCSTART 33
        :end-before: DOCEND 33
-       :dedent: 12
+       :dedent: 16
 
 Checking that the transaction meets the contract constraints is only part of verifying the transaction's contents. We
 will usually also want to perform our own additional validation of the transaction contents before signing, to ensure
@@ -552,13 +552,13 @@ We achieve this by using the ``ServiceHub`` to convert the ``SignedTransaction``
        :language: kotlin
        :start-after: DOCSTART 32
        :end-before: DOCEND 32
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
        :start-after: DOCSTART 32
        :end-before: DOCEND 32
-       :dedent: 12
+       :dedent: 16
 
 We can now perform our additional verification. Here's a simple example:
 
@@ -568,13 +568,13 @@ We can now perform our additional verification. Here's a simple example:
        :language: kotlin
        :start-after: DOCSTART 34
        :end-before: DOCEND 34
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
        :start-after: DOCSTART 34
        :end-before: DOCEND 34
-       :dedent: 12
+       :dedent: 16
 
 Verifying the transaction's signatures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -589,13 +589,13 @@ We can verify that all the transaction's required signatures are present and val
        :language: kotlin
        :start-after: DOCSTART 35
        :end-before: DOCEND 35
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
        :start-after: DOCSTART 35
        :end-before: DOCEND 35
-       :dedent: 12
+       :dedent: 16
 
 However, we'll often want to verify the transaction's existing signatures before all of them have been collected. For
 this we can use ``SignedTransaction.verifySignaturesExcept``, which takes a ``vararg`` of the public keys for
@@ -607,13 +607,13 @@ which the signatures are allowed to be missing:
        :language: kotlin
        :start-after: DOCSTART 36
        :end-before: DOCEND 36
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
        :start-after: DOCSTART 36
        :end-before: DOCEND 36
-       :dedent: 12
+       :dedent: 16
 
 If the transaction is missing any signatures without the corresponding public keys being passed in, a
 ``SignaturesMissingException`` is thrown.
@@ -626,13 +626,13 @@ We can also choose to simply verify the signatures that are present:
        :language: kotlin
        :start-after: DOCSTART 37
        :end-before: DOCEND 37
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
        :start-after: DOCSTART 37
        :end-before: DOCEND 37
-       :dedent: 12
+       :dedent: 16
 
 Be very careful, however - this function neither guarantees that the signatures that are present are required, nor
 checks whether any signatures are missing.
@@ -650,7 +650,7 @@ We can sign using our legal identity key, as follows:
        :language: kotlin
        :start-after: DOCSTART 38
        :end-before: DOCEND 38
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -666,7 +666,7 @@ Or we can choose to sign using another one of our public keys:
        :language: kotlin
        :start-after: DOCSTART 39
        :end-before: DOCEND 39
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -684,7 +684,7 @@ We can do this with our legal identity key:
        :language: kotlin
        :start-after: DOCSTART 40
        :end-before: DOCEND 40
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java
@@ -700,7 +700,7 @@ Or using another one of our public keys:
        :language: kotlin
        :start-after: DOCSTART 41
        :end-before: DOCEND 41
-       :dedent: 12
+       :dedent: 8
 
     .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
        :language: java

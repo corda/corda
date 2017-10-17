@@ -9,9 +9,9 @@ import java.util.*
  * behaviour is unpredictable! There is a best-effort check for double inserts, but this should *not* be relied on, so
  * ONLY USE THIS IF YOUR TABLE IS APPEND-ONLY
  */
-class AppendOnlyPersistentMap<K, V, E, out EK> (
+class AppendOnlyPersistentMap<K, V, E, out EK>(
         val toPersistentEntityKey: (K) -> EK,
-        val fromPersistentEntity: (E) -> Pair<K,V>,
+        val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
         val persistentEntityClass: Class<E>,
         cacheBound: Long = 1024
@@ -40,18 +40,20 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      * Returns all key/value pairs from the underlying storage.
      */
     fun allPersisted(): Sequence<Pair<K, V>> {
-        val criteriaQuery = DatabaseTransactionManager.current().session.criteriaBuilder.createQuery(persistentEntityClass)
+        val session = currentDBSession()
+        val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
         val root = criteriaQuery.from(persistentEntityClass)
         criteriaQuery.select(root)
-        val query = DatabaseTransactionManager.current().session.createQuery(criteriaQuery)
+        val query = session.createQuery(criteriaQuery)
         val result = query.resultList
         return result.map { x -> fromPersistentEntity(x) }.asSequence()
     }
 
-    private tailrec fun set(key: K, value: V, logWarning: Boolean, store: (K,V) -> V?): Boolean {
+    private tailrec fun set(key: K, value: V, logWarning: Boolean, store: (K, V) -> V?): Boolean {
         var insertionAttempt = false
         var isUnique = true
-        val existingInCache = cache.get(key) { // Thread safe, if multiple threads may wait until the first one has loaded.
+        val existingInCache = cache.get(key) {
+            // Thread safe, if multiple threads may wait until the first one has loaded.
             insertionAttempt = true
             // Key wasn't in the cache and might be in the underlying storage.
             // Depending on 'store' method, this may insert without checking key duplication or it may avoid inserting a duplicated key.
@@ -85,8 +87,8 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      * If the map previously contained a mapping for the key, the behaviour is unpredictable and may throw an error from the underlying storage.
      */
     operator fun set(key: K, value: V) =
-            set(key, value, logWarning = false) {
-                k, v -> DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
+            set(key, value, logWarning = false) { k, v ->
+                currentDBSession().save(toPersistentEntity(k, v))
                 null
             }
 
@@ -96,25 +98,25 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      * @return true if added key was unique, otherwise false
      */
     fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean =
-            set(key, value, logWarning) {
-                k, v ->
-                val existingEntry = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(k))
+            set(key, value, logWarning) { k, v ->
+                val session = currentDBSession()
+                val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
                 if (existingEntry == null) {
-                    DatabaseTransactionManager.current().session.save(toPersistentEntity(k, v))
+                    session.save(toPersistentEntity(k, v))
                     null
                 } else {
                     fromPersistentEntity(existingEntry).second
                 }
             }
 
-    fun putAll(entries: Map<K,V>) {
+    fun putAll(entries: Map<K, V>) {
         entries.forEach {
             set(it.key, it.value)
         }
     }
 
     private fun loadValue(key: K): V? {
-        val result = DatabaseTransactionManager.current().session.find(persistentEntityClass, toPersistentEntityKey(key))
+        val result = currentDBSession().find(persistentEntityClass, toPersistentEntityKey(key))
         return result?.let(fromPersistentEntity)?.second
     }
 
@@ -125,7 +127,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK> (
      * WARNING!! The method is not thread safe.
      */
     fun clear() {
-        val session = DatabaseTransactionManager.current().session
+        val session = currentDBSession()
         val deleteQuery = session.criteriaBuilder.createCriteriaDelete(persistentEntityClass)
         deleteQuery.from(persistentEntityClass)
         session.createQuery(deleteQuery).executeUpdate()

@@ -2,6 +2,7 @@ package net.corda.sandbox.tools;
 
 import net.corda.sandbox.WhitelistClassLoader;
 import net.corda.sandbox.visitors.SandboxPathVisitor;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -18,7 +19,6 @@ import joptsimple.OptionSet;
  * This class takes in an exploded set of JRE classes, and a whitelist, and rewrites all
  * classes (note: not methods) that have at least one whitelisted method to create a
  * sandboxed version of the class.
- *
  */
 // java8.scan.java.lang_and_util java8.interfaces_for_compat java8 sandbox
 public final class SandboxCreator {
@@ -30,7 +30,7 @@ public final class SandboxCreator {
     private final String outputJarName;
     private final WhitelistClassLoader wlcl;
     private final boolean hasInputJar;
-    
+
     private final static OptionParser parser = new OptionParser();
 
     private static void usage() {
@@ -53,7 +53,7 @@ public final class SandboxCreator {
 
     static String unpackJar(final String zipFilePath) throws IOException {
         final Path tmpDir = Files.createTempDirectory(Paths.get("/tmp"), "wlcl-extract");
-        
+
         try (final ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFilePath))) {
             ZipEntry entry = zipIn.getNextEntry();
 
@@ -68,13 +68,13 @@ public final class SandboxCreator {
                 entry = zipIn.getNextEntry();
             }
         }
-        
+
         return tmpDir.toString();
     }
-    
+
     void cleanup() {
         if (hasInputJar) {
-            
+
         }
     }
 
@@ -107,10 +107,9 @@ public final class SandboxCreator {
     }
 
     /**
-     * 
      * @param basePath
      * @param packageName
-     * @throws IOException 
+     * @throws IOException
      */
     void walk() throws IOException {
         final Path scanDir = Paths.get(basePathName);

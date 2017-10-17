@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.internal.uncheckedCast
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -31,8 +32,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
                 TreeMap::class.java to { map -> TreeMap(map) },
                 EnumMap::class.java to { map ->
-                    @Suppress("UNCHECKED_CAST")
-                    EnumMap(map as Map<EnumJustUsedForCasting, Any>)
+                    EnumMap(uncheckedCast<Map<*, *>, Map<EnumJustUsedForCasting, Any>>(map))
                 }
         ))
 
@@ -42,12 +42,10 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 
         fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
             declaredClass.checkSupportedMapType()
-            if(supportedTypes.containsKey(declaredClass)) {
+            if (supportedTypes.containsKey(declaredClass)) {
                 // Simple case - it is already known to be a map.
-                @Suppress("UNCHECKED_CAST")
-                return deriveParametrizedType(declaredType, declaredClass as Class<out Map<*, *>>)
-            }
-            else if (actualClass != null && Map::class.java.isAssignableFrom(actualClass)) {
+                return deriveParametrizedType(declaredType, uncheckedCast(declaredClass))
+            } else if (actualClass != null && Map::class.java.isAssignableFrom(actualClass)) {
                 // Declared class is not map, but [actualClass] is - represent it accordingly.
                 val mapClass = findMostSuitableMapType(actualClass)
                 return deriveParametrizedType(declaredType, mapClass)
@@ -68,14 +66,14 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 
     private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
 
-    override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({declaredType.typeName}) {
+    override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
         if (output.writeTypeNotations(typeNotation)) {
             output.requireSerializer(declaredType.actualTypeArguments[0])
             output.requireSerializer(declaredType.actualTypeArguments[1])
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({declaredType.typeName}) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
         obj.javaClass.checkSupportedMapType()
         // Write described
         data.withDescribed(typeNotation.descriptor) {
@@ -90,7 +88,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({declaredType.typeName}) {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
         // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
         val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schema, input, it) }
         concreteBuilder(entries.toMap())
@@ -109,13 +107,11 @@ internal fun Class<*>.checkSupportedMapType() {
     if (HashMap::class.java.isAssignableFrom(this) && !LinkedHashMap::class.java.isAssignableFrom(this)) {
         throw IllegalArgumentException(
                 "Map type $this is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
-    }
-    else if (WeakHashMap::class.java.isAssignableFrom(this)) {
-        throw IllegalArgumentException ("Weak references with map types not supported. Suggested fix: "
-                                        + "use java.util.LinkedHashMap instead.")
-    }
-    else if (Dictionary::class.java.isAssignableFrom(this)) {
-        throw IllegalArgumentException (
+    } else if (WeakHashMap::class.java.isAssignableFrom(this)) {
+        throw IllegalArgumentException("Weak references with map types not supported. Suggested fix: "
+                + "use java.util.LinkedHashMap instead.")
+    } else if (Dictionary::class.java.isAssignableFrom(this)) {
+        throw IllegalArgumentException(
                 "Unable to serialise deprecated type $this. Suggested fix: prefer java.util.map implementations")
     }
 }

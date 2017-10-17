@@ -3,8 +3,12 @@ package net.corda.core.transactions
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.internal.UpgradeCommand
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.Try
+import java.security.PublicKey
 import java.util.*
 import java.util.function.Predicate
 
@@ -45,6 +49,16 @@ data class LedgerTransaction(
         checkEncumbrancesValid()
     }
 
+    private companion object {
+        @JvmStatic
+        private fun createContractFor(className: ContractClassName): Try<Contract> {
+            return Try.on { this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance() }
+        }
+    }
+
+    private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state.contract } + outputs.map { it.contract })
+            .toSet().map { it to createContractFor(it) }.toMap()
+
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
 
     /**
@@ -52,8 +66,7 @@ data class LedgerTransaction(
      * @param index The index into the inputs.
      * @return The [StateAndRef]
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> inRef(index: Int): StateAndRef<T> = inputs[index] as StateAndRef<T>
+    fun <T : ContractState> inRef(index: Int): StateAndRef<T> = uncheckedCast(inputs[index])
 
     /**
      * Verifies this transaction and runs contract code. At this stage it is assumed that signatures have already been verified.
@@ -63,7 +76,12 @@ data class LedgerTransaction(
     @Throws(TransactionVerificationException::class)
     fun verify() {
         verifyConstraints()
-        verifyContracts()
+        // TODO: make contract upgrade transactions have a separate type
+        if (commands.any { it.value is UpgradeCommand }) {
+            verifyContractUpgrade()
+        } else {
+            verifyContracts()
+        }
     }
 
     /**
@@ -90,19 +108,18 @@ data class LedgerTransaction(
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      */
     private fun verifyContracts() {
-        val contracts = (inputs.map { it.state.contract } + outputs.map { it.contract }).toSet()
-        for (contractClassName in contracts) {
-            val contract = try {
-                assert(javaClass.classLoader == ClassLoader.getSystemClassLoader())
-                javaClass.classLoader.loadClass(contractClassName).asSubclass(Contract::class.java).getConstructor().newInstance()
-            } catch (e: ClassNotFoundException) {
-                throw TransactionVerificationException.ContractCreationError(id, contractClassName, e)
-            }
-
-            try {
-                contract.verify(this)
-            } catch (e: Throwable) {
-                throw TransactionVerificationException.ContractRejection(id, contract, e)
+        for (contractEntry in contracts.entries) {
+            val result = contractEntry.value
+            when (result) {
+                is Try.Failure -> throw TransactionVerificationException.ContractCreationError(id, contractEntry.key, result.exception)
+                is Try.Success -> {
+                    val contract = result.value
+                    try {
+                        contract.verify(this)
+                    } catch (e: Throwable) {
+                        throw TransactionVerificationException.ContractRejection(id, contract, e)
+                    }
+                }
             }
         }
     }
@@ -150,6 +167,25 @@ data class LedgerTransaction(
                         encumbranceIndex,
                         TransactionVerificationException.Direction.OUTPUT)
             }
+        }
+    }
+
+    private fun verifyContractUpgrade() {
+        // Contract Upgrade transaction should have 1 input, 1 output and 1 command.
+        val input = inputs.single().state
+        val output = outputs.single()
+        val commandData = commandsOfType<UpgradeCommand>().single()
+
+        val command = commandData.value
+        val participantKeys: Set<PublicKey> = input.data.participants.map { it.owningKey }.toSet()
+        val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
+        @Suppress("UNCHECKED_CAST")
+        val upgradedContract = javaClass.classLoader.loadClass(command.upgradedContractClass).newInstance() as UpgradedContract<ContractState, *>
+        requireThat {
+            "The signing keys include all participant keys" using keysThatSigned.containsAll(participantKeys)
+            "Inputs state reference the legacy contract" using (input.contract == upgradedContract.legacyContract)
+            "Outputs state reference the upgraded contract" using (output.contract == command.upgradedContractClass)
+            "Output state must be an upgraded version of the input state" using (output.data == upgradedContract.upgrade(input.data))
         }
     }
 
@@ -230,8 +266,7 @@ data class LedgerTransaction(
      * @return the possibly empty list of inputs [StateAndRef] matching the clazz restriction.
      */
     fun <T : ContractState> inRefsOfType(clazz: Class<T>): List<StateAndRef<T>> {
-        @Suppress("UNCHECKED_CAST")
-        return inputs.mapNotNull { if (clazz.isInstance(it.state.data)) it as StateAndRef<T> else null }
+        return inputs.mapNotNull { if (clazz.isInstance(it.state.data)) uncheckedCast<StateAndRef<ContractState>, StateAndRef<T>>(it) else null }
     }
 
     inline fun <reified T : ContractState> inRefsOfType(): List<StateAndRef<T>> = inRefsOfType(T::class.java)
@@ -307,8 +342,7 @@ data class LedgerTransaction(
      * @param index the position of the item in the commands.
      * @return The Command at the requested index
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : CommandData> getCommand(index: Int): Command<T> = Command(commands[index].value as T, commands[index].signers)
+    fun <T : CommandData> getCommand(index: Int): Command<T> = Command(uncheckedCast(commands[index].value), commands[index].signers)
 
     /**
      * Helper to simplify getting all [Command] items with a [CommandData] of a particular class, interface, or base class.

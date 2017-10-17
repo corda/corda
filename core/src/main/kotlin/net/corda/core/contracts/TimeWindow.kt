@@ -64,6 +64,17 @@ abstract class TimeWindow {
      */
     abstract val midpoint: Instant?
 
+    /**
+     * Returns the duration between [fromTime] and [untilTime] if both are non-null. Otherwise returns null.
+     */
+    val length: Duration? get() {
+        return if (fromTime == null || untilTime == null) {
+            null
+        } else {
+            Duration.between(fromTime, untilTime)
+        }
+    }
+
     /** Returns true iff the given [instant] is within the time interval of this [TimeWindow]. */
     abstract operator fun contains(instant: Instant): Boolean
 
@@ -85,6 +96,7 @@ abstract class TimeWindow {
         init {
             require(fromTime < untilTime) { "fromTime must be earlier than untilTime" }
         }
+
         override val midpoint: Instant get() = fromTime + (fromTime until untilTime) / 2
         override fun contains(instant: Instant): Boolean = instant >= fromTime && instant < untilTime
         override fun toString(): String = "[$fromTime, $untilTime)"

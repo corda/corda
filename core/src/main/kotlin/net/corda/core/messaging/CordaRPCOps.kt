@@ -104,12 +104,15 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {
         return vaultQueryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
+
     fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T> {
         return vaultQueryBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
     }
+
     fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
         return vaultQueryBy(criteria, paging, Sort(emptySet()), contractStateType)
     }
+
     fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
         return vaultQueryBy(criteria, PageSpecification(), sorting, contractStateType)
     }
@@ -142,12 +145,15 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
+
     fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
     }
+
     fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return vaultTrackBy(criteria, paging, Sort(emptySet()), contractStateType)
     }
+
     fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
@@ -250,11 +256,20 @@ interface CordaRPCOps : RPCOps {
      * @return well known identity, if found.
      */
     fun wellKnownPartyFromAnonymous(party: AbstractParty): Party?
+
     /** Returns the [Party] corresponding to the given key, if found. */
     fun partyFromKey(key: PublicKey): Party?
 
     /** Returns the [Party] with the X.500 principal as it's [Party.name]. */
     fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party?
+
+    /**
+     * Get a notary identity by name.
+     *
+     * @return the notary identity, or null if there is no notary by that name. Note that this will return null if there
+     * is a peer with that name but they are not a recognised notary service.
+     */
+    fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party?
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
@@ -271,6 +286,8 @@ interface CordaRPCOps : RPCOps {
 
     /**
      * Returns a node's info from the network map cache, where known.
+     * Notice that when there are more than one node for a given name (in case of distributed services) first service node
+     * found will be returned.
      *
      * @return the node info if available.
      */
@@ -300,7 +317,7 @@ inline fun <T, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         flowConstructor: () -> R
 ): FlowHandle<T> = startFlowDynamic(R::class.java)
 
-inline fun <T , A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
+inline fun <T, A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: (A) -> R,
         arg0: A

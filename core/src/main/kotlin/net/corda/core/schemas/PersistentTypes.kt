@@ -49,7 +49,8 @@ open class MappedSchema(schemaFamily: Class<*>,
  * A super class for all mapped states exported to a schema that ensures the [StateRef] appears on the database row.  The
  * [StateRef] will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).
  */
-@MappedSuperclass @CordaSerializable open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
+@MappedSuperclass
+@CordaSerializable open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
 
 /**
  * Embedded [StateRef] representation used in state mapping.

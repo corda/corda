@@ -25,15 +25,3 @@ class IllegalFlowLogicException(type: Class<*>, msg: String) : IllegalArgumentEx
 // TODO: align this with the existing [FlowRef] in the bank-side API (probably replace some of the API classes)
 @CordaSerializable
 interface FlowLogicRef
-
-
-/**
- * This is just some way to track what attachments need to be in the class loader, but may later include some app
- * properties loaded from the attachments.  And perhaps the authenticated user for an API call?
- */
-@CordaSerializable
-data class AppContext(val attachments: List<SecureHash>) {
-    // TODO: build a real [AttachmentsClassLoader] etc
-    val classLoader: ClassLoader
-        get() = this.javaClass.classLoader
-}

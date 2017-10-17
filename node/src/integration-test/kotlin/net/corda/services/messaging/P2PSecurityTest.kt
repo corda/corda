@@ -9,6 +9,8 @@ import net.corda.core.internal.cert
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.NetworkMapInfo
+import net.corda.node.services.config.ActiveMqServerConfiguration
+import net.corda.node.services.config.BridgeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService
@@ -60,6 +62,7 @@ class P2PSecurityTest : NodeBasedTest() {
                 baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName).also {
             whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.chooseIdentity().name))
+            whenever(it.activeMQServer).thenReturn(ActiveMqServerConfiguration(BridgeConfiguration(1001, 2, 3.4)))
         }
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
         return SimpleNode(config, trustRoot = trustRoot).apply { start() }
