@@ -832,7 +832,7 @@ class CashTests : TestDependencyInjectionBase() {
     // Double spend.
     @Test
     fun chainCashDoubleSpendFailsWith() {
-        val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), MEGA_CORP_KEY)
+        val mockService = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), MEGA_CORP_KEY)
 
         ledger(mockService) {
             unverifiedTransaction {
