@@ -40,7 +40,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.slf4j.Logger
 import rx.Observable
-import rx.Subscriber
 import rx.observables.ConnectableObservable
 import java.io.File
 import java.net.*
@@ -846,24 +845,12 @@ class DriverDSL(
         val counterObservable = nodeCountObservable(snapshot.size, updates)
         countObservables.put(rpc.nodeInfo().legalIdentities.first().name, counterObservable)
         val requiredNodes = countObservables.size
-        val future = openFuture<Unit>()
 
         // This is an observable which yield the minimum number of nodes in each node network map.
         val smallestSeenNetworkMapSize = Observable.combineLatest(countObservables.values.toList()) {
             args : Array<Any> -> args.map { it as Int }.min() ?: 0
         }
-        
-        smallestSeenNetworkMapSize.subscribe(object : Subscriber<Int>() {
-            override fun onError(e: Throwable?) {  }
-            override fun onCompleted() {  }
-            override fun onNext(knownNodes: Int) {
-                if (knownNodes >= requiredNodes) {
-                    future.set(Unit)
-                    unsubscribe()
-                }
-            }
-        })
-
+        val future = smallestSeenNetworkMapSize.filter { it >= requiredNodes }.toFuture().map {  }
         counterObservable.connect()
         return future
     }

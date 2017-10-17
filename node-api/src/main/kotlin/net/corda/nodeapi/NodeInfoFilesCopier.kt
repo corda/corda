@@ -17,8 +17,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
 
-const val NODE_INFO_FILE_NAME_PREFIX = "nodeInfo-"
-
 /**
  * Utility class which copies nodeInfo files across a set of running nodes.
  *
@@ -29,6 +27,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
 
     companion object {
         private val log = loggerFor<NodeInfoFilesCopier>()
+        const val NODE_INFO_FILE_NAME_PREFIX = "nodeInfo-"
     }
 
     private val nodeDataMap = mutableMapOf<Path, NodeData>()
@@ -50,7 +49,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
         nodeDataMap[nodeDir] = newNodeFile
 
         for (previouslySeenFile in allPreviouslySeenFiles()) {
-            copy(previouslySeenFile, newNodeFile.additionalNodeInfoDirectory.resolve(previouslySeenFile.fileName))
+            atomicCopy(previouslySeenFile, newNodeFile.additionalNodeInfoDirectory.resolve(previouslySeenFile.fileName))
         }
         log.info("Now watching: $nodeDir")
     }
@@ -93,12 +92,12 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
         if (newTimestamp > previousTimestamp) {
             for (destination in nodeDataMap.values.filter { it.nodeDir != nodeData.nodeDir }.map { it.additionalNodeInfoDirectory }) {
                 val fullDestinationPath = destination.resolve(path.fileName)
-                copy(path, fullDestinationPath)
+                atomicCopy(path, fullDestinationPath)
             }
         }
     }
 
-    private fun copy(source: Path, destination: Path) {
+    private fun atomicCopy(source: Path, destination: Path) {
         val tempDestination = try {
             Files.createTempFile(destination.parent, "", null)
         } catch (exception: IOException) {
