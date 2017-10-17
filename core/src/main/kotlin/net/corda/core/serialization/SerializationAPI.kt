@@ -8,6 +8,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
 import java.sql.Blob
 
+data class ObjectWithCompatibleContext<out T : Any>(val obj: T, val context: SerializationContext)
+
 /**
  * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
  * a header / prefix in the bytes.
@@ -21,6 +23,16 @@ abstract class SerializationFactory {
      * @param context A context that configures various parameters to deserialization.
      */
     abstract fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
+
+    /**
+     * Deserialize the bytes in to an object, using the prefixed bytes to determine the format.
+     *
+     * @param byteSequence The bytes to deserialize, including a format header prefix.
+     * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
+     * @param context A context that configures various parameters to deserialization.
+     * @return deserialized object along with [SerializationContext] to identify encoding used.
+     */
+    abstract fun <T : Any> deserializeWithCompatibleContext(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithCompatibleContext<T>
 
     /**
      * Serialize an object to bytes using the preferred serialization format version from the context.
@@ -87,6 +99,8 @@ abstract class SerializationFactory {
     }
 }
 
+typealias VersionHeader = ByteSequence
+
 /**
  * Parameters to serialization and deserialization.
  */
@@ -94,7 +108,7 @@ interface SerializationContext {
     /**
      * When serializing, use the format this header sequence represents.
      */
-    val preferredSerializationVersion: ByteSequence
+    val preferredSerializationVersion: VersionHeader
     /**
      * The class loader to use for deserialization.
      */
@@ -147,7 +161,7 @@ interface SerializationContext {
     /**
      * Helper method to return a new context based on this context but with serialization using the format this header sequence represents.
      */
-    fun withPreferredSerializationVersion(versionHeader: ByteSequence): SerializationContext
+    fun withPreferredSerializationVersion(versionHeader: VersionHeader): SerializationContext
 
     /**
      * The use case that we are serializing for, since it influences the implementations chosen.
@@ -172,6 +186,15 @@ object SerializationDefaults {
  */
 inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T {
     return serializationFactory.deserialize(this, T::class.java, context)
+}
+
+/**
+ * Additionally returns [SerializationContext] which was used for encoding.
+ * It might be helpful to know [SerializationContext] to use the same encoding in the reply.
+ */
+inline fun <reified T : Any> ByteSequence.deserializeWithCompatibleContext(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
+                                                                       context: SerializationContext = serializationFactory.defaultContext): ObjectWithCompatibleContext<T> {
+    return serializationFactory.deserializeWithCompatibleContext(this, T::class.java, context)
 }
 
 /**
