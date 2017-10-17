@@ -59,7 +59,7 @@ private fun CriteriaBuilder.executeUpdate(session: Session, configure: Root<*>.(
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val clock: Clock, private val keyManagementService: KeyManagementService, private val stateLoader: StateLoader, private val hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultServiceInternal {
+class NodeVaultService(private val clock: Clock, private val keyManagementService: KeyManagementService, private val stateLoader: StateLoader, hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultServiceInternal {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -377,9 +377,8 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
         return keysToCheck.any { it in myKeys }
     }
 
-    private var sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
-    private var criteriaBuilder = sessionFactory.criteriaBuilder
-
+    private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas
+    private val criteriaBuilder = sessionFactory.criteriaBuilder
     /**
      * Maintain a list of contract state interfaces to concrete types stored in the vault
      * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
@@ -406,11 +405,6 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
-
-        // refresh to include any schemas registered after initial VQ service initialisation
-        sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas()
-        criteriaBuilder = sessionFactory.criteriaBuilder
-
         // calculate total results where a page specification has been defined
         var totalStates = -1L
         if (!paging.isDefault) {

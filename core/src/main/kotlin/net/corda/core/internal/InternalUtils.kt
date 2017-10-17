@@ -300,3 +300,6 @@ fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serial
  * @suppress
  */
 fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+
+/** Convenience method to get the package name of a class literal. */
+val KClass<*>.packageName get() = java.`package`.name

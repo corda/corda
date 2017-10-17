@@ -1,8 +1,8 @@
 package net.corda.nodeapi
 
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.utilities.sequence
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.reader.MessageUtil
@@ -20,12 +20,15 @@ object VerifierApi {
             val responseAddress: SimpleString
     ) {
         companion object {
-            fun fromClientMessage(message: ClientMessage): VerificationRequest {
-                return VerificationRequest(
+            fun fromClientMessage(message: ClientMessage): ObjectWithCompatibleContext<VerificationRequest> {
+                val bytes = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
+                val bytesSequence = bytes.sequence()
+                val (transaction, context) = bytesSequence.deserializeWithCompatibleContext<LedgerTransaction>()
+                val request = VerificationRequest(
                         message.getLongProperty(VERIFICATION_ID_FIELD_NAME),
-                        ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }.deserialize(),
-                        MessageUtil.getJMSReplyTo(message)
-                )
+                        transaction,
+                        MessageUtil.getJMSReplyTo(message))
+                return ObjectWithCompatibleContext(request, context)
             }
         }
 
@@ -49,10 +52,10 @@ object VerifierApi {
             }
         }
 
-        fun writeToClientMessage(message: ClientMessage) {
+        fun writeToClientMessage(message: ClientMessage, context: SerializationContext) {
             message.putLongProperty(VERIFICATION_ID_FIELD_NAME, verificationId)
             if (exception != null) {
-                message.putBytesProperty(RESULT_EXCEPTION_FIELD_NAME, exception.serialize().bytes)
+                message.putBytesProperty(RESULT_EXCEPTION_FIELD_NAME, exception.serialize(context = context).bytes)
             }
         }
     }

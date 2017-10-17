@@ -37,7 +37,7 @@ import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests : TestDependencyInjectionBase() {
     private class Services : MockServices() {
-        private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR))).start(attachments)
+        private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
         private val cordapp get() = provider.cordapps.first()
         val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
         val appContext get() = provider.getAppContext(cordapp)

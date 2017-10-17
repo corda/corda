@@ -7,7 +7,6 @@ import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -26,7 +25,6 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -37,6 +35,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
@@ -148,7 +147,6 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected lateinit var database: CordaPersistence
-    lateinit var cordappProvider: CordappProviderImpl
     protected val _nodeReadyFuture = openFuture<Unit>()
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
@@ -161,7 +159,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     }
 
     open val serializationWhitelists: List<SerializationWhitelist> by lazy {
-        cordappProvider.cordapps.flatMap { it.serializationWhitelists }
+        cordappLoader.cordapps.flatMap { it.serializationWhitelists }
     }
 
     /** Set to non-null once [start] has been successfully called. */
@@ -185,11 +183,12 @@ abstract class AbstractNode(config: NodeConfiguration,
         validateKeystore()
     }
 
+    private fun makeSchemaService() = NodeSchemaService(cordappLoader)
     open fun generateNodeInfo() {
         check(started == null) { "Node has already been started" }
         initCertificate()
         log.info("Generating nodeInfo ...")
-        val schemaService = NodeSchemaService()
+        val schemaService = makeSchemaService()
         initialiseDatabasePersistence(schemaService) {
             makeServices(schemaService)
             saveOwnNodeInfo()
@@ -200,7 +199,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         initCertificate()
         log.info("Node starting up ...")
-        val schemaService = NodeSchemaService()
+        val schemaService = makeSchemaService()
         // Do all of this in a database transaction so anything that might need a connection has one.
         val startedImpl = initialiseDatabasePersistence(schemaService) {
             val tokenizableServices = makeServices(schemaService)
@@ -231,8 +230,7 @@ abstract class AbstractNode(config: NodeConfiguration,
 
             installCordaServices()
             registerCordappFlows()
-            _services.rpcFlows += cordappProvider.cordapps.flatMap { it.rpcFlows }
-            registerCustomSchemas(cordappProvider.cordapps.flatMap { it.customSchemas }.toSet())
+            _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
 
             runOnStop += network::stop
@@ -254,7 +252,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
     private fun installCordaServices() {
-        val loadedServices = cordappProvider.cordapps.flatMap { it.services }
+        val loadedServices = cordappLoader.cordapps.flatMap { it.services }
         filterServicesToInstall(loadedServices).forEach {
             try {
                 installCordaService(it)
@@ -373,7 +371,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     }
 
     private fun registerCordappFlows() {
-        cordappProvider.cordapps.flatMap { it.initiatedFlows }
+        cordappLoader.cordapps.flatMap { it.initiatedFlows }
                 .forEach {
                     try {
                         registerInitiatedFlowInternal(it, track = false)
@@ -470,11 +468,11 @@ abstract class AbstractNode(config: NodeConfiguration,
      */
     private fun makeServices(schemaService: SchemaService): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        cordappProvider = CordappProviderImpl(cordappLoader)
         val transactionStorage = makeTransactionStorage()
-        _services = ServiceHubInternalImpl(schemaService, transactionStorage, StateLoaderImpl(transactionStorage))
-        attachments = NodeAttachmentService(services.monitoringService.metrics)
-        cordappProvider.start(attachments)
+        val metrics = MetricRegistry()
+        attachments = NodeAttachmentService(metrics)
+        val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
+        _services = ServiceHubInternalImpl(schemaService, transactionStorage, StateLoaderImpl(transactionStorage), MonitoringService(metrics), cordappProvider)
         legalIdentity = obtainIdentity(notaryConfig = null)
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
@@ -540,7 +538,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T): T {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            this.database = configureDatabase(props, configuration.database, schemaService, { _services.identityService })
+            this.database = configureDatabase(props, configuration.database, { _services.identityService }, schemaService)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
                 log.info("Connected to ${database.dataSource.connection.metaData.databaseProductName} database.")
@@ -766,12 +764,13 @@ abstract class AbstractNode(config: NodeConfiguration,
     private inner class ServiceHubInternalImpl(
             override val schemaService: SchemaService,
             override val validatedTransactions: WritableTransactionStorage,
-            private val stateLoader: StateLoader
+            private val stateLoader: StateLoader,
+            override val monitoringService: MonitoringService,
+            override val cordappProvider: CordappProviderInternal
     ) : SingletonSerializeAsToken(), ServiceHubInternal, StateLoader by stateLoader {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
-        override val monitoringService = MonitoringService(MetricRegistry())
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
         override val vaultService by lazy { makeVaultService(keyManagementService, stateLoader) }
@@ -796,8 +795,6 @@ abstract class AbstractNode(config: NodeConfiguration,
         override val myInfo: NodeInfo get() = info
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
-        override val cordappProvider: CordappProvider = this@AbstractNode.cordappProvider
-
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
             return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
@@ -819,9 +816,4 @@ abstract class AbstractNode(config: NodeConfiguration,
 
         override fun jdbcSession(): Connection = database.createSession()
     }
-
-    fun registerCustomSchemas(schemas: Set<MappedSchema>) {
-        database.hibernateConfig.schemaService.registerCustomSchemas(schemas)
-    }
-
 }

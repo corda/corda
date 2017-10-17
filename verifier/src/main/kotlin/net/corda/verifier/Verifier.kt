@@ -17,17 +17,16 @@ import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
+import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths
 
 data class VerifierConfiguration(
         override val baseDirectory: Path,
-        val config: Config
+        val config: Config // NB: This property is being used via reflection.
 ) : NodeSSLConfiguration {
     val nodeHostAndPort: NetworkHostAndPort by config
     override val keyStorePassword: String by config
@@ -66,7 +65,7 @@ class Verifier {
             val consumer = session.createConsumer(VERIFICATION_REQUESTS_QUEUE_NAME)
             val replyProducer = session.createProducer()
             consumer.setMessageHandler {
-                val request = VerifierApi.VerificationRequest.fromClientMessage(it)
+                val (request, context) = VerifierApi.VerificationRequest.fromClientMessage(it)
                 log.debug { "Received verification request with id ${request.verificationId}" }
                 val error = try {
                     request.transaction.verify()
@@ -77,7 +76,7 @@ class Verifier {
                 }
                 val reply = session.createMessage(false)
                 val response = VerifierApi.VerificationResponse(request.verificationId, error)
-                response.writeToClientMessage(reply)
+                response.writeToClientMessage(reply, context)
                 replyProducer.send(request.responseAddress, reply)
                 it.acknowledge()
             }
@@ -88,18 +87,32 @@ class Verifier {
 
         private fun initialiseSerialization() {
             SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                registerScheme(KryoVerifierSerializationScheme())
+                registerScheme(KryoVerifierSerializationScheme)
+                registerScheme(AMQPVerifierSerializationScheme)
             }
+            /**
+             * Even though default context is set to Kryo P2P, the encoding will be adjusted depending on the incoming
+             * request received, see use of [context] in [main] method.
+             */
             SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         }
     }
 
-    class KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
+    private object KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
         override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
             return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
         }
 
         override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
+    }
+
+    private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme() {
+        override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
+            return (byteSequence == AmqpHeaderV1_0 && (target == SerializationContext.UseCase.P2P))
+        }
+
+        override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory = throw UnsupportedOperationException()
+        override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory = throw UnsupportedOperationException()
     }
 }

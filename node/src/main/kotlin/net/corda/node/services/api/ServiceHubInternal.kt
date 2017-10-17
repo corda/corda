@@ -21,6 +21,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
@@ -89,7 +90,7 @@ interface ServiceHubInternal : ServiceHub {
     val networkService: MessagingService
     val database: CordaPersistence
     val configuration: NodeConfiguration
-
+    override val cordappProvider: CordappProviderInternal
     override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
         require(txs.any()) { "No transactions passed in for recording" }
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }

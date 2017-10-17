@@ -1,5 +1,6 @@
 package net.corda.testing
 
+import net.corda.core.internal.packageName
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LoggerContext
@@ -25,7 +26,7 @@ object LogHelper {
         }
     }
 
-    fun setLevel(vararg classes: KClass<*>) = setLevel(*classes.map { "+" + it.java.`package`.name }.toTypedArray())
+    fun setLevel(vararg classes: KClass<*>) = setLevel(*classes.map { "+" + it.packageName }.toTypedArray())
 
     /** Removes custom configuration for the specified logger names */
     fun reset(vararg names: String) {
@@ -35,7 +36,7 @@ object LogHelper {
         loggerContext.updateLoggers(config)
     }
 
-    fun reset(vararg classes: KClass<*>) = reset(*classes.map { it.java.`package`.name }.toTypedArray())
+    fun reset(vararg classes: KClass<*>) = reset(*classes.map { it.packageName }.toTypedArray())
 
     /** Updates logging level for the specified Log4j logger name */
     private fun setLevel(name: String, level: Level) {

@@ -57,8 +57,6 @@ class HibernateObserverTests {
         val testSchema = TestSchema
         val rawUpdatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()
         val schemaService = object : SchemaService {
-            override fun registerCustomSchemas(customSchemas: Set<MappedSchema>) {}
-
             override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = emptyMap()
 
             override fun selectSchemas(state: ContractState): Iterable<MappedSchema> = setOf(testSchema)
@@ -70,7 +68,7 @@ class HibernateObserverTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), schemaService, createIdentityService = ::makeTestIdentityService)
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService, schemaService)
         HibernateObserver.install(rawUpdatesPublisher, database.hibernateConfig)
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))

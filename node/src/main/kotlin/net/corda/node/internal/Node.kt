@@ -62,7 +62,7 @@ import kotlin.system.exitProcess
  *
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
  */
-open class Node(override val configuration: FullNodeConfiguration,
+open class Node(configuration: FullNodeConfiguration,
                 versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
@@ -99,6 +99,7 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 
     override val log: Logger get() = logger
+    override val configuration get() = super.configuration as FullNodeConfiguration // Necessary to avoid init order NPE.
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 

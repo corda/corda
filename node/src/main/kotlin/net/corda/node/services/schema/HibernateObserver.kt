@@ -40,7 +40,7 @@ class HibernateObserver private constructor(private val config: HibernateConfigu
 
     @VisibleForTesting
     internal fun persistStateWithSchema(state: ContractState, stateRef: StateRef, schema: MappedSchema) {
-        val sessionFactory = config.sessionFactoryForSchema(schema)
+        val sessionFactory = config.sessionFactoryForSchemas(setOf(schema))
         val session = sessionFactory.withOptions().
                 connection(DatabaseTransactionManager.current().connection).
                 flushMode(FlushMode.MANUAL).

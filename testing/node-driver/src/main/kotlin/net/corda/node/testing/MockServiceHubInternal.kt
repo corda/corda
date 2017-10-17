@@ -1,7 +1,6 @@
 package net.corda.node.testing
 
 import com.codahale.metrics.MetricRegistry
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -13,11 +12,11 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -46,10 +45,9 @@ open class MockServiceHubInternal(
         val mapCache: NetworkMapCacheInternal? = null,
         val scheduler: SchedulerService? = null,
         val overrideClock: Clock? = NodeClock(),
-        val schemas: SchemaService? = NodeSchemaService(),
         val customContractUpgradeService: ContractUpgradeService? = null,
         val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2),
-        override val cordappProvider: CordappProvider = CordappProviderImpl(CordappLoader.createDefault(Paths.get("."))).start(attachments),
+        override val cordappProvider: CordappProviderInternal = CordappProviderImpl(CordappLoader.createDefault(Paths.get(".")), attachments),
         protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions)
 ) : ServiceHubInternal, StateLoader by stateLoader {
     override val transactionVerifierService: TransactionVerifierService
@@ -75,8 +73,7 @@ open class MockServiceHubInternal(
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     override val rpcFlows: List<Class<out FlowLogic<*>>>
         get() = throw UnsupportedOperationException()
-    override val schemaService: SchemaService
-        get() = schemas ?: throw UnsupportedOperationException()
+    override val schemaService get() = throw UnsupportedOperationException()
     override val auditService: AuditService = DummyAuditService()
 
     lateinit var smm: StateMachineManager
