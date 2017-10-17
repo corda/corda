@@ -1,10 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.contracts.ComponentGroupEnum.*
-import net.corda.core.crypto.MerkleTree
-import net.corda.core.crypto.PartialMerkleTree
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.secureRandomBytes
+import net.corda.core.crypto.*
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
@@ -398,6 +395,10 @@ class CompatibleTransactionTests : TestDependencyInjectionBase() {
 
     @Test
     fun `FilteredTransaction signer manipulation tests`() {
+        // Required to call the private constructor.
+        val ftxConstructor = FilteredTransaction::class.java.declaredConstructors[1]
+        ftxConstructor.isAccessible = true
+
         // 1st and 3rd commands require a signature from KEY_1.
         val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public),  dummyCommand(DUMMY_KEY_1.public))
         val componentGroups = listOf(
@@ -429,64 +430,111 @@ class CompatibleTransactionTests : TestDependencyInjectionBase() {
         val key1CommandsFtx = wtx.buildFilteredTransaction(Predicate(::filterKEY1Commands))
         val key2CommandsFtx = wtx.buildFilteredTransaction(Predicate(::filterKEY2Commands))
 
-        val ftxConstructor = FilteredTransaction::class.java.declaredConstructors[1]
-        ftxConstructor.isAccessible = true
+        // val commandDataComponents = key1CommandsFtx.filteredComponentGroups[0].components
+        val commandDataHashes = wtx.availableComponentHashes[ComponentGroupEnum.COMMANDS_GROUP.ordinal]!!
+        val noLastCommandDataPMT = PartialMerkleTree.build(
+                MerkleTree.getMerkleTree(commandDataHashes),
+                commandDataHashes.subList(0, 1)
+        )
+        val noLastCommandDataComponents = key1CommandsFtx.filteredComponentGroups[0].components.subList(0, 1)
+        val noLastCommandDataNonces = key1CommandsFtx.filteredComponentGroups[0].nonces.subList(0, 1)
+        val noLastCommandDataGroup = FilteredComponentGroup(
+                ComponentGroupEnum.COMMANDS_GROUP.ordinal,
+                noLastCommandDataComponents,
+                noLastCommandDataNonces,
+                noLastCommandDataPMT
+        )
 
-        // There are only two components in key1CommandsFtx (commandData and signers).
-        assertEquals(2, key1CommandsFtx.componentGroups.size)
-
-        // Remove last signer for which there is a pointer from a visible commandData. This is the case of Key1.
+        val signerComponents = key1CommandsFtx.filteredComponentGroups[1].components
+        val signerHashes = wtx.availableComponentHashes[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!
+        val noLastSignerPMT = PartialMerkleTree.build(
+                MerkleTree.getMerkleTree(signerHashes),
+                signerHashes.subList(0, 2)
+        )
         val noLastSignerComponents = key1CommandsFtx.filteredComponentGroups[1].components.subList(0, 2)
         val noLastSignerNonces = key1CommandsFtx.filteredComponentGroups[1].nonces.subList(0, 2)
         val noLastSignerGroup = FilteredComponentGroup(
                 ComponentGroupEnum.SIGNERS_GROUP.ordinal,
                 noLastSignerComponents,
                 noLastSignerNonces,
+                noLastSignerPMT
+        )
+        val noLastSignerGroupSamePartialTree = FilteredComponentGroup(
+                ComponentGroupEnum.SIGNERS_GROUP.ordinal,
+                noLastSignerComponents,
+                noLastSignerNonces,
                 key1CommandsFtx.filteredComponentGroups[1].partialMerkleTree) // We don't update that, so we can catch the index mismatch.
-        val updatedFilteredComponents = listOf(key1CommandsFtx.filteredComponentGroups[0], noLastSignerGroup)
-        // Invalid Transaction. A command with no corresponding signer detected
+
+        val updatedFilteredComponentsNoSignersKey2 = listOf(key2CommandsFtx.filteredComponentGroups[0], noLastSignerGroup)
+        val updatedFilteredComponentsNoSignersKey2SamePMT = listOf(key2CommandsFtx.filteredComponentGroups[0], noLastSignerGroupSamePartialTree)
+
+        // There are only two components in key1CommandsFtx (commandData and signers).
+        assertEquals(2, key1CommandsFtx.componentGroups.size)
+
+        // Remove last signer for which there is a pointer from a visible commandData. This is the case of Key1.
+        // This will result to an invalid transaction.
+        // A command with no corresponding signer detected
         // because the pointer of CommandData (3rd leaf) cannot find a corresponding (3rd) signer.
-        assertFails { ftxConstructor.newInstance(key1CommandsFtx.id, updatedFilteredComponents, key1CommandsFtx.groupHashes) }
+        val updatedFilteredComponentsNoSignersKey1SamePMT = listOf(key1CommandsFtx.filteredComponentGroups[0], noLastSignerGroupSamePartialTree)
+        assertFails { ftxConstructor.newInstance(key1CommandsFtx.id, updatedFilteredComponentsNoSignersKey1SamePMT, key1CommandsFtx.groupHashes) }
+
+        // Remove both last signer (KEY1) and related command.
+        // Update partial Merkle tree for signers.
+        val updatedFilteredComponentsNoLastCommandAndSigners = listOf(noLastCommandDataGroup, noLastSignerGroup)
+        val ftxNoLastCommandAndSigners = ftxConstructor.newInstance(key1CommandsFtx.id, updatedFilteredComponentsNoLastCommandAndSigners, key1CommandsFtx.groupHashes) as FilteredTransaction
+        // verify() will pass as the transaction is well-formed.
+        ftxNoLastCommandAndSigners.verify()
+        // checkCommandVisibility() will not pass, because checkAllComponentsVisible(ComponentGroupEnum.SIGNERS_GROUP) will fail.
+        ftxNoLastCommandAndSigners.checkCommandVisibility(DUMMY_KEY_1.public)
 
         // Remove last signer for which there is no pointer from a visible commandData. This is the case of Key2.
         // Do not change partial Merkle tree for signers.
-        val noLastSignerComponentsKey2 = key2CommandsFtx.filteredComponentGroups[1].components.subList(0, 2)
-        val noLastSignerNoncesKey2 = key2CommandsFtx.filteredComponentGroups[1].nonces.subList(0, 2)
-        val noLastSignerGroupKey2 = FilteredComponentGroup(
-                ComponentGroupEnum.SIGNERS_GROUP.ordinal,
-                noLastSignerComponentsKey2,
-                noLastSignerNoncesKey2,
-                key2CommandsFtx.filteredComponentGroups[1].partialMerkleTree // Let's suppose that we don't change the partial Merkle tree.
-        )
-        val updatedFilteredComponentsKey2 = listOf(key2CommandsFtx.filteredComponentGroups[0], noLastSignerGroupKey2)
         // This time the object can be constructed as there is no pointer mismatch.
-        val ftxNoLastSigner = ftxConstructor.newInstance(key2CommandsFtx.id, updatedFilteredComponentsKey2, key2CommandsFtx.groupHashes) as FilteredTransaction
-        // But, checkAllComponentsVisible will not pass.
-        assertFailsWith<ComponentVisibilityException> { ftxNoLastSigner.checkAllComponentsVisible(COMMANDS_GROUP) }
-        // verify() will also fail as we didn't change the partial Merkle tree.
+        val ftxNoLastSigner = ftxConstructor.newInstance(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2SamePMT, key2CommandsFtx.groupHashes) as FilteredTransaction
+        // verify() will fail as we didn't change the partial Merkle tree.
         assertFailsWith<FilteredTransactionVerificationException> { ftxNoLastSigner.verify() }
+        // checkCommandVisibility() will not pass.
+        assertFailsWith<ComponentVisibilityException> { ftxNoLastSigner.checkCommandVisibility(DUMMY_KEY_2.public) }
 
         // Remove last signer for which there is no pointer from a visible commandData. This is the case of Key2.
         // Update partial Merkle tree for signers.
-        val noLastSignerComponentsKey2B = key2CommandsFtx.filteredComponentGroups[1].components.subList(0, 2)
-        val noLastSignerNoncesKey2B = key2CommandsFtx.filteredComponentGroups[1].nonces.subList(0, 2)
-        val signersMerkleTree = wtx.availableComponentHashes[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!
-        val noLastSignerPMTKey2B = PartialMerkleTree.build(
-                MerkleTree.getMerkleTree(signersMerkleTree),
-                signersMerkleTree.subList(0, 2)
-        )
-        val noLastSignerGroupKey2B = FilteredComponentGroup(
-                ComponentGroupEnum.SIGNERS_GROUP.ordinal,
-                noLastSignerComponentsKey2B,
-                noLastSignerNoncesKey2B,
-                noLastSignerPMTKey2B // Let's suppose that we don't change the partial Merkle tree.
-        )
-        val updatedFilteredComponentsKey2B = listOf(key2CommandsFtx.filteredComponentGroups[0], noLastSignerGroupKey2B)
-        val ftxNoLastSignerB = ftxConstructor.newInstance(key2CommandsFtx.id, updatedFilteredComponentsKey2B, key2CommandsFtx.groupHashes) as FilteredTransaction
-        // Verify will pass, the transaction is well-formed.
+        val ftxNoLastSignerB = ftxConstructor.newInstance(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2, key2CommandsFtx.groupHashes) as FilteredTransaction
+        // verify() will pass, the transaction is well-formed.
         ftxNoLastSignerB.verify()
-        // But, checkAllComponentsVisible will not pass.
-        assertFailsWith<ComponentVisibilityException> { ftxNoLastSignerB.checkAllComponentsVisible(COMMANDS_GROUP) }
+        // But, checkAllComponentsVisible() will not pass.
+        assertFailsWith<ComponentVisibilityException> { ftxNoLastSignerB.checkCommandVisibility(DUMMY_KEY_2.public) }
+
+        // Modify last signer (we have a pointer from commandData).
+        // Update partial Merkle tree for signers.
+        val alterSignerComponents = signerComponents.subList(0, 2) + signerComponents[1] // Third one is removed and the 2nd command is added twice.
+        val alterSignersHashes = wtx.availableComponentHashes[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!.subList(0, 2) + componentHash(key1CommandsFtx.filteredComponentGroups[1].nonces[2], alterSignerComponents[2])
+        val alterMTree = MerkleTree.getMerkleTree(alterSignersHashes)
+        val alterSignerPMTK = PartialMerkleTree.build(
+                alterMTree,
+                alterSignersHashes
+        )
+
+        val alterSignerGroup = FilteredComponentGroup(
+                ComponentGroupEnum.SIGNERS_GROUP.ordinal,
+                alterSignerComponents,
+                key1CommandsFtx.filteredComponentGroups[1].nonces,
+                alterSignerPMTK
+        )
+        val alterFilteredComponents = listOf(key1CommandsFtx.filteredComponentGroups[0], alterSignerGroup)
+
+        // Do not update groupHashes.
+        val ftxAlterSigner = ftxConstructor.newInstance(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes) as FilteredTransaction
+        // Visible components in signers group cannot be verified against their partial Merkle tree.
+        assertFailsWith<FilteredTransactionVerificationException> { ftxAlterSigner.verify() }
+        // Also, checkAllComponentsVisible() will not pass (groupHash matching will fail).
+        assertFailsWith<ComponentVisibilityException> { ftxAlterSigner.checkCommandVisibility(DUMMY_KEY_1.public) }
+
+        // Update groupHashes.
+        val ftxAlterSignerB = ftxConstructor.newInstance(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes.subList(0, 6) + alterMTree.hash) as FilteredTransaction
+        // Visible components in signers group cannot be verified against their partial Merkle tree.
+        assertFailsWith<FilteredTransactionVerificationException> { ftxAlterSignerB.verify() }
+        // However, checkCommandVisibility() will pass. This is why checkCommandVisibility() should run before or after verify().
+        ftxAlterSignerB.checkCommandVisibility(DUMMY_KEY_1.public)
 
         ftxConstructor.isAccessible = false
     }
