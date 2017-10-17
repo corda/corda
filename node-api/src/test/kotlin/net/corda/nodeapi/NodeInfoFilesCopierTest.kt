@@ -1,8 +1,6 @@
 package net.corda.nodeapi
 
 import net.corda.cordform.CordformNode
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.eventually
 import org.junit.Before
 import org.junit.Rule
@@ -30,11 +28,9 @@ class NodeInfoFilesCopierTest {
         private const val NODE_2_PATH = "node2"
 
         private val content = "blah".toByteArray(Charsets.UTF_8)
-        private val GOOD_NODE_INFO_NAME = "${NODE_INFO_FILE_NAME_PREFIX}test"
-        private val GOOD_NODE_INFO_NAME_2 = "${NODE_INFO_FILE_NAME_PREFIX}anotherNode"
+        private val GOOD_NODE_INFO_NAME = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}test"
+        private val GOOD_NODE_INFO_NAME_2 = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}anotherNode"
         private val BAD_NODE_INFO_NAME = "something"
-        private val legalName = CordaX500Name(organisation = ORGANIZATION, locality = "Nowhere", country = "GB")
-        private val hostAndPort = NetworkHostAndPort("localhost", 1)
     }
 
     private fun nodeDir(nodeBaseDir : String) = rootPath.resolve(nodeBaseDir).resolve(ORGANIZATION.toLowerCase())

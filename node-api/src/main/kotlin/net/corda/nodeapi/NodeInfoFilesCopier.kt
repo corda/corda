@@ -1,6 +1,7 @@
 package net.corda.nodeapi
 
 import net.corda.cordform.CordformNode
+import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
@@ -30,7 +31,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
         const val NODE_INFO_FILE_NAME_PREFIX = "nodeInfo-"
     }
 
-    private val nodeDataMap = mutableMapOf<Path, NodeData>()
+    private val nodeDataMapBox = ThreadBox(mutableMapOf<Path, NodeData>())
 
     init {
         Observable.interval(5, TimeUnit.SECONDS, scheduler)
@@ -43,15 +44,16 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
      * Its nodeInfo file will be copied to other nodes' additional-node-infos directory, and conversely,
      * other nodes' nodeInfo files will be copied to this node additional-node-infos directory.
      */
-    @Synchronized
     fun addConfig(nodeDir: Path) {
-        val newNodeFile = NodeData(nodeDir)
-        nodeDataMap[nodeDir] = newNodeFile
+        nodeDataMapBox.locked {
+            val newNodeFile = NodeData(nodeDir)
+            put(nodeDir, newNodeFile)
 
-        for (previouslySeenFile in allPreviouslySeenFiles()) {
-            atomicCopy(previouslySeenFile, newNodeFile.additionalNodeInfoDirectory.resolve(previouslySeenFile.fileName))
+            for (previouslySeenFile in allPreviouslySeenFiles()) {
+                atomicCopy(previouslySeenFile, newNodeFile.additionalNodeInfoDirectory.resolve(previouslySeenFile.fileName))
+            }
+            log.info("Now watching: $nodeDir")
         }
-        log.info("Now watching: $nodeDir")
     }
 
     /**
@@ -60,26 +62,29 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
      * No files written by that node will be copied to other nodes, nor files from other nodes will be copied to this
      * one.
      */
-    @Synchronized
     fun removeConfig(nodeDir: Path) {
-        nodeDataMap.remove(nodeDir) ?: return
-        log.info("Stopped watching: $nodeDir")
+        nodeDataMapBox.locked {
+            remove(nodeDir) ?: return
+            log.info("Stopped watching: $nodeDir")
+        }
     }
 
-    @Synchronized
     fun reset() {
-        nodeDataMap.clear()
+        nodeDataMapBox.locked {
+            clear()
+        }
     }
 
-    private fun allPreviouslySeenFiles() = nodeDataMap.values.flatMap { it.previouslySeenFiles.keys }
+    private fun allPreviouslySeenFiles() = nodeDataMapBox.alreadyLocked { values.flatMap { it.previouslySeenFiles.keys } }
 
-    @Synchronized
     private fun poll() {
-        for (nodeData in nodeDataMap.values) {
-            nodeData.nodeDir.list { paths ->
-                paths.filter { it.isRegularFile() }
-                        .filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }
-                        .forEach { path -> processPath(nodeData, path) }
+        nodeDataMapBox.locked {
+            for (nodeData in values) {
+                nodeData.nodeDir.list { paths ->
+                    paths.filter { it.isRegularFile() }
+                            .filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }
+                            .forEach { path -> processPath(nodeData, path) }
+                }
             }
         }
     }
@@ -87,12 +92,14 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
     // Takes a path under nodeData config dir and decides whether the file represented by that path needs to
     // be copied.
     private fun processPath(nodeData: NodeData, path: Path) {
-        val newTimestamp = Files.readAttributes(path, BasicFileAttributes::class.java).lastModifiedTime()
-        val previousTimestamp = nodeData.previouslySeenFiles.put(path, newTimestamp) ?: FileTime.fromMillis(-1)
-        if (newTimestamp > previousTimestamp) {
-            for (destination in nodeDataMap.values.filter { it.nodeDir != nodeData.nodeDir }.map { it.additionalNodeInfoDirectory }) {
-                val fullDestinationPath = destination.resolve(path.fileName)
-                atomicCopy(path, fullDestinationPath)
+        nodeDataMapBox.alreadyLocked {
+            val newTimestamp = Files.readAttributes(path, BasicFileAttributes::class.java).lastModifiedTime()
+            val previousTimestamp = nodeData.previouslySeenFiles.put(path, newTimestamp) ?: FileTime.fromMillis(-1)
+            if (newTimestamp > previousTimestamp) {
+                for (destination in this.values.filter { it.nodeDir != nodeData.nodeDir }.map { it.additionalNodeInfoDirectory }) {
+                    val fullDestinationPath = destination.resolve(path.fileName)
+                    atomicCopy(path, fullDestinationPath)
+                }
             }
         }
     }

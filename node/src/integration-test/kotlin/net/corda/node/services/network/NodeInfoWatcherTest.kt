@@ -8,7 +8,7 @@ import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.nodeapi.NODE_INFO_FILE_NAME_PREFIX
+import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.testing.ALICE
 import net.corda.testing.ALICE_KEY
 import net.corda.testing.DEV_TRUST_ROOT
@@ -56,13 +56,14 @@ class NodeInfoWatcherTest : NodeBasedTest() {
 
     @Test
     fun `save a NodeInfo`() {
-        assertEquals(0, folder.root.list().filter { it.startsWith(NODE_INFO_FILE_NAME_PREFIX) }.size)
+        assertEquals(0,
+                folder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.size)
         NodeInfoWatcher.saveToFile(folder.root.toPath(), nodeInfo, keyManagementService)
 
-        val nodeInfoFiles = folder.root.list().filter { it.startsWith(NODE_INFO_FILE_NAME_PREFIX) }
+        val nodeInfoFiles = folder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }
         assertEquals(1, nodeInfoFiles.size)
         val fileName = nodeInfoFiles.first()
-        assertTrue(fileName.startsWith(NODE_INFO_FILE_NAME_PREFIX))
+        assertTrue(fileName.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX))
         val file = (folder.root.path / fileName).toFile()
         // Just check that something is written, another tests verifies that the written value can be read back.
         assertThat(contentOf(file)).isNotEmpty()

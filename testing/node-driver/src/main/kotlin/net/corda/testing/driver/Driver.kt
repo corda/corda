@@ -818,7 +818,7 @@ class DriverDSL(
 
     /**
      * @param initial number of nodes currently in the network map of a running node.
-     * @param observable an observable returning the updates to the node network map.
+     * @param networkMapCacheChangeObservable an observable returning the updates to the node network map.
      * @return a [ConnectableObservable] which emits a new [Int] every time the number of registered nodes changes
      *   the initial value emitted is always [initial]
      */
@@ -838,9 +838,9 @@ class DriverDSL(
     /**
      * @param rpc the [CordaRPCOps] of a newly started node.
      * @return a [CordaFuture] which resolves when every node started by driver has in its network map a number of nodes
-     *   equal to the number of running nodes.
+     *   equal to the number of running nodes. The future will yield the number of connected nodes.
      */
-    private fun waitForNodes(rpc: CordaRPCOps): CordaFuture<Unit> {
+    private fun waitForNodes(rpc: CordaRPCOps): CordaFuture<Int> {
         val (snapshot, updates) = rpc.networkMapFeed()
         val counterObservable = nodeCountObservable(snapshot.size, updates)
         countObservables.put(rpc.nodeInfo().legalIdentities.first().name, counterObservable)
@@ -850,7 +850,7 @@ class DriverDSL(
         val smallestSeenNetworkMapSize = Observable.combineLatest(countObservables.values.toList()) {
             args : Array<Any> -> args.map { it as Int }.min() ?: 0
         }
-        val future = smallestSeenNetworkMapSize.filter { it >= requiredNodes }.toFuture().map {  }
+        val future = smallestSeenNetworkMapSize.filter { it >= requiredNodes }.toFuture()
         counterObservable.connect()
         return future
     }
