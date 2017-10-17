@@ -9,6 +9,7 @@ import com.r3.corda.doorman.signer.DefaultCsrHandler
 import com.r3.corda.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateStream
 import net.corda.node.utilities.CertificateType
@@ -38,7 +39,7 @@ import kotlin.test.assertEquals
 
 class DoormanServiceTest {
     private val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val rootCACert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Node Root CA,L=London"), rootCAKey)
+    private val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 Ltd", country = "GB"), rootCAKey)
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
     private lateinit var doormanServer: DoormanServer
@@ -66,7 +67,7 @@ class DoormanServiceTest {
         startSigningServer(storage)
 
         val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
-        val request = X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName"), "my@mail.com", keyPair)
+        val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB"), "my@mail.com", keyPair)
         // Post request to signing server via http.
 
         assertEquals(id, submitRequest(request))
@@ -91,7 +92,7 @@ class DoormanServiceTest {
             on { signCertificate(eq(id), any(), any()) }.then {
                 @Suppress("UNCHECKED_CAST")
                 val certGen = it.arguments[2] as ((CertificationRequestData) -> CertPath)
-                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName,L=London"), "my@mail.com", keyPair))
+                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "LegalName", country = "GB"), "my@mail.com", keyPair))
                 certificateStore[id] = certGen(request)
                 true
             }
@@ -115,7 +116,7 @@ class DoormanServiceTest {
         assertEquals(3, certificates.size)
 
         certificates.first().run {
-            assertThat(subjectDN.name).contains("CN=LegalName")
+            assertThat(subjectDN.name).contains("O=LegalName")
             assertThat(subjectDN.name).contains("L=London")
         }
 
@@ -141,7 +142,7 @@ class DoormanServiceTest {
             on { signCertificate(eq(id), any(), any()) }.then {
                 @Suppress("UNCHECKED_CAST")
                 val certGen = it.arguments[2] as ((CertificationRequestData) -> CertPath)
-                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName,L=London"), "my@mail.com", keyPair))
+                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB"), "my@mail.com", keyPair))
                 certificateStore[id] = certGen(request)
                 true
             }
@@ -169,7 +170,7 @@ class DoormanServiceTest {
         val sslCert = X509Utilities.createCertificate(CertificateType.TLS, X509CertificateHolder(certificates.first().encoded), keyPair, X500Name("CN=LegalName,L=London"), sslKey.public).toX509Certificate()
 
         // TODO: This is temporary solution, remove all certificate re-shaping after identity refactoring is done.
-        X509Utilities.validateCertificateChain(X509CertificateHolder(certificates.last().encoded), sslCert, *certificates.toTypedArray())
+        X509Utilities.validateCertificateChain(certificates.last(), sslCert, *certificates.toTypedArray())
     }
 
     @Test

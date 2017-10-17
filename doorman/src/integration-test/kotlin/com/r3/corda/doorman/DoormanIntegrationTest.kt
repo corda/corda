@@ -9,8 +9,7 @@ import com.r3.corda.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.cert
-import net.corda.core.utilities.subject
+import net.corda.core.internal.cert
 import net.corda.node.utilities.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
@@ -31,8 +30,7 @@ class DoormanIntegrationTest {
     @Test
     fun `Network Registration With Doorman`() {
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA", organisation = "R3 Ltd",
-                locality = "London", country = "GB").x500Name, rootCAKey)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA", organisation = "R3 Ltd", locality = "London", country = "GB"), rootCAKey)
         val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey,
                 CordaX500Name(commonName = "Integration Test Corda Node Intermediate CA", locality = "London", country = "GB", organisation = "R3 Ltd"), intermediateCAKey.public)
@@ -62,19 +60,19 @@ class DoormanIntegrationTest {
 
         loadKeyStore(config.nodeKeystore, config.keyStorePassword).apply {
             assert(containsAlias(X509Utilities.CORDA_CLIENT_CA))
-            assertEquals(ALICE.name.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Name, getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subject)
+            assertEquals(ALICE.name.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Principal, getX509Certificate(X509Utilities.CORDA_CLIENT_CA).subjectX500Principal)
             assertEquals(listOf(intermediateCACert.cert, rootCACert.cert), getCertificateChain(X509Utilities.CORDA_CLIENT_CA).drop(1).toList())
         }
 
         loadKeyStore(config.sslKeystore, config.keyStorePassword).apply {
             assert(containsAlias(X509Utilities.CORDA_CLIENT_TLS))
-            assertEquals(ALICE.name.copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Name, getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject)
+            assertEquals(ALICE.name.x500Principal, getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal)
             assertEquals(listOf(intermediateCACert.cert, rootCACert.cert), getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).drop(2).toList())
         }
 
         loadKeyStore(config.trustStoreFile, config.trustStorePassword).apply {
             assert(containsAlias(X509Utilities.CORDA_ROOT_CA))
-            assertEquals(rootCACert.cert.subject, getX509Certificate(X509Utilities.CORDA_ROOT_CA).subject)
+            assertEquals(rootCACert.cert.subjectX500Principal, getX509Certificate(X509Utilities.CORDA_ROOT_CA).subjectX500Principal)
         }
         doorman.close()
     }

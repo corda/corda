@@ -4,6 +4,7 @@ import com.r3.corda.doorman.buildCertPath
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import com.r3.corda.doorman.toX509Certificate
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.x500Name
 import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
@@ -28,12 +29,12 @@ class LocalSigner(private val storage: CertificationRequestStorage,
             // please see [sun.security.x509.X500Name.isWithinSubtree()] for more information.
             // We assume all attributes in the subject name has been checked prior approval.
             // TODO: add validation to subject name.
-            val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.build(request.subject).copy(commonName = null).x500Name))), arrayOf())
+            val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.parse(request.subject.toString()).copy(commonName = null).x500Name))), arrayOf())
             val ourCertificate = caCertAndKey.certificate
             val clientCertificate = X509Utilities.createCertificate(CertificateType.CLIENT_CA,
                     caCertAndKey.certificate,
                     caCertAndKey.keyPair,
-                    CordaX500Name.build(request.subject).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN),
+                    CordaX500Name.parse(request.subject.toString()).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN),
                     request.publicKey,
                     nameConstraints = nameConstraints).toX509Certificate()
             buildCertPath(clientCertificate, ourCertificate.toX509Certificate(), rootCACert)

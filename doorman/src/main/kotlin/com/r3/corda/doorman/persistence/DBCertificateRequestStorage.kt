@@ -2,6 +2,7 @@ package com.r3.corda.doorman.persistence
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.x500Name
 import net.corda.node.utilities.CordaPersistence
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayInputStream
@@ -79,7 +80,7 @@ open class DBCertificateRequestStorage(private val database: CordaPersistence) :
         database.transaction {
             val (legalName, rejectReason) = try {
                 // This will fail with IllegalArgumentException if subject name is malformed.
-                val legalName = CordaX500Name.build(certificationData.request.subject).copy(commonName = null)
+                val legalName = CordaX500Name.parse(certificationData.request.subject.toString()).copy(commonName = null)
                 // Checks database for duplicate name.
                 val query = session.criteriaBuilder.run {
                     val criteriaQuery = createQuery(CertificateSigningRequest::class.java)

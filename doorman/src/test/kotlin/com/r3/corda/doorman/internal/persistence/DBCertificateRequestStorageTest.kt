@@ -106,7 +106,7 @@ class DBCertificateRequestStorageTest {
         storage.signCertificate(requestId) {
             JcaPKCS10CertificationRequest(csr.request).run {
                 val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val rootCACert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Node Root CA,L=London"), rootCAKey)
+                val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
                 val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
                 val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
@@ -127,7 +127,7 @@ class DBCertificateRequestStorageTest {
         val generateCert: CertificationRequestData.() -> CertPath = {
             JcaPKCS10CertificationRequest(csr.request).run {
                 val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val rootCACert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Node Root CA,L=London"), rootCAKey)
+                val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
                 val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
                 val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
@@ -188,7 +188,7 @@ class DBCertificateRequestStorageTest {
         val request = CertificationRequestData(
                 "hostname",
                 "0.0.0.0",
-                X509Utilities.createCertificateSigningRequest(CordaX500Name(organisation = legalName, locality = "London", country = "GB").x500Name, "my@mail.com", keyPair))
+                X509Utilities.createCertificateSigningRequest(CordaX500Name(organisation = legalName, locality = "London", country = "GB"), "my@mail.com", keyPair))
         return Pair(request, keyPair)
     }
 

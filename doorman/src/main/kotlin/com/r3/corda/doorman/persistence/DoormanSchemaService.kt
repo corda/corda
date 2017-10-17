@@ -12,10 +12,15 @@ class DoormanSchemaService : SchemaService {
     object DoormanServicesV1 : MappedSchema(schemaFamily = DoormanServices.javaClass, version = 1,
             mappedTypes = listOf(DBCertificateRequestStorage.CertificateSigningRequest::class.java))
 
-    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = mapOf(Pair(DoormanServicesV1, SchemaService.SchemaOptions()))
+    override var schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = mapOf(Pair(DoormanServicesV1, SchemaService.SchemaOptions()))
 
     override fun selectSchemas(state: ContractState): Iterable<MappedSchema> = setOf(DoormanServicesV1)
 
     override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState = throw UnsupportedOperationException()
 
+    override fun registerCustomSchemas(customSchemas: Set<MappedSchema>) {
+        schemaOptions = schemaOptions.plus(customSchemas.map { mappedSchema ->
+            Pair(mappedSchema, SchemaService.SchemaOptions())
+        })
+    }
 }

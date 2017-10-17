@@ -8,10 +8,10 @@ import com.atlassian.jira.rest.client.api.domain.input.TransitionInput
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.core.utilities.country
-import net.corda.core.utilities.locality
+import net.corda.core.internal.country
+import net.corda.core.internal.locality
+import net.corda.core.internal.organisation
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.organisation
 import net.corda.node.utilities.X509Utilities
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter

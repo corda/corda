@@ -9,6 +9,7 @@ import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
 import com.r3.corda.doorman.persistence.DoormanSchemaService
 import com.r3.corda.doorman.signer.*
 import net.corda.core.crypto.Crypto
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
@@ -16,7 +17,6 @@ import net.corda.node.utilities.*
 import net.corda.node.utilities.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
 import net.corda.node.utilities.X509Utilities.createCertificate
-import org.bouncycastle.asn1.x500.X500Name
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -31,7 +31,6 @@ import java.net.URI
 import java.time.Instant
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
-
 
 /**
  *  DoormanServer runs on Jetty server and provide certificate signing service via http.
@@ -134,7 +133,7 @@ private fun DoormanParameters.generateRootKeyPair() {
     }
 
     val selfSignKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val selfSignCert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Root CA, O=R3, OU=Corda, L=London, C=GB"), selfSignKey)
+    val selfSignCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Root CA", organisation = "R3 Ltd", locality = "London", country = "GB", organisationUnit = "Corda", state = null), selfSignKey)
     rootStore.addOrReplaceKey(CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
     rootStore.save(rootStorePath, rootKeystorePassword)
 
@@ -172,7 +171,8 @@ private fun DoormanParameters.generateCAKeyPair() {
     }
 
     val intermediateKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val intermediateCert = createCertificate(CertificateType.INTERMEDIATE_CA, rootKeyAndCert.certificate, rootKeyAndCert.keyPair, X500Name("CN=Corda Intermediate CA, O=R3, OU=Corda, L=London, C=GB"), intermediateKey.public)
+    val intermediateCert = createCertificate(CertificateType.INTERMEDIATE_CA, rootKeyAndCert.certificate, rootKeyAndCert.keyPair,
+            CordaX500Name(commonName = "Corda Intermediate CA", organisation = "R3 Ltd", organisationUnit = "Corda", locality = "London", country = "GB", state = null), intermediateKey.public)
     keyStore.addOrReplaceKey(CORDA_INTERMEDIATE_CA, intermediateKey.private,
             caPrivateKeyPassword.toCharArray(), arrayOf(intermediateCert, rootKeyAndCert.certificate))
     keyStore.save(keystorePath, keystorePassword)
@@ -207,7 +207,7 @@ private fun DoormanParameters.startDoorman(isLocalSigning: Boolean = false) {
 }
 
 private fun buildLocalSigner(storage: CertificationRequestStorage, parameters: DoormanParameters): Signer {
-    checkNotNull(parameters.keystorePath) {"The keystorePath parameter must be specified when using local signing!"}
+    checkNotNull(parameters.keystorePath) { "The keystorePath parameter must be specified when using local signing!" }
     // Get password from console if not in config.
     val keystorePassword = parameters.keystorePassword ?: readPassword("Keystore Password: ")
     val caPrivateKeyPassword = parameters.caPrivateKeyPassword ?: readPassword("CA Private Key Password: ")
