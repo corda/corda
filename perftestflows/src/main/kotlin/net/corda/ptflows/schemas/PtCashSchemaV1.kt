@@ -23,8 +23,8 @@ object PtCashSchema
 object PtCashSchemaV1 : MappedSchema(schemaFamily = PtCashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
     @Table(name = "contract_cash_states",
-            indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),
-                    Index(name = "pennies_idx", columnList = "pennies")))
+           indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),
+                             Index(name = "pennies_idx", columnList = "pennies")))
     class PersistentCashState(
             /** X500Name of owner party **/
             @Column(name = "owner_name")

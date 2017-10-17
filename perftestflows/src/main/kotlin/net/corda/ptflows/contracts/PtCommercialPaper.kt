@@ -55,7 +55,7 @@ class PtCommercialPaper : Contract {
             override val owner: AbstractParty,
             val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant
-    ) : OwnableState, QueryableState, IPtCommercialPaperState{
+    ) : OwnableState, QueryableState{
         override val participants = listOf(owner)
 
         override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
@@ -63,10 +63,10 @@ class PtCommercialPaper : Contract {
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by $owner)"
 
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
-        override fun withOwner(newOwner: AbstractParty): IPtCommercialPaperState = copy(owner = newOwner)
+        fun withOwner(newOwner: AbstractParty): State = copy(owner = newOwner)
 
-        override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): IPtCommercialPaperState = copy(faceValue = newFaceValue)
-        override fun withMaturityDate(newMaturityDate: Instant): IPtCommercialPaperState = copy(maturityDate = newMaturityDate)
+        fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): State = copy(faceValue = newFaceValue)
+        fun withMaturityDate(newMaturityDate: Instant): State = copy(maturityDate = newMaturityDate)
 
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(PtCommercialPaperSchemaV1)

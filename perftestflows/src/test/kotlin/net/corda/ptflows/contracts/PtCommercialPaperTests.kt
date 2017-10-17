@@ -26,30 +26,17 @@ import kotlin.test.assertTrue
 
 // TODO: The generate functions aren't tested by these tests: add them.
 
-interface IPtCommercialPaperTestTemplate {
-    fun getPaper(): IPtCommercialPaperState
+interface PtCommercialPaperTestTemplate {
+    fun getPaper(): PtCommercialPaper.State
     fun getIssueCommand(notary: Party): CommandData
     fun getRedeemCommand(notary: Party): CommandData
     fun getMoveCommand(): CommandData
     fun getContract(): ContractClassName
 }
 
-class JavaCommercialPaperTest : IPtCommercialPaperTestTemplate {
-    override fun getPaper(): IPtCommercialPaperState = JavaPtCommercialPaper.State(
-            MEGA_CORP.ref(123),
-            MEGA_CORP,
-            1000.DOLLARS `issued by` MEGA_CORP.ref(123),
-            TEST_TX_TIME + 7.days
-    )
 
-    override fun getIssueCommand(notary: Party): CommandData = JavaPtCommercialPaper.Commands.Issue()
-    override fun getRedeemCommand(notary: Party): CommandData = JavaPtCommercialPaper.Commands.Redeem()
-    override fun getMoveCommand(): CommandData = JavaPtCommercialPaper.Commands.Move()
-    override fun getContract() = JavaPtCommercialPaper.JCP_PROGRAM_ID
-}
-
-class KotlinCommercialPaperTest : IPtCommercialPaperTestTemplate {
-    override fun getPaper(): IPtCommercialPaperState = PtCommercialPaper.State(
+class KotlinCommercialPaperTest : PtCommercialPaperTestTemplate {
+    override fun getPaper(): PtCommercialPaper.State = PtCommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP,
             faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
@@ -62,8 +49,8 @@ class KotlinCommercialPaperTest : IPtCommercialPaperTestTemplate {
     override fun getContract() = PtCommercialPaper.CP_PROGRAM_ID
 }
 
-class KotlinCommercialPaperLegacyTest : IPtCommercialPaperTestTemplate {
-    override fun getPaper(): IPtCommercialPaperState = PtCommercialPaper.State(
+class KotlinCommercialPaperLegacyTest : PtCommercialPaperTestTemplate {
+    override fun getPaper(): PtCommercialPaper.State = PtCommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP,
             faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
@@ -80,11 +67,11 @@ class KotlinCommercialPaperLegacyTest : IPtCommercialPaperTestTemplate {
 class CommercialPaperTestsGeneric {
     companion object {
         @Parameterized.Parameters @JvmStatic
-        fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest(), KotlinCommercialPaperLegacyTest())
+        fun data() = listOf(KotlinCommercialPaperTest(), KotlinCommercialPaperLegacyTest())
     }
 
     @Parameterized.Parameter
-    lateinit var thisTest: IPtCommercialPaperTestTemplate
+    lateinit var thisTest: PtCommercialPaperTestTemplate
 
     val issuer = MEGA_CORP.ref(123)
 
@@ -100,7 +87,7 @@ class CommercialPaperTestsGeneric {
 
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
-                attachments(CP_PROGRAM_ID, JavaPtCommercialPaper.JCP_PROGRAM_ID)
+                attachments(CP_PROGRAM_ID, PtCommercialPaper.CP_PROGRAM_ID)
                 output(thisTest.getContract(), "paper") { thisTest.getPaper() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
                 timeWindow(TEST_TX_TIME)
@@ -110,11 +97,11 @@ class CommercialPaperTestsGeneric {
             // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
             // that sounds a bit too good to be true!
             transaction("Trade") {
-                attachments(PtCash.PROGRAM_ID, JavaPtCommercialPaper.JCP_PROGRAM_ID)
+                attachments(PtCash.PROGRAM_ID, PtCommercialPaper.CP_PROGRAM_ID)
                 input("paper")
                 input("alice's $900")
                 output(PtCash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
-                output(thisTest.getContract(), "alice's paper") { "paper".output<IPtCommercialPaperState>().withOwner(ALICE) }
+                output(thisTest.getContract(), "alice's paper") { "paper".output<PtCommercialPaper.State>().withOwner(ALICE) }
                 command(ALICE_PUBKEY) { PtCash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
                 this.verifies()
@@ -123,7 +110,7 @@ class CommercialPaperTestsGeneric {
             // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
             // as a single payment from somewhere and uses it to pay Alice off, keeping the remaining $200 as change.
             transaction("Redemption") {
-                attachments(CP_PROGRAM_ID, JavaPtCommercialPaper.JCP_PROGRAM_ID)
+                attachments(CP_PROGRAM_ID, PtCommercialPaper.CP_PROGRAM_ID)
                 input("alice's paper")
                 input("some profits")
 
@@ -150,7 +137,7 @@ class CommercialPaperTestsGeneric {
                 timeWindow(TEST_TX_TIME + 8.days)
 
                 tweak {
-                    output(thisTest.getContract()) { "paper".output<IPtCommercialPaperState>() }
+                    output(thisTest.getContract()) { "paper".output<PtCommercialPaper.State>() }
                     this `fails with` "must be destroyed"
                 }
 
@@ -163,7 +150,7 @@ class CommercialPaperTestsGeneric {
     fun `key mismatch at issue`() {
         transaction {
             attachment(CP_PROGRAM_ID)
-            attachment(JavaPtCommercialPaper.JCP_PROGRAM_ID)
+            attachment(CP_PROGRAM_ID)
             output(thisTest.getContract()) { thisTest.getPaper() }
             command(MINI_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timeWindow(TEST_TX_TIME)
@@ -175,7 +162,7 @@ class CommercialPaperTestsGeneric {
     fun `face value is not zero`() {
         transaction {
             attachment(CP_PROGRAM_ID)
-            attachment(JavaPtCommercialPaper.JCP_PROGRAM_ID)
+            attachment(CP_PROGRAM_ID)
             output(thisTest.getContract()) { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timeWindow(TEST_TX_TIME)
@@ -187,7 +174,7 @@ class CommercialPaperTestsGeneric {
     fun `maturity date not in the past`() {
         transaction {
             attachment(CP_PROGRAM_ID)
-            attachment(JavaPtCommercialPaper.JCP_PROGRAM_ID)
+            attachment(CP_PROGRAM_ID)
             output(thisTest.getContract()) { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timeWindow(TEST_TX_TIME)
@@ -199,7 +186,7 @@ class CommercialPaperTestsGeneric {
     fun `issue cannot replace an existing state`() {
         transaction {
             attachment(CP_PROGRAM_ID)
-            attachment(JavaPtCommercialPaper.JCP_PROGRAM_ID)
+            attachment(CP_PROGRAM_ID)
             input(thisTest.getContract(), thisTest.getPaper())
             output(thisTest.getContract()) { thisTest.getPaper() }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
