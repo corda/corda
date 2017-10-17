@@ -46,5 +46,5 @@ include 'doorman'
 include 'verify-enclave'
 include 'sgx-jvm/hsm-tool'
 include 'signing-server'
-include 'perftestflows'
+include 'perftestcordapp'
 
