@@ -1,5 +1,6 @@
 package net.corda.core.identity
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
@@ -10,6 +11,7 @@ import java.security.PublicKey
  * the party. In most cases [Party] or [AnonymousParty] should be used, depending on use-case.
  */
 @CordaSerializable
+@DoNotImplement
 abstract class AbstractParty(val owningKey: PublicKey) {
     /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */
     override fun equals(other: Any?): Boolean = other === this || other is AbstractParty && other.owningKey == owningKey

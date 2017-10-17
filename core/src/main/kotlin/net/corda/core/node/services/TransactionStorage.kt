@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.DataFeed
 import net.corda.core.transactions.SignedTransaction
@@ -8,6 +9,7 @@ import rx.Observable
 /**
  * Thread-safe storage of transactions.
  */
+@DoNotImplement
 interface TransactionStorage {
     /**
      * Return the transaction with the given [id], or null if no such transaction exists.

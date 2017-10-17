@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -43,6 +44,7 @@ interface NetworkMapCache : NetworkMapCacheBase {
 }
 
 /** Subset of [NetworkMapCache] that doesn't depend on an [IdentityService]. */
+@DoNotImplement
 interface NetworkMapCacheBase {
     // DOCSTART 1
     /**

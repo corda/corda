@@ -1,6 +1,7 @@
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -14,7 +15,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.utilities.NonEmptySet
 import rx.Observable
-import rx.subjects.PublishSubject
 import java.time.Instant
 import java.util.*
 
@@ -151,6 +151,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
  *
  * Note that transactions we've seen are held by the storage service, not the vault.
  */
+@DoNotImplement
 interface VaultService {
     /**
      * Prefer the use of [updates] unless you know why you want to use this instead.

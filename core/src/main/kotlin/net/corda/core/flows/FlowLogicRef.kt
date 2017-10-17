@@ -1,6 +1,6 @@
 package net.corda.core.flows
 
-import net.corda.core.crypto.SecureHash
+import net.corda.core.DoNotImplement
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -8,6 +8,7 @@ import net.corda.core.serialization.CordaSerializable
  * Typically this would be used from within the nextScheduledActivity method of a QueryableState to specify
  * the flow to run at the scheduled time.
  */
+@DoNotImplement
 interface FlowLogicRefFactory {
     fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
 }
@@ -24,4 +25,5 @@ class IllegalFlowLogicException(type: Class<*>, msg: String) : IllegalArgumentEx
  */
 // TODO: align this with the existing [FlowRef] in the bank-side API (probably replace some of the API classes)
 @CordaSerializable
+@DoNotImplement
 interface FlowLogicRef
