@@ -310,9 +310,9 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
 
     private fun findByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfoSchemaV1.PersistentNodeInfo> {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKeyHash = :owningKeyHash",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKey = :owningKey",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
-        query.setParameter("owningKeyHash", SecureHash.sha256(identityKey.encoded).toString())
+        query.setParameter("owningKey", identityKey.toBase58String())
         return query.resultList
     }
 
