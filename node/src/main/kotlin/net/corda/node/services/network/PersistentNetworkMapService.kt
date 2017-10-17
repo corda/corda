@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.SingleMessageRecipient
@@ -10,6 +9,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisMessagingComponent
@@ -34,7 +34,7 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_nodes")
     class NetworkNode(
             @Id
-            @Column(name = "node_party_key_hash", length = 64)
+            @Column(name = "node_party_key_hash", length = MAX_HASH_HEX_SIZE)
             var publicKeyHash: String,
 
             @Column
@@ -61,14 +61,14 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
 
         fun createNetworkNodesMap(): PersistentMap<PartyAndCertificate, NodeRegistrationInfo, NetworkNode, String> {
             return PersistentMap(
-                    toPersistentEntityKey = { SecureHash.sha256(it.owningKey.encoded).toString() },
+                    toPersistentEntityKey = { it.owningKey.toStringShort() },
                     fromPersistentEntity = {
                         Pair(PartyAndCertificate(factory.generateCertPath(ByteArrayInputStream(it.nodeParty.certPath))),
                                 it.registrationInfo.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { key: PartyAndCertificate, value: NodeRegistrationInfo ->
                         NetworkNode(
-                                publicKeyHash = key.owningKey.encoded.sha256().toString(),
+                                publicKeyHash = key.owningKey.toStringShort(),
                                 nodeParty = NodeParty(
                                         key.name.toString(),
                                         key.certificate.encoded,

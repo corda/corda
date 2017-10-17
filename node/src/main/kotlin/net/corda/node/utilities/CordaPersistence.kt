@@ -20,6 +20,14 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 const val NODE_DATABASE_PREFIX = "node_"
 
+/**
+ * The maximum supported field-size for hash HEX-encoded outputs (e.g. database fields).
+ * This value is enough to support hash functions with outputs up to 512 bits (e.g. SHA3-512), in which
+ * case 128 HEX characters are required.
+ * 130 was selected instead of 128, to allow for 2 extra characters that will be used as hash-scheme identifiers.
+ */
+const val MAX_HASH_HEX_SIZE = 130
+
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
 class CordaPersistence(var dataSource: HikariDataSource, private val schemaService: SchemaService,
                        private val createIdentityService: () -> IdentityService, databaseProperties: Properties) : Closeable {
