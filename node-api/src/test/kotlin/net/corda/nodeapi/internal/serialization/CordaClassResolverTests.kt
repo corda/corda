@@ -10,7 +10,6 @@ import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
-import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
 import net.corda.testing.node.MockAttachmentStorage
@@ -106,16 +105,6 @@ class CordaClassResolverTests {
         val emptyListClass = listOf<Any>().javaClass
         val emptySetClass = setOf<Any>().javaClass
         val emptyMapClass = mapOf<Any, Any>().javaClass
-    }
-
-    val factory: SerializationFactory = object : SerializationFactory() {
-        override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-            TODO("not implemented")
-        }
-
-        override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-            TODO("not implemented")
-        }
     }
 
     private val emptyWhitelistContext: SerializationContext = SerializationContextImpl(KryoHeaderV0_1, this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, SerializationContext.UseCase.P2P)

@@ -103,6 +103,10 @@ class TestSerializationFactory : SerializationFactory() {
         return delegate!!.deserialize(byteSequence, clazz, context)
     }
 
+    override fun <T : Any> deserializeWithCompatibleContext(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithCompatibleContext<T> {
+        return delegate!!.deserializeWithCompatibleContext(byteSequence, clazz, context)
+    }
+
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         return delegate!!.serialize(obj, context)
     }
@@ -147,7 +151,7 @@ class TestSerializationContext : SerializationContext {
         return TestSerializationContext().apply { delegate = this@TestSerializationContext.delegate!!.withWhitelisted(clazz) }
     }
 
-    override fun withPreferredSerializationVersion(versionHeader: ByteSequence): SerializationContext {
+    override fun withPreferredSerializationVersion(versionHeader: VersionHeader): SerializationContext {
         return TestSerializationContext().apply { delegate = this@TestSerializationContext.delegate!!.withPreferredSerializationVersion(versionHeader) }
     }
 
