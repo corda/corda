@@ -22,6 +22,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.toBase58String
 import net.corda.node.services.api.NetworkCacheException
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.ServiceHubInternal
