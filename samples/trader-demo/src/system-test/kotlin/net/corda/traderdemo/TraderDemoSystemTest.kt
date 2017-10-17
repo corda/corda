@@ -4,228 +4,406 @@ import net.sf.expectit.Expect
 import net.sf.expectit.ExpectBuilder
 import net.sf.expectit.Result
 import net.sf.expectit.matcher.Matchers
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.io.*
 import java.lang.UnsupportedOperationException
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 import javax.naming.ConfigurationException
 
 class TraderDemoSystemTest {
-    @Test
-    fun `runs trader demo system test`() {
-        var node = Node(workingDirectory, "BankA")
-        var expect = node.launch(false, false, emptyList())
 
-        var result = expect
-            .withTimeout(60, TimeUnit.SECONDS)
-            .expect(Matchers.regexp("(?m)^Node for \"Bank A\" started up and registered in .*"))
+    private var bankA: NodeProcess? = null
+    private var bankB: NodeProcess? = null
+    private var bankOfCorda: NodeProcess? = null
+    private var notaryService: NodeProcess? = null
 
-        println(result!!.input)
-
-        println(result.isSuccessful)
-//        Node for "Bank A" started up and registered in 5.59 sec
-//        Node for "Bank A" started up and registered in 5.59 sec
-
-        expect.close()
-
-        println("asdga")
+    @Before
+    fun startNodes() {
+        bankA = startNode("BankA")
+        bankB = startNode("BankB")
+        bankOfCorda = startNode("BankOfCorda")
+        notaryService = startNode("NotaryService")
     }
 
-    private val nodeSubDirectoryNames =
-        listOf<String>("Notary Service", "Bank A", "Bank B", "BankOfCorda")
+    @After
+    fun stopNodes() {
+        bankA?.close()
+        bankB?.close()
+        bankOfCorda?.close()
+        notaryService?.close()
+    }
 
-    private val workingDirectory by lazy {
+    @Test
+    fun `runs trader demo system test`() {
+
+
+//
+//        var result = expect
+//            .withTimeout(60, TimeUnit.SECONDS)
+//            .expect(Matchers.regexp("(?m)^Node for \"Bank A\" started up and registered in .*"))
+//
+//        println(result!!.input
+//
+//        println(result.isSuccessful)
+////        Node for "Bank A" started up and registered in 5.59 sec
+////        Node for "Bank A" started up and registered in 5.59 sec
+
+    }
+
+    private fun startNode(nodeDirectoryName: String): NodeProcess {
+        return NodeStarter().start(File(nodesDirectory, nodeDirectoryName))
+    }
+
+    private val nodesDirectory by lazy {
         Paths
             .get(System.getProperty("user.dir"), "build", "nodes")
             .toFile()
     }
 }
 
-private class NodeProcess(private val process: Process) {
+private abstract class JarType(private val _jarName: String) {
 
+    fun jarName(): String = _jarName
 
+    open fun validateFilesOrThrow(nodeDirectory: File) {
+        throw NotImplementedError()
+    }
+
+    protected fun validateFilesExistOrThrow(nodeDirectory: File) {
+        nodeDirectory.existsOrThrow()
+        jarFile(nodeDirectory).existsOrThrow()
+        configFile(nodeDirectory).existsOrThrow()
+    }
+
+    protected fun jarFile(nodeDirectory: File) = File(nodeDirectory, jarName())
+    protected fun configFile(nodeDirectory: File) = File(nodeDirectory, "node.conf")
+}
+
+private object cordaJarType: JarType("corda.jar") {
+
+    override fun validateFilesOrThrow(nodeDirectory: File) = validateFilesExistOrThrow(nodeDirectory)
 
 }
 
-private class Node(private val workingDirectory: File, private val subDirectoryName: String) {
+private object webserverJarType: JarType("corda-webserver.jar") {
 
-    fun launch(isHeadless: Boolean, isCapsuleDebugOn: Boolean, arguments: List<String>): Expect {
-        validateFilesExistOrThrow()
-        // TODO need to save process - pass into NodeProcess class
-        val process = startProcess(isHeadless, isCapsuleDebugOn, arguments)
-        return buildExpect(process)
+    override fun validateFilesOrThrow(nodeDirectory: File) {
+        validateFilesExistOrThrow(nodeDirectory)
+        validateConfigOrThrow(configFile(nodeDirectory))
     }
 
-    private fun buildExpect(process: Process) =
-        ExpectBuilder()
-            .withInputs(process.inputStream)
-            .withOutput(process.outputStream)
-//            .withExceptionOnFailure() TODO uncomment when working
-            .build()
-
-    private fun startProcess(isHeadless: Boolean, isCapsuleDebugOn: Boolean, arguments: List<String>) =
-        ProcessBuilder()
-            .command(shellCommand(javaCommand(isHeadless, isCapsuleDebugOn, arguments)))
-            .directory(subDirectory())
-            .redirectErrorStream(true)
-            .start()
-
-    private fun shellCommand(javaCommand: List<String>) =
-        ShellCommandBuilder().run {
-            setCommand(javaCommand)
-            setWorkingDirectory(subDirectory())
-            build()
+    private fun validateConfigOrThrow(configFile: File) {
+        val isConfigValid = Files
+                .lines(configFile.toPath())
+                .anyMatch { "webAddress" in it }
+        if (!isConfigValid) {
+            throw ConfigurationException("Node config does not contain webAddress.")
         }
+    }
+}
 
-    private fun javaCommand(isHeadless: Boolean, isCapsuleDebugOn: Boolean, arguments: List<String>) =
-        JavaCommandBuilder().run {
-            setJarFile(jarFile())
+private class NodeStarter {
+
+    fun start(
+            nodeDirectory: File,
+            jarType: JarType = cordaJarType,
+            isHeadless: Boolean = false,
+            isCapsuleDebugOn: Boolean = false,
+            jarArguments: List<String> = emptyList()
+    ): NodeProcess {
+        jarType.validateFilesOrThrow(nodeDirectory)
+        val jarFile = File(nodeDirectory, jarType.jarName())
+        val nodeCommand = buildNodeCommand(jarFile, isHeadless, isCapsuleDebugOn, jarArguments)
+        return NodeProcessCreator().create(nodeCommand, nodeDirectory)
+    }
+
+    private fun buildNodeCommand(
+            jarFile: File,
+            isHeadless: Boolean,
+            isCapsuleDebugOn: Boolean,
+            jarArguments: List<String>
+    ): List<String> {
+        return NodeCommandBuilder().run {
+            withJarFile(jarFile)
             if (isHeadless) {
-                runHeadless()
+                withHeadlessFlag()
             }
             if (isCapsuleDebugOn) {
-                runWithCapsuleDebugOn()
+                withCapsuleDebugOn()
             }
-            arguments.forEach { addArgument(it) }
+            withJarArguments(jarArguments)
             build()
         }
-
-    private fun validateFilesExistOrThrow() {
-        subDirectory().existsOrThrow()
-        jarFile().existsOrThrow()
-        configFile().existsOrThrow()
     }
-
-    private fun jarFile() =
-        File(subDirectory(), "corda.jar")
-
-    private fun configFile() =
-        File(subDirectory(), "node.conf")
-
-    private fun subDirectory() =
-        File(workingDirectory, subDirectoryName)
 }
 
-private class ShellCommandBuilder {
+private class NodeCommandBuilder {
 
-    private var command: List<String> = mutableListOf()
-    private var workingDirectory: File? = null
+    private var _jarFile: File? = null
+    private var _isHeadless: Boolean? = null
+    private var _isCapsuleDebugOn: Boolean? = null
+    private var _jarArguments: List<String>? = null
 
-    fun setCommand(command: List<String>) {
-        this.command = command
+    fun withJarFile(jarFile: File): NodeCommandBuilder {
+        _jarFile.expectNullOrThrow("JarFile")
+        _jarFile = jarFile
+        return this
     }
 
-    fun setWorkingDirectory(workingDirectory: File) {
-        this.workingDirectory = workingDirectory
+    fun withJarArguments(jarArguments: List<String>): NodeCommandBuilder {
+        _jarArguments.expectNullOrThrow("JarArguments")
+        _jarArguments = jarArguments
+        return this
     }
 
-    fun build() =
-        when (os) {
-            OS.WINDOWS -> buildWindows()
-            OS.OSX -> buildOsx()
-            OS.LINUX -> buildLinux()
+    fun withHeadlessFlag(): NodeCommandBuilder {
+        _isHeadless.expectNullOrThrow("Headless")
+        _isHeadless = true
+        return this
+    }
+
+    fun withCapsuleDebugOn(): NodeCommandBuilder {
+        _isCapsuleDebugOn.expectNullOrThrow("CapsuleDebugOn")
+        _isCapsuleDebugOn = true
+        return this
+    }
+
+    fun build(): List<String> {
+        validateJarFileNameOrThrow()
+        return buildShellCommand()
+    }
+
+    private fun buildShellCommand(): List<String> {
+        return ShellCommandBuilder()
+            .withCommand(buildJavaCommand())
+            .withWorkingDirectory(_jarFile!!.parentFile)
+            .build()
+    }
+
+    private fun buildJavaCommand(): List<String> {
+        return JavaCommandBuilder()
+            .withJavaArguments(javaArguments())
+            .withJarFile(_jarFile!!)
+            .withJarArguments(jarArguments())
+            .build()
+    }
+
+    private fun validateJarFileNameOrThrow() {
+        val validJarFileNames = listOf(cordaJarType.jarName(), webserverJarType.jarName())
+        if (_jarFile!!.name !in validJarFileNames) {
+            throw IllegalArgumentException("JarFile.name is not valid.")
         }
-
-    private fun buildWindows(): List<String> =
-        mutableListOf<String>().apply {
-            TODO("Test this")
-            add("cmd")
-            add("/C")
-            add("start ${command.joinToString(" ")}")
-        }
-
-    private fun buildOsx(): List<String> =
-        mutableListOf<String>().apply {
-            add("/bin/bash")
-            add("-c")
-            add("cd $workingDirectory ; ${command.joinToString(" ")} && exit")
-        }
-
-    private fun buildLinux(): List<String> =
-        mutableListOf<String>().apply {
-            TODO()
-        }
-}
-
-private class JavaCommandBuilder {
-
-    private var jarFile: File? = null
-    private var isHeadless = false
-    private var isCapsuleDebugOn = false
-    private var arguments = mutableListOf<String>()
-
-    fun setJarFile(jarFile: File) {
-        this.jarFile = jarFile
     }
 
-    fun runHeadless() {
-        isHeadless = true
-    }
-
-    fun runWithCapsuleDebugOn() {
-        isCapsuleDebugOn = true
-    }
-
-    fun addArgument(argument: String) {
-        arguments.add(argument)
-    }
-
-    fun build(): List<String> =
-        mutableListOf<String>().apply {
-            add(javaPathString)
-            addAll(javaOptions())
-            add("-jar")
-            add(jarFile!!.name)
-            addAll(jarArguments())
-        }
-
-    private val javaPathString by lazy {
-        Paths
-            .get(System.getProperty("java.home"), "bin", "java")
-            .toString()
-    }
-
-    private fun javaOptions(): List<String> =
-        mutableListOf<String>().apply {
-            if (isCapsuleDebugOn) {
+    private fun javaArguments(): List<String> {
+        return mutableListOf<String>().apply {
+            if (_isCapsuleDebugOn == true) {
                 add("-Dcapsule.log=verbose")
             }
-            add(nodeNameSystemProperty())
+            add(nodeName())
             add(debugPort())
         }
+    }
 
-    private fun nodeNameSystemProperty() =
-        "-Dname=" + jarFile!!.parentFile.name + if (isHeadless) "" else "-${jarFile!!.name}"
+    private fun nodeName(): String {
+        return "-Dname=" + _jarFile!!.parentFile.name + if (_isHeadless == true) "" else "-${_jarFile!!.name}"
+    }
 
     private fun debugPort(): String {
         val portNumber = debugPortNumberGenerator.next()
         return "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$portNumber"
     }
 
-    private fun jarArguments() =
-        mutableListOf<String>().apply {
-            if (isHeadless) {
+    private fun jarArguments(): List<String> {
+        return mutableListOf<String>().apply {
+            if (_isHeadless == true) {
                 add("--no-local-shell")
             }
-            addAll(arguments)
+            addAll(_jarArguments ?: emptyList())
         }
+    }
+}
+
+private class ShellCommandBuilder {
+
+    private var _command: List<String>? = null
+    private var _workingDirectory: File? = null
+
+    fun withCommand(command: List<String>): ShellCommandBuilder {
+        _command.expectNullOrThrow("Command")
+        _command = command
+        return this
+    }
+
+    fun withWorkingDirectory(workingDirectory: File): ShellCommandBuilder {
+        _workingDirectory.expectNullOrThrow("WorkingDirectory")
+        _workingDirectory = workingDirectory
+        return this
+    }
+
+    fun build(): List<String> {
+        return when (os) {
+            OS.WINDOWS -> buildWindows()
+            OS.OSX -> buildOsx()
+            OS.LINUX -> buildLinux()
+        }
+    }
+
+    private fun buildWindows(): List<String> {
+        return mutableListOf<String>().apply {
+            TODO("Test this - Also apply workingDirectory")
+            add("cmd")
+            add("/C")
+            add("start ${_command!!.joinToString(" ")}")
+        }
+    }
+
+    private fun buildOsx(): List<String> {
+        return mutableListOf<String>().apply {
+            add("/bin/bash")
+            add("-c")
+            add("cd ${_workingDirectory!!.path} ; ${_command!!.joinToString(" ")} && exit")
+        }
+    }
+
+    private fun buildLinux(): List<String> {
+        return mutableListOf<String>().apply {
+            TODO()
+        }
+    }
+}
+
+private class JavaCommandBuilder {
+
+    private var _javaArguments: List<String>? = null
+    private var _jarFile: File? = null
+    private var _jarArguments: List<String>? = null
+
+    fun withJavaArguments(javaArguments: List<String>): JavaCommandBuilder {
+        _javaArguments.expectNullOrThrow("JavaArguments")
+        _javaArguments = javaArguments
+        return this
+    }
+
+    fun withJarFile(jarFile: File): JavaCommandBuilder {
+        _jarFile.expectNullOrThrow("JarFile")
+        _jarFile = jarFile
+        return this
+    }
+
+    fun withJarArguments(jarArguments: List<String>): JavaCommandBuilder {
+        _jarArguments.expectNullOrThrow("JarArguments")
+        _jarArguments = jarArguments
+        return this
+    }
+
+    fun build(): List<String> {
+        return mutableListOf<String>().apply {
+            add(javaPathString)
+            addAll(_javaArguments ?: emptyList())
+            add("-jar")
+            add(_jarFile!!.name)
+            addAll(_jarArguments ?: emptyList())
+        }
+    }
+
+    private val javaPathString: String by lazy {
+        Paths
+            .get(System.getProperty("java.home"), "bin", "java")
+            .toString()
+    }
+}
+
+private class NodeProcessCreator {
+
+    fun create(command: List<String>, workingDirectory: File): NodeProcess {
+        val process = buildProcess(command, workingDirectory)
+        val expect = buildExpect(process)
+        return NodeProcess(process, expect)
+    }
+
+    private fun buildProcess(command: List<String>, workingDirectory: File): Process {
+        return ProcessBuilder()
+            .command(command)
+            .directory(workingDirectory)
+            .redirectErrorStream(true)
+            .start()
+    }
+
+    private fun buildExpect(process: Process): Expect {
+        return ExpectBuilder()
+            .withInputs(process.inputStream)
+            .withOutput(process.outputStream)
+//            .withExceptionOnFailure() TODO uncomment when working
+            .build()
+    }
+
+}
+
+private class NodeProcess(private val _process: Process, private val _expect: Expect) {
+
+    fun expectCordaLogo(): Result {
+        val pattern =
+            "?(m)" +
+            """^\Q   ______               __ \E.*$\r\n?|\n""" +
+            """^\Q  / ____/     _________/ /___ _\E.*$\r\n?|\n""" +
+            """^\Q / /     __  / ___/ __  / __ `/\E.*$\r\n?|\n""" +
+            """^\Q/ /___  /_/ / /  / /_/ / /_/ /\E.*$\r\n?|\n""" +
+            """^\Q\____/     /_/   \__,_/\__,_/\E.*$\r\n?|\n"""
+        return expectPattern(pattern)
+    }
+
+    fun expectLogsLocation(path: String): Result {
+        return expectPattern("(?m)^Logs can be found in +: $path$")
+    }
+
+    fun expectDatabaseConnectionUrl(url: String): Result {
+        return expectPattern("(?m)^Database connection url is +: $url$")
+    }
+
+    fun expectIncomingConnectionAddress(host: String, portNumber: Int): Result {
+        return expectPattern("(?m)^Incoming connection address +: $host:$portNumber")
+    }
+
+    fun expectListeningOnPort(portNumber: Int): Result {
+        return expectPattern("(?m)^Listening on port +: $portNumber$")
+    }
+
+    fun expectLoadedCorDapps(cordapps: List<String>): Result {
+        return expectPattern("(?m)^Loaded CorDapps +: ${cordapps.joinToString(", ")}$")
+    }
+
+    fun expectStartedUp(nodeName: String): Result {
+        return expectPattern("(?m)^Node for \"$nodeName\" started up and registered in \\d+(\\.\\d+)? sec$")
+    }
+
+    fun expectPattern(pattern: String): Result {
+        return _expect.expect(Matchers.regexp(pattern))
+    }
+
+    fun close() {
+        _expect.close()
+        _process
+            .destroyForcibly()
+            .waitFor(5, TimeUnit.SECONDS)
+    }
 }
 
 private enum class OS {
     WINDOWS,
     OSX,
-    LINUX
+    LINUX,
 }
 
-private val os by lazy {
-    val osNameProperty = System.getProperty("os.name", "generic")
-    var osName = osNameProperty.toLowerCase(Locale.ENGLISH)
+private val os: OS by lazy {
+    val osName = System
+        .getProperty("os.name", "generic")
+        .toLowerCase(Locale.ENGLISH)
     if ("mac" in osName || "darwin" in osName)
         OS.OSX
     else if ("win" in osName)
@@ -245,4 +423,8 @@ private fun File.existsOrThrow() {
     if (!this.exists()) {
         throw FileNotFoundException("${this.path} does not exist.")
     }
+}
+
+private fun Any?.expectNullOrThrow(name: String = "Nullable") {
+    this?.let { throw IllegalArgumentException("$name has already been set to a value.") }
 }
