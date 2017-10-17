@@ -8,6 +8,7 @@ import net.corda.core.internal.list
 import net.corda.core.utilities.loggerFor
 import rx.Observable
 import rx.Scheduler
+import rx.Subscription
 import rx.schedulers.Schedulers
 import java.io.IOException
 import java.nio.file.Files
@@ -24,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * This class will create paths that it needs to poll and to where it needs to copy files in case those
  * don't exist yet.
  */
-class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
+class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseable {
 
     companion object {
         private val log = loggerFor<NodeInfoFilesCopier>()
@@ -32,9 +33,15 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
     }
 
     private val nodeDataMapBox = ThreadBox(mutableMapOf<Path, NodeData>())
+    /**
+     * Whether the NodeInfoFilesCopier is closed. When the NodeInfoFilesCopier is closed it will stop polling the
+     * filesystem and all the public methods except [#close] will throw.
+     */
+    private var closed = false
+    private val subscription: Subscription
 
     init {
-        Observable.interval(5, TimeUnit.SECONDS, scheduler)
+        this.subscription = Observable.interval(5, TimeUnit.SECONDS, scheduler)
                 .subscribe { poll() }
     }
 
@@ -45,6 +52,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
      * other nodes' nodeInfo files will be copied to this node additional-node-infos directory.
      */
     fun addConfig(nodeDir: Path) {
+        require(!closed) { "NodeInfoFilesCopier is already closed" }
         nodeDataMapBox.locked {
             val newNodeFile = NodeData(nodeDir)
             put(nodeDir, newNodeFile)
@@ -63,6 +71,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
      * one.
      */
     fun removeConfig(nodeDir: Path) {
+        require(!closed) { "NodeInfoFilesCopier is already closed" }
         nodeDataMapBox.locked {
             remove(nodeDir) ?: return
             log.info("Stopped watching: $nodeDir")
@@ -70,8 +79,20 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) {
     }
 
     fun reset() {
+        require(!closed) { "NodeInfoFilesCopier is already closed" }
         nodeDataMapBox.locked {
             clear()
+        }
+    }
+
+    /**
+     * Stops polling the filesystem.
+     * This function can be called as many times as one wants.
+     */
+    override fun close() {
+        if (!closed) {
+            closed = true
+            subscription.unsubscribe()
         }
     }
 

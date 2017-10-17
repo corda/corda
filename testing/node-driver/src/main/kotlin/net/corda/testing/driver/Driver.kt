@@ -809,6 +809,7 @@ class DriverDSL(
     override fun start() {
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
+        shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
     }
 
     fun baseDirectory(nodeName: CordaX500Name): Path {
@@ -853,7 +854,6 @@ class DriverDSL(
             args : Array<Any> -> args.map { it as Int }.min() ?: 0
         }
         val future = smallestSeenNetworkMapSize.filter { it >= requiredNodes }.toFuture()
-        counterObservable.connect()
         return future
     }
 
