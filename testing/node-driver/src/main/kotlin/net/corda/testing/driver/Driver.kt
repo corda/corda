@@ -20,6 +20,7 @@ import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.toFuture
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
@@ -208,14 +209,14 @@ sealed class NodeHandle {
             override val webAddress: NetworkHostAndPort,
             val debugPort: Int?,
             val process: Process,
-            val action: () -> Unit
+            private val onStopCallback: () -> Unit
     ) : NodeHandle() {
         override fun stop(): CordaFuture<Unit> {
             with(process) {
                 destroy()
                 waitFor()
             }
-            action()
+            onStopCallback()
             return doneFuture(Unit)
         }
     }
@@ -227,7 +228,7 @@ sealed class NodeHandle {
             override val webAddress: NetworkHostAndPort,
             val node: StartedNode<Node>,
             val nodeThread: Thread,
-            val action: () -> Unit
+            private val onStopCallback: () -> Unit
     ) : NodeHandle() {
         override fun stop(): CordaFuture<Unit> {
             node.dispose()
@@ -235,7 +236,7 @@ sealed class NodeHandle {
                 interrupt()
                 join()
             }
-            action()
+            onStopCallback()
             return doneFuture(Unit)
         }
     }
@@ -611,7 +612,7 @@ class DriverDSL(
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
     private val nodeInfoFilesCopier = NodeInfoFilesCopier()
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
-    private var countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
+    private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
 
     class State {
         val processes = ArrayList<CordaFuture<Process>>()
@@ -806,7 +807,6 @@ class DriverDSL(
     override fun start() {
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
-        // TODO
     }
 
     fun baseDirectory(nodeName: CordaX500Name): Path {
@@ -823,10 +823,10 @@ class DriverDSL(
      * @return a [ConnectableObservable] which emits a new [Int] every time the number of registered nodes changes
      *   the initial value emitted is always [initial]
      */
-    private fun countNodesObservable(initial: Int, observable: Observable<NetworkMapCache.MapChange>):
+    private fun nodeCountObservable(initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>):
             ConnectableObservable<Int> {
         var count = initial
-        return observable.map { it ->
+        return networkMapCacheChangeObservable.map { it ->
             when (it) {
                 is NetworkMapCache.MapChange.Added -> count++
                 is NetworkMapCache.MapChange.Removed -> count--
@@ -843,18 +843,19 @@ class DriverDSL(
      */
     private fun waitForNodes(rpc: CordaRPCOps): CordaFuture<Unit> {
         val (snapshot, updates) = rpc.networkMapFeed()
-        val counterObservable = countNodesObservable(snapshot.size, updates)
+        val counterObservable = nodeCountObservable(snapshot.size, updates)
         countObservables.put(rpc.nodeInfo().legalIdentities.first().name, counterObservable)
         val requiredNodes = countObservables.size
         val future = openFuture<Unit>()
 
         // This is an observable which yield the minimum number of nodes in each node network map.
-        val latest = Observable.combineLatest(countObservables.values.toList(), { args ->
-            val ints = args.map { it as Int }
-            return@combineLatest ints.min() ?: 0
-        })
+        val smallestSeenNetworkMapSize = Observable.combineLatest(countObservables.values.toList()) {
+            args : Array<Any> -> args.map { it as Int }.min() ?: 0
+        }
 
-        latest.subscribe(object : Subscriber<Int>() {
+        smallestSeenNetworkMapSize.filter {it > requiredNodes} .toFuture()
+
+        smallestSeenNetworkMapSize.subscribe(object : Subscriber<Int>() {
             override fun onError(e: Throwable?) {  }
             override fun onCompleted() {  }
             override fun onNext(knownNodes: Int) {
