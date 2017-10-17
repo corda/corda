@@ -7,7 +7,7 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
 
-data class ObjectWithVersionHeader<out T : Any>(val obj: T, val versionHeader: VersionHeader)
+data class ObjectWithCompatibleContext<out T : Any>(val obj: T, val context: SerializationContext)
 
 /**
  * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
@@ -29,9 +29,9 @@ abstract class SerializationFactory {
      * @param byteSequence The bytes to deserialize, including a format header prefix.
      * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
      * @param context A context that configures various parameters to deserialization.
-     * @return deserialized object along with [VersionHeader] to identify encoding used.
+     * @return deserialized object along with [SerializationContext] to identify encoding used.
      */
-    abstract fun <T : Any> deserializeWithVersionHeader(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithVersionHeader<T>
+    abstract fun <T : Any> deserializeWithCompatibleContext(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithCompatibleContext<T>
 
     /**
      * Serialize an object to bytes using the preferred serialization format version from the context.
@@ -188,12 +188,12 @@ inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: Seri
 }
 
 /**
- * Additionally returns [VersionHeader] which was used to encoding.
- * It might be helpful to know [VersionHeader] in case reply needs to be sent in the same encoding.
+ * Additionally returns [SerializationContext] which was used for encoding.
+ * It might be helpful to know [SerializationContext] to use the same encoding in the reply.
  */
-inline fun <reified T : Any> ByteSequence.deserializeWithVersionHeader(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
-                                                                       context: SerializationContext = serializationFactory.defaultContext): ObjectWithVersionHeader<T> {
-    return serializationFactory.deserializeWithVersionHeader(this, T::class.java, context)
+inline fun <reified T : Any> ByteSequence.deserializeWithCompatibleContext(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
+                                                                       context: SerializationContext = serializationFactory.defaultContext): ObjectWithCompatibleContext<T> {
+    return serializationFactory.deserializeWithCompatibleContext(this, T::class.java, context)
 }
 
 /**

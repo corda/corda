@@ -20,15 +20,15 @@ object VerifierApi {
             val responseAddress: SimpleString
     ) {
         companion object {
-            fun fromClientMessage(message: ClientMessage): ObjectWithVersionHeader<VerificationRequest> {
+            fun fromClientMessage(message: ClientMessage): ObjectWithCompatibleContext<VerificationRequest> {
                 val bytes = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
                 val bytesSequence = bytes.sequence()
-                val (transaction, versionHeader) = bytesSequence.deserializeWithVersionHeader<LedgerTransaction>()
+                val (transaction, context) = bytesSequence.deserializeWithCompatibleContext<LedgerTransaction>()
                 val request = VerificationRequest(
                         message.getLongProperty(VERIFICATION_ID_FIELD_NAME),
                         transaction,
                         MessageUtil.getJMSReplyTo(message))
-                return ObjectWithVersionHeader(request, versionHeader)
+                return ObjectWithCompatibleContext(request, context)
             }
         }
 
@@ -52,11 +52,10 @@ object VerifierApi {
             }
         }
 
-        fun writeToClientMessage(message: ClientMessage, versionHeader: VersionHeader) {
+        fun writeToClientMessage(message: ClientMessage, context: SerializationContext) {
             message.putLongProperty(VERIFICATION_ID_FIELD_NAME, verificationId)
             if (exception != null) {
-                message.putBytesProperty(RESULT_EXCEPTION_FIELD_NAME,
-                        exception.serialize(context = SerializationFactory.defaultFactory.defaultContext.withPreferredSerializationVersion(versionHeader)).bytes)
+                message.putBytesProperty(RESULT_EXCEPTION_FIELD_NAME, exception.serialize(context = context).bytes)
             }
         }
     }

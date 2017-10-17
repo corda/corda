@@ -2435,14 +2435,14 @@ public final class net.corda.core.serialization.MissingAttachmentsException exte
   public <init>(List)
   @org.jetbrains.annotations.NotNull public final List getIds()
 ##
-public final class net.corda.core.serialization.ObjectWithVersionHeader extends java.lang.Object
-  public <init>(Object, net.corda.core.utilities.ByteSequence)
+public final class net.corda.core.serialization.ObjectWithCompatibleContext extends java.lang.Object
+  public <init>(Object, net.corda.core.serialization.SerializationContext)
   @org.jetbrains.annotations.NotNull public final Object component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.ByteSequence component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.ObjectWithVersionHeader copy(Object, net.corda.core.utilities.ByteSequence)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.ObjectWithCompatibleContext copy(Object, net.corda.core.serialization.SerializationContext)
   public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getContext()
   @org.jetbrains.annotations.NotNull public final Object getObj()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.ByteSequence getVersionHeader()
   public int hashCode()
   public String toString()
 ##
@@ -2487,7 +2487,7 @@ public abstract class net.corda.core.serialization.SerializationFactory extends 
   public <init>()
   public final Object asCurrent(kotlin.jvm.functions.Function1)
   @org.jetbrains.annotations.NotNull public abstract Object deserialize(net.corda.core.utilities.ByteSequence, Class, net.corda.core.serialization.SerializationContext)
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.serialization.ObjectWithVersionHeader deserializeWithVersionHeader(net.corda.core.utilities.ByteSequence, Class, net.corda.core.serialization.SerializationContext)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.serialization.ObjectWithCompatibleContext deserializeWithCompatibleContext(net.corda.core.utilities.ByteSequence, Class, net.corda.core.serialization.SerializationContext)
   @org.jetbrains.annotations.Nullable public final net.corda.core.serialization.SerializationContext getCurrentContext()
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getDefaultContext()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.serialization.SerializedBytes serialize(Object, net.corda.core.serialization.SerializationContext)
