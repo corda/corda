@@ -26,7 +26,7 @@ const val NODE_DATABASE_PREFIX = "node_"
  * case 128 HEX characters are required.
  * 130 was selected instead of 128, to allow for 2 extra characters that will be used as hash-scheme identifiers.
  */
-const val MAX_HASH_HEX_SIZE = 130
+internal const val MAX_HASH_HEX_SIZE = 130
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
 class CordaPersistence(var dataSource: HikariDataSource, private val schemaService: SchemaService,
