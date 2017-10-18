@@ -1,17 +1,15 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.CashSelection
+import java.sql.Connection
 import java.sql.DatabaseMetaData
+import java.sql.ResultSet
 import java.util.*
 
-class CashSelectionMySQLImpl : CashSelection {
+class CashSelectionMySQLImpl : AbstractCashSelection() {
 
     companion object {
         const val JDBC_DRIVER_NAME = "MySQL JDBC Driver"
@@ -21,12 +19,9 @@ class CashSelectionMySQLImpl : CashSelection {
         return metadata.driverName == JDBC_DRIVER_NAME
     }
 
-    override fun unconsumedCashStatesForSpending(services: ServiceHub,
-                                                 amount: Amount<Currency>,
-                                                 onlyFromIssuerParties: Set<AbstractParty>,
-                                                 notary: Party?,
-                                                 lockId: UUID,
-                                                 withIssuerRefs: Set<OpaqueBytes>): List<StateAndRef<Cash.State>> {
+    override fun executeQuery(statement: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, issuerKeysStr: Set<AbstractParty>, issuerRefsStr: Set<OpaqueBytes>): ResultSet {
         TODO("MySQL cash selection not implemented")
     }
+
+    override fun toString() = "${this::class.java} for ${CashSelectionH2Impl.JDBC_DRIVER_NAME}"
 }

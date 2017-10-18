@@ -32,7 +32,7 @@ import static net.corda.testing.TestConstants.getALICE;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
-        super(Collections.singletonList("net.corda.finance.contracts"));
+        super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()));
     }
 
     private List<String> perms = Arrays.asList(startFlowPermission(CashPaymentFlow.class), startFlowPermission(CashIssueFlow.class));
@@ -53,7 +53,6 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     public void setUp() throws ExecutionException, InterruptedException {
         CordaFuture<StartedNode<Node>> nodeFuture = startNotaryNode(getALICE().getName(), singletonList(rpcUser), true);
         node = nodeFuture.get();
-        node.getInternals().registerCustomSchemas(Collections.singleton(CashSchemaV1.INSTANCE));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 

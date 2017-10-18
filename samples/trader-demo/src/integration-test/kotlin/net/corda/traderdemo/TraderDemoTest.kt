@@ -1,6 +1,7 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.internal.packageName
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
@@ -20,7 +21,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.concurrent.Executors
 
-class TraderDemoTest : NodeBasedTest(listOf("net.corda.finance.contracts.asset", "net.corda.finance.contracts")) {
+class TraderDemoTest : NodeBasedTest(listOf(
+        "net.corda.finance.contracts.asset", "net.corda.finance.contracts",
+        CashSchemaV1::class.packageName, CommercialPaperSchemaV1::class.packageName)) {
     @Test
     fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlowPermission<SellerFlow>()))
@@ -35,9 +38,6 @@ class TraderDemoTest : NodeBasedTest(listOf("net.corda.finance.contracts.asset",
         val (nodeA, nodeB, bankNode) = listOf(nodeAFuture, nodeBFuture, bankNodeFuture, notaryFuture).map { it.getOrThrow() }
 
         nodeA.internals.registerInitiatedFlow(BuyerFlow::class.java)
-        nodeA.internals.registerCustomSchemas(setOf(CashSchemaV1))
-        nodeB.internals.registerCustomSchemas(setOf(CashSchemaV1, CommercialPaperSchemaV1))
-
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
             val client = CordaRPCClient(it.internals.configuration.rpcAddress!!)
             client.start(demoUser.username, demoUser.password).proxy
