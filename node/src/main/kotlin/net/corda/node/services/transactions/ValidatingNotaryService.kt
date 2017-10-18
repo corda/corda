@@ -12,6 +12,7 @@ class ValidatingNotaryService(override val services: ServiceHubInternal, overrid
     companion object {
         val id = constructId(validating = true)
     }
+    override val isValidating: Boolean get() = true
     override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = PersistentUniquenessProvider()
 

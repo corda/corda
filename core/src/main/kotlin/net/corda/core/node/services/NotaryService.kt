@@ -30,6 +30,14 @@ abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val services: ServiceHub
     abstract val notaryIdentityKey: PublicKey
 
+    // TODO For now it's Boolean to indicate if a notary service is validating/non-validating, but maybe we will
+    // have a use case for quering for bft, raft?
+    /**
+     * Indicate if the notary is validating/non-validating. In the future we may want to add different information about
+     * the notary type.
+     */
+    abstract val isValidating: Boolean
+
     abstract fun start()
     abstract fun stop()
 

@@ -116,7 +116,9 @@ interface NetworkMapCache {
     fun isNotary(party: Party): Boolean = party in notaryIdentities
 
     /** Checks whether a given party is an validating notary identity. */
-    // TODO This implementation will change after introducing of NetworkParameters.
+    // TODO We probably should remove that function, because in NetworkParameters we specify notaries without the type.
+    //  It could be problematic if we had more types of notaries.
+    @Deprecated("We can no longer determine if an identity is a validating notary just based on the Party")
     fun isValidatingNotary(party: Party): Boolean = isNotary(party) && "validating" in party.name.commonName!!
 
     /** Clear all network map data from local node cache. */

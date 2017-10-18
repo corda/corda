@@ -37,17 +37,18 @@ class NotaryFlow {
         constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {
+            object CHECKING_TX : ProgressTracker.Step("Checking validity of the transaction")
+            object DISCOVERING : ProgressTracker.Step("Discovering the type of Notary service: validating/non-validating")
             object REQUESTING : ProgressTracker.Step("Requesting signature by Notary service")
             object VALIDATING : ProgressTracker.Step("Validating response from Notary service")
 
-            fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
+            fun tracker() = ProgressTracker(CHECKING_TX, DISCOVERING, REQUESTING, VALIDATING)
         }
 
         @Suspendable
         @Throws(NotaryException::class)
         override fun call(): List<TransactionSignature> {
-            progressTracker.currentStep = REQUESTING
-
+            progressTracker.currentStep = CHECKING_TX
             val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(stx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) {
                 "Input states must have the same Notary"
@@ -60,8 +61,11 @@ class NotaryFlow {
             }
 
             val response = try {
+                progressTracker.currentStep = DISCOVERING
                 val session = initiateFlow(notaryParty)
-                if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
+                val isValidating = session.receive<Boolean>().unwrap { it }
+                progressTracker.currentStep = REQUESTING
+                if (isValidating) {
                     subFlow(SendTransactionWithRetry(session, stx))
                     session.receive<List<TransactionSignature>>()
                 } else {
@@ -115,6 +119,7 @@ class NotaryFlow {
 
         @Suspendable
         override fun call(): Void? {
+            otherSideSession.send(service.isValidating)
             val (id, inputs, timeWindow, notary) = receiveAndVerifyTx()
             checkNotary(notary)
             service.validateTimeWindow(timeWindow)
