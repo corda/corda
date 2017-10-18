@@ -80,24 +80,30 @@ class NodeVaultService(
 
     private val mutex = ThreadBox(InnerState())
 
+    private fun buildNewState(stateAndRef: StateAndRef<*>, status: Vault.StateStatus, recordedTime: Instant): VaultSchemaV1.VaultStates {
+        val state = VaultSchemaV1.VaultStates(
+                notary = stateAndRef.state.notary,
+                contractStateClassName = stateAndRef.state.data.javaClass.name,
+                contractState = stateAndRef.state.serialize(context = STORAGE_CONTEXT).bytes,
+                stateStatus = status,
+                recordedTime = recordedTime)
+        state.stateRef = PersistentStateRef(stateAndRef.ref)
+        return state
+    }
+
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
-            val producedStateRefs = update.produced.map { it.ref }
-            val producedStateRefsMap = update.produced.associateBy { it.ref }
-            val consumedStateRefs = update.consumed.map { it.ref }
-            log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
+            val consumedStateRefs = update.consumed.map(StateAndRef<*>::ref)
+            val now = clock.instant()
+            if (log.isTraceEnabled) {
+                val producedStateRefs = update.produced.map(StateAndRef<*>::ref)
+                val observedStateRefs = update.observed.map(StateAndRef<*>::ref)
+                log.trace { "Removing $consumedStateRefs consumed contract states, adding $producedStateRefs produced and adding $observedStateRefs observed contract states to the database." }
+            }
 
             val session = currentDBSession()
-            producedStateRefsMap.forEach { stateAndRef ->
-                val state = VaultSchemaV1.VaultStates(
-                        notary = stateAndRef.value.state.notary,
-                        contractStateClassName = stateAndRef.value.state.data.javaClass.name,
-                        contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
-                        stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = clock.instant())
-                state.stateRef = PersistentStateRef(stateAndRef.key)
-                session.save(state)
-            }
+            update.produced.map { buildNewState(it, Vault.StateStatus.UNCONSUMED, now) }.forEach{ session.save(it) }
+            update.observed.map { buildNewState(it, Vault.StateStatus.OBSERVED, now) }.forEach{ session.save(it) }
             consumedStateRefs.forEach { stateRef ->
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
@@ -155,13 +161,19 @@ class NodeVaultService(
 
     private fun notifyRegular(txns: Iterable<WireTransaction>, statesToRecord: StatesToRecord) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
-            val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet()
+            val newStates = tx.outRefsOfType<ContractState>()
 
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, myKeys.toSet()) }
-                StatesToRecord.ALL_VISIBLE -> tx.outputs
-            }.map { tx.outRef<ContractState>(it.data) }
+                StatesToRecord.ONLY_RELEVANT -> newStates.filter { isRelevant(it.state.data, myKeys) }
+                StatesToRecord.ALL_VISIBLE -> newStates
+            }.toSet()
+            val ourObservedStates = when (statesToRecord) {
+                StatesToRecord.NONE -> throw AssertionError("Should not reach here")
+                StatesToRecord.ONLY_RELEVANT -> newStates.subtract(ourNewStates).filter { isObserved(it.state.data, myKeys) }
+                StatesToRecord.ALL_VISIBLE -> emptyList() // All states are treated as relevant so are never observed
+            }.toSet()
 
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStates(tx.inputs)
@@ -172,7 +184,7 @@ class NodeVaultService(
                 return Vault.NoUpdate
             }
 
-            return Vault.Update(consumedStates, ourNewStates.toHashSet())
+            return Vault.Update(consumedStates, ourNewStates, ourObservedStates)
         }
 
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
@@ -186,8 +198,8 @@ class NodeVaultService(
             // input positions
             val ltx = tx.resolve(stateLoader, emptyList())
             val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
-            val (consumedStateAndRefs, producedStates) = ltx.inputs.
-                    zip(ltx.outputs).
+            val zippedStates = ltx.inputs.zip(ltx.outputs)
+            val (consumedStateAndRefs, producedStates) = zippedStates.
                     filter { (_, output) ->
                         if (statesToRecord == StatesToRecord.ONLY_RELEVANT)
                             isRelevant(output.data, myKeys.toSet())
@@ -195,15 +207,19 @@ class NodeVaultService(
                             true
                     }.
                     unzip()
+            val (_, observedStates) = zippedStates.
+                    filter { (_, output) -> isObserved(output.data, myKeys.toSet()) }.
+                    unzip()
 
             val producedStateAndRefs = producedStates.map { ltx.outRef<ContractState>(it.data) }
+            val observedStateAndRefs = observedStates.map { ltx.outRef<ContractState>(it.data) }
 
             if (consumedStateAndRefs.isEmpty() && producedStateAndRefs.isEmpty()) {
                 log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
                 return Vault.NoNotaryUpdate
             }
 
-            return Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet(), null, Vault.UpdateType.NOTARY_CHANGE)
+            return Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet(), observedStateAndRefs.toHashSet(), null, Vault.UpdateType.NOTARY_CHANGE)
         }
 
         val netDelta = txns.fold(Vault.NoNotaryUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
@@ -390,6 +406,14 @@ class NodeVaultService(
             else -> state.participants.map { it.owningKey }
         }
         return keysToCheck.any { it in myKeys }
+    }
+
+    @VisibleForTesting
+    internal fun isObserved(state: ContractState, myKeys: Set<PublicKey>): Boolean {
+        return when (state) {
+            is ObservedState -> state.observers.any { it.owningKey in myKeys }
+            else -> false
+        }
     }
 
     private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas

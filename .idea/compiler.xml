@@ -78,6 +78,12 @@
       <module name="node_test" target="1.8" />
       <module name="notary-demo_main" target="1.8" />
       <module name="notary-demo_test" target="1.8" />
+      <module name="observer-demo_integrationTest" target="1.8" />
+      <module name="observer-demo_main" target="1.8" />
+      <module name="observer-demo_test" target="1.8" />
+      <module name="observer_integrationTest" target="1.8" />
+      <module name="observer_main" target="1.8" />
+      <module name="observer_test" target="1.8" />
       <module name="publish-utils_main" target="1.8" />
       <module name="publish-utils_test" target="1.8" />
       <module name="quasar-hook_main" target="1.8" />

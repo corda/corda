@@ -39,11 +39,16 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      *
      * If the vault observes multiple transactions simultaneously, where some transactions consume the outputs of some of the
      * other transactions observed, then the changes are observed "net" of those.
+     *
+     * @property consumed the set of states which have been consumed (spent).
+     * @property produced the set of states which have been produced (issued).
+     * @property observed the set of states which have been observed (produced but are not owned by us).
      */
     @CordaSerializable
     data class Update<U : ContractState>(
             val consumed: Set<StateAndRef<U>>,
             val produced: Set<StateAndRef<U>>,
+            val observed: Set<StateAndRef<U>>,
             val flowId: UUID? = null,
             /**
              * Specifies the type of update, currently supported types are general and notary change. Notary
@@ -52,14 +57,19 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
              */
             val type: UpdateType = UpdateType.GENERAL
     ) {
+        @Deprecated("Use constructor with observed states specified")
+        constructor(consumed: Set<StateAndRef<U>>, produced: Set<StateAndRef<U>>, flowId: UUID? = null, type: UpdateType = UpdateType.GENERAL) : this(consumed, produced, emptySet(), flowId, type)
         /** Checks whether the update contains a state of the specified type. */
-        inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
+        inline fun <reified T : ContractState> containsType(): Boolean {
+            return consumed.any { it.state.data is T } || produced.any { it.state.data is T } || observed.any { it.state.data is T }
+        }
 
         /** Checks whether the update contains a state of the specified type and state status */
         fun <T : ContractState> containsType(clazz: Class<T>, status: StateStatus) =
                 when (status) {
                     StateStatus.UNCONSUMED -> produced.any { clazz.isAssignableFrom(it.state.data.javaClass) }
                     StateStatus.CONSUMED -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
+                    StateStatus.OBSERVED -> observed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
                     else -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
                             || produced.any { clazz.isAssignableFrom(it.state.data.javaClass) }
                 }
@@ -98,13 +108,13 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     companion object {
-        val NoUpdate = Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL)
-        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE)
+        val NoUpdate = Update(emptySet(), emptySet(), emptySet(), type = Vault.UpdateType.GENERAL)
+        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), emptySet(), null, type = Vault.UpdateType.NOTARY_CHANGE)
     }
 
     @CordaSerializable
     enum class StateStatus {
-        UNCONSUMED, CONSUMED, ALL
+        UNCONSUMED, CONSUMED, OBSERVED, ALL
     }
 
     @CordaSerializable

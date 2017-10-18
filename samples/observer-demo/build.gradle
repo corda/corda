@@ -1,0 +1,113 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'maven-publish'
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+
+    // Corda integration dependencies
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':client:rpc')
+    cordaCompile project(':webserver')
+    cordaCompile project(':node-driver')
+
+    testCompile project(':test-utils')
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
+            'StartFlow.net.corda.observerdemo.flow.IssueReceivableFlow',
+            'StartFlow.net.corda.observerdemo.flow.RegistryObserverFlow.Client'
+    ]]]
+
+    directory "./build/nodes"
+    // These names are hard-coded into ObserverDemo so if you change it here, change it there too.
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        notary = [validating : true]
+        p2pPort 10002
+        cordapps = ["$project.group:finance:$corda_release_version"]
+    }
+    node {
+        name "O=Bank A,L=London,C=GB"
+        p2pPort 10005
+        rpcPort 10006
+        cordapps = ["$project.group:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
+    }
+    node {
+        name "O=Bank B,L=New York,C=US"
+        p2pPort 10008
+        rpcPort 10009
+        cordapps = ["$project.group:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
+    }
+    node {
+        name "O=Registry Service,L=New York,C=US"
+        p2pPort 10011
+        rpcPort 10012
+        cordapps = ["$project.group:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
+    }
+}
+
+task integrationTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+idea {
+    module {
+        downloadJavadoc = true // defaults to false
+        downloadSources = true
+    }
+}
+
+publishing {
+    publications {
+        jarAndSources(MavenPublication) {
+            from components.java
+            artifactId 'observerdemo'
+
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
+}
+
+task runDemo(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.observerdemo.ObserverDemoKt'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.samples.demos.trader'
+        )
+    }
+}
