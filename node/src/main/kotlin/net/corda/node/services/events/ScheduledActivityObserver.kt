@@ -12,11 +12,20 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
  * This observes the vault and schedules and unschedules activities appropriately based on state production and
  * consumption.
  */
-class ScheduledActivityObserver(vaultService: VaultService, private val schedulerService: SchedulerService) {
-    init {
-        vaultService.rawUpdates.subscribe { (consumed, produced) ->
-            consumed.forEach { schedulerService.unscheduleStateActivity(it.ref) }
-            produced.forEach { scheduleStateActivity(it) }
+class ScheduledActivityObserver private constructor(private val schedulerService: SchedulerService) {
+    companion object {
+        @JvmStatic
+        fun install(vaultService: VaultService, schedulerService: SchedulerService) {
+            val observer = ScheduledActivityObserver(schedulerService)
+            vaultService.rawUpdates.subscribe { (consumed, produced) ->
+                consumed.forEach { schedulerService.unscheduleStateActivity(it.ref) }
+                produced.forEach { observer.scheduleStateActivity(it) }
+            }
+        }
+
+        // TODO: Beware we are calling dynamically loaded contract code inside here.
+        private inline fun <T : Any> sandbox(code: () -> T?): T? {
+            return code()
         }
     }
 
@@ -26,10 +35,5 @@ class ScheduledActivityObserver(vaultService: VaultService, private val schedule
             val scheduledAt = sandbox { producedState.nextScheduledActivity(produced.ref, FlowLogicRefFactoryImpl)?.scheduledAt } ?: return
             schedulerService.scheduleStateActivity(ScheduledStateRef(produced.ref, scheduledAt))
         }
-    }
-
-    // TODO: Beware we are calling dynamically loaded contract code inside here.
-    private inline fun <T : Any> sandbox(code: () -> T?): T? {
-        return code()
     }
 }

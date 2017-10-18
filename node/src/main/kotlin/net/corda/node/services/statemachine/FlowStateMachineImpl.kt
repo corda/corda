@@ -68,12 +68,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * is not necessary.
      */
     override val logger: Logger = LoggerFactory.getLogger("net.corda.flow.$id")
-
-    @Transient private var _resultFuture: OpenFuture<R>? = openFuture()
+    @Transient private var resultFutureTransient: OpenFuture<R>? = openFuture()
+    private val _resultFuture get() = resultFutureTransient ?: openFuture<R>().also { resultFutureTransient = it }
     /** This future will complete when the call method returns. */
-    override val resultFuture: CordaFuture<R>
-        get() = _resultFuture ?: openFuture<R>().also { _resultFuture = it }
-
+    override val resultFuture: CordaFuture<R> get() = _resultFuture
     // This state IS serialised, as we need it to know what the fiber is waiting for.
     internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSessionInternal>()
     internal var waitingForResponse: WaitingRequest? = null
@@ -115,7 +113,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         recordDuration(startTime)
         // This is to prevent actionOnEnd being called twice if it throws an exception
         actionOnEnd(Try.Success(result), false)
-        _resultFuture?.set(result)
+        _resultFuture.set(result)
         logic.progressTracker?.currentStep = ProgressTracker.DONE
         logger.debug { "Flow finished with result ${result.toString().abbreviate(300)}" }
     }
@@ -128,7 +126,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun processException(exception: Throwable, propagated: Boolean) {
         actionOnEnd(Try.Failure(exception), propagated)
-        _resultFuture?.setException(exception)
+        _resultFuture.setException(exception)
         logic.progressTracker?.endWithError(exception)
     }
 
