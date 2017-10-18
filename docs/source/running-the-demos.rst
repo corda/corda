@@ -11,6 +11,8 @@ how solutions to a number of common designs could be implemented in a CorDapp. N
 2. The :ref:`attachment-demo`, which demonstrates uploading attachments to nodes
 3. The :ref:`bank-of-corda-demo`, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
    applications request issuance of some cash on behalf of a node called Big Corporation
+4. The :ref:`observer-demo`, which shows a pair of nodes issuing a state, with a third node acting as an observer who
+   is required to witness all transactions for the contract, but is not a participant itself.
 
 Documentation on running the samples can be found inside the sample directories themselves, in the `README.md` file.
 

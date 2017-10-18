@@ -45,6 +45,10 @@ We can picture the hierarchy as follows:
 
 .. image:: resources/state-hierarchy.png
 
+.. note:: These interfaces are used by the vault to decide which states to store. By default the vault stores all states
+   on which it is a participant. For states which implement ``OwnableState`` it normally only retains the state if it is the
+   owner.
+
 LinearState
 ^^^^^^^^^^^
 The ``LinearState`` interface is defined as follows:

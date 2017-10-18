@@ -13,6 +13,10 @@ The vault keeps track of both unconsumed and consumed states:
 By fungible we refer to assets of measurable quantity (eg. a cash currency, units of stock) which can be combined
 together to represent a single ledger state.
 
+.. note:: Generally nodes do not retain states that the node owner is not a participant of, in order to avoid storing
+   states unnecessarily. This behaviour can be overriden when recording transactions by specifying `StatesToRecord.ALL_VISIBLE`
+   in the function call parameters.
+
 Like with a cryptocurrency wallet, the Corda vault can create transactions that send value (eg. transfer of state) to
 someone else by combining fungible states and possibly adding a change output that makes the values balance (this
 process is usually referred to as ‘coin selection’). Vault spending ensures that transactions respect the fungibility

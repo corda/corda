@@ -7,6 +7,8 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* Added a new ``observer-demo`` to demonstrate workflow for observed states.
+
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
 

@@ -1,0 +1,48 @@
+{
+  "debtor": {
+    "id": "RmXQnCD2y3tf6xV1MUgVzjJaxCU2JELELoRSKpmW3HEeakaRuba5j4v3t7Y77ugRVH5biHVAywTBYBWH4ocuqKvq4RqSwHz5msttWhBU",
+    "name": "Some Debtor",
+    "address": {
+      "line1": "123 Dummy Street",
+      "line2": null,
+      "city": "Some City",
+      "state": null,
+      "postalCode": "Postcode",
+      "country": "UK"
+    },
+    "organizationId": "Some Debtor"
+  },
+  "description": "Blah",
+  "securedParty": {
+    "id": "RmXQnCD2y3tf6xV1MUgVzjJaxCU2JELELoRSKpmW3HEeakaRuba5j4v3t7Y76fnLXyGLGPLr94PeGGe5rycm6xEqKqgUTKiZYMa2BKnH",
+    "name": "Filer",
+    "address": {
+      "line1": "123 Dummy Street",
+      "line2": null,
+      "city": "Some City",
+      "state": null,
+      "postalCode": "Postcode",
+      "country": "UK"
+    },
+    "organizationId": "Filer"
+  },
+  "filer": {
+    "id": "RmXQnCD2y3tf6xV1MUgVzjJaxCU2JELELoRSKpmW3HEeakaRuba5j4v3t7Y76fnLXyGLGPLr94PeGGe5rycm6xEqKqgUTKiZYMa2BKnH",
+    "name": "Filer",
+    "address": {
+      "line1": "123 Dummy Street",
+      "line2": null,
+      "city": "Some City",
+      "state": null,
+      "postalCode": "Postcode",
+      "country": "UK"
+    },
+    "organizationId": "Filer"
+  },
+  "requestDate": "1483548509",
+  "expiryDate": "1485967709",
+  "securityAgreementEffectiveDate": "1485967709",
+  "status": "ACTIVE",
+  "noticeType": "OWNERSHIP_INTEREST",
+  "filerReferenceData": ""
+}

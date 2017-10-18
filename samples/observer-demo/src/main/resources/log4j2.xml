@@ -1,0 +1,35 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info">
+
+    <Properties>
+        <Property name="log-path">logs</Property>
+        <Property name="log-name">tfr-${hostName}</Property>
+        <Property name="archive">${log-path}/archive</Property>
+    </Properties>
+
+    <ThresholdFilter level="trace"/>
+
+    <Appenders>
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout>
+                <pattern>
+                    %highlight{%level{length=1} %d{HH:mm:ss} %T %c{1}.%M - %msg%n}{INFO=white,WARN=red,FATAL=bright red blink}
+                </pattern>>
+            </PatternLayout>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Root level="warn">
+            <AppenderRef ref="Console-Appender"/>
+        </Root>
+        <Logger name="net.corda" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Logger name="net.corda.tradefinance" level="debug" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+    </Loggers>
+
+</Configuration>

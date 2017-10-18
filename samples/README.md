@@ -9,3 +9,4 @@ Please refer to `README.md` in the individual project folders.  There are the fo
 * **simm-valuation-demo** A demo showing two nodes reaching agreement on the valuation of a derivatives portfolio.
 * **notary-demo** A simple demonstration of a node getting multiple transactions notarised by a single or distributed (Raft or BFT SMaRt) notary.
 * **bank-of-corda-demo** A demo showing a node acting as an issuer of fungible assets (initially Cash)
+* **observer-demo** A demo showing a pair of nodes issuing a state, with a third node acting as an observer who is required to witness all transactions for the contract, but is not a participant itself.
