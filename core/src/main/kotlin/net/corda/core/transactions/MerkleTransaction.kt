@@ -273,8 +273,8 @@ class FilteredTransaction private constructor(
             val groupPartialRoot = groupHashes[group.groupIndex]
             val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }).hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
-            // TODO: should we add an extra call call to verify() to ensure the transaction is well-formed
-            //      or we accept they should always run together as mentioned in the api doc.
+            // Verify the top level Merkle tree from groupHashes.
+            visibilityCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) { "Transaction is malformed. Top level Merkle tree cannot be verified against transaction's id" }
         }
     }
 

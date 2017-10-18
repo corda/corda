@@ -485,7 +485,7 @@ class CompatibleTransactionTests : TestDependencyInjectionBase() {
         // verify() will pass as the transaction is well-formed.
         ftxNoLastCommandAndSigners.verify()
         // checkCommandVisibility() will not pass, because checkAllComponentsVisible(ComponentGroupEnum.SIGNERS_GROUP) will fail.
-        ftxNoLastCommandAndSigners.checkCommandVisibility(DUMMY_KEY_1.public)
+        assertFailsWith<ComponentVisibilityException> { ftxNoLastCommandAndSigners.checkCommandVisibility(DUMMY_KEY_1.public) }
 
         // Remove last signer for which there is no pointer from a visible commandData. This is the case of Key2.
         // Do not change partial Merkle tree for signers.
@@ -533,8 +533,8 @@ class CompatibleTransactionTests : TestDependencyInjectionBase() {
         val ftxAlterSignerB = ftxConstructor.newInstance(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes.subList(0, 6) + alterMTree.hash) as FilteredTransaction
         // Visible components in signers group cannot be verified against their partial Merkle tree.
         assertFailsWith<FilteredTransactionVerificationException> { ftxAlterSignerB.verify() }
-        // However, checkCommandVisibility() will pass. This is why checkCommandVisibility() should run before or after verify().
-        ftxAlterSignerB.checkCommandVisibility(DUMMY_KEY_1.public)
+        // Also, checkAllComponentsVisible() will not pass (top level Merkle tree cannot be verified against transaction's id).
+        assertFailsWith<ComponentVisibilityException> { ftxAlterSignerB.checkCommandVisibility(DUMMY_KEY_1.public) }
 
         ftxConstructor.isAccessible = false
     }
