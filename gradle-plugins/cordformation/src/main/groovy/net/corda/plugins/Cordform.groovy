@@ -132,9 +132,12 @@ class Cordform extends DefaultTask {
 
     private generateNodeInfos() {
         nodes.each { Node node ->
+            def logDir = new File(fullNodePath(node).toFile(), "logs")
+            logDir.mkdirs()
             def process = new ProcessBuilder("java", "-jar", Node.NODEJAR_NAME, "--just-generate-node-info")
                     .directory(fullNodePath(node).toFile())
                     .redirectErrorStream(true)
+                    .redirectOutput(new File(logDir, "generate-info-log.txt"))
                     .start()
                     .waitFor()
         }
