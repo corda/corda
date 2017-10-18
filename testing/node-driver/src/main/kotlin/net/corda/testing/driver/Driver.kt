@@ -843,17 +843,24 @@ class DriverDSL(
      * @return a [CordaFuture] which resolves when every node started by driver has in its network map a number of nodes
      *   equal to the number of running nodes. The future will yield the number of connected nodes.
      */
-    private fun waitForNodes(rpc: CordaRPCOps): CordaFuture<Int> {
+    private fun allNodesConnected(rpc: CordaRPCOps): CordaFuture<Int> {
         val (snapshot, updates) = rpc.networkMapFeed()
         val counterObservable = nodeCountObservable(snapshot.size, updates)
         countObservables.put(rpc.nodeInfo().legalIdentities.first().name, counterObservable)
+        /* TODO: this might not always be the exact number of nodes one has to wait for,
+         * for example in the following sequence
+         * 1 start 3 nodes in order, A, B, C.
+         * 2 before the future returned by this function resolves, kill B
+         * At that point this future won't ever resolve as it will wait for nodes to know 3 other nodes.
+         */
         val requiredNodes = countObservables.size
 
         // This is an observable which yield the minimum number of nodes in each node network map.
-        val smallestSeenNetworkMapSize = Observable.combineLatest(countObservables.values.toList()) {
-            args : Array<Any> -> args.map { it as Int }.min() ?: 0
+        val smallestSeenNetworkMapSize = Observable.combineLatest(countObservables.values.toList()) { args : Array<Any> ->
+            args.map { it as Int }.min() ?: 0
         }
         val future = smallestSeenNetworkMapSize.filter { it >= requiredNodes }.toFuture()
+        counterObservable.connect()
         return future
     }
 
@@ -876,7 +883,7 @@ class DriverDSL(
             )
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(nodeConfiguration, openFuture()).flatMap { rpc ->
-                    waitForNodes(rpc).map {
+                    allNodesConnected(rpc).map {
                         NodeHandle.InProcess(rpc.nodeInfo(), rpc, nodeConfiguration, webAddress, node, thread, onNodeExit)
                     }
                 }
@@ -892,7 +899,7 @@ class DriverDSL(
                 establishRpc(nodeConfiguration, processDeathFuture).flatMap { rpc ->
                     // Call waitUntilNetworkReady in background in case RPC is failing over:
                     val forked = executorService.fork {
-                        waitForNodes(rpc)
+                        allNodesConnected(rpc)
                     }
                     val networkMapFuture = forked.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
