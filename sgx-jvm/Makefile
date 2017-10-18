@@ -4,7 +4,7 @@ SHELL=/bin/bash
 # JAVA_HOME=$(ROOT)/usr/lib/jvm/java-8-openjdk-amd64
 # JAVA_HOME=$(ROOT)/usr/lib/jvm/java-openjdk
 
-JDK_IMAGE=$(PWD)/jdk8u/build/linux-x86_64-normal-server-release/images/j2re-image
+JDK_IMAGE=$(MAKEFILE_DIR)/jdk8u/build/linux-x86_64-normal-server-release/images/j2re-image
 
 .PHONY: all
 all: jvm-enclave/standalone/build/standalone_sgx_verify linux-sgx-driver/isgx.ko
@@ -18,7 +18,7 @@ AVIAN_EXTRA_CFLAGS="-I$(ROOT)/usr/include -I$(ROOT)/usr/include/x86_64-linux-gnu
 AVIAN_EXTRA_LDFLAGS="-L$(ROOT)/usr/lib -L$(ROOT)/usr/lib/x86_64-linux-gnu -ldl -lpthread -lz"
 .PHONY: avian
 avian: | $(JDK_IMAGE)
-	PATH=$(ROOT)/usr/bin:$(PATH) $(MAKE) -C avian build-lflags=$(AVIAN_EXTRA_LDFLAGS) extra-lflags=$(AVIAN_EXTRA_LDFLAGS) extra-build-cflags+=$(AVIAN_EXTRA_CFLAGS) extra-cflags+=$(AVIAN_EXTRA_CFLAGS) mode=debug openjdk=$(JAVA_HOME) openjdk-src=$(PWD)/jdk8u/jdk/src openjdk-image=$(JDK_IMAGE) system=sgx
+	PATH=$(ROOT)/usr/bin:$(PATH) $(MAKE) -C avian build-lflags=$(AVIAN_EXTRA_LDFLAGS) extra-lflags=$(AVIAN_EXTRA_LDFLAGS) extra-build-cflags+=$(AVIAN_EXTRA_CFLAGS) extra-cflags+=$(AVIAN_EXTRA_CFLAGS) mode=debug openjdk=$(JAVA_HOME) openjdk-src=$(MAKEFILE_DIR)/jdk8u/jdk/src openjdk-image=$(JDK_IMAGE) system=sgx
 
 # The SGX SDK
 LINUX_SGX_SOURCES=$(shell find linux-sgx \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.edl' \) ! \( -name '*_u.?' -o -name '*_t.?'  -o -name '*.pb.h' -o -path 'linux-sgx/sdk/cpprt/linux/libunwind/*' -o -path 'linux-sgx/external/rdrand/src/config.h' \)) # Poor man's up-to-date check (they don't have one in the SDK??)
