@@ -43,6 +43,7 @@ class TraderDemoSystemTest {
     fun `runs trader demo system test`(): Unit {
 
 
+        Thread.sleep(5000)
 //
 //        var result = expect
 //            .withTimeout(60, TimeUnit.SECONDS)
