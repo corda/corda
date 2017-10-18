@@ -1,8 +1,6 @@
-package net.corda.demobench.model
+package net.corda.nodeapi
 
 import net.corda.cordform.CordformNode
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.eventually
 import org.junit.Before
 import org.junit.Rule
@@ -30,17 +28,13 @@ class NodeInfoFilesCopierTest {
         private const val NODE_2_PATH = "node2"
 
         private val content = "blah".toByteArray(Charsets.UTF_8)
-        private val GOOD_NODE_INFO_NAME = "nodeInfo-test"
-        private val GOOD_NODE_INFO_NAME_2 = "nodeInfo-anotherNode"
+        private val GOOD_NODE_INFO_NAME = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}test"
+        private val GOOD_NODE_INFO_NAME_2 = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}anotherNode"
         private val BAD_NODE_INFO_NAME = "something"
-        private val legalName = CordaX500Name(organisation = ORGANIZATION, locality = "Nowhere", country = "GB")
-        private val hostAndPort = NetworkHostAndPort("localhost", 1)
     }
 
     private fun nodeDir(nodeBaseDir : String) = rootPath.resolve(nodeBaseDir).resolve(ORGANIZATION.toLowerCase())
 
-    private val node1Config by lazy { createConfig(NODE_1_PATH) }
-    private val node2Config by lazy { createConfig(NODE_2_PATH) }
     private val node1RootPath by lazy { nodeDir(NODE_1_PATH) }
     private val node2RootPath by lazy { nodeDir(NODE_2_PATH) }
     private val node1AdditionalNodeInfoPath by lazy { node1RootPath.resolve(CordformNode.NODE_INFO_DIRECTORY) }
@@ -56,7 +50,7 @@ class NodeInfoFilesCopierTest {
     @Test
     fun `files created before a node is started are copied to that node`() {
         // Configure the first node.
-        nodeInfoFilesCopier.addConfig(node1Config)
+        nodeInfoFilesCopier.addConfig(node1RootPath)
         // Ensure directories are created.
         advanceTime()
 
@@ -65,7 +59,7 @@ class NodeInfoFilesCopierTest {
         Files.write(node1RootPath.resolve(BAD_NODE_INFO_NAME), content)
 
         // Configure the second node.
-        nodeInfoFilesCopier.addConfig(node2Config)
+        nodeInfoFilesCopier.addConfig(node2RootPath)
         advanceTime()
 
         eventually<AssertionError, Unit>(Duration.ofMinutes(1)) {
@@ -77,8 +71,8 @@ class NodeInfoFilesCopierTest {
     @Test
     fun `polling of running nodes`() {
         // Configure 2 nodes.
-        nodeInfoFilesCopier.addConfig(node1Config)
-        nodeInfoFilesCopier.addConfig(node2Config)
+        nodeInfoFilesCopier.addConfig(node1RootPath)
+        nodeInfoFilesCopier.addConfig(node2RootPath)
         advanceTime()
 
         // Create 2 files, one of which to be copied, in a node root path.
@@ -95,8 +89,8 @@ class NodeInfoFilesCopierTest {
     @Test
     fun `remove nodes`() {
         // Configure 2 nodes.
-        nodeInfoFilesCopier.addConfig(node1Config)
-        nodeInfoFilesCopier.addConfig(node2Config)
+        nodeInfoFilesCopier.addConfig(node1RootPath)
+        nodeInfoFilesCopier.addConfig(node2RootPath)
         advanceTime()
 
         // Create a file, in node 2 root path.
@@ -104,7 +98,7 @@ class NodeInfoFilesCopierTest {
         advanceTime()
 
         // Remove node 2
-        nodeInfoFilesCopier.removeConfig(node2Config)
+        nodeInfoFilesCopier.removeConfig(node2RootPath)
 
         // Create another file in node 2 directory.
         Files.write(node2RootPath.resolve(GOOD_NODE_INFO_NAME_2), content)
@@ -119,8 +113,8 @@ class NodeInfoFilesCopierTest {
     @Test
     fun `clear`() {
         // Configure 2 nodes.
-        nodeInfoFilesCopier.addConfig(node1Config)
-        nodeInfoFilesCopier.addConfig(node2Config)
+        nodeInfoFilesCopier.addConfig(node1RootPath)
+        nodeInfoFilesCopier.addConfig(node2RootPath)
         advanceTime()
 
         nodeInfoFilesCopier.reset()
@@ -142,15 +136,4 @@ class NodeInfoFilesCopierTest {
         val onlyFileName = Files.list(path).toList().first().fileName.toString()
         assertEquals(filename, onlyFileName)
     }
-
-    private fun createConfig(relativePath: String) =
-            NodeConfigWrapper(rootPath.resolve(relativePath),
-                    NodeConfig(myLegalName = legalName,
-                            p2pAddress = hostAndPort,
-                            rpcAddress = hostAndPort,
-                            webAddress = hostAndPort,
-                            h2port = -1,
-                            notary = null,
-                            networkMapService = null,
-                            rpcUsers = listOf()))
 }

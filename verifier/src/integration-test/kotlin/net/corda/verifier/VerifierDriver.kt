@@ -74,7 +74,6 @@ fun <A> verifierDriver(
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         startNodesInProcess: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         dsl: VerifierExposedDSLInterface.() -> A
@@ -86,7 +85,6 @@ fun <A> verifierDriver(
                         systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
-                        networkMapStartStrategy = networkMapStartStrategy,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
                         extraCordappPackagesToScan = extraCordappPackagesToScan
