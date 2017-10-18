@@ -274,8 +274,7 @@ abstract class AbstractNode(config: NodeConfiguration,
                 require(customNotaryServiceList.size == 1) {
                     "Attempting to install more than one notary service: ${customNotaryServiceList.joinToString()}"
                 }
-            }
-            else return loadedServices - customNotaryServiceList
+            } else return loadedServices - customNotaryServiceList
         }
         return loadedServices
     }
@@ -494,9 +493,9 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected open fun makeTransactionStorage(): WritableTransactionStorage = DBTransactionStorage()
 
     private fun makeVaultObservers() {
-        VaultSoftLockManager(services.vaultService, smm)
-        ScheduledActivityObserver(services)
-        HibernateObserver(services.vaultService.rawUpdates, services.database.hibernateConfig)
+        VaultSoftLockManager.install(services.vaultService, smm)
+        ScheduledActivityObserver.install(services.vaultService, services.schedulerService)
+        HibernateObserver.install(services.vaultService.rawUpdates, database.hibernateConfig)
     }
 
     /**
@@ -743,6 +742,9 @@ abstract class AbstractNode(config: NodeConfiguration,
     }
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
+    protected open fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
+        return NodeVaultService(platformClock, keyManagementService, stateLoader, database.hibernateConfig)
+    }
 
     private inner class ServiceHubInternalImpl(
             override val schemaService: SchemaService,
@@ -756,7 +758,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         override val auditService = DummyAuditService()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val networkMapCache by lazy { NetworkMapCacheImpl(PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration), identityService) }
-        override val vaultService by lazy { NodeVaultService(platformClock, keyManagementService, stateLoader, this@AbstractNode.database.hibernateConfig) }
+        override val vaultService by lazy { makeVaultService(keyManagementService, stateLoader) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
