@@ -45,7 +45,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
                 override val vaultService: VaultServiceInternal
                     get() {
                         val vaultService = NodeVaultService(clock, keyManagementService, stateLoader, database.hibernateConfig)
-                        hibernatePersister = HibernateObserver(vaultService.rawUpdates, database.hibernateConfig)
+                        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig)
                         return vaultService
                     }
 

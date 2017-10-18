@@ -4,18 +4,28 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateAndRef
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.core.node.services.VaultService
+import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 
 /**
  * This observes the vault and schedules and unschedules activities appropriately based on state production and
  * consumption.
  */
-class ScheduledActivityObserver(val services: ServiceHubInternal) {
-    init {
-        services.vaultService.rawUpdates.subscribe { (consumed, produced) ->
-            consumed.forEach { services.schedulerService.unscheduleStateActivity(it.ref) }
-            produced.forEach { scheduleStateActivity(it) }
+class ScheduledActivityObserver private constructor(private val schedulerService: SchedulerService) {
+    companion object {
+        @JvmStatic
+        fun install(vaultService: VaultService, schedulerService: SchedulerService) {
+            val observer = ScheduledActivityObserver(schedulerService)
+            vaultService.rawUpdates.subscribe { (consumed, produced) ->
+                consumed.forEach { schedulerService.unscheduleStateActivity(it.ref) }
+                produced.forEach { observer.scheduleStateActivity(it) }
+            }
+        }
+
+        // TODO: Beware we are calling dynamically loaded contract code inside here.
+        private inline fun <T : Any> sandbox(code: () -> T?): T? {
+            return code()
         }
     }
 
@@ -23,12 +33,7 @@ class ScheduledActivityObserver(val services: ServiceHubInternal) {
         val producedState = produced.state.data
         if (producedState is SchedulableState) {
             val scheduledAt = sandbox { producedState.nextScheduledActivity(produced.ref, FlowLogicRefFactoryImpl)?.scheduledAt } ?: return
-            services.schedulerService.scheduleStateActivity(ScheduledStateRef(produced.ref, scheduledAt))
+            schedulerService.scheduleStateActivity(ScheduledStateRef(produced.ref, scheduledAt))
         }
-    }
-
-    // TODO: Beware we are calling dynamically loaded contract code inside here.
-    private inline fun <T : Any> sandbox(code: () -> T?): T? {
-        return code()
     }
 }

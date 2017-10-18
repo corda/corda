@@ -269,7 +269,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
                 update.where(stateStatusPredication, lockIdPredicate, *commonPredicates)
             }
             if (updatedRows > 0 && updatedRows == stateRefs.size) {
-                log.trace("Reserving soft lock states for $lockId: $stateRefs")
+                log.trace { "Reserving soft lock states for $lockId: $stateRefs" }
                 FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
             } else {
                 // revert partial soft locks
@@ -280,7 +280,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
                     update.where(lockUpdateTime, lockIdPredicate, *commonPredicates)
                 }
                 if (revertUpdatedRows > 0) {
-                    log.trace("Reverting $revertUpdatedRows partially soft locked states for $lockId")
+                    log.trace { "Reverting $revertUpdatedRows partially soft locked states for $lockId" }
                 }
                 throw StatesNotAvailableException("Attempted to reserve $stateRefs for $lockId but only $updatedRows rows available")
             }
@@ -309,7 +309,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
                 update.where(*commonPredicates)
             }
             if (update > 0) {
-                log.trace("Releasing $update soft locked states for $lockId")
+                log.trace { "Releasing $update soft locked states for $lockId" }
             }
         } else {
             try {
@@ -320,7 +320,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
                     update.where(*commonPredicates, stateRefsPredicate)
                 }
                 if (updatedRows > 0) {
-                    log.trace("Releasing $updatedRows soft locked states for $lockId and stateRefs $stateRefs")
+                    log.trace { "Releasing $updatedRows soft locked states for $lockId and stateRefs $stateRefs" }
                 }
             } catch (e: Exception) {
                 log.error("""soft lock update error attempting to release states for $lockId and $stateRefs")
