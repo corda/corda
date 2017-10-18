@@ -10,7 +10,7 @@ class DoormanSchemaService : SchemaService {
     object DoormanServices
 
     object DoormanServicesV1 : MappedSchema(schemaFamily = DoormanServices.javaClass, version = 1,
-            mappedTypes = listOf(DBCertificateRequestStorage.CertificateSigningRequest::class.java))
+            mappedTypes = listOf(CertificateSigningRequest::class.java, NodeInfoEntity::class.java, PublicKeyNodeInfoLink::class.java))
 
     override var schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = mapOf(Pair(DoormanServicesV1, SchemaService.SchemaOptions()))
 

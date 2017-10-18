@@ -4,8 +4,10 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
+import net.corda.core.crypto.sha256
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
+import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
@@ -45,3 +47,8 @@ fun X509CertificateHolder.toX509Certificate(): Certificate = CertificateUtilitie
 fun buildCertPath(vararg certificates: Certificate): CertPath {
     return CertificateFactory.getInstance("X509").generateCertPath(certificates.asList())
 }
+
+fun buildCertPath(certPathBytes: ByteArray): CertPath = CertificateFactory.getInstance("X509").generateCertPath(certPathBytes.inputStream())
+
+// TODO: replace this with Crypto.hash when its available.
+fun PublicKey.hash() = encoded.sha256().toString()

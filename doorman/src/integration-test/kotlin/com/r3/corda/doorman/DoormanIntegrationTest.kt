@@ -1,15 +1,13 @@
 package com.r3.corda.doorman
 
-import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.whenever
-import com.r3.corda.doorman.persistence.ApprovingAllCertificateRequestStorage
 import com.r3.corda.doorman.persistence.DoormanSchemaService
-import com.r3.corda.doorman.signer.DefaultCsrHandler
-import com.r3.corda.doorman.signer.LocalSigner
+import com.r3.corda.doorman.signer.Signer
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.utilities.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
@@ -28,7 +26,7 @@ class DoormanIntegrationTest {
     val tempFolder = TemporaryFolder()
 
     @Test
-    fun `Network Registration With Doorman`() {
+    fun `initial registration`() {
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA", organisation = "R3 Ltd", locality = "London", country = "GB"), rootCAKey)
         val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -39,16 +37,17 @@ class DoormanIntegrationTest {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         })
+        val signer = Signer(intermediateCAKey, arrayOf(intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate()))
+
         //Start doorman server
-        val storage = ApprovingAllCertificateRequestStorage(database)
-        val doorman = DoormanServer(HostAndPort.fromParts("localhost", 0), DefaultCsrHandler(storage, LocalSigner(storage, CertificateAndKeyPair(intermediateCACert, intermediateCAKey), rootCACert.toX509Certificate())))
-        doorman.start()
+        val doorman = startDoorman(NetworkHostAndPort("localhost", 0), database, true, signer, null)
 
         // Start Corda network registration.
         val config = testNodeConfiguration(
                 baseDirectory = tempFolder.root.toPath(),
                 myLegalName = ALICE.name).also {
             whenever(it.certificateSigningService).thenReturn(URL("http://localhost:${doorman.hostAndPort.port}"))
+            whenever(it.emailAddress).thenReturn("iTest@R3.com")
         }
 
         NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.certificateSigningService)).buildKeystore()
@@ -76,7 +75,6 @@ class DoormanIntegrationTest {
         }
         doorman.close()
     }
-
 
     private fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
         val props = Properties()

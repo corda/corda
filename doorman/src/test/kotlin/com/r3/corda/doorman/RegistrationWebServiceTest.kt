@@ -1,16 +1,13 @@
 package com.r3.corda.doorman
 
-import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.doorman.persistence.CertificateResponse
-import com.r3.corda.doorman.persistence.CertificationRequestData
-import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import com.r3.corda.doorman.signer.DefaultCsrHandler
-import com.r3.corda.doorman.signer.LocalSigner
+import com.r3.corda.doorman.signer.CsrHandler
+import com.r3.corda.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.node.utilities.CertificateAndKeyPair
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.utilities.CertificateStream
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
@@ -37,17 +34,15 @@ import java.util.zip.ZipInputStream
 import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
-class DoormanServiceTest {
+class RegistrationWebServiceTest {
     private val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 Ltd", country = "GB"), rootCAKey)
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
     private lateinit var doormanServer: DoormanServer
 
-    private fun startSigningServer(storage: CertificationRequestStorage) {
-        val caCertAndKey = CertificateAndKeyPair(intermediateCACert, intermediateCAKey)
-        val csrManager = DefaultCsrHandler(storage, LocalSigner(storage, caCertAndKey, rootCACert.toX509Certificate()))
-        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), csrManager)
+    private fun startSigningServer(csrHandler: CsrHandler) {
+        doormanServer = DoormanServer(NetworkHostAndPort("localhost", 0), RegistrationWebService(csrHandler, DoormanServerStatus()))
         doormanServer.start()
     }
 
@@ -60,20 +55,20 @@ class DoormanServiceTest {
     fun `submit request`() {
         val id = SecureHash.randomSHA256().toString()
 
-        val storage = mock<CertificationRequestStorage> {
+        val requestProcessor = mock<CsrHandler> {
             on { saveRequest(any()) }.then { id }
         }
 
-        startSigningServer(storage)
+        startSigningServer(requestProcessor)
 
         val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
         val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB"), "my@mail.com", keyPair)
         // Post request to signing server via http.
 
         assertEquals(id, submitRequest(request))
-        verify(storage, times(1)).saveRequest(any())
+        verify(requestProcessor, times(1)).saveRequest(any())
         submitRequest(request)
-        verify(storage, times(2)).saveRequest(any())
+        verify(requestProcessor, times(2)).saveRequest(any())
     }
 
     @Test
@@ -83,36 +78,29 @@ class DoormanServiceTest {
 
         // Mock Storage behaviour.
         val certificateStore = mutableMapOf<String, CertPath>()
-        val storage = mock<CertificationRequestStorage> {
+        val requestProcessor = mock<CsrHandler> {
             on { getResponse(eq(id)) }.then {
                 certificateStore[id]?.let {
                     CertificateResponse.Ready(it)
                 } ?: CertificateResponse.NotReady
             }
-            on { signCertificate(eq(id), any(), any()) }.then {
-                @Suppress("UNCHECKED_CAST")
-                val certGen = it.arguments[2] as ((CertificationRequestData) -> CertPath)
-                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "LegalName", country = "GB"), "my@mail.com", keyPair))
-                certificateStore[id] = certGen(request)
-                true
+            on { processApprovedRequests() }.then {
+                val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "LegalName", country = "GB"), "my@mail.com", keyPair)
+                certificateStore[id] = JcaPKCS10CertificationRequest(request).run {
+                    val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
+                    buildCertPath(tlsCert, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
+                }
+                null
             }
-            on { getNewRequestIds() }.then { listOf(id) }
         }
 
-        startSigningServer(storage)
-
+        startSigningServer(requestProcessor)
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
 
-        storage.approveRequest(id)
-        storage.signCertificate(id) {
-            JcaPKCS10CertificationRequest(request).run {
-                val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
-                buildCertPath(tlsCert, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-            }
-        }
+        requestProcessor.processApprovedRequests()
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain
-        verify(storage, times(2)).getResponse(any())
+        verify(requestProcessor, times(2)).getResponse(any())
         assertEquals(3, certificates.size)
 
         certificates.first().run {
@@ -133,34 +121,28 @@ class DoormanServiceTest {
 
         // Mock Storage behaviour.
         val certificateStore = mutableMapOf<String, CertPath>()
-        val storage = mock<CertificationRequestStorage> {
+        val storage = mock<CsrHandler> {
             on { getResponse(eq(id)) }.then {
                 certificateStore[id]?.let {
                     CertificateResponse.Ready(it)
                 } ?: CertificateResponse.NotReady
             }
-            on { signCertificate(eq(id), any(), any()) }.then {
-                @Suppress("UNCHECKED_CAST")
-                val certGen = it.arguments[2] as ((CertificationRequestData) -> CertPath)
-                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB"), "my@mail.com", keyPair))
-                certificateStore[id] = certGen(request)
+            on { processApprovedRequests() }.then {
+                val request = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Legal Name", country = "GB"), "my@mail.com", keyPair)
+                certificateStore[id] = JcaPKCS10CertificationRequest(request).run {
+                    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, X500Name("CN=LegalName, L=London")))), arrayOf())
+                    val clientCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints).toX509Certificate()
+                    buildCertPath(clientCert, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
+                }
                 true
             }
-            on { getNewRequestIds() }.then { listOf(id) }
         }
 
         startSigningServer(storage)
 
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
 
-        storage.approveRequest(id)
-        storage.signCertificate(id) {
-            JcaPKCS10CertificationRequest(request).run {
-                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, X500Name("CN=LegalName, L=London")))), arrayOf())
-                val clientCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints).toX509Certificate()
-                buildCertPath(clientCert, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-            }
-        }
+        storage.processApprovedRequests()
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain
         verify(storage, times(2)).getResponse(any())
@@ -177,13 +159,11 @@ class DoormanServiceTest {
     fun `request not authorised`() {
         val id = SecureHash.randomSHA256().toString()
 
-        val storage = mock<CertificationRequestStorage> {
+        val requestProcessor = mock<CsrHandler> {
             on { getResponse(eq(id)) }.then { CertificateResponse.Unauthorised("Not Allowed") }
-            on { getNewRequestIds() }.then { listOf(id) }
         }
 
-        startSigningServer(storage)
-
+        startSigningServer(requestProcessor)
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.Unauthorised("Not Allowed"))
     }
 

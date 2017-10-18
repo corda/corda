@@ -1,100 +1,61 @@
 package com.r3.corda.doorman.signer
 
-import com.atlassian.jira.rest.client.api.JiraRestClient
-import com.atlassian.jira.rest.client.api.domain.Field
-import com.atlassian.jira.rest.client.api.domain.IssueType
-import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder
-import com.atlassian.jira.rest.client.api.domain.input.TransitionInput
+import com.r3.corda.doorman.JiraClient
+import com.r3.corda.doorman.buildCertPath
 import com.r3.corda.doorman.persistence.CertificateResponse
-import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.core.internal.country
-import net.corda.core.internal.locality
-import net.corda.core.internal.organisation
-import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.X509Utilities
-import org.bouncycastle.asn1.x500.style.BCStyle
-import org.bouncycastle.openssl.jcajce.JcaPEMWriter
-import org.bouncycastle.util.io.pem.PemObject
-import java.io.StringWriter
+import com.r3.corda.doorman.persistence.RequestStatus
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
 
-open class DefaultCsrHandler(protected val storage: CertificationRequestStorage, protected val signer: Signer) {
-    open fun saveRequest(certificationData: CertificationRequestData): String {
-        return storage.saveRequest(certificationData)
+interface CsrHandler {
+    fun saveRequest(rawRequest: PKCS10CertificationRequest): String
+    fun processApprovedRequests()
+    fun getResponse(requestId: String): CertificateResponse
+}
+
+class DefaultCsrHandler(private val storage: CertificationRequestStorage, private val signer: Signer?) : CsrHandler {
+    override fun processApprovedRequests() {
+        storage.getRequests(RequestStatus.Approved)
+                .forEach { processRequest(it.requestId, PKCS10CertificationRequest(it.request)) }
     }
 
-    open fun sign() {
-        for (id in storage.getApprovedRequestIds()) {
-            signer.sign(id)
+    private fun processRequest(requestId: String, request: PKCS10CertificationRequest) {
+        if (signer != null) {
+            val certs = signer.sign(request)
+            storage.putCertificatePath(requestId, certs)
         }
     }
 
-    fun getResponse(requestId: String) = storage.getResponse(requestId)
-}
-
-class JiraCsrHandler(private val jiraClient: JiraRestClient,
-                     private val projectCode: String,
-                     private val doneTransitionCode: Int,
-                     storage: CertificationRequestStorage, signer: Signer) : DefaultCsrHandler(storage, signer) {
-
-    companion object {
-        private val logger = loggerFor<JiraCsrHandler>()
+    override fun saveRequest(rawRequest: PKCS10CertificationRequest): String {
+        return storage.saveRequest(rawRequest)
     }
 
-    // The JIRA project must have a Request ID field and the Task issue type.
-    private val requestIdField: Field = jiraClient.metadataClient.fields.claim().find { it.name == "Request ID" }!!
-    private val taskIssueType: IssueType = jiraClient.metadataClient.issueTypes.claim().find { it.name == "Task" }!!
+    override fun getResponse(requestId: String): CertificateResponse {
+        val response = storage.getRequest(requestId)
+        return when (response?.status) {
+            RequestStatus.New, RequestStatus.Approved, null -> CertificateResponse.NotReady
+            RequestStatus.Rejected -> CertificateResponse.Unauthorised(response.rejectReason ?: "Unknown reason")
+            RequestStatus.Signed -> CertificateResponse.Ready(buildCertPath(response.certificateData?.certificatePath ?: throw IllegalArgumentException("Certificate should not be null.")))
+        }
+    }
+}
 
-    override fun saveRequest(certificationData: CertificationRequestData): String {
-        val requestId = super.saveRequest(certificationData)
+class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: CertificationRequestStorage, private val delegate: CsrHandler) : CsrHandler by delegate {
+    override fun saveRequest(rawRequest: PKCS10CertificationRequest): String {
+        val requestId = delegate.saveRequest(rawRequest)
         // Make sure request has been accepted.
-        val response = storage.getResponse(requestId)
-        if (response !is CertificateResponse.Unauthorised) {
-            val request = StringWriter()
-            JcaPEMWriter(request).use {
-                it.writeObject(PemObject("CERTIFICATE REQUEST", certificationData.request.encoded))
-            }
-            val organisation = certificationData.request.subject.organisation
-            val nearestCity = certificationData.request.subject.locality
-            val country = certificationData.request.subject.country
-
-            val email = certificationData.request.getAttributes(BCStyle.E).firstOrNull()?.attrValues?.firstOrNull()?.toString()
-
-            val issue = IssueInputBuilder().setIssueTypeId(taskIssueType.id)
-                    .setProjectKey(projectCode)
-                    .setDescription("Organisation: $organisation\nNearest City: $nearestCity\nCountry: $country\nEmail: $email\n\n{code}$request{code}")
-                    .setSummary(organisation)
-                    .setFieldValue(requestIdField.id, requestId)
-            // This will block until the issue is created.
-            jiraClient.issueClient.createIssue(issue.build()).fail { logger.error("Exception when creating JIRA issue.", it) }.claim()
+        if (delegate.getResponse(requestId) !is CertificateResponse.Unauthorised) {
+            jiraClient.createRequestTicket(requestId, rawRequest)
         }
         return requestId
     }
 
-    override fun sign() {
-        val issues = jiraClient.searchClient.searchJql("project = $projectCode AND status = Approved").claim().issues
-        issues.map {
-            val requestId = it.getField(requestIdField.id)?.value?.toString()
-            if (requestId != null) {
-                var approvedBy = it.assignee?.displayName
-                if (approvedBy == null) {
-                    approvedBy = "Unknown"
-                }
-                storage.approveRequest(requestId, approvedBy)
-            }
-
-        }
-        super.sign()
-        // Retrieving certificates for signed CSRs to attach to the jira tasks.
-        storage.getSignedRequestIds().forEach {
-            val certificate = (storage.getResponse(it) as? CertificateResponse.Ready)?.certificatePath!!.certificates.first()
-            // Jira only support ~ (contains) search for custom textfield.
-            val issue = jiraClient.searchClient.searchJql("'Request ID' ~ $it").claim().issues.firstOrNull()
-            if (issue != null) {
-                jiraClient.issueClient.transition(issue, TransitionInput(doneTransitionCode)).fail { logger.error("Exception when transiting JIRA status.", it) }.claim()
-                jiraClient.issueClient.addAttachment(issue.attachmentsUri, certificate?.encoded?.inputStream(), "${X509Utilities.CORDA_CLIENT_CA}.cer")
-                        .fail { logger.error("Exception when uploading attachment to JIRA.", it) }.claim()
-            }
-        }
+    override fun processApprovedRequests() {
+        jiraClient.getApprovedRequests().forEach { (id, approvedBy) -> storage.approveRequest(id, approvedBy) }
+        delegate.processApprovedRequests()
+        val signedRequests = storage.getRequests(RequestStatus.Signed).mapNotNull {
+            it.certificateData?.certificatePath?.let { certs -> it.requestId to buildCertPath(certs) }
+        }.toMap()
+        jiraClient.updateSignedRequests(signedRequests)
     }
 }

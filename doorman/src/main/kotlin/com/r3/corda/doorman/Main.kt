@@ -1,22 +1,24 @@
 package com.r3.corda.doorman
 
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
-import com.google.common.net.HostAndPort
 import com.r3.corda.doorman.DoormanServer.Companion.logger
-import com.r3.corda.doorman.persistence.ApprovingAllCertificateRequestStorage
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
 import com.r3.corda.doorman.persistence.DoormanSchemaService
-import com.r3.corda.doorman.signer.*
+import com.r3.corda.doorman.persistence.PersistenceNodeInfoStorage
+import com.r3.corda.doorman.signer.DefaultCsrHandler
+import com.r3.corda.doorman.signer.JiraCsrHandler
+import com.r3.corda.doorman.signer.Signer
+import com.r3.corda.doorman.webservice.NodeInfoWebService
+import com.r3.corda.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.utilities.*
-import net.corda.node.utilities.X509Utilities.CORDA_INTERMEDIATE_CA
-import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
-import net.corda.node.utilities.X509Utilities.createCertificate
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -25,36 +27,34 @@ import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
-import java.lang.Thread.sleep
 import java.net.InetSocketAddress
 import java.net.URI
+import java.nio.file.Path
 import java.time.Instant
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
 /**
- *  DoormanServer runs on Jetty server and provide certificate signing service via http.
+ *  DoormanServer runs on Jetty server and provides certificate signing service via http.
  *  The server will require keystorePath, keystore password and key password via command line input.
  *  The Intermediate CA certificate,Intermediate CA private key and Root CA Certificate should use alias name specified in [X509Utilities]
  */
-class DoormanServer(webServerAddr: HostAndPort, val csrHandler: DefaultCsrHandler) : Closeable {
-    val serverStatus = DoormanServerStatus()
-
+// TODO: Move this class to its own file.
+class DoormanServer(hostAndPort: NetworkHostAndPort, private vararg val webServices: Any) : Closeable {
     companion object {
         val logger = loggerFor<DoormanServer>()
+        val serverStatus = DoormanServerStatus()
     }
 
-    private val server: Server = Server(InetSocketAddress(webServerAddr.host, webServerAddr.port)).apply {
+    private val server: Server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
         handler = HandlerCollection().apply {
             addHandler(buildServletContextHandler())
         }
     }
 
-    val hostAndPort: HostAndPort
-        get() = server.connectors
-                .map { it as? ServerConnector }
-                .filterNotNull()
-                .map { HostAndPort.fromParts(it.host, it.localPort) }
+    val hostAndPort: NetworkHostAndPort
+        get() = server.connectors.mapNotNull { it as? ServerConnector }
+                .map { NetworkHostAndPort(it.host, it.localPort) }
                 .first()
 
     override fun close() {
@@ -67,22 +67,6 @@ class DoormanServer(webServerAddr: HostAndPort, val csrHandler: DefaultCsrHandle
         logger.info("Starting Doorman Web Services...")
         server.start()
         logger.info("Doorman Web Services started on $hostAndPort")
-        serverStatus.serverStartTime = Instant.now()
-
-        // Thread approving request periodically.
-        thread(name = "Request Approval Thread") {
-            while (true) {
-                try {
-                    sleep(10.seconds.toMillis())
-                    // TODO: Handle rejected request?
-                    serverStatus.lastRequestCheckTime = Instant.now()
-                    csrHandler.sign()
-                } catch (e: Exception) {
-                    // Log the error and carry on.
-                    logger.error("Error encountered when approving request.", e)
-                }
-            }
-        }
     }
 
     private fun buildServletContextHandler(): ServletContextHandler {
@@ -90,18 +74,15 @@ class DoormanServer(webServerAddr: HostAndPort, val csrHandler: DefaultCsrHandle
             contextPath = "/"
             val resourceConfig = ResourceConfig().apply {
                 // Add your API provider classes (annotated for JAX-RS) here
-                register(DoormanWebService(csrHandler, serverStatus))
+                webServices.forEach { register(it) }
             }
-            val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply {
-                initOrder = 0  // Initialise at server start
-            }
+            val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
             addServlet(jerseyServlet, "/api/*")
         }
     }
 }
 
-data class DoormanServerStatus(var serverStartTime: Instant? = null,
-                               var lastRequestCheckTime: Instant? = null)
+data class DoormanServerStatus(var serverStartTime: Instant = Instant.now(), var lastRequestCheckTime: Instant? = null)
 
 /** Read password from console, do a readLine instead if console is null (e.g. when debugging in IDE). */
 internal fun readPassword(fmt: String): String {
@@ -109,112 +90,134 @@ internal fun readPassword(fmt: String): String {
         String(System.console().readPassword(fmt))
     } else {
         print(fmt)
-        readLine()!!
+        readLine() ?: ""
     }
 }
 
-private fun DoormanParameters.generateRootKeyPair() {
-    if (rootStorePath == null) {
-        throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!")
-    }
+// Keygen utilities.
+// TODO: Move keygen methods to Utilities.kt
+fun generateRootKeyPair(rootStorePath: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?) {
     println("Generating Root CA keypair and certificate.")
     // Get password from console if not in config.
-    val rootKeystorePassword = rootKeystorePassword ?: readPassword("Root Keystore Password: ")
+    val rootKeystorePassword = rootKeystorePass ?: readPassword("Root Keystore Password: ")
     // Ensure folder exists.
     rootStorePath.parent.createDirectories()
     val rootStore = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword)
-    val rootPrivateKeyPassword = rootPrivateKeyPassword ?: readPassword("Root Private Key Password: ")
+    val rootPrivateKeyPassword = rootPrivateKeyPass ?: readPassword("Root Private Key Password: ")
 
-    if (rootStore.containsAlias(CORDA_ROOT_CA)) {
-        val oldKey = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword).getCertificate(CORDA_ROOT_CA).publicKey
-        println("Key $CORDA_ROOT_CA already exists in keystore, process will now terminate.")
+    if (rootStore.containsAlias(X509Utilities.CORDA_ROOT_CA)) {
+        val oldKey = loadOrCreateKeyStore(rootStorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey
+        println("Key ${X509Utilities.CORDA_ROOT_CA} already exists in keystore, process will now terminate.")
         println(oldKey)
         exitProcess(1)
     }
 
     val selfSignKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val selfSignCert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Root CA", organisation = "R3 Ltd", locality = "London", country = "GB", organisationUnit = "Corda", state = null), selfSignKey)
-    rootStore.addOrReplaceKey(CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
+    rootStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
     rootStore.save(rootStorePath, rootKeystorePassword)
 
     println("Root CA keypair and certificate stored in $rootStorePath.")
-    println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(CORDA_ROOT_CA).publicKey)
+    println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey)
 }
 
-private fun DoormanParameters.generateCAKeyPair() {
-    if (keystorePath == null) {
-        throw IllegalArgumentException("The 'keystorePath' parameter must be specified when generating keys!")
-    }
-
-    if (rootStorePath == null) {
-        throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!")
-    }
+fun generateCAKeyPair(keystorePath: Path, rootStorePath: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, keystorePass: String?, caPrivateKeyPass: String?) {
     println("Generating Intermediate CA keypair and certificate using root keystore $rootStorePath.")
     // Get password from console if not in config.
-    val rootKeystorePassword = rootKeystorePassword ?: readPassword("Root Keystore Password: ")
-    val rootPrivateKeyPassword = rootPrivateKeyPassword ?: readPassword("Root Private Key Password: ")
+    val rootKeystorePassword = rootKeystorePass ?: readPassword("Root Keystore Password: ")
+    val rootPrivateKeyPassword = rootPrivateKeyPass ?: readPassword("Root Private Key Password: ")
     val rootKeyStore = loadKeyStore(rootStorePath, rootKeystorePassword)
 
-    val rootKeyAndCert = rootKeyStore.getCertificateAndKeyPair(CORDA_ROOT_CA, rootPrivateKeyPassword)
+    val rootKeyAndCert = rootKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, rootPrivateKeyPassword)
 
-    val keystorePassword = keystorePassword ?: readPassword("Keystore Password: ")
-    val caPrivateKeyPassword = caPrivateKeyPassword ?: readPassword("CA Private Key Password: ")
+    val keystorePassword = keystorePass ?: readPassword("Keystore Password: ")
+    val caPrivateKeyPassword = caPrivateKeyPass ?: readPassword("CA Private Key Password: ")
     // Ensure folder exists.
     keystorePath.parent.createDirectories()
     val keyStore = loadOrCreateKeyStore(keystorePath, keystorePassword)
 
-    if (keyStore.containsAlias(CORDA_INTERMEDIATE_CA)) {
-        val oldKey = loadOrCreateKeyStore(keystorePath, rootKeystorePassword).getCertificate(CORDA_INTERMEDIATE_CA).publicKey
-        println("Key $CORDA_INTERMEDIATE_CA already exists in keystore, process will now terminate.")
+    if (keyStore.containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA)) {
+        val oldKey = loadOrCreateKeyStore(keystorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey
+        println("Key ${X509Utilities.CORDA_INTERMEDIATE_CA} already exists in keystore, process will now terminate.")
         println(oldKey)
         exitProcess(1)
     }
 
     val intermediateKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val intermediateCert = createCertificate(CertificateType.INTERMEDIATE_CA, rootKeyAndCert.certificate, rootKeyAndCert.keyPair,
+    val intermediateCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootKeyAndCert.certificate, rootKeyAndCert.keyPair,
             CordaX500Name(commonName = "Corda Intermediate CA", organisation = "R3 Ltd", organisationUnit = "Corda", locality = "London", country = "GB", state = null), intermediateKey.public)
-    keyStore.addOrReplaceKey(CORDA_INTERMEDIATE_CA, intermediateKey.private,
+    keyStore.addOrReplaceKey(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateKey.private,
             caPrivateKeyPassword.toCharArray(), arrayOf(intermediateCert, rootKeyAndCert.certificate))
     keyStore.save(keystorePath, keystorePassword)
     println("Intermediate CA keypair and certificate stored in $keystorePath.")
-    println(loadKeyStore(keystorePath, keystorePassword).getCertificate(CORDA_INTERMEDIATE_CA).publicKey)
+    println(loadKeyStore(keystorePath, keystorePassword).getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA).publicKey)
 }
 
-private fun DoormanParameters.startDoorman(isLocalSigning: Boolean = false) {
+// TODO: Move this method to DoormanServer.
+fun startDoorman(hostAndPort: NetworkHostAndPort,
+                 database: CordaPersistence,
+                 approveAll: Boolean,
+                 signer: Signer? = null,
+                 jiraConfig: DoormanParameters.JiraConfig? = null): DoormanServer {
+
     logger.info("Starting Doorman server.")
-    // Create DB connection.
-    val database = configureDatabase(dataSourceProperties, databaseProperties, { DoormanSchemaService() }, createIdentityService = {
-        // Identity service not needed doorman, corda persistence is not very generic.
-        throw UnsupportedOperationException()
-    })
-    val csrHandler = if (jiraConfig == null) {
-        logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing request.")
-        val storage = ApprovingAllCertificateRequestStorage(database)
-        DefaultCsrHandler(storage, buildLocalSigner(storage, this))
+
+    val requestService = if (approveAll) {
+        logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
+        ApproveAllCertificateRequestStorage(DBCertificateRequestStorage(database))
     } else {
-        val storage = DBCertificateRequestStorage(database)
-        val signer = if (isLocalSigning) {
-            buildLocalSigner(storage, this)
-        } else {
-            ExternalSigner()
-        }
-        val jiraClient = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
-        JiraCsrHandler(jiraClient, jiraConfig.projectCode, jiraConfig.doneTransitionCode, storage, signer)
+        DBCertificateRequestStorage(database)
     }
-    val doorman = DoormanServer(HostAndPort.fromParts(host, port), csrHandler)
+
+    val requestProcessor = if (jiraConfig != null) {
+        val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
+        val jiraClient = JiraClient(jiraWebAPI, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
+        JiraCsrHandler(jiraClient, requestService, DefaultCsrHandler(requestService, signer))
+    } else {
+        DefaultCsrHandler(requestService, signer)
+    }
+
+    val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus), NodeInfoWebService(PersistenceNodeInfoStorage(database)))
     doorman.start()
+
+    // Thread process approved request periodically.
+    thread(name = "Approved Request Process Thread") {
+        while (true) {
+            try {
+                Thread.sleep(10.seconds.toMillis())
+                DoormanServer.serverStatus.lastRequestCheckTime = Instant.now()
+                requestProcessor.processApprovedRequests()
+            } catch (e: Exception) {
+                // Log the error and carry on.
+                DoormanServer.logger.error("Error encountered when approving request.", e)
+            }
+        }
+    }
     Runtime.getRuntime().addShutdownHook(thread(start = false) { doorman.close() })
+    return doorman
 }
 
-private fun buildLocalSigner(storage: CertificationRequestStorage, parameters: DoormanParameters): Signer {
-    checkNotNull(parameters.keystorePath) { "The keystorePath parameter must be specified when using local signing!" }
-    // Get password from console if not in config.
-    val keystorePassword = parameters.keystorePassword ?: readPassword("Keystore Password: ")
-    val caPrivateKeyPassword = parameters.caPrivateKeyPassword ?: readPassword("CA Private Key Password: ")
-    val keystore = loadOrCreateKeyStore(parameters.keystorePath!!, keystorePassword)
-    val rootCACert = keystore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA).last()
-    val caCertAndKey = keystore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, caPrivateKeyPassword)
-    return LocalSigner(storage, caCertAndKey, rootCACert)
+private fun buildLocalSigner(parameters: DoormanParameters): Signer? {
+    return parameters.keystorePath?.let {
+        // Get password from console if not in config.
+        val keystorePassword = parameters.keystorePassword ?: readPassword("Keystore Password: ")
+        val caPrivateKeyPassword = parameters.caPrivateKeyPassword ?: readPassword("CA Private Key Password: ")
+        val keystore = loadOrCreateKeyStore(parameters.keystorePath, keystorePassword)
+        val caKeyPair = keystore.getKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, caPrivateKeyPassword)
+        val caCertPath = keystore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA)
+        Signer(caKeyPair, caCertPath)
+    }
+}
+
+/**
+ * This storage automatically approves all created requests.
+ */
+private class ApproveAllCertificateRequestStorage(private val delegate: CertificationRequestStorage) : CertificationRequestStorage by delegate {
+    override fun saveRequest(rawRequest: PKCS10CertificationRequest): String {
+        val requestId = delegate.saveRequest(rawRequest)
+        approveRequest(requestId)
+        return requestId
+    }
 }
 
 fun main(args: Array<String>) {
@@ -222,9 +225,22 @@ fun main(args: Array<String>) {
         // TODO : Remove config overrides and solely use config file after testnet is finalized.
         parseParameters(*args).run {
             when (mode) {
-                DoormanParameters.Mode.ROOT_KEYGEN -> generateRootKeyPair()
-                DoormanParameters.Mode.CA_KEYGEN -> generateCAKeyPair()
-                DoormanParameters.Mode.DOORMAN -> startDoorman(keystorePath != null)
+                DoormanParameters.Mode.ROOT_KEYGEN -> generateRootKeyPair(
+                        rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
+                        rootKeystorePassword,
+                        rootPrivateKeyPassword)
+                DoormanParameters.Mode.CA_KEYGEN -> generateCAKeyPair(
+                        keystorePath ?: throw IllegalArgumentException("The 'keystorePath' parameter must be specified when generating keys!"),
+                        rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
+                        rootKeystorePassword,
+                        rootPrivateKeyPassword,
+                        keystorePassword,
+                        caPrivateKeyPassword)
+                DoormanParameters.Mode.DOORMAN -> {
+                    val database = configureDatabase(dataSourceProperties, databaseProperties, { DoormanSchemaService() }, { throw UnsupportedOperationException() })
+                    val signer = buildLocalSigner(this)
+                    startDoorman(NetworkHostAndPort(host, port), database, approveAll, signer, jiraConfig)
+                }
             }
         }
     } catch (e: ShowHelpException) {
