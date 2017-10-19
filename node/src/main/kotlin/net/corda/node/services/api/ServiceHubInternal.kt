@@ -84,7 +84,6 @@ interface ServiceHubInternal : ServiceHub {
     val monitoringService: MonitoringService
     val schemaService: SchemaService
     override val networkMapCache: NetworkMapCacheInternal
-    val schedulerService: SchedulerService
     val auditService: AuditService
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService
@@ -109,6 +108,10 @@ interface ServiceHubInternal : ServiceHub {
         }
     }
 
+    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+}
+
+interface FlowStarter {
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
      * defaults to [FlowInitiator.RPC] with username "Only For Testing".
@@ -138,10 +141,9 @@ interface ServiceHubInternal : ServiceHub {
         val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
         return startFlow(logic, flowInitiator, ourIdentity = null)
     }
-
-    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
 }
 
+interface StartedNodeServices : ServiceHubInternal, FlowStarter
 /**
  * Thread-safe storage of transactions.
  */

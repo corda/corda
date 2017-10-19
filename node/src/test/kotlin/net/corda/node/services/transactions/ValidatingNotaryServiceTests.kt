@@ -13,7 +13,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.issueInvalidState
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
@@ -28,8 +28,8 @@ import kotlin.test.assertFailsWith
 
 class ValidatingNotaryServiceTests {
     lateinit var mockNet: MockNetwork
-    lateinit var notaryServices: ServiceHubInternal
-    lateinit var aliceServices: ServiceHubInternal
+    lateinit var notaryServices: StartedNodeServices
+    lateinit var aliceServices: StartedNodeServices
     lateinit var notary: Party
     lateinit var alice: Party
 
