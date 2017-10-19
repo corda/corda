@@ -126,12 +126,12 @@ open class Cordform : DefaultTask() {
     }
 
     private fun initializeConfiguration() {
-        if (null != definitionClass) {
+        if (definitionClass != null) {
             val cd = loadCordformDefinition()
             cd.nodeConfigurers.forEach {
-                it.accept(node {
-                    rootDir(directory)
-                })
+                val node = node { }
+                it.accept(node)
+                node.rootDir(directory)
             }
             cd.setup { nodeName -> project.projectDir.toPath().resolve(getNodeByName(nodeName)!!.nodeDir.toPath()) }
         } else {

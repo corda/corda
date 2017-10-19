@@ -111,8 +111,13 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     internal fun rootDir(rootDir: Path) {
+        if(name == null) {
+            project.logger.error("Node has a null name - cannot create node")
+            throw IllegalStateException("Node has a null name - cannot create node")
+        }
+
         val dirName = try {
-            X500Name(name).getRDNs(BCStyle.O)[0].first.value.toString()
+            X500Name(name).getRDNs(BCStyle.O).first().first.value.toString()
         } catch(_ : IllegalArgumentException) {
             // Can't parse as an X500 name, use the full string
             name
@@ -162,7 +167,7 @@ class Node(private val project: Project) : CordformNode() {
     /**
      * Installs this project's cordapp to this directory.
      */
-    private fun installBuiltPlugin() {
+    private fun installBuiltCordapp() {
         val cordappsDir = File(nodeDir, "cordapps")
         project.copy {
             it.apply {
