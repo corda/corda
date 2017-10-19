@@ -4,7 +4,6 @@ import net.corda.core.contracts.Amount
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.*
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.AbstractCashSelection
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
