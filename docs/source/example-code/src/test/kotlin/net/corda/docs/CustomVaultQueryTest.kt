@@ -32,7 +32,7 @@ class CustomVaultQueryTest {
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
-        nodeA.internals.installCordaService(CustomVaultQuery.Service::class.java)
+        nodeA.installCordaService(CustomVaultQuery.Service::class.java)
         notary = nodeA.services.getDefaultNotary()
     }
 
