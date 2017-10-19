@@ -33,10 +33,10 @@ class DoormanIntegrationTest {
         val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey,
                 CordaX500Name(commonName = "Integration Test Corda Node Intermediate CA", locality = "London", country = "GB", organisation = "R3 Ltd"), intermediateCAKey.public)
 
-        val database = configureDatabase(makeTestDataSourceProperties(), null, { DoormanSchemaService() }, createIdentityService = {
+        val database = configureDatabase(makeTestDataSourceProperties(), null, {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
-        })
+        }, DoormanSchemaService())
         val signer = Signer(intermediateCAKey, arrayOf(intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate()))
 
         //Start doorman server

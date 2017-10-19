@@ -237,7 +237,7 @@ fun main(args: Array<String>) {
                         keystorePassword,
                         caPrivateKeyPassword)
                 DoormanParameters.Mode.DOORMAN -> {
-                    val database = configureDatabase(dataSourceProperties, databaseProperties, { DoormanSchemaService() }, { throw UnsupportedOperationException() })
+                    val database = configureDatabase(dataSourceProperties, databaseProperties, { throw UnsupportedOperationException() }, DoormanSchemaService())
                     val signer = buildLocalSigner(this)
                     startDoorman(NetworkHostAndPort(host, port), database, approveAll, signer, jiraConfig)
                 }

@@ -3,8 +3,7 @@ package com.r3.corda.signing.persistence
 import net.corda.node.utilities.CordaPersistence
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.CertPath
-import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
+import java.sql.Connection
 import java.time.Instant
 import javax.persistence.*
 import javax.persistence.criteria.CriteriaBuilder
@@ -53,7 +52,7 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
 
     override fun sign(requests: List<ApprovedCertificateRequestData>, signers: List<String>) {
         requests.forEach {
-            database.transaction {
+            database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
                 val request = singleRequestWhere { builder, path ->
                     builder.and(
                             builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), it.requestId),

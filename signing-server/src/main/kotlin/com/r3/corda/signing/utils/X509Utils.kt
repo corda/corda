@@ -3,6 +3,7 @@ package com.r3.corda.signing.utils
 import CryptoServerJCE.CryptoServerProvider
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.toX509CertHolder
+import net.corda.core.internal.x500Name
 import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
@@ -108,7 +109,7 @@ object X509Utilities {
     fun retrieveCertificateAndKeys(certificateKeyName: String, privateKeyPassword: String, keyStore: KeyStore): CertificateAndKeyPair {
         val privateKey = keyStore.getKey(certificateKeyName, privateKeyPassword.toCharArray()) as PrivateKey
         val publicKey = keyStore.getCertificate(certificateKeyName).publicKey
-        val certificate = keyStore.getX509Certificate(certificateKeyName)
+        val certificate = keyStore.getX509Certificate(certificateKeyName).toX509CertHolder()
         return CertificateAndKeyPair(certificate, getCleanEcdsaKeyPair(publicKey, privateKey))
     }
 
@@ -176,13 +177,13 @@ object X509Utilities {
                                 provider: Provider): Certificate {
         val jcaRequest = JcaPKCS10CertificationRequest(request)
         // This can be adjusted more to our future needs.
-        val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.build(jcaRequest.subject).copy(commonName = null).x500Name))), arrayOf())
+        val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.parse(jcaRequest.subject.toString()).copy(commonName = null).x500Name))), arrayOf())
         val issuerCertificate = caCertAndKey.certificate
         val issuerKeyPair = caCertAndKey.keyPair
         val certificateType = CertificateType.CLIENT_CA
         val validityWindow = getCertificateValidityWindow(0, validDays, issuerCertificate.notBefore, issuerCertificate.notAfter)
         val serial = BigInteger.valueOf(random63BitValue(provider))
-        val subject = CordaX500Name.build(jcaRequest.subject).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Name
+        val subject = CordaX500Name.parse(jcaRequest.subject.toString()).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN).x500Name
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(jcaRequest.publicKey.encoded))
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val builder = JcaX509v3CertificateBuilder(issuerCertificate.subject, serial, validityWindow.first, validityWindow.second, subject, jcaRequest.publicKey)

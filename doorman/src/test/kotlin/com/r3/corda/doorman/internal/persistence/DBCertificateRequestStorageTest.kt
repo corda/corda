@@ -29,7 +29,7 @@ class DBCertificateRequestStorageTest {
 
     @Before
     fun startDb() {
-        persistence = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { DoormanSchemaService() }, createIdentityService = { throw UnsupportedOperationException() })
+        persistence = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { throw UnsupportedOperationException() }, DoormanSchemaService())
         storage = DBCertificateRequestStorage(persistence)
     }
 

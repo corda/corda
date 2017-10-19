@@ -1,5 +1,8 @@
 package com.r3.corda.signing.persistence
 
+import com.r3.corda.signing.persistence.DBCertificateRequestStorage.CertificateSigningRequest
+import com.r3.corda.signing.persistence.DBCertificateRequestStorage.Status
+import com.r3.corda.signing.utils.X509Utilities.buildCertPath
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -7,8 +10,6 @@ import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.configureDatabase
-import com.r3.corda.signing.persistence.DBCertificateRequestStorage.CertificateSigningRequest
-import com.r3.corda.signing.persistence.DBCertificateRequestStorage.Status
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
@@ -27,17 +28,16 @@ import javax.persistence.criteria.Path
 import javax.persistence.criteria.Predicate
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import com.r3.corda.signing.utils.X509Utilities.buildCertPath
 
 class DBCertificateRequestStorageTest {
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    private val intermediateCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Intermediate CA", organisation = "R3 Ltd", locality = "London", country = "GB").x500Name, intermediateCAKey)
+    private val intermediateCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Intermediate CA", organisation = "R3 Ltd", locality = "London", country = "GB"), intermediateCAKey)
     private lateinit var storage: DBCertificateRequestStorage
     private lateinit var persistence: CordaPersistence
 
     @Before
     fun startDb() {
-        persistence = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { SigningServerSchemaService() }, createIdentityService = { throw UnsupportedOperationException() })
+        persistence = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { throw UnsupportedOperationException() }, SigningServerSchemaService())
         storage = DBCertificateRequestStorage(persistence)
     }
 
@@ -131,7 +131,7 @@ class DBCertificateRequestStorageTest {
         val requestId = SecureHash.randomSHA256().toString()
         persistence.transaction {
             val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val x500Name = CordaX500Name(organisation = legalName, locality = "London", country = "GB").x500Name
+            val x500Name = CordaX500Name(organisation = legalName, locality = "London", country = "GB")
             session.save(CertificateSigningRequest(
                     requestId = requestId,
                     status = status,

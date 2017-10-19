@@ -58,7 +58,7 @@ class PersistenceNodeInfoStorageTest {
 
     @Before
     fun startDb() {
-        persistence = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { DoormanSchemaService() }, createIdentityService = { throw UnsupportedOperationException() })
+        persistence = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { throw UnsupportedOperationException() }, DoormanSchemaService())
         nodeInfoStorage = PersistenceNodeInfoStorage(persistence)
         requestStorage = DBCertificateRequestStorage(persistence)
     }

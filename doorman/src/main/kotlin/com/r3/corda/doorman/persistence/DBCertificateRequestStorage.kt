@@ -10,14 +10,16 @@ import net.corda.node.utilities.DatabaseTransaction
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import java.security.cert.CertPath
+import java.sql.Connection
 import java.time.Instant
+import javax.persistence.LockModeType
 import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.Path
 import javax.persistence.criteria.Predicate
 
 class DBCertificateRequestStorage(private val database: CordaPersistence) : CertificationRequestStorage {
     override fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: List<String>) {
-        return database.transaction {
+        return database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
             val request = singleRequestWhere { builder, path ->
                 val requestIdEq = builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
                 val statusEq = builder.equal(path.get<String>(CertificateSigningRequest::status.name), Approved)
@@ -37,7 +39,7 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
     override fun saveRequest(rawRequest: PKCS10CertificationRequest): String {
         val request = JcaPKCS10CertificationRequest(rawRequest)
         val requestId = SecureHash.randomSHA256().toString()
-        database.transaction {
+        database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
             // TODO ensure public key not duplicated.
             val (legalName, rejectReason) = try {
                 // This will fail with IllegalArgumentException if subject name is malformed.
@@ -73,7 +75,7 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
 
     override fun approveRequest(requestId: String, approvedBy: String): Boolean {
         var approved = false
-        database.transaction {
+        database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
             val request = singleRequestWhere { builder, path ->
                 builder.and(builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId),
                         builder.equal(path.get<String>(CertificateSigningRequest::status.name), New))
@@ -90,7 +92,7 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
     }
 
     override fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String) {
-        database.transaction {
+        database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
             val request = singleRequestWhere { builder, path ->
                 builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
             }
@@ -130,6 +132,6 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
         val query = criteriaQuery.from(CertificateSigningRequest::class.java).run {
             criteriaQuery.where(predicate(builder, this))
         }
-        return session.createQuery(query).uniqueResultOptional().orElse(null)
+        return session.createQuery(query).setLockMode(LockModeType.PESSIMISTIC_WRITE).uniqueResultOptional().orElse(null)
     }
 }

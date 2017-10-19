@@ -1,6 +1,5 @@
 package com.r3.corda.signing
 
-import net.corda.node.utilities.configureDatabase
 import com.r3.corda.signing.authentication.Authenticator
 import com.r3.corda.signing.authentication.createProvider
 import com.r3.corda.signing.configuration.Parameters
@@ -12,6 +11,7 @@ import com.r3.corda.signing.persistence.ApprovedCertificateRequestData
 import com.r3.corda.signing.persistence.DBCertificateRequestStorage
 import com.r3.corda.signing.persistence.SigningServerSchemaService
 import com.r3.corda.signing.utils.mapCryptoServerException
+import net.corda.node.utilities.configureDatabase
 
 fun main(args: Array<String>) {
     run(parseParameters(*args))
@@ -21,10 +21,10 @@ fun run(parameters: Parameters) {
     parameters.run {
         // Create DB connection.
         checkNotNull(dataSourceProperties)
-        val database = configureDatabase(dataSourceProperties, databaseProperties, { SigningServerSchemaService() }, createIdentityService = {
+        val database = configureDatabase(dataSourceProperties, databaseProperties, {
             // Identity service not needed
             throw UnsupportedOperationException()
-        })
+        }, SigningServerSchemaService())
 
         val storage = DBCertificateRequestStorage(database)
         val provider = createProvider()

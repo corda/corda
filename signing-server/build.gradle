@@ -1,7 +1,7 @@
 ext {
     // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
     // align with the corresponding Corda release.
-    corda_dependency_version = '0.16-20170913.101300-6'
+    corda_dependency_version = '2.0-20171017.135310-6'
 }
 
 version "$corda_dependency_version"

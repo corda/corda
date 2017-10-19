@@ -18,9 +18,4 @@ class DoormanSchemaService : SchemaService {
 
     override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState = throw UnsupportedOperationException()
 
-    override fun registerCustomSchemas(customSchemas: Set<MappedSchema>) {
-        schemaOptions = schemaOptions.plus(customSchemas.map { mappedSchema ->
-            Pair(mappedSchema, SchemaService.SchemaOptions())
-        })
-    }
 }
