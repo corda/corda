@@ -3,6 +3,7 @@ package net.corda.node.services.schema
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
@@ -17,14 +18,15 @@ import rx.Observable
  * A vault observer that extracts Object Relational Mappings for contract states that support it, and persists them with Hibernate.
  */
 // TODO: Manage version evolution of the schemas via additional tooling.
-class HibernateObserver(vaultUpdates: Observable<Vault.Update<ContractState>>, val config: HibernateConfiguration) {
-
+class HibernateObserver private constructor(private val config: HibernateConfiguration) {
     companion object {
-        val logger = loggerFor<HibernateObserver>()
-    }
-
-    init {
-        vaultUpdates.subscribe { persist(it.produced) }
+        private val log = loggerFor<HibernateObserver>()
+        @JvmStatic
+        fun install(vaultUpdates: Observable<Vault.Update<ContractState>>, config: HibernateConfiguration): HibernateObserver {
+            val observer = HibernateObserver(config)
+            vaultUpdates.subscribe { observer.persist(it.produced) }
+            return observer
+        }
     }
 
     private fun persist(produced: Set<StateAndRef<ContractState>>) {
@@ -33,12 +35,13 @@ class HibernateObserver(vaultUpdates: Observable<Vault.Update<ContractState>>, v
 
     private fun persistState(stateAndRef: StateAndRef<ContractState>) {
         val state = stateAndRef.state.data
-        logger.debug { "Asked to persist state ${stateAndRef.ref}" }
+        log.debug { "Asked to persist state ${stateAndRef.ref}" }
         config.schemaService.selectSchemas(state).forEach { persistStateWithSchema(state, stateAndRef.ref, it) }
     }
 
-    fun persistStateWithSchema(state: ContractState, stateRef: StateRef, schema: MappedSchema) {
-        val sessionFactory = config.sessionFactoryForSchema(schema)
+    @VisibleForTesting
+    internal fun persistStateWithSchema(state: ContractState, stateRef: StateRef, schema: MappedSchema) {
+        val sessionFactory = config.sessionFactoryForSchemas(setOf(schema))
         val session = sessionFactory.withOptions().
                 connection(DatabaseTransactionManager.current().connection).
                 flushMode(FlushMode.MANUAL).

@@ -209,10 +209,8 @@ NodeAttachmentService
 The ``NodeAttachmentService`` provides an implementation of the 
 ``AttachmentStorage`` interface exposed on the ``ServiceHub`` allowing 
 transactions to add documents, copies of the contract code and binary 
-data to transactions. The data is persisted to the local file system 
-inside the attachments subfolder of the node workspace. The service is 
-also interfaced to by the web server, which allows files to be uploaded 
-via an HTTP post request. 
+data to transactions. The service is also interfaced to by the web server,
+which allows files to be uploaded via an HTTP post request.
 
 Flow framework and event scheduling services
 --------------------------------------------
@@ -320,7 +318,7 @@ does this by tracking update notifications from the
 ``TransactionStorage`` service and processing relevant updates to delete 
 consumed states and insert new states. The resulting update is then 
 persisted to the database. The ``VaultService`` then exposes query and 
-event notification APIs to flows and CorDapp plugins to allow them 
+event notification APIs to flows and CorDapp services to allow them
 to respond to updates, or query for states meeting various conditions to 
 begin the formation of new transactions consuming them. The equivalent 
 services are also forwarded to RPC clients, so that they may show 

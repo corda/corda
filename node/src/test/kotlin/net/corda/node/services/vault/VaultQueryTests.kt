@@ -6,6 +6,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
@@ -45,7 +46,9 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 class VaultQueryTests : TestDependencyInjectionBase() {
-
+    private val cordappPackages = setOf(
+            "net.corda.testing.contracts", "net.corda.finance.contracts",
+            CashSchemaV1::class.packageName, CommercialPaperSchemaV1::class.packageName, DummyLinearStateSchemaV1::class.packageName).toMutableList()
     private lateinit var services: MockServices
     private lateinit var notaryServices: MockServices
     private val vaultService: VaultService get() = services.vaultService
@@ -59,23 +62,20 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts")
-
         // register additional identities
         identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
         identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY),
                 createIdentityService = { identitySvc },
-                customSchemas = setOf(CashSchemaV1, CommercialPaperSchemaV1, DummyLinearStateSchemaV1))
+                cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
-        notaryServices = MockServices(DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
     }
 
     @After
     fun tearDown() {
         database.close()
-        unsetCordappPackages()
     }
 
     /**
@@ -84,8 +84,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = { identitySvc })
-
+        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), { identitySvc })
         setUpDb(database, 5000)
 
         database.close()
@@ -1490,18 +1489,16 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         // GBP issuer
         val gbpCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1001))
         val gbpCashIssuer = Party(CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB"), gbpCashIssuerKey.public).ref(1)
-        val gbpCashIssuerServices = MockServices(gbpCashIssuerKey)
+        val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerKey)
         // USD issuer
         val usdCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1002))
         val usdCashIssuer = Party(CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US"), usdCashIssuerKey.public).ref(1)
-        val usdCashIssuerServices = MockServices(usdCashIssuerKey)
+        val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerKey)
         // CHF issuer
         val chfCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1003))
         val chfCashIssuer = Party(CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH"), chfCashIssuerKey.public).ref(1)
-        val chfCashIssuerServices = MockServices(chfCashIssuerKey)
-
+        val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerKey)
         database.transaction {
-
             services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (gbpCashIssuer))
             services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (usdCashIssuer))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (chfCashIssuer))
@@ -1754,6 +1751,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
     @Test
     fun `query attempting to use unregistered schema`() {
+        tearDown()
+        cordappPackages -= SampleCashSchemaV3::class.packageName
+        setUp()
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(100.POUNDS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L))

@@ -20,6 +20,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
      * service.
      */
     val networkMapService: NetworkMapInfo?
+    val noNetworkMapServiceMode: Boolean
     val minimumPlatformVersion: Int
     val emailAddress: String
     val exportJMXto: String
@@ -36,9 +37,15 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val additionalNodeInfoPollingFrequencyMsec: Long
 }
 
-data class NotaryConfig(val validating: Boolean, val raft: RaftConfig? = null, val bftSMaRt: BFTSMaRtConfiguration? = null) {
+data class NotaryConfig(val validating: Boolean,
+                        val raft: RaftConfig? = null,
+                        val bftSMaRt: BFTSMaRtConfiguration? = null,
+                        val custom: Boolean = false
+) {
     init {
-        require(raft == null || bftSMaRt == null) { "raft and bftSMaRt configs cannot be specified together" }
+        require(raft == null || bftSMaRt == null || !custom) {
+            "raft, bftSMaRt, and custom configs cannot be specified together"
+        }
     }
 }
 
@@ -46,9 +53,10 @@ data class RaftConfig(val nodeAddress: NetworkHostAndPort, val clusterAddresses:
 
 /** @param exposeRaces for testing only, so its default is not in reference.conf but here. */
 data class BFTSMaRtConfiguration constructor(val replicaId: Int,
-                                 val clusterAddresses: List<NetworkHostAndPort>,
-                                 val debug: Boolean = false,
-                                 val exposeRaces: Boolean = false) {
+                                             val clusterAddresses: List<NetworkHostAndPort>,
+                                             val debug: Boolean = false,
+                                             val exposeRaces: Boolean = false
+) {
     init {
         require(replicaId >= 0) { "replicaId cannot be negative" }
     }
@@ -71,6 +79,7 @@ data class FullNodeConfiguration(
         override val database: Properties?,
         override val certificateSigningService: URL,
         override val networkMapService: NetworkMapInfo?,
+        override val noNetworkMapServiceMode: Boolean = false,
         override val minimumPlatformVersion: Int = 1,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,

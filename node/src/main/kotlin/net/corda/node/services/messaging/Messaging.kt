@@ -213,6 +213,7 @@ data class TopicSession(val topic: String, val sessionID: Long = MessagingServic
  * These IDs and timestamps should not be assumed to be globally unique, although due to the nanosecond precision of
  * the timestamp field they probably will be, even if an implementation just uses a hash prefix as the message id.
  */
+@CordaSerializable
 interface Message {
     val topicSession: TopicSession
     val data: ByteArray

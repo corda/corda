@@ -11,15 +11,19 @@ import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.internal.demorun.*
+import net.corda.testing.internal.demorun.name
+import net.corda.testing.internal.demorun.node
+import net.corda.testing.internal.demorun.notary
+import net.corda.testing.internal.demorun.rpcUsers
+import net.corda.testing.internal.demorun.runNodes
 
-fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
+fun main(args: Array<String>) = SingleNotaryCordform().runNodes()
 
 val notaryDemoUser = User("demou", "demop", setOf(startFlowPermission<DummyIssueAndMove>(), startFlowPermission<RPCStartableNotaryFlowClient>()))
 
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
 // NOT use this as a design to copy.
-object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", DUMMY_NOTARY.name.toString()) {
+class SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes") {
     init {
         node {
             name(ALICE.name)

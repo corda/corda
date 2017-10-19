@@ -38,14 +38,14 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), NodeSchemaService(), ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), ::makeTestIdentityService)
         database.transaction {
 
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultServiceInternal
                     get() {
                         val vaultService = NodeVaultService(clock, keyManagementService, stateLoader, database.hibernateConfig)
-                        hibernatePersister = HibernateObserver(vaultService.rawUpdates, database.hibernateConfig)
+                        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig)
                         return vaultService
                     }
 

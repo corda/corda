@@ -80,6 +80,7 @@ open class NodeStartup(val args: Array<String>) {
             exitProcess(1)
         }
 
+        logger.info("Node exiting successfully")
         exitProcess(0)
     }
 
@@ -95,7 +96,7 @@ open class NodeStartup(val args: Array<String>) {
             return
         }
         val startedNode = node.start()
-        Node.printBasicNodeInfo("Loaded CorDapps", startedNode.internals.cordappProvider.cordapps.joinToString { it.name })
+        Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
         startedNode.internals.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation

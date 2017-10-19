@@ -25,6 +25,19 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
+UNRELEASED
+----------
+
+Testing
+^^^^^^^
+
+* The registration mechanism for CorDapps in ``MockNetwork`` unit tests has changed.
+
+  It is now done via the ``cordappPackages`` constructor parameter of MockNetwork.
+  This takes a list of `String` values which should be the
+  package names of the CorDapps containing the contract verification code you wish to load.
+  The ``unsetCordappPackages`` method is now redundant and has been removed.
+
 :ref:`Milestone 14 <changelog_m14>`
 ------------
 
@@ -219,6 +232,8 @@ Miscellaneous
   The concept of advertised services has been removed from Corda. This is because it was vaguely defined and real world
   apps would not typically select random, unknown counterparties from the network map based on self-declared capabilities.
   We will introduce a replacement for this functionality, business networks, in a future release.
+
+  For now, your should retrieve the service by legal name using ``NetworkMapCache.getNodeByLegalName``.
 
 Gotchas
 ^^^^^^^

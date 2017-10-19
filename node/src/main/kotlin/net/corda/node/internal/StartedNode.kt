@@ -7,9 +7,11 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.StateLoader
+import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.node.services.api.CheckpointStorage
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -18,7 +20,7 @@ import net.corda.node.utilities.CordaPersistence
 
 interface StartedNode<out N : AbstractNode> {
     val internals: N
-    val services: ServiceHubInternal
+    val services: StartedNodeServices
     val info: NodeInfo
     val checkpointStorage: CheckpointStorage
     val smm: StateMachineManager
@@ -29,6 +31,11 @@ interface StartedNode<out N : AbstractNode> {
     val rpcOps: CordaRPCOps
     fun dispose() = internals.stop()
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(initiatedFlowClass)
+    /**
+     * Use this method to install your Corda services in your tests. This is automatically done by the node when it
+     * starts up for all classes it finds which are annotated with [CordaService].
+     */
+    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>) = internals.installCordaService(services, serviceClass)
 }
 
 class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : StateLoader {

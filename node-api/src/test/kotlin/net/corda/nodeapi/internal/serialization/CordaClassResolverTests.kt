@@ -10,7 +10,6 @@ import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
-import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
 import net.corda.testing.node.MockAttachmentStorage
@@ -32,6 +31,23 @@ enum class Foo {
     };
 
     abstract val value: Int
+}
+
+enum class BadFood {
+    Mud {
+        override val value = -1
+    };
+
+    abstract val value: Int
+}
+
+@CordaSerializable
+enum class Simple {
+    Easy
+}
+
+enum class BadSimple {
+    Nasty
 }
 
 @CordaSerializable
@@ -91,29 +107,38 @@ class CordaClassResolverTests {
         val emptyMapClass = mapOf<Any, Any>().javaClass
     }
 
-    val factory: SerializationFactory = object : SerializationFactory() {
-        override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-            TODO("not implemented")
-        }
-
-        override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-            TODO("not implemented")
-        }
-    }
-
     private val emptyWhitelistContext: SerializationContext = SerializationContextImpl(KryoHeaderV0_1, this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, SerializationContext.UseCase.P2P)
     private val allButBlacklistedContext: SerializationContext = SerializationContextImpl(KryoHeaderV0_1, this.javaClass.classLoader, AllButBlacklisted, emptyMap(), true, SerializationContext.UseCase.P2P)
 
     @Test
     fun `Annotation on enum works for specialised entries`() {
-        // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
-        @Suppress("UNSUPPORTED_FEATURE")
         CordaClassResolver(emptyWhitelistContext).getRegistration(Foo.Bar::class.java)
+    }
+
+    @Test(expected = KryoException::class)
+    fun `Unannotated specialised enum does not work`() {
+        CordaClassResolver(emptyWhitelistContext).getRegistration(BadFood.Mud::class.java)
+    }
+
+    @Test
+    fun `Annotation on simple enum works`() {
+        CordaClassResolver(emptyWhitelistContext).getRegistration(Simple.Easy::class.java)
+    }
+
+    @Test(expected = KryoException::class)
+    fun `Unannotated simple enum does not work`() {
+        CordaClassResolver(emptyWhitelistContext).getRegistration(BadSimple.Nasty::class.java)
     }
 
     @Test
     fun `Annotation on array element works`() {
         val values = arrayOf(Element())
+        CordaClassResolver(emptyWhitelistContext).getRegistration(values.javaClass)
+    }
+
+    @Test(expected = KryoException::class)
+    fun `Unannotated array elements do not work`() {
+        val values = arrayOf(NotSerializable())
         CordaClassResolver(emptyWhitelistContext).getRegistration(values.javaClass)
     }
 

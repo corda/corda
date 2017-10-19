@@ -83,7 +83,7 @@ class NetworkMapCacheTest {
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val notaryLegalIdentity = notaryNode.info.chooseIdentity()
         val alice = aliceNode.info.chooseIdentity()
-        val notaryCache = notaryNode.services.networkMapCache as PersistentNetworkMapCache
+        val notaryCache = notaryNode.services.networkMapCache
         mockNet.runNetwork()
         notaryNode.database.transaction {
             assertThat(notaryCache.getNodeByLegalIdentity(alice) != null)

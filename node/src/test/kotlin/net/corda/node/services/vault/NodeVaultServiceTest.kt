@@ -9,6 +9,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
@@ -45,27 +46,29 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NodeVaultServiceTest : TestDependencyInjectionBase() {
+    companion object {
+        private val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+    }
+
     lateinit var services: MockServices
-    lateinit var issuerServices: MockServices
+    private lateinit var issuerServices: MockServices
     val vaultService get() = services.vaultService as NodeVaultService
     lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.finance.contracts.asset")
         LogHelper.setLevel(NodeVaultService::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(BOC_KEY, DUMMY_CASH_ISSUER_KEY),
-                customSchemas = setOf(CashSchemaV1))
+                cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
-        issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, BOC_KEY)
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY, BOC_KEY)
     }
 
     @After
     fun tearDown() {
         database.close()
         LogHelper.reset(NodeVaultService::class)
-        unsetCordappPackages()
     }
 
     @Suspendable
@@ -440,8 +443,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
     @Test
     fun addNoteToTransaction() {
-        val megaCorpServices = MockServices(MEGA_CORP_KEY)
-
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP_KEY)
         database.transaction {
             val freshKey = services.myInfo.chooseIdentity().owningKey
 

@@ -12,6 +12,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
+import net.corda.node.internal.FlowStarterImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.VaultServiceInternal
@@ -72,14 +73,13 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Before
     fun setup() {
-        setCordappPackages("net.corda.testing.contracts")
         initialiseTestSerialization()
         countDown = CountDownLatch(1)
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
         val databaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, databaseProperties, createIdentityService = ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, databaseProperties, ::makeTestIdentityService)
         val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
@@ -98,11 +98,11 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     network = mockMessagingService), TestReference {
                 override val vaultService: VaultServiceInternal = NodeVaultService(testClock, kms, stateLoader, database.hibernateConfig)
                 override val testReference = this@NodeSchedulerServiceTest
-                override val cordappProvider: CordappProviderImpl = CordappProviderImpl(CordappLoader.createWithTestPackages()).start(attachments)
+                override val cordappProvider = CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), attachments)
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-            scheduler = NodeSchedulerService(services, schedulerGatedExecutor, serverThread = smmExecutor)
             val mockSMM = StateMachineManager(services, DBCheckpointStorage(), smmExecutor, database)
+            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), services.stateLoader, schedulerGatedExecutor, serverThread = smmExecutor)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllFlows.countDown()
@@ -124,7 +124,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
         database.close()
         resetTestSerialization()
-        unsetCordappPackages()
     }
 
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, val myIdentity: Party) : LinearState, SchedulableState {

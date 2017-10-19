@@ -3,11 +3,6 @@ package net.corda.finance.contracts.universal
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.setCordappPackages
-import net.corda.testing.transaction
-import net.corda.testing.unsetCordappPackages
-import org.junit.After
-import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
@@ -59,17 +54,6 @@ class Swaption {
     }
 
     val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY), contractInitial)
-
-    @Before
-    fun setup() {
-        setCordappPackages("net.corda.finance.contracts.universal")
-    }
-
-    @After
-    fun tearDown() {
-        unsetCordappPackages()
-    }
-
     @Test
     fun issue() {
         transaction {

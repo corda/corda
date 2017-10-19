@@ -46,7 +46,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     @Test
     fun `get nodes by owning key and by name, no network map service`() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
-        val netCache = alice.services.networkMapCache as PersistentNetworkMapCache
+        val netCache = alice.services.networkMapCache
         alice.database.transaction {
             val res = netCache.getNodeByLegalIdentity(alice.info.chooseIdentity())
             assertEquals(alice.info, res)
@@ -58,7 +58,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     @Test
     fun `get nodes by address no network map service`() {
         val alice = startNodesWithPort(listOf(ALICE), noNetworkMap = true)[0]
-        val netCache = alice.services.networkMapCache as PersistentNetworkMapCache
+        val netCache = alice.services.networkMapCache
         alice.database.transaction {
             val res = netCache.getNodeByAddress(alice.info.addresses[0])
             assertEquals(alice.info, res)

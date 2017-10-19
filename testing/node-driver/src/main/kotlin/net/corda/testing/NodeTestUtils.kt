@@ -46,8 +46,9 @@ fun transaction(
         transactionLabel: String? = null,
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         initialiseSerialization: Boolean = true,
+        cordappPackages: List<String> = emptyList(),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(initialiseSerialization = initialiseSerialization) {
+) = ledger(services = MockServices(cordappPackages), initialiseSerialization = initialiseSerialization) {
     dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
 }
 

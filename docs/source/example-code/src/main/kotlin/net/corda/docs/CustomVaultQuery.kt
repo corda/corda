@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -23,7 +23,7 @@ import java.util.*
 object CustomVaultQuery {
 
     @CordaService
-    class Service(val services: ServiceHub) : SingletonSerializeAsToken() {
+    class Service(val services: AppServiceHub) : SingletonSerializeAsToken() {
         private companion object {
             val log = loggerFor<Service>()
         }
@@ -49,7 +49,7 @@ object CustomVaultQuery {
             val session = services.jdbcSession()
             val prepStatement = session.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
-            var topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
+            val topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
             while (rs.next()) {
                 val currencyStr = rs.getString(1)
                 val amount = rs.getLong(2)

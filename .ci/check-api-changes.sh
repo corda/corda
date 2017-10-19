@@ -10,13 +10,14 @@ if [ ! -f $apiCurrent ]; then
    exit -1
 fi
 
-diffContents=`diff -u $apiCurrent $APIHOME/../build/api/api-corda-*.txt`
-echo "Diff contents:" 
+# Remove the two header lines from the diff output.
+diffContents=`diff -u $apiCurrent $APIHOME/../build/api/api-corda-*.txt | tail --lines=+3`
+echo "Diff contents:"
 echo "$diffContents"
 echo
 
 # A removed line means that an API was either deleted or modified.
-removals=$(echo "$diffContents" | grep "^-\s")
+removals=$(echo "$diffContents" | grep "^-")
 removalCount=`grep -v "^$" <<EOF | wc -l
 $removals
 EOF
@@ -29,7 +30,7 @@ if [ $removalCount -gt 0 ]; then
 fi
 
 # Adding new abstract methods could also break the API.
-newAbstracts=$(echo "$diffContents" | grep "^+\s" | grep "\(public\|protected\) abstract")
+newAbstracts=$(echo "$diffContents" | grep "^+" | grep "\(public\|protected\) abstract")
 abstractCount=`grep -v "^$" <<EOF | wc -l
 $newAbstracts
 EOF

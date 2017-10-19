@@ -1,9 +1,10 @@
-package net.corda.node.services.vaultService
+package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.internal.packageName
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -34,6 +35,10 @@ import kotlin.test.assertEquals
 // TODO: Move this to the cash contract tests once mock services are further split up.
 
 class VaultWithCashTest : TestDependencyInjectionBase() {
+    companion object {
+        private val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+    }
+
     lateinit var services: MockServices
     lateinit var issuerServices: MockServices
     val vaultService: VaultService get() = services.vaultService
@@ -42,22 +47,19 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
-
         LogHelper.setLevel(VaultWithCashTest::class)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(DUMMY_CASH_ISSUER_KEY, DUMMY_NOTARY_KEY),
-                customSchemas = setOf(CashSchemaV1))
+                cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
-        issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
-        notaryServices = MockServices(DUMMY_NOTARY_KEY)
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY_KEY)
     }
 
     @After
     fun tearDown() {
         LogHelper.reset(VaultWithCashTest::class)
         database.close()
-        unsetCordappPackages()
     }
 
     @Test
@@ -81,7 +83,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        val megaCorpServices = MockServices(MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP_KEY)
         val freshKey = services.keyManagementService.freshKey()
 
         val usefulTX =

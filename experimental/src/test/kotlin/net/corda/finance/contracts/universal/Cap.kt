@@ -5,15 +5,17 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.setCordappPackages
-import net.corda.testing.transaction
-import net.corda.testing.unsetCordappPackages
-import org.junit.After
-import org.junit.Before
+import net.corda.testing.EnforceVerifyOrFail
+import net.corda.testing.TransactionDSL
+import net.corda.testing.TransactionDSLInterpreter
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+
+fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
+    net.corda.testing.transaction(cordappPackages = listOf("net.corda.finance.contracts.universal"), dsl = script)
+}
 
 class Cap {
 
@@ -165,16 +167,6 @@ class Cap {
                 }
             }
         }
-    }
-
-    @Before
-    fun setup() {
-        setCordappPackages("net.corda.finance.contracts.universal")
-    }
-
-    @After
-    fun tearDown() {
-        unsetCordappPackages()
     }
 
     @Test

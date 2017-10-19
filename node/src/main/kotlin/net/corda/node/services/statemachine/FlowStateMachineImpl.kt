@@ -12,13 +12,11 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.abbreviate
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.staticField
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
@@ -32,13 +30,15 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
 import java.sql.SQLException
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 class FlowPermissionException(message: String) : FlowException(message)
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
-                              val logic: FlowLogic<R>,
+                              override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
                               override val flowInitiator: FlowInitiator,
         // Store the Party rather than the full cert path with PartyAndCertificate
@@ -52,23 +52,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
-
-        /**
-         * Provide a mechanism to sleep within a Strand without locking any transactional state
-         */
-        // TODO: inlined due to an intermittent Quasar error (to be fully investigated)
-        @Suppress("NOTHING_TO_INLINE")
-        @Suspendable
-        inline fun sleep(millis: Long) {
-            if (currentStateMachine() != null) {
-                val db = DatabaseTransactionManager.dataSource
-                DatabaseTransactionManager.current().commit()
-                DatabaseTransactionManager.current().close()
-                Strand.sleep(millis)
-                DatabaseTransactionManager.dataSource = db
-                DatabaseTransactionManager.newTransaction()
-            } else Strand.sleep(millis)
-        }
     }
 
     // These fields shouldn't be serialised, so they are marked @Transient.
@@ -85,12 +68,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * is not necessary.
      */
     override val logger: Logger = LoggerFactory.getLogger("net.corda.flow.$id")
-
-    @Transient private var _resultFuture: OpenFuture<R>? = openFuture()
+    @Transient private var resultFutureTransient: OpenFuture<R>? = openFuture()
+    private val _resultFuture get() = resultFutureTransient ?: openFuture<R>().also { resultFutureTransient = it }
     /** This future will complete when the call method returns. */
-    override val resultFuture: CordaFuture<R>
-        get() = _resultFuture ?: openFuture<R>().also { _resultFuture = it }
-
+    override val resultFuture: CordaFuture<R> get() = _resultFuture
     // This state IS serialised, as we need it to know what the fiber is waiting for.
     internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSessionInternal>()
     internal var waitingForResponse: WaitingRequest? = null
@@ -132,7 +113,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         recordDuration(startTime)
         // This is to prevent actionOnEnd being called twice if it throws an exception
         actionOnEnd(Try.Success(result), false)
-        _resultFuture?.set(result)
+        _resultFuture.set(result)
         logic.progressTracker?.currentStep = ProgressTracker.DONE
         logger.debug { "Flow finished with result ${result.toString().abbreviate(300)}" }
     }
@@ -145,7 +126,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun processException(exception: Throwable, propagated: Boolean) {
         actionOnEnd(Try.Failure(exception), propagated)
-        _resultFuture?.setException(exception)
+        _resultFuture.setException(exception)
         logic.progressTracker?.endWithError(exception)
     }
 
@@ -259,6 +240,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         throw IllegalStateException("We were resumed after waiting for $hash but it wasn't found in our local storage")
     }
 
+    // Provide a mechanism to sleep within a Strand without locking any transactional state.
+    // This checkpoints, since we cannot undo any database writes up to this point.
+    @Suspendable
+    override fun sleepUntil(until: Instant) {
+        suspend(Sleep(until, this))
+    }
+
     // TODO Dummy implementation of access to application specific permission controls and audit logging
     override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
         val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
@@ -339,7 +327,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             is FlowSessionState.Initiated -> sessionState.peerSessionId
             else -> throw IllegalStateException("We've somehow held onto a non-initiated session: $session")
         }
-        return SessionData(peerSessionId, payload)
+        return SessionData(peerSessionId, payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
     }
 
     @Suspendable
@@ -401,7 +389,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         session.state = FlowSessionState.Initiating(state.otherParty)
         session.retryable = retryable
         val (version, initiatingFlowClass) = session.flow.javaClass.flowVersionAndInitiatingClass
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, firstPayload)
+        val payloadBytes = firstPayload?.serialize(context = SerializationDefaults.P2P_CONTEXT)
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, payloadBytes)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
@@ -494,6 +483,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         }
 
+        if (exceptionDuringSuspend == null && ioRequest is Sleep) {
+            // Sleep on the fiber.  This will not sleep if it's in the past.
+            Strand.sleep(Duration.between(Instant.now(), ioRequest.until).toNanos(), TimeUnit.NANOSECONDS)
+        }
         createTransaction()
         // TODO Now that we're throwing outside of the suspend the FlowLogic can catch it. We need Quasar to terminate
         // the fiber when exceptions occur inside a suspend.

@@ -19,6 +19,7 @@ import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.AttachmentsClassLoader
+import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 import java.util.*
@@ -37,7 +38,7 @@ object NotSupportedSerializationScheme : SerializationScheme {
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> = doThrow()
 }
 
-data class SerializationContextImpl(override val preferredSerializationVersion: ByteSequence,
+data class SerializationContextImpl(override val preferredSerializationVersion: VersionHeader,
                                     override val deserializationClassLoader: ClassLoader,
                                     override val whitelist: ClassWhitelist,
                                     override val properties: Map<Any, Any>,
@@ -88,36 +89,54 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
         })
     }
 
-    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferredSerializationVersion = versionHeader)
+    override fun withPreferredSerializationVersion(versionHeader: VersionHeader) = copy(preferredSerializationVersion = versionHeader)
 }
 
 private const val HEADER_SIZE: Int = 8
+
+fun ByteSequence.obtainHeaderSignature(): VersionHeader = take(HEADER_SIZE).copy()
 
 open class SerializationFactoryImpl : SerializationFactory() {
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
 
     private val registeredSchemes: MutableCollection<SerializationScheme> = Collections.synchronizedCollection(mutableListOf())
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     // TODO: This is read-mostly. Probably a faster implementation to be found.
     private val schemes: ConcurrentHashMap<Pair<ByteSequence, SerializationContext.UseCase>, SerializationScheme> = ConcurrentHashMap()
 
-    private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): SerializationScheme {
+    private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): Pair<SerializationScheme, VersionHeader> {
         // truncate sequence to 8 bytes, and make sure it's a copy to avoid holding onto large ByteArrays
-        return schemes.computeIfAbsent(byteSequence.take(HEADER_SIZE).copy() to target) {
+        val lookupKey = byteSequence.obtainHeaderSignature() to target
+        val scheme = schemes.computeIfAbsent(lookupKey) {
             registeredSchemes
                     .filter { scheme -> scheme.canDeserializeVersion(it.first, it.second) }
                     .forEach { return@computeIfAbsent it }
+            logger.warn("Cannot find serialization scheme for: $lookupKey, registeredSchemes are: $registeredSchemes")
             NotSupportedSerializationScheme
         }
+        return scheme to lookupKey.first
     }
 
     @Throws(NotSerializableException::class)
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        return asCurrent { withCurrentContext(context) { schemeFor(byteSequence, context.useCase).deserialize(byteSequence, clazz, context) } }
+        return asCurrent { withCurrentContext(context) { schemeFor(byteSequence, context.useCase).first.deserialize(byteSequence, clazz, context) } }
+    }
+
+    @Throws(NotSerializableException::class)
+    override fun <T : Any> deserializeWithCompatibleContext(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithCompatibleContext<T> {
+        return asCurrent {
+            withCurrentContext(context) {
+                val (scheme, versionHeader) = schemeFor(byteSequence, context.useCase)
+                val deserializedObject = scheme.deserialize(byteSequence, clazz, context)
+                ObjectWithCompatibleContext(deserializedObject, context.withPreferredSerializationVersion(versionHeader))
+            }
+        }
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        return asCurrent { withCurrentContext(context) { schemeFor(context.preferredSerializationVersion, context.useCase).serialize(obj, context) } }
+        return asCurrent { withCurrentContext(context) { schemeFor(context.preferredSerializationVersion, context.useCase).first.serialize(obj, context) } }
     }
 
     fun registerScheme(scheme: SerializationScheme) {

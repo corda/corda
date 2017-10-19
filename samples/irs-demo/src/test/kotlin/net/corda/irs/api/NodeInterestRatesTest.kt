@@ -14,7 +14,6 @@ import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.ownedBy
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -24,6 +23,7 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import net.corda.testing.node.createMockCordaService
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -62,17 +62,16 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        setCordappPackages("net.corda.finance.contracts")
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         database.transaction {
-            oracle = NodeInterestRates.Oracle(services).apply { knownFixes = TEST_DATA }
+            oracle = createMockCordaService(services, NodeInterestRates::Oracle)
+            oracle.knownFixes = TEST_DATA
         }
     }
 
     @After
     fun tearDown() {
         database.close()
-        unsetCordappPackages()
     }
 
     @Test
@@ -201,13 +200,13 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Test
     fun `network tearoff`() {
-        val mockNet = MockNetwork(initialiseSerialization = false)
+        val mockNet = MockNetwork(initialiseSerialization = false, cordappPackages = listOf("net.corda.finance.contracts"))
         val n1 = mockNet.createNotaryNode()
         val oracleNode = mockNet.createNode().apply {
             internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
-                internals.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+                installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
             }
         }
         val tx = makePartialTX()

@@ -12,12 +12,12 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB
-import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -55,13 +55,13 @@ class AttachmentTests {
 
     @Test
     fun `download and store`() {
-        mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
         aliceNode.internals.ensureRegistered()
+        val alice = aliceNode.info.singleIdentity()
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -73,7 +73,7 @@ class AttachmentTests {
 
         // Get node one to run a flow to fetch it and insert it.
         mockNet.runNetwork()
-        val bobFlow = bobNode.startAttachmentFlow(setOf(id), aliceNode.info.chooseIdentity())
+        val bobFlow = bobNode.startAttachmentFlow(setOf(id), alice)
         mockNet.runNetwork()
         assertEquals(0, bobFlow.resultFuture.getOrThrow().fromDisk.size)
 
@@ -87,13 +87,12 @@ class AttachmentTests {
         // Shut down node zero and ensure node one can still resolve the attachment.
         aliceNode.dispose()
 
-        val response: FetchDataFlow.Result<Attachment> = bobNode.startAttachmentFlow(setOf(id), aliceNode.info.chooseIdentity()).resultFuture.getOrThrow()
+        val response: FetchDataFlow.Result<Attachment> = bobNode.startAttachmentFlow(setOf(id), alice).resultFuture.getOrThrow()
         assertEquals(attachment, response.fromDisk[0])
     }
 
     @Test
     fun `missing`() {
-        mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
 
@@ -107,7 +106,8 @@ class AttachmentTests {
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         mockNet.runNetwork()
-        val bobFlow = bobNode.startAttachmentFlow(setOf(hash), aliceNode.info.chooseIdentity())
+        val alice = aliceNode.info.singleIdentity()
+        val bobFlow = bobNode.startAttachmentFlow(setOf(hash), alice)
         mockNet.runNetwork()
         val e = assertFailsWith<FetchDataFlow.HashNotFound> { bobFlow.resultFuture.getOrThrow() }
         assertEquals(hash, e.requested)
@@ -130,6 +130,7 @@ class AttachmentTests {
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
         aliceNode.internals.ensureRegistered()
+        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -146,12 +147,12 @@ class AttachmentTests {
 
         val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment)
         aliceNode.database.transaction {
-            DatabaseTransactionManager.current().session.update(corruptAttachment)
+            session.update(corruptAttachment)
         }
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         mockNet.runNetwork()
-        val bobFlow = bobNode.startAttachmentFlow(setOf(id), aliceNode.info.chooseIdentity())
+        val bobFlow = bobNode.startAttachmentFlow(setOf(id), alice)
         mockNet.runNetwork()
         assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { bobFlow.resultFuture.getOrThrow() }
     }

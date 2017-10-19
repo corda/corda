@@ -12,7 +12,6 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.nodeapi.internal.ServiceType
 import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
@@ -141,7 +140,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val mockNet = MockNetwork(networkSendManuallyPumped, runAsync)
+    val mockNet = MockNetwork(
+            networkSendManuallyPumped = networkSendManuallyPumped,
+            threadPerNode = runAsync,
+            cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract"))
     // This one must come first.
     val networkMap = mockNet.startNetworkMapNode(nodeFactory = NetworkMapNodeFactory)
     val notary = mockNet.createNotaryNode(validating = false, nodeFactory = NotaryNodeFactory)
@@ -255,7 +257,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val networkInitialisationFinished = allOf(*mockNet.nodes.map { it.nodeReadyFuture.toCompletableFuture() }.toTypedArray())
 
     fun start(): Future<Unit> {
-        setCordappPackages("net.corda.irs.contract", "net.corda.finance.contract")
         mockNet.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
         return networkInitialisationFinished.thenCompose { startMainSimulation() }
@@ -271,9 +272,3 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         mockNet.stopNodes()
     }
 }
-
-/**
- * Helper function for verifying that a service info contains the given type of advertised service. For non-simulation cases
- * this is a configuration matter rather than implementation.
- */
-fun Iterable<ServiceInfo>.containsType(type: ServiceType) = any { it.type == type }

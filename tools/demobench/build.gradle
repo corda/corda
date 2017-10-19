@@ -46,6 +46,8 @@ dependencies {
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
+    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
+
     compile project(':client:rpc')
     compile project(':finance')
 
@@ -122,12 +124,12 @@ distributions {
             }
             from(project(':finance').tasks.jar) {
                 rename 'corda-finance-(.*)', 'corda-finance.jar'
-                into 'plugins'
+                into 'cordapps'
                 fileMode = 0444
             }
             from(project(':samples:bank-of-corda-demo').jar) {
                 rename 'bank-of-corda-demo-(.*)', 'bank-of-corda.jar'
-                into 'plugins'
+                into 'cordapps'
                 fileMode = 0444
             }
         }
@@ -201,7 +203,7 @@ task javapackage(dependsOn: distZip) {
 
                 fileset(dir: dist_source, type: 'data') {
                     include(name: 'corda/*.jar')
-                    include(name: 'plugins/*.jar')
+                    include(name: 'cordapps/*.jar')
                     include(name: 'explorer/*.jar')
                 }
 
