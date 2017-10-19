@@ -8,7 +8,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import java.net.HttpURLConnection
 import java.net.URL
-import javax.ws.rs.core.MediaType
 
 interface NetworkMapClient {
     /**
@@ -37,7 +36,7 @@ class HTTPNetworkMapClient(private val networkMapUrl: String) : NetworkMapClient
         val conn = publishURL.openConnection() as HttpURLConnection
         conn.doOutput = true
         conn.requestMethod = "POST"
-        conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
+        conn.setRequestProperty("Content-Type", "application/octet-stream")
         conn.outputStream.write(signedNodeInfo.serialize().bytes)
         when (conn.responseCode) {
             HttpURLConnection.HTTP_OK -> return
