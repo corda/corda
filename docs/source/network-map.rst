@@ -22,7 +22,7 @@ Node side network map update protocol:
 
 * The network map service returns a signed ``NetworkMap`` object, containing list of node info hashes and the network parameter hashes.
 
-* The node updates its local copy of NodeInfos and NetworkParameter if it is different from the newly downloaded NetworkMap.
+* The node updates its local copy of NodeInfos and NetworkParameters if it is different from the newly downloaded NetworkMap.
 
 Network Map service REST API:
 
@@ -31,9 +31,9 @@ Network Map service REST API:
 +================+==================================+========================================================================================================================================================+
 | POST           | /api/network-map/publish         | Publish new node info to the network map service                                                                                                       |
 +----------------+----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /api/network-map                 | Retrieve ``NetworkMap`` from the server, the ``NetworkMap`` object contains list of node info hashes and NetworkParameter hash.                        |
+| GET            | /api/network-map                 | Retrieve ``NetworkMap`` from the server, the ``NetworkMap`` object contains list of node info hashes and NetworkParameters hash.                        |
 +----------------+----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /api/network-map/node-info/{hash}| Retrieve ``NodeInfo`` object with the node info hash.                                                                                                  |
 +----------------+----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /api/network-map/parameter/{hash}| Retrieve ``NetworkParameter`` object with the network parameter hash.                                                                                  |
+| GET            | /api/network-map/parameter/{hash}| Retrieve ``NetworkParameters`` object with the network parameter hash.                                                                                  |
 +----------------+----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
