@@ -1,19 +1,16 @@
 package com.r3.corda.signing
 
-import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
-import com.r3.corda.doorman.DoormanServer
 import com.r3.corda.doorman.buildCertPath
-import com.r3.corda.doorman.persistence.ApprovingAllCertificateRequestStorage
 import com.r3.corda.doorman.persistence.DoormanSchemaService
-import com.r3.corda.doorman.signer.DefaultCsrHandler
-import com.r3.corda.doorman.signer.ExternalSigner
+import com.r3.corda.doorman.startDoorman
 import com.r3.corda.doorman.toX509Certificate
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
@@ -36,8 +33,6 @@ import java.net.URL
 import java.util.*
 import kotlin.concurrent.scheduleAtFixedRate
 import kotlin.concurrent.thread
-import com.r3.corda.doorman.persistence.DBCertificateRequestStorage.CertificateSigningRequest as DoormanRequest
-import com.r3.corda.signing.persistence.DBCertificateRequestStorage.CertificateSigningRequest as SigningServerRequest
 
 class SigningServiceIntegrationTest {
 
@@ -67,7 +62,7 @@ class SigningServiceIntegrationTest {
         // Create all certificates
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA",
-                organisation = "R3 Ltd", locality = "London", country = "GB").x500Name, rootCAKey)
+                organisation = "R3 Ltd", locality = "London", country = "GB"), rootCAKey)
         val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey,
                 CordaX500Name(commonName = "Integration Test Corda Node Intermediate CA", locality = "London", country = "GB",
@@ -91,12 +86,11 @@ class SigningServiceIntegrationTest {
     @Test
     fun `Signing service communicates with Doorman`() {
         //Start doorman server
-        val doormanStorage = ApprovingAllCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), null, { DoormanSchemaService() }, createIdentityService = {
+        val database = configureDatabase(makeTestDataSourceProperties(), null, { DoormanSchemaService() }, createIdentityService = {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
-        }))
-        val doorman = DoormanServer(HostAndPort.fromParts(HOST, 0), DefaultCsrHandler(doormanStorage, ExternalSigner()))
-        doorman.start()
+        })
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true)
 
         // Start Corda network registration.
         val config = testNodeConfiguration(
@@ -139,12 +133,11 @@ class SigningServiceIntegrationTest {
     @Ignore
     fun `DEMO - Create CSR and poll`() {
         //Start doorman server
-        val doormanStorage = ApprovingAllCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), null, { DoormanSchemaService() }, createIdentityService = {
+        val database = configureDatabase(makeTestDataSourceProperties(), null, { DoormanSchemaService() }, createIdentityService = {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
-        }))
-        val doorman = DoormanServer(HostAndPort.fromParts(HOST, 0), DefaultCsrHandler(doormanStorage, ExternalSigner()))
-        doorman.start()
+        })
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true)
 
         thread(start = true, isDaemon = true) {
             val h2ServerArgs = arrayOf("-tcpPort", H2_TCP_PORT, "-tcpAllowOthers")

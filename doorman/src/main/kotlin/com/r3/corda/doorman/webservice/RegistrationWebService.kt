@@ -1,9 +1,8 @@
-package com.r3.corda.doorman
+package com.r3.corda.doorman.webservice
 
+import com.r3.corda.doorman.DoormanServerStatus
 import com.r3.corda.doorman.persistence.CertificateResponse
-import com.r3.corda.doorman.persistence.CertificationRequestData
-import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import com.r3.corda.doorman.signer.DefaultCsrHandler
+import com.r3.corda.doorman.signer.CsrHandler
 import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_CA
 import net.corda.node.utilities.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
@@ -24,25 +23,19 @@ import javax.ws.rs.core.Response.Status.UNAUTHORIZED
 /**
  * Provides functionality for asynchronous submission of certificate signing requests and retrieval of the results.
  */
-@Path("")
-class DoormanWebService(val csrHandler: DefaultCsrHandler, val serverStatus: DoormanServerStatus) {
+@Path("certificate")
+class RegistrationWebService(private val csrHandler: CsrHandler, private val serverStatus: DoormanServerStatus) {
     @Context lateinit var request: HttpServletRequest
     /**
-     * Accept stream of [PKCS10CertificationRequest] from user and persists in [CertificationRequestStorage] for approval.
+     * Accept stream of [PKCS10CertificationRequest] from user and persists in [CertificateRequestStorage] for approval.
      * Server returns HTTP 200 response with random generated request Id after request has been persisted.
      */
     @POST
-    @Path("certificate")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     @Produces(MediaType.TEXT_PLAIN)
     fun submitRequest(input: InputStream): Response {
-        val certificationRequest = input.use {
-            JcaPKCS10CertificationRequest(it.readBytes())
-        }
-        // TODO: Certificate signing request verifications.
-        // TODO: Use jira api / slack bot to semi automate the approval process?
-        // TODO: Acknowledge to user we have received the request via email?
-        val requestId = csrHandler.saveRequest(CertificationRequestData(request.remoteHost, request.remoteAddr, certificationRequest))
+        val certificationRequest = input.use { JcaPKCS10CertificationRequest(it.readBytes()) }
+        val requestId = csrHandler.saveRequest(certificationRequest)
         return ok(requestId).build()
     }
 
@@ -51,7 +44,7 @@ class DoormanWebService(val csrHandler: DefaultCsrHandler, val serverStatus: Doo
      * Returns HTTP 200 with DER encoded signed certificates if request has been approved else HTTP 204 No content
      */
     @GET
-    @Path("certificate/{var}")
+    @Path("{var}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun retrieveCert(@PathParam("var") requestId: String): Response {
         val response = csrHandler.getResponse(requestId)

@@ -18,12 +18,12 @@ data class DoormanParameters(val basedir: Path,
                              val port: Int,
                              val dataSourceProperties: Properties,
                              val mode: Mode,
+                             val approveAll: Boolean = false,
                              val databaseProperties: Properties? = null,
                              val jiraConfig: JiraConfig? = null,
                              val keystorePath: Path? = null, // basedir / "certificates" / "caKeystore.jks",
                              val rootStorePath: Path? = null // basedir / "certificates" / "rootCAKeystore.jks"
 ) {
-
     enum class Mode {
         DOORMAN, CA_KEYGEN, ROOT_KEYGEN
     }
@@ -57,6 +57,7 @@ fun parseParameters(vararg args: String): DoormanParameters {
     } else {
         Paths.get(argConfig.getString("basedir")) / "node.conf"
     }
-    val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))).resolve()
-    return config.parseAs<DoormanParameters>()
+    return argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)))
+            .resolve()
+            .parseAs()
 }

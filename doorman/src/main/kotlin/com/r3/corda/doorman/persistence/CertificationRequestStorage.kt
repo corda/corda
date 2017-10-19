@@ -2,71 +2,127 @@ package com.r3.corda.doorman.persistence
 
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.CertPath
+import java.time.Instant
+import javax.persistence.*
 
 /**
  *  Provide certificate signing request storage for the certificate signing server.
  */
 interface CertificationRequestStorage {
-
     companion object {
-        val DOORMAN_SIGNATURE = listOf("Doorman")
+        val DOORMAN_SIGNATURE = "Doorman"
     }
 
     /**
-     * Persist [certificationData] in storage for further approval if it's a valid request. If not then it will be automatically
+     * Persist [PKCS10CertificationRequest] in storage for further approval if it's a valid request. If not then it will be automatically
      * rejected and not subject to any approval process. In both cases a randomly generated request ID is returned.
      */
-    fun saveRequest(certificationData: CertificationRequestData): String
+    fun saveRequest(rawRequest: PKCS10CertificationRequest): String
 
     /**
-     * Retrieve certificate singing request and Host/IP information using [requestId].
+     * Retrieve certificate singing request using [requestId].
      */
-    fun getRequest(requestId: String): CertificationRequestData?
+    fun getRequest(requestId: String): CertificateSigningRequest?
 
     /**
-     * Return the response for a previously saved request with ID [requestId].
+     * Retrieve list of certificate singing request base on the [RequestStatus].
      */
-    fun getResponse(requestId: String): CertificateResponse
+    fun getRequests(requestStatus: RequestStatus): List<CertificateSigningRequest>
 
     /**
      * Approve the given request if it has not already been approved. Otherwise do nothing.
      *
      * @return True if the request has been approved and false otherwise.
      */
-    fun approveRequest(requestId: String, approvedBy: String = DOORMAN_SIGNATURE.first()): Boolean
-
-    /**
-     * Signs the certificate signing request by assigning the given certificate.
-     *
-     * @return True if the request has been signed and false otherwise.
-     */
-    fun signCertificate(requestId: String, signedBy: List<String> = DOORMAN_SIGNATURE, generateCertificate: CertificationRequestData.() -> CertPath): Boolean
+    // TODO: Merge status changing methods.
+    fun approveRequest(requestId: String, approvedBy: String = DOORMAN_SIGNATURE): Boolean
 
     /**
      * Reject the given request using the given reason.
      */
-    fun rejectRequest(requestId: String, rejectedBy: String = DOORMAN_SIGNATURE.first(), rejectReason: String)
+    fun rejectRequest(requestId: String, rejectedBy: String = DOORMAN_SIGNATURE, rejectReason: String)
 
     /**
-     * Retrieve list of request IDs waiting for approval.
+     * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request statue to [RequestStatus.Signed].
+     *
+     * @throws IllegalArgumentException if request is not found or not in Approved state.
      */
-    fun getNewRequestIds(): List<String>
-
-    /**
-     * Retrieve list of approved request IDs.
-     */
-    fun getApprovedRequestIds(): List<String>
-
-    /**
-     * Retrieve list of signed request IDs.
-     */
-    fun getSignedRequestIds(): List<String>
+    fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: List<String> = listOf(DOORMAN_SIGNATURE))
 }
 
-data class CertificationRequestData(val hostName: String, val ipAddress: String, val request: PKCS10CertificationRequest)
+@Entity
+@Table(name = "certificate_signing_request", indexes = arrayOf(Index(name = "IDX_PUB_KEY_HASH", columnList = "public_key_hash")))
+// TODO: Use Hibernate Envers to audit the table instead of individual "changed_by"/"changed_at" columns.
+class CertificateSigningRequest(
+        @Id
+        @Column(name = "request_id", length = 64)
+        var requestId: String = "",
+
+        // TODO: Store X500Name with a proper schema.
+        @Column(name = "legal_name", length = 256)
+        var legalName: String = "",
+
+        @Lob
+        @Column
+        var request: ByteArray = ByteArray(0),
+
+        @Column(name = "created_at")
+        var createdAt: Instant = Instant.now(),
+
+        @Column(name = "approved_at")
+        var approvedAt: Instant = Instant.now(),
+
+        @Column(name = "approved_by", length = 64)
+        var approvedBy: String? = null,
+
+        @Column
+        @Enumerated(EnumType.STRING)
+        var status: RequestStatus = RequestStatus.New,
+
+        @Column(name = "signed_by", length = 512)
+        @ElementCollection(targetClass = String::class, fetch = FetchType.EAGER)
+        var signedBy: List<String>? = null,
+
+        @Column(name = "signed_at")
+        var signedAt: Instant? = Instant.now(),
+
+        @Column(name = "rejected_by", length = 64)
+        var rejectedBy: String? = null,
+
+        @Column(name = "rejected_at")
+        var rejectedAt: Instant? = Instant.now(),
+
+        @Column(name = "reject_reason", length = 256, nullable = true)
+        var rejectReason: String? = null,
+
+        // TODO: The certificate data can have its own table.
+        @Embedded
+        var certificateData: CertificateData? = null
+)
+
+@Embeddable
+class CertificateData(
+        @Column(name = "public_key_hash", length = 64, nullable = true)
+        var publicKeyHash: String? = null,
+
+        @Lob
+        @Column(nullable = true)
+        var certificatePath: ByteArray? = null,
+
+        @Column(name = "certificate_status", nullable = true)
+        var certificateStatus: CertificateStatus? = null
+)
+
+enum class CertificateStatus {
+    VALID, SUSPENDED, REVOKED
+}
+
+enum class RequestStatus {
+    New, Approved, Rejected, Signed
+}
 
 sealed class CertificateResponse {
     object NotReady : CertificateResponse()
-    class Ready(val certificatePath: CertPath) : CertificateResponse()
-    class Unauthorised(val message: String) : CertificateResponse()
+    data class Ready(val certificatePath: CertPath) : CertificateResponse()
+    data class Unauthorised(val message: String) : CertificateResponse()
 }
