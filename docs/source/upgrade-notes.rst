@@ -25,6 +25,19 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
+UNRELEASED
+----------
+
+Testing
+^^^^^^^
+
+* The registration mechanism for CorDapps in ``MockNetwork`` unit tests has changed.
+
+  It is now done via the ``cordappPackages`` constructor parameter of MockNetwork.
+  This takes a list of `String` values which should be the
+  package names of the CorDapps containing the contract verification code you wish to load.
+  The ``unsetCordappPackages`` method is now redundant and has been removed.
+
 :ref:`Milestone 14 <changelog_m14>`
 ------------
 
@@ -182,9 +195,10 @@ We will be revisiting this capability in a future release.
 
 * CorDapps must be explicitly registered in ``MockNetwork`` unit tests.
 
-  This is done via the ``cordappPackages`` constructor parameter of MockNetwork.
-  This takes a list of `String` values which should be the
+  This is done by calling ``setCordappPackages``, an extension helper function in the ``net.corda.testing`` package,
+  on the first line of your `@Before` method. This takes a variable number of `String` arguments which should be the
   package names of the CorDapps containing the contract verification code you wish to load.
+  You should unset CorDapp packages in your `@After` method by using ``unsetCordappPackages()`` after `stopNodes()`.
 
 * CorDapps must be explicitly registered in ``DriverDSL`` and ``RPCDriverDSL`` integration tests.
 
