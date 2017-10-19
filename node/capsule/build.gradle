@@ -31,7 +31,11 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
             "$rootDir/config/dev/log4j2.xml"
     )
     from 'NOTICE' // Copy CDDL notice
-
+    from { project(':node').configurations.runtime.filter { // Include config library JAR.
+        (((it.toString().contains("/com/typesafe/config/") && it.toString().contains("/config-")) ||
+                (it.toString().contains("\\com\\typesafe\\config\\") && it.toString().contains("\\config-"))) && it.toString().endsWith(".jar"))
+    }.collect { zipTree(it) } }
+    from { "$rootDir/node/build/resources/main/reference.conf" }
 
     capsuleManifest {
         applicationVersion = corda_release_version
@@ -47,6 +51,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
         // JVM configuration:
         // - Constrain to small heap sizes to ease development on low end devices.
         // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
+        // NOTE: these can be overridden in node.conf.
         //
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
