@@ -1,26 +1,19 @@
-package com.r3.corda.enterprise.perftestcordapp.contracts.flows
+package com.r3.corda.enterprise.perftestcordapp.flows
 
+import com.r3.corda.enterprise.perftestcordapp.DOLLARS
+import com.r3.corda.enterprise.perftestcordapp.`issued by`
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import com.r3.corda.enterprise.perftestcordapp.DOLLARS
-import com.r3.corda.enterprise.perftestcordapp.`issued by`
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
-import com.r3.corda.enterprise.perftestcordapp.flows.PtCashException
-import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueFlow
-import com.r3.corda.enterprise.perftestcordapp.flows.CashPaymentFlow
 import net.corda.node.internal.StartedNode
-import net.corda.testing.chooseIdentity
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
-import net.corda.testing.getDefaultNotary
+import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.setCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -38,11 +31,9 @@ class CashPaymentFlowTests {
 
     @Before
     fun start() {
-        setCordappPackages("com.r3.corda.enterprise.perftestcordapp.contracts.asset")
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
-        val nodes = mockNet.createSomeNodes(1)
-        notaryNode = nodes.notaryNode
-        bankOfCordaNode = nodes.partyNodes[0]
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
+        notaryNode = mockNet.createNotaryNode()
+        bankOfCordaNode = mockNet.createPartyNode(BOC.name)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
         notary = notaryNode.services.getDefaultNotary()
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
@@ -64,8 +55,8 @@ class CashPaymentFlowTests {
         bankOfCordaNode.database.transaction {
             // Register for vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
-            val (_, vaultUpdatesBankClient) = notaryNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
+            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultService.trackBy<Cash.State>(criteria)
+            val (_, vaultUpdatesBankClient) = notaryNode.services.vaultService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
                     payTo)).resultFuture
@@ -102,7 +93,7 @@ class CashPaymentFlowTests {
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo)).resultFuture
         mockNet.runNetwork()
-        assertFailsWith<PtCashException> {
+        assertFailsWith<CashException> {
             future.getOrThrow()
         }
     }

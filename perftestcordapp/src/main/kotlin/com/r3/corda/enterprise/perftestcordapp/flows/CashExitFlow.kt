@@ -14,7 +14,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.CashSelection
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.AbstractCashSelection
 import com.r3.corda.enterprise.perftestcordapp.issuedBy
 import java.util.*
 
@@ -41,12 +41,12 @@ class CashExitFlow(private val amount: Amount<Currency>,
      * (for this flow this map is always empty).
      */
     @Suspendable
-    @Throws(PtCashException::class)
+    @Throws(CashException::class)
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = null)
         val issuer = ourIdentity.ref(issuerRef)
-        val exitStates = CashSelection
+        val exitStates = AbstractCashSelection
                 .getInstance { serviceHub.jdbcSession().metaData }
                 .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
@@ -55,12 +55,12 @@ class CashExitFlow(private val amount: Amount<Currency>,
                     amount.issuedBy(issuer),
                     exitStates)
         } catch (e: InsufficientBalanceException) {
-            throw PtCashException("Exiting more cash than exists", e)
+            throw CashException("Exiting more cash than exists", e)
         }
 
         // Work out who the owners of the burnt states were (specify page size so we don't silently drop any if > DEFAULT_PAGE_SIZE)
-        val inputStates = serviceHub.vaultQueryService.queryBy<Cash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
-                                                                           PageSpecification(pageNumber = DEFAULT_PAGE_NUM, pageSize = builder.inputStates().size)).states
+        val inputStates = serviceHub.vaultService.queryBy<Cash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
+                PageSpecification(pageNumber = DEFAULT_PAGE_NUM, pageSize = builder.inputStates().size)).states
 
         // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
         //       count as a reason to fail?

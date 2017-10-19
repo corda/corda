@@ -5,20 +5,26 @@ apply plugin: 'kotlin-jpa'
 apply plugin: CanonicalizerPlugin
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'net.corda.plugins.cordapp'
 //apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda performance test modules'
 
 dependencies {
-    // Note the :perftestflows module is a CorDapp in its own right
-    // and CorDapps using :perftestflows features should use 'cordapp' not 'compile' linkage.
+    // Note the :finance module is a CorDapp in its own right
+    // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
     cordaCompile project(':core')
     cordaCompile project(':confidential-identities')
+
+    // TODO Remove this once we have app configs
+    compile "com.typesafe:config:$typesafe_config_version"
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"
+
+    // AssertJ: for fluent assertions for testing
+    testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
 configurations {

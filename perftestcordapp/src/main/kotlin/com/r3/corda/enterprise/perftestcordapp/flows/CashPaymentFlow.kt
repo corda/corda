@@ -55,7 +55,7 @@ open class CashPaymentFlow(
                     anonymousRecipient,
                     issuerConstraint)
         } catch (e: InsufficientBalanceException) {
-            throw PtCashException("Insufficient cash for spend: ${e.message}", e)
+            throw CashException("Insufficient cash for spend: ${e.message}", e)
         }
 
         progressTracker.currentStep = SIGNING_TX

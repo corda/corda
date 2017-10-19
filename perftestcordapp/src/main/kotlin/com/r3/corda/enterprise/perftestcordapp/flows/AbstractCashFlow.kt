@@ -31,7 +31,7 @@ abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTra
         try {
             return subFlow(FinalityFlow(tx, extraParticipants))
         } catch (e: NotaryException) {
-            throw PtCashException(message, e)
+            throw CashException(message, e)
         }
     }
 
@@ -50,4 +50,4 @@ abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTra
     abstract class AbstractRequest(val amount: Amount<Currency>)
 }
 
-class PtCashException(message: String, cause: Throwable) : FlowException(message, cause)
+class CashException(message: String, cause: Throwable) : FlowException(message, cause)

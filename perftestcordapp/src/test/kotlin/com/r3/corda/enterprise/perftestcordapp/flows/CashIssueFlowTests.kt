@@ -1,4 +1,4 @@
-package com.r3.corda.enterprise.perftestcordapp.contracts.flows
+package com.r3.corda.enterprise.perftestcordapp.flows
 
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
@@ -7,13 +7,12 @@ import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.`issued by`
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
-import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueFlow
 import net.corda.testing.chooseIdentity
 import net.corda.testing.getDefaultNotary
+import net.corda.testing.BOC
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.setCordappPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -29,15 +28,12 @@ class CashIssueFlowTests {
 
     @Before
     fun start() {
-        setCordappPackages("com.r3.corda.enterprise.perftestcordapp.contracts.asset")
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
-        val nodes = mockNet.createSomeNodes(1)
-        notaryNode = nodes.notaryNode
-        bankOfCordaNode = nodes.partyNodes[0]
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
+        notaryNode = mockNet.createNotaryNode()
+        bankOfCordaNode = mockNet.createPartyNode(BOC.name)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
-
+        notary = notaryNode.services.getDefaultNotary()
         mockNet.runNetwork()
-        notary = bankOfCordaNode.services.getDefaultNotary()
     }
 
     @After
