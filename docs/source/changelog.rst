@@ -26,7 +26,7 @@ UNRELEASED
 
 * ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
 
-* Enums now respsect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
+* Enums now respect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
   either annotated with the @CordaSerializable annotation or explicitly whitelisted then a NotSerializableException is
   thrown.
 
@@ -53,6 +53,15 @@ UNRELEASED
 
 * ``TimeWindow`` now has a ``length`` property that returns the length of the time-window, or ``null`` if the
   time-window is open-ended.
+
+* A new ``SIGNERS_GROUP`` with ordinal 6 has been added to ``ComponentGroupEnum`` that corresponds to the ``Command``
+  signers.
+
+* ``PartialMerkleTree`` is equipped with a ``leafIndex`` function that returns the index of a hash (leaf) in the
+  partial Merkle tree structure.
+
+* A new function ``checkCommandVisibility(publicKey: PublicKey)`` has been added to ``FilteredTransaction`` to check
+  if every command that a signer should receive (e.g. an Oracle) is indeed visible.
 
 .. _changelog_v1:
 
