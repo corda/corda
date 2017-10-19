@@ -33,6 +33,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.pumpReceive
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -71,9 +72,8 @@ class FlowFrameworkTests {
     @Before
     fun start() {
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"))
-        aliceNode = mockNet.createNode(legalName = ALICE_NAME)
-        bobNode = mockNet.createNode(legalName = BOB_NAME)
-
+        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         mockNet.runNetwork()
         aliceNode.internals.ensureRegistered()
 
@@ -165,8 +165,7 @@ class FlowFrameworkTests {
         charlieNode.internals.disableDBCloseOnStop()
         charlieNode.services.networkMapCache.clearNetworkMapCache() // zap persisted NetworkMapCache to force use of network.
         charlieNode.dispose()
-
-        charlieNode = mockNet.createNode(charlieNode.internals.id)
+        charlieNode = mockNet.createNode(MockNodeParameters(charlieNode.internals.id))
         val restoredFlow = charlieNode.getSingleFlow<NoOpFlow>().first
         assertEquals(false, restoredFlow.flowStarted) // Not started yet as no network activity has been allowed yet
         mockNet.runNetwork() // Allow network map messages to flow
@@ -177,7 +176,7 @@ class FlowFrameworkTests {
         charlieNode.dispose()
 
         // Now it is completed the flow should leave no Checkpoint.
-        charlieNode = mockNet.createNode(charlieNode.internals.id)
+        charlieNode = mockNet.createNode(MockNodeParameters(charlieNode.internals.id))
         mockNet.runNetwork() // Allow network map messages to flow
         charlieNode.flushSmm()
         assertTrue(charlieNode.smm.findStateMachines(NoOpFlow::class.java).isEmpty())
@@ -202,8 +201,7 @@ class FlowFrameworkTests {
 
         var sentCount = 0
         mockNet.messagingNetwork.sentMessages.toSessionTransfers().filter { it.isPayloadTransfer }.forEach { sentCount++ }
-
-        val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
+        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
         val secondFlow = charlieNode.registerFlowFactory(PingPongFlow::class) { PingPongFlow(it, payload2) }
         mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
@@ -222,7 +220,7 @@ class FlowFrameworkTests {
             assertEquals(1, bobNode.checkpointStorage.checkpoints().size) // confirm checkpoint
             bobNode.services.networkMapCache.clearNetworkMapCache()
         }
-        val node2b = mockNet.createNode(bobNode.internals.id)
+        val node2b = mockNet.createNode(MockNodeParameters(bobNode.internals.id))
         bobNode.internals.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
@@ -249,7 +247,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `sending to multiple parties`() {
-        val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
+        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
         mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
         bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
@@ -282,7 +280,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `receiving from multiple parties`() {
-        val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
+        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
         mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
         val bobPayload = "Test 1"
@@ -436,7 +434,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException propagated in invocation chain`() {
-        val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
+        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
         mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
@@ -451,7 +449,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
-        val charlieNode = mockNet.createNode(legalName = CHARLIE_NAME)
+        val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
         mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
@@ -700,7 +698,7 @@ class FlowFrameworkTests {
     private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow() = internals.run {
         disableDBCloseOnStop() // Handover DB to new node copy
         stop()
-        val newNode = mockNet.createNode(id)
+        val newNode = mockNet.createNode(MockNodeParameters(id))
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
         mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine

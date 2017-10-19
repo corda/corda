@@ -2,13 +2,11 @@ package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.send
 import net.corda.node.services.messaging.sendRequest
@@ -24,16 +22,15 @@ import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.node.MockNodeArgs
+import net.corda.testing.node.MockNodeParameters
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.math.BigInteger
-import java.security.KeyPair
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -51,7 +48,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     fun setup() {
         mockNet = MockNetwork(defaultFactory = nodeFactory)
         mapServiceNode = mockNet.networkMapNode
-        alice = mockNet.createNode(nodeFactory = nodeFactory, legalName = ALICE.name)
+        alice = mockNet.createNode(MockNodeParameters(legalName = ALICE.name), nodeFactory)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
     }
@@ -246,14 +243,14 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun addNewNodeToNetworkMap(legalName: CordaX500Name): StartedNode<MockNode> {
-        val node = mockNet.createNode(legalName = legalName)
+        val node = mockNet.createNode(MockNodeParameters(legalName = legalName))
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node
     }
 
     private fun newNodeSeparateFromNetworkMap(legalName: CordaX500Name): StartedNode<MockNode> {
-        return mockNet.createNode(legalName = legalName, nodeFactory = NoNMSNodeFactory)
+        return mockNet.createNode(MockNodeParameters(legalName = legalName), NoNMSNodeFactory)
     }
 
     sealed class Changed {
@@ -267,13 +264,8 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private object NoNMSNodeFactory : MockNetwork.Factory<MockNode> {
-        override fun create(config: NodeConfiguration,
-                            network: MockNetwork,
-                            networkMapAddr: SingleMessageRecipient?,
-                            id: Int,
-                            notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNode {
-            return object : MockNode(config, network, null, id, notaryIdentity, entropyRoot) {
+        override fun create(args: MockNodeArgs): MockNode {
+            return object : MockNode(args.copy(networkMapAddr = null)) {
                 override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = NullNetworkMapService
             }
         }

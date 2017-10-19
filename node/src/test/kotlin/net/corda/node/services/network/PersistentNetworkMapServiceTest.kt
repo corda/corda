@@ -1,14 +1,10 @@
 package net.corda.node.services.network
 
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import java.math.BigInteger
-import java.security.KeyPair
+import net.corda.testing.node.MockNodeArgs
 
 /**
  * This class mirrors [InMemoryNetworkMapServiceTest] but switches in a [PersistentNetworkMapService] and
@@ -28,13 +24,8 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
     }
 
     private object NodeFactory : MockNetwork.Factory<MockNode> {
-        override fun create(config: NodeConfiguration,
-                            network: MockNetwork,
-                            networkMapAddr: SingleMessageRecipient?,
-                            id: Int,
-                            notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                            entropyRoot: BigInteger): MockNode {
-            return object : MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+        override fun create(args: MockNodeArgs): MockNode {
+            return object : MockNode(args) {
                 override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal) = SwizzleNetworkMapService(network, networkMapCache)
             }
         }

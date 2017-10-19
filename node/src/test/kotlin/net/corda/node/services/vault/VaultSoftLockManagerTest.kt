@@ -11,7 +11,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.packageName
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.queryBy
@@ -26,15 +25,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.rigorousMock
+import net.corda.testing.node.MockNodeArgs
+import net.corda.testing.node.MockNodeParameters
 import org.junit.After
 import org.junit.Test
-import java.math.BigInteger
-import java.security.KeyPair
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.jvm.jvmName
@@ -73,7 +70,7 @@ private class NodePair(private val mockNet: MockNetwork) {
         while (!serverRunning.get()) mockNet.runNetwork(1)
         if (rebootClient) {
             client.dispose()
-            client = mockNet.createNode(client.internals.id)
+            client = mockNet.createNode(MockNodeParameters(client.internals.id))
         }
         return uncheckedCast(client.smm.allStateMachines.single().stateMachine)
     }
@@ -84,8 +81,8 @@ class VaultSoftLockManagerTest {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
     private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
-            return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+        override fun create(args: MockNodeArgs): MockNetwork.MockNode {
+            return object : MockNetwork.MockNode(args) {
                 override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
                     val realVault = super.makeVaultService(keyManagementService, stateLoader)
                     return object : VaultServiceInternal by realVault {
