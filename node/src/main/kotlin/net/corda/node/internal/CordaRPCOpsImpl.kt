@@ -19,6 +19,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
@@ -37,7 +38,8 @@ import java.time.Instant
 class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
-        private val database: CordaPersistence
+        private val database: CordaPersistence,
+        private val flowStarter: FlowStarter
 ) : CordaRPCOps {
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
@@ -150,7 +152,7 @@ class CordaRPCOpsImpl(
         rpcContext.requirePermission(startFlowPermission(logicType))
         val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
         // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
-        return services.invokeFlowAsync(logicType, currentUser, *args)
+        return flowStarter.invokeFlowAsync(logicType, currentUser, *args)
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {

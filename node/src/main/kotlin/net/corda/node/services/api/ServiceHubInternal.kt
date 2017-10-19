@@ -16,6 +16,7 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -28,7 +29,8 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.CordaPersistence
 
-interface NetworkMapCacheInternal : NetworkMapCache {
+interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
+interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
     /**
      * Deregister from updates from the given map service.
      * @param network the network messaging service.
@@ -84,7 +86,6 @@ interface ServiceHubInternal : ServiceHub {
     val monitoringService: MonitoringService
     val schemaService: SchemaService
     override val networkMapCache: NetworkMapCacheInternal
-    val schedulerService: SchedulerService
     val auditService: AuditService
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService
@@ -109,6 +110,10 @@ interface ServiceHubInternal : ServiceHub {
         }
     }
 
+    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+}
+
+interface FlowStarter {
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
      * defaults to [FlowInitiator.RPC] with username "Only For Testing".
@@ -138,10 +143,9 @@ interface ServiceHubInternal : ServiceHub {
         val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
         return startFlow(logic, flowInitiator, ourIdentity = null)
     }
-
-    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
 }
 
+interface StartedNodeServices : ServiceHubInternal, FlowStarter
 /**
  * Thread-safe storage of transactions.
  */

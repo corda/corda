@@ -206,7 +206,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
             internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
-                internals.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+                installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
             }
         }
         val tx = makePartialTX()

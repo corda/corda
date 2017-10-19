@@ -65,7 +65,7 @@ class CordaRPCOpsImplTest {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
         aliceNode = mockNet.createNode()
         notaryNode = mockNet.createNotaryNode(validating = false)
-        rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
+        rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>()
