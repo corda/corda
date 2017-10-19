@@ -437,7 +437,6 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-        networkMapStartStrategy: NetworkMapStartStrategy = defaultParameters.networkMapStartStrategy,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         driverDslWrapper: (DriverDSL) -> D,
@@ -452,7 +451,6 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
                     systemProperties = systemProperties,
                     driverDirectory = driverDirectory.toAbsolutePath(),
                     useTestClock = useTestClock,
-                    networkMapStartStrategy = networkMapStartStrategy,
                     isDebug = isDebug,
                     startNodesInProcess = startNodesInProcess,
                     extraCordappPackagesToScan = extraCordappPackagesToScan
