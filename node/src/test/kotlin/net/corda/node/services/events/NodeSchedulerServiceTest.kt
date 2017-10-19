@@ -12,6 +12,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
+import net.corda.node.internal.FlowStarterImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.VaultServiceInternal
@@ -100,8 +101,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 override val cordappProvider = CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), attachments)
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-            scheduler = NodeSchedulerService(services, schedulerGatedExecutor, serverThread = smmExecutor)
             val mockSMM = StateMachineManager(services, DBCheckpointStorage(), smmExecutor, database)
+            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), services.stateLoader, schedulerGatedExecutor, serverThread = smmExecutor)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllFlows.countDown()

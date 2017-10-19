@@ -9,7 +9,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -19,8 +19,8 @@ import kotlin.test.assertEquals
 
 class WorkflowTransactionBuildTutorialTest {
     lateinit var mockNet: MockNetwork
-    lateinit var aliceServices: ServiceHubInternal
-    lateinit var bobServices: ServiceHubInternal
+    lateinit var aliceServices: StartedNodeServices
+    lateinit var bobServices: StartedNodeServices
     lateinit var alice: Party
     lateinit var bob: Party
 
