@@ -3,6 +3,7 @@ package com.r3.corda.doorman.internal.persistence
 import com.r3.corda.doorman.buildCertPath
 import com.r3.corda.doorman.hash
 import com.r3.corda.doorman.persistence.*
+import com.r3.corda.doorman.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.doorman.toX509Certificate
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sha256
@@ -79,11 +80,11 @@ class PersistenceNodeInfoStorageTest {
         val request = X509Utilities.createCertificateSigningRequest(nodeInfo.legalIdentities.first().name, "my@mail.com", keyPair)
 
         val requestId = requestStorage.saveRequest(request)
-        requestStorage.approveRequest(requestId)
+        requestStorage.approveRequest(requestId, DOORMAN_SIGNATURE)
 
         assertNull(nodeInfoStorage.getCertificatePath(keyPair.public.hash()))
 
-        requestStorage.putCertificatePath(requestId, buildCertPath(clientCert.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate()))
+        requestStorage.putCertificatePath(requestId, buildCertPath(clientCert.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate()), listOf(DOORMAN_SIGNATURE))
 
         val storedCertPath = nodeInfoStorage.getCertificatePath(keyPair.public.hash())
         assertNotNull(storedCertPath)

@@ -88,7 +88,7 @@ class DBCertificateRequestStorageTest {
             val request = getRequestById(it.requestId)
             assertNotNull(request)
             assertEquals(Status.Signed, request?.status)
-            assertEquals(signers.toString(), request?.signedBy.toString())
+            assertEquals(signers.toString(), request?.modifiedBy.toString())
             assertNotNull(request?.certificatePath)
         }
     }

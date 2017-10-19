@@ -1,6 +1,7 @@
 package com.r3.corda.doorman.persistence
 
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import org.hibernate.envers.Audited
 import java.security.cert.CertPath
 import java.time.Instant
 import javax.persistence.*
@@ -16,6 +17,8 @@ interface CertificationRequestStorage {
     /**
      * Persist [PKCS10CertificationRequest] in storage for further approval if it's a valid request. If not then it will be automatically
      * rejected and not subject to any approval process. In both cases a randomly generated request ID is returned.
+     * @param certificationData certificate request data to be persisted.
+     * @param createdBy authority (its identifier) creating this request.
      */
     fun saveRequest(rawRequest: PKCS10CertificationRequest): String
 
@@ -31,28 +34,32 @@ interface CertificationRequestStorage {
 
     /**
      * Approve the given request if it has not already been approved. Otherwise do nothing.
-     *
+     * @param requestId id of the certificate signing request
+     * @param approvedBy authority (its identifier) approving this request.
      * @return True if the request has been approved and false otherwise.
      */
     // TODO: Merge status changing methods.
-    fun approveRequest(requestId: String, approvedBy: String = DOORMAN_SIGNATURE): Boolean
+    fun approveRequest(requestId: String, approvedBy: String): Boolean
 
     /**
      * Reject the given request using the given reason.
+     * @param requestId id of the certificate signing request
+     * @param rejectBy authority (its identifier) rejecting this request.
+     * @param rejectReason brief description of the rejection reason
      */
-    fun rejectRequest(requestId: String, rejectedBy: String = DOORMAN_SIGNATURE, rejectReason: String)
+    fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String)
 
     /**
      * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request statue to [RequestStatus.Signed].
-     *
+     * @param requestId id of the certificate signing request
+     * @param signedBy authority (its identifier) signing this request.
      * @throws IllegalArgumentException if request is not found or not in Approved state.
      */
-    fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: List<String> = listOf(DOORMAN_SIGNATURE))
+    fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: List<String>)
 }
 
 @Entity
 @Table(name = "certificate_signing_request", indexes = arrayOf(Index(name = "IDX_PUB_KEY_HASH", columnList = "public_key_hash")))
-// TODO: Use Hibernate Envers to audit the table instead of individual "changed_by"/"changed_at" columns.
 class CertificateSigningRequest(
         @Id
         @Column(name = "request_id", length = 64)
@@ -66,34 +73,23 @@ class CertificateSigningRequest(
         @Column
         var request: ByteArray = ByteArray(0),
 
-        @Column(name = "created_at")
-        var createdAt: Instant = Instant.now(),
-
-        @Column(name = "approved_at")
-        var approvedAt: Instant = Instant.now(),
-
-        @Column(name = "approved_by", length = 64)
-        var approvedBy: String? = null,
-
-        @Column
+        @Audited
+        @Column(name = "status")
         @Enumerated(EnumType.STRING)
         var status: RequestStatus = RequestStatus.New,
 
-        @Column(name = "signed_by", length = 512)
+        @Audited
+        @Column(name = "modified_by", length = 512)
         @ElementCollection(targetClass = String::class, fetch = FetchType.EAGER)
-        var signedBy: List<String>? = null,
+        var modifiedBy: List<String> = emptyList(),
 
-        @Column(name = "signed_at")
-        var signedAt: Instant? = Instant.now(),
+        @Audited
+        @Column(name = "modified_at")
+        var modifiedAt: Instant? = Instant.now(),
 
-        @Column(name = "rejected_by", length = 64)
-        var rejectedBy: String? = null,
-
-        @Column(name = "rejected_at")
-        var rejectedAt: Instant? = Instant.now(),
-
-        @Column(name = "reject_reason", length = 256, nullable = true)
-        var rejectReason: String? = null,
+        @Audited
+        @Column(name = "remark", length = 256, nullable = true)
+        var remark: String? = null,
 
         // TODO: The certificate data can have its own table.
         @Embedded

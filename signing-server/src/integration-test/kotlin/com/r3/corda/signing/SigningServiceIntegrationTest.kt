@@ -8,6 +8,10 @@ import com.r3.corda.doorman.buildCertPath
 import com.r3.corda.doorman.persistence.DoormanSchemaService
 import com.r3.corda.doorman.startDoorman
 import com.r3.corda.doorman.toX509Certificate
+import com.r3.corda.signing.hsm.HsmSigner
+import com.r3.corda.signing.persistence.ApprovedCertificateRequestData
+import com.r3.corda.signing.persistence.DBCertificateRequestStorage
+import com.r3.corda.signing.persistence.SigningServerSchemaService
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
@@ -17,10 +21,6 @@ import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import com.r3.corda.signing.hsm.HsmSigner
-import com.r3.corda.signing.persistence.ApprovedCertificateRequestData
-import com.r3.corda.signing.persistence.DBCertificateRequestStorage
-import com.r3.corda.signing.persistence.SigningServerSchemaService
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.CHARLIE
@@ -86,10 +86,10 @@ class SigningServiceIntegrationTest {
     @Test
     fun `Signing service communicates with Doorman`() {
         //Start doorman server
-        val database = configureDatabase(makeTestDataSourceProperties(), null, { DoormanSchemaService() }, createIdentityService = {
+        val database = configureDatabase(makeTestDataSourceProperties(), null, {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
-        })
+        }, DoormanSchemaService())
         val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true)
 
         // Start Corda network registration.
@@ -99,10 +99,10 @@ class SigningServiceIntegrationTest {
             whenever(it.certificateSigningService).thenReturn(URL("http://$HOST:${doorman.hostAndPort.port}"))
         }
 
-        val signingServiceStorage = DBCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), makeNotInitialisingTestDatabaseProperties(), { SigningServerSchemaService() }, createIdentityService = {
+        val signingServiceStorage = DBCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), makeNotInitialisingTestDatabaseProperties(), {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
-        }))
+        }, SigningServerSchemaService()))
 
         val hsmSigner = givenSignerSigningAllRequests(signingServiceStorage)
         // Poll the database for approved requests
@@ -133,10 +133,10 @@ class SigningServiceIntegrationTest {
     @Ignore
     fun `DEMO - Create CSR and poll`() {
         //Start doorman server
-        val database = configureDatabase(makeTestDataSourceProperties(), null, { DoormanSchemaService() }, createIdentityService = {
+        val database = configureDatabase(makeTestDataSourceProperties(), null, {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
-        })
+        }, SigningServerSchemaService())
         val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true)
 
         thread(start = true, isDaemon = true) {
@@ -150,7 +150,7 @@ class SigningServiceIntegrationTest {
 
                 val config = testNodeConfiguration(
                         baseDirectory = tempFolder.root.toPath(),
-                        myLegalName = when(it) {
+                        myLegalName = when (it) {
                             1 -> ALICE.name
                             2 -> BOB.name
                             3 -> CHARLIE.name

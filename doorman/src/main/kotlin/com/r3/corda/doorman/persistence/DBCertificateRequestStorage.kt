@@ -30,8 +30,8 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
             val publicKeyHash = certificates.certificates.first().publicKey.hash()
             request!!.certificateData = CertificateData(publicKeyHash, certificates.encoded, CertificateStatus.VALID)
             request.status = Signed
-            request.signedBy = signedBy
-            request.signedAt = Instant.now()
+            request.modifiedBy = signedBy
+            request.modifiedAt = Instant.now()
             session.save(request)
         }
     }
@@ -66,7 +66,8 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
                     requestId = requestId,
                     legalName = legalName.toString(),
                     request = request.encoded,
-                    rejectReason = rejectReason,
+                    remark = rejectReason,
+                    modifiedBy = emptyList(),
                     status = if (rejectReason == null) New else Rejected
             ))
         }
@@ -81,8 +82,8 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
                         builder.equal(path.get<String>(CertificateSigningRequest::status.name), New))
             }
             if (request != null) {
-                request.approvedAt = Instant.now()
-                request.approvedBy = approvedBy
+                request.modifiedAt = Instant.now()
+                request.modifiedBy = listOf(approvedBy)
                 request.status = Approved
                 session.save(request)
                 approved = true
@@ -97,10 +98,10 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
                 builder.equal(path.get<String>(CertificateSigningRequest::requestId.name), requestId)
             }
             if (request != null) {
-                request.rejectReason = rejectReason
+                request.remark = rejectReason
                 request.status = Rejected
-                request.rejectedBy = rejectedBy
-                request.rejectedAt = Instant.now()
+                request.modifiedBy = listOf(rejectedBy)
+                request.modifiedAt = Instant.now()
                 session.save(request)
             }
         }

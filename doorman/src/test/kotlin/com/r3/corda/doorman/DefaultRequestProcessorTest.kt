@@ -22,7 +22,7 @@ class DefaultRequestProcessorTest {
         val requestStorage: CertificationRequestStorage = mock {
             on { getRequest("New") }.thenReturn(CertificateSigningRequest(status = RequestStatus.New))
             on { getRequest("Signed") }.thenReturn(CertificateSigningRequest(status = RequestStatus.Signed, certificateData = CertificateData("", buildCertPath(cert.toX509Certificate()).encoded, CertificateStatus.VALID)))
-            on { getRequest("Rejected") }.thenReturn(CertificateSigningRequest(status = RequestStatus.Rejected, rejectReason = "Random reason"))
+            on { getRequest("Rejected") }.thenReturn(CertificateSigningRequest(status = RequestStatus.Rejected, remark = "Random reason"))
         }
         val signer: Signer = mock()
         val requestProcessor = DefaultCsrHandler(requestStorage, signer)

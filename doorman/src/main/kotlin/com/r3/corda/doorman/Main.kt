@@ -3,6 +3,7 @@ package com.r3.corda.doorman
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
 import com.r3.corda.doorman.DoormanServer.Companion.logger
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
+import com.r3.corda.doorman.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
 import com.r3.corda.doorman.persistence.DoormanSchemaService
 import com.r3.corda.doorman.persistence.PersistenceNodeInfoStorage
@@ -215,7 +216,7 @@ private fun buildLocalSigner(parameters: DoormanParameters): Signer? {
 private class ApproveAllCertificateRequestStorage(private val delegate: CertificationRequestStorage) : CertificationRequestStorage by delegate {
     override fun saveRequest(rawRequest: PKCS10CertificationRequest): String {
         val requestId = delegate.saveRequest(rawRequest)
-        approveRequest(requestId)
+        approveRequest(requestId, DOORMAN_SIGNATURE)
         return requestId
     }
 }

@@ -4,6 +4,7 @@ import com.r3.corda.doorman.JiraClient
 import com.r3.corda.doorman.buildCertPath
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
+import com.r3.corda.doorman.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 import com.r3.corda.doorman.persistence.RequestStatus
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 
@@ -22,7 +23,9 @@ class DefaultCsrHandler(private val storage: CertificationRequestStorage, privat
     private fun processRequest(requestId: String, request: PKCS10CertificationRequest) {
         if (signer != null) {
             val certs = signer.sign(request)
-            storage.putCertificatePath(requestId, certs)
+            // Since Doorman is deployed in the auto-signing mode (i.e. signer != null),
+            // we use DOORMAN_SIGNATURE as the signer.
+            storage.putCertificatePath(requestId, certs, listOf(DOORMAN_SIGNATURE))
         }
     }
 
@@ -34,7 +37,7 @@ class DefaultCsrHandler(private val storage: CertificationRequestStorage, privat
         val response = storage.getRequest(requestId)
         return when (response?.status) {
             RequestStatus.New, RequestStatus.Approved, null -> CertificateResponse.NotReady
-            RequestStatus.Rejected -> CertificateResponse.Unauthorised(response.rejectReason ?: "Unknown reason")
+            RequestStatus.Rejected -> CertificateResponse.Unauthorised(response.remark ?: "Unknown reason")
             RequestStatus.Signed -> CertificateResponse.Ready(buildCertPath(response.certificateData?.certificatePath ?: throw IllegalArgumentException("Certificate should not be null.")))
         }
     }

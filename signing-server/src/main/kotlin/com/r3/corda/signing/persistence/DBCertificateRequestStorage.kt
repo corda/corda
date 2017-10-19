@@ -2,6 +2,7 @@ package com.r3.corda.signing.persistence
 
 import net.corda.node.utilities.CordaPersistence
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import org.hibernate.envers.Audited
 import java.security.cert.CertPath
 import java.sql.Connection
 import java.time.Instant
@@ -34,16 +35,19 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
             @Column(nullable = true)
             var certificatePath: ByteArray? = null,
 
-            @Column(name = "signed_by", length = 512)
-            @ElementCollection(targetClass = String::class, fetch = FetchType.EAGER)
-            var signedBy: List<String>? = null,
-
-            @Column(name = "signed_at")
-            var signedAt: Instant? = Instant.now(),
-
+            @Audited
             @Column(name = "status")
             @Enumerated(EnumType.STRING)
-            var status: Status = Status.Approved
+            var status: Status = Status.Approved,
+
+            @Audited
+            @Column(name = "modified_by", length = 512)
+            @ElementCollection(targetClass = String::class, fetch = FetchType.EAGER)
+            var modifiedBy: List<String> = emptyList(),
+
+            @Audited
+            @Column(name = "modified_at")
+            var modifiedAt: Instant? = Instant.now()
     )
 
     override fun getApprovedRequests(): List<ApprovedCertificateRequestData> {
@@ -63,8 +67,8 @@ class DBCertificateRequestStorage(private val database: CordaPersistence) : Cert
                     val now = Instant.now()
                     request.certificatePath = it.certPath?.encoded
                     request.status = Status.Signed
-                    request.signedAt = now
-                    request.signedBy = signers
+                    request.modifiedAt = now
+                    request.modifiedBy = signers
                     session.update(request)
                 }
             }

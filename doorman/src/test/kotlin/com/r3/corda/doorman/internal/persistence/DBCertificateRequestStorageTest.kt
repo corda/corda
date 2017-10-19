@@ -1,8 +1,9 @@
 package com.r3.corda.doorman.internal.persistence
 
 import com.r3.corda.doorman.buildCertPath
-import com.r3.corda.doorman.persistence.DoormanSchemaService
+import com.r3.corda.doorman.persistence.CertificateSigningRequest
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
+import com.r3.corda.doorman.persistence.DoormanSchemaService
 import com.r3.corda.doorman.persistence.RequestStatus
 import com.r3.corda.doorman.toX509Certificate
 import net.corda.core.crypto.Crypto
@@ -16,12 +17,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
+import org.hibernate.envers.AuditReaderFactory
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.KeyPair
 import java.util.*
 import kotlin.test.*
+import com.r3.corda.doorman.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
 
 class DBCertificateRequestStorageTest {
     private lateinit var storage: DBCertificateRequestStorage
@@ -58,7 +61,7 @@ class DBCertificateRequestStorageTest {
         // Certificate should be empty.
         assertNull(storage.getRequest(requestId)!!.certificateData)
         // Store certificate to DB.
-        val result = storage.approveRequest(requestId)
+        val result = storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         // Check request request has been approved
         assertTrue(result)
         // Check request is not ready yet.
@@ -73,10 +76,10 @@ class DBCertificateRequestStorageTest {
         val (request, _) = createRequest("LegalName")
         // Add request to DB.
         val requestId = storage.saveRequest(request)
-        storage.approveRequest(requestId)
+        storage.approveRequest(requestId, DOORMAN_SIGNATURE)
 
         // When subsequent approval is performed
-        val result = storage.approveRequest(requestId)
+        val result = storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         // Then check request has not been approved
         assertFalse(result)
     }
@@ -91,20 +94,20 @@ class DBCertificateRequestStorageTest {
         // Certificate should be empty.
         assertNull(storage.getRequest(requestId)!!.certificateData)
         // Store certificate to DB.
-        storage.approveRequest(requestId)
+        storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         // Check request is not ready yet.
         assertEquals(RequestStatus.Approved, storage.getRequest(requestId)!!.status)
         // New request should be empty.
         assertTrue(storage.getRequests(RequestStatus.New).isEmpty())
         // Sign certificate
         storage.putCertificatePath(requestId, JcaPKCS10CertificationRequest(csr).run {
-                val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
-                val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
-                val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
-                buildCertPath(ourCertificate, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-        })
+            val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+            val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
+            val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+            val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
+            val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
+            buildCertPath(ourCertificate, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
+        }, listOf(DOORMAN_SIGNATURE))
         // Check request is ready
         assertNotNull(storage.getRequest(requestId)!!.certificateData)
     }
@@ -115,18 +118,18 @@ class DBCertificateRequestStorageTest {
         // Add request to DB.
         val requestId = storage.saveRequest(csr)
         // Store certificate to DB.
-        storage.approveRequest(requestId)
+        storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         storage.putCertificatePath(requestId, JcaPKCS10CertificationRequest(csr).run {
-                val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
-                val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
-                val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
-                buildCertPath(ourCertificate, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-        })
+            val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+            val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
+            val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+            val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
+            val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
+            buildCertPath(ourCertificate, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
+        }, listOf(DOORMAN_SIGNATURE))
         // Sign certificate
         // When subsequent signature requested
-        assertFailsWith(IllegalArgumentException::class){
+        assertFailsWith(IllegalArgumentException::class) {
             storage.putCertificatePath(requestId, JcaPKCS10CertificationRequest(csr).run {
                 val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 LTD", country = "GB"), rootCAKey)
@@ -134,16 +137,16 @@ class DBCertificateRequestStorageTest {
                 val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
                 val ourCertificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
                 buildCertPath(ourCertificate, intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-            })
+            }, listOf(DOORMAN_SIGNATURE))
         }
     }
 
     @Test
     fun `reject request`() {
         val requestId = storage.saveRequest(createRequest("BankA").first)
-        storage.rejectRequest(requestId, rejectReason = "Because I said so!")
+        storage.rejectRequest(requestId, DOORMAN_SIGNATURE, "Because I said so!")
         assertThat(storage.getRequests(RequestStatus.New)).isEmpty()
-        assertThat(storage.getRequest(requestId)!!.rejectReason).isEqualTo("Because I said so!")
+        assertThat(storage.getRequest(requestId)!!.remark).isEqualTo("Because I said so!")
     }
 
     @Test
@@ -153,28 +156,49 @@ class DBCertificateRequestStorageTest {
         val requestId2 = storage.saveRequest(createRequest("BankA").first)
         assertThat(storage.getRequests(RequestStatus.New).map { it.requestId }).containsOnly(requestId1)
         assertEquals(RequestStatus.Rejected, storage.getRequest(requestId2)!!.status)
-        assertThat(storage.getRequest(requestId2)!!.rejectReason).containsIgnoringCase("duplicate")
+        assertThat(storage.getRequest(requestId2)!!.remark).containsIgnoringCase("duplicate")
         // Make sure the first request is processed properly
-        storage.approveRequest(requestId1)
+        storage.approveRequest(requestId1, DOORMAN_SIGNATURE)
         assertThat(storage.getRequest(requestId1)!!.status).isEqualTo(RequestStatus.Approved)
     }
 
     @Test
     fun `request with the same legal name as a previously approved request`() {
         val requestId1 = storage.saveRequest(createRequest("BankA").first)
-        storage.approveRequest(requestId1)
+        storage.approveRequest(requestId1, DOORMAN_SIGNATURE)
         val requestId2 = storage.saveRequest(createRequest("BankA").first)
-        assertThat(storage.getRequest(requestId2)!!.rejectReason).containsIgnoringCase("duplicate")
+        assertThat(storage.getRequest(requestId2)!!.remark).containsIgnoringCase("duplicate")
     }
 
     @Test
     fun `request with the same legal name as a previously rejected request`() {
         val requestId1 = storage.saveRequest(createRequest("BankA").first)
-        storage.rejectRequest(requestId1, rejectReason = "Because I said so!")
+        storage.rejectRequest(requestId1, DOORMAN_SIGNATURE, "Because I said so!")
         val requestId2 = storage.saveRequest(createRequest("BankA").first)
         assertThat(storage.getRequests(RequestStatus.New).map { it.requestId }).containsOnly(requestId2)
-        storage.approveRequest(requestId2)
+        storage.approveRequest(requestId2, DOORMAN_SIGNATURE)
         assertThat(storage.getRequest(requestId2)!!.status).isEqualTo(RequestStatus.Approved)
+    }
+
+    @Test
+    fun `audit data is available for CSRs`() {
+        // given
+        val approver = "APPROVER"
+
+        // when
+        val requestId = storage.saveRequest(createRequest("BankA").first)
+        storage.approveRequest(requestId, approver)
+
+        // then
+        persistence.transaction {
+            val auditReader = AuditReaderFactory.get(persistence.entityManagerFactory.createEntityManager())
+            val newRevision = auditReader.find(CertificateSigningRequest::class.java, requestId, 1)
+            assertEquals(RequestStatus.New, newRevision.status)
+            assertTrue(newRevision.modifiedBy.isEmpty())
+            val approvedRevision = auditReader.find(CertificateSigningRequest::class.java, requestId, 2)
+            assertEquals(RequestStatus.Approved, approvedRevision.status)
+            assertEquals(approver, approvedRevision.modifiedBy.first())
+        }
     }
 
     private fun createRequest(legalName: String): Pair<PKCS10CertificationRequest, KeyPair> {
