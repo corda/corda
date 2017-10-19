@@ -8,7 +8,6 @@ buildscript {
     }
 }
 
-apply plugin: 'groovy'
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 
@@ -34,8 +33,8 @@ sourceSets {
 
 dependencies {
     compile gradleApi()
-    compile localGroovy()
     compile project(":cordapp")
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
