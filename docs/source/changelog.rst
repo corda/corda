@@ -63,7 +63,7 @@ UNRELEASED
 * A new function ``checkCommandVisibility(publicKey: PublicKey)`` has been added to ``FilteredTransaction`` to check
   if every command that a signer should receive (e.g. an Oracle) is indeed visible.
 
-* Change the AMQP serialiser to use the oficially assigned R3 identifier rather than a placeholder
+* Change the AMQP serialiser to use the oficially assigned R3 identifier rather than a placeholder.
 
 .. _changelog_v1:
 

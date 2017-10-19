@@ -21,7 +21,7 @@ import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSch
 /**
  * R3 AMQP assigned enterprise number
  *
- * see [https://www.iana.org/assignments/enterprise-numbers/enterprise-numbers]
+ * see [here](https://www.iana.org/assignments/enterprise-numbers/enterprise-numbers)
  *
  * Repeated here for brevity:
  *   50530 - R3 - Mike Hearn - mike&r3.com
