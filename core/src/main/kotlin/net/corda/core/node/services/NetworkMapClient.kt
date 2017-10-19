@@ -11,17 +11,30 @@ import java.net.URL
 import javax.ws.rs.core.MediaType
 
 interface NetworkMapClient {
-    fun register(signedNodeInfo: SignedData<NodeInfo>)
+    /**
+     *  Publish node info to network map service.
+     */
+    fun publish(signedNodeInfo: SignedData<NodeInfo>)
+
+    /**
+     *  Retrieve [NetworkMap] from the network map service containing list of node info hashes and network parameter hash.
+     */
     // TODO: Use NetworkMap object when available.
     fun getNetworkMap(): List<SecureHash>
 
+    /**
+     *  Retrieve [NodeInfo] from network map service using the node info hash.
+     */
     fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo?
+
+    // TODO: Implement getNetworkParameter when its available.
+    //fun getNetworkParameter(networkParameterHash: SecureHash): NetworkParameter
 }
 
 class HTTPNetworkMapClient(private val networkMapUrl: String) : NetworkMapClient {
-    override fun register(signedNodeInfo: SignedData<NodeInfo>) {
-        val registerURL = URL("$networkMapUrl/register")
-        val conn = registerURL.openConnection() as HttpURLConnection
+    override fun publish(signedNodeInfo: SignedData<NodeInfo>) {
+        val publishURL = URL("$networkMapUrl/publish")
+        val conn = publishURL.openConnection() as HttpURLConnection
         conn.doOutput = true
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
@@ -29,7 +42,7 @@ class HTTPNetworkMapClient(private val networkMapUrl: String) : NetworkMapClient
         when (conn.responseCode) {
             HttpURLConnection.HTTP_OK -> return
             HttpURLConnection.HTTP_UNAUTHORIZED -> throw IllegalArgumentException(conn.errorStream.bufferedReader().readLine())
-            else -> throw IllegalArgumentException("Unexpected response code ${conn.responseCode}, response error message: '${conn.errorStream.bufferedReader().readLine()}'")
+            else -> throw IllegalArgumentException("Unexpected response code ${conn.responseCode}, response error message: '${conn.errorStream.bufferedReader().readLines()}'")
         }
     }
 
@@ -41,7 +54,7 @@ class HTTPNetworkMapClient(private val networkMapUrl: String) : NetworkMapClient
                 val response = conn.inputStream.bufferedReader().use { it.readLine() }
                 ObjectMapper().readValue(response, List::class.java).map { SecureHash.parse(it.toString()) }
             }
-            else -> throw IllegalArgumentException("Unexpected response code ${conn.responseCode}, response error message: '${conn.errorStream.bufferedReader().readLine()}'")
+            else -> throw IllegalArgumentException("Unexpected response code ${conn.responseCode}, response error message: '${conn.errorStream.bufferedReader().readLines()}'")
         }
     }
 
@@ -52,7 +65,7 @@ class HTTPNetworkMapClient(private val networkMapUrl: String) : NetworkMapClient
         return when (conn.responseCode) {
             HttpURLConnection.HTTP_OK -> conn.inputStream.readBytes().deserialize()
             HttpURLConnection.HTTP_NOT_FOUND -> null
-            else -> throw IllegalArgumentException("Unexpected response code ${conn.responseCode}, response error message: '${conn.errorStream.bufferedReader().readLine()}'")
+            else -> throw IllegalArgumentException("Unexpected response code ${conn.responseCode}, response error message: '${conn.errorStream.bufferedReader().readLines()}'")
         }
     }
 }

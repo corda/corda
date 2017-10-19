@@ -104,7 +104,7 @@ internal class HTTPNetworkMapClientTest {
         val signedNodeInfo = createStubedNodeInfo("Test1")
         val nodeInfo = signedNodeInfo.verified()
 
-        networkMapClient.register(signedNodeInfo)
+        networkMapClient.publish(signedNodeInfo)
 
         val nodeInfoHash = nodeInfo.serialize().sha256()
 
@@ -113,7 +113,7 @@ internal class HTTPNetworkMapClientTest {
 
         val signedNodeInfo2 = createStubedNodeInfo("Test2")
         val nodeInfo2 = signedNodeInfo2.verified()
-        networkMapClient.register(signedNodeInfo2)
+        networkMapClient.publish(signedNodeInfo2)
 
         val nodeInfoHash2 = nodeInfo2.serialize().sha256()
         assertEquals(listOf(nodeInfoHash, nodeInfoHash2).sorted(), networkMapClient.getNetworkMap().sorted())
@@ -134,12 +134,13 @@ internal class HTTPNetworkMapClientTest {
 }
 
 @Path("network-map")
+// This is a stub implementation of the network map rest API.
 internal class MockNetworkMapServer {
     private val nodeInfos = mutableMapOf<SecureHash, NodeInfo>()
     @POST
-    @Path("register")
+    @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    fun registerNode(input: InputStream): Response {
+    fun publishNodeInfo(input: InputStream): Response {
         val registrationData = input.readBytes().deserialize<SignedData<NodeInfo>>()
         val nodeInfo = registrationData.verified()
         val nodeInfoHash = nodeInfo.serialize().sha256()
@@ -148,7 +149,6 @@ internal class MockNetworkMapServer {
     }
 
     @GET
-    @Path("")
     @Produces(MediaType.APPLICATION_JSON)
     fun getNetworkMap(): Response {
         return Response.ok(ObjectMapper().writeValueAsString(nodeInfos.keys.map { it.toString() })).build()
