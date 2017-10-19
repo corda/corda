@@ -1576,24 +1576,8 @@ public interface net.corda.core.node.services.KeyManagementService
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.TransactionSignature sign(net.corda.core.crypto.SignableData, java.security.PublicKey)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.DigitalSignature$WithKey sign(byte[], java.security.PublicKey)
 ##
-public interface net.corda.core.node.services.NetworkMapCache
-  public abstract void clearNetworkMapCache()
-  @org.jetbrains.annotations.NotNull public abstract List getAllNodes()
-  @org.jetbrains.annotations.NotNull public abstract rx.Observable getChanged()
-  @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.NodeInfo getNodeByAddress(net.corda.core.utilities.NetworkHostAndPort)
+public interface net.corda.core.node.services.NetworkMapCache extends net.corda.core.node.services.NetworkMapCacheBase
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.NodeInfo getNodeByLegalIdentity(net.corda.core.identity.AbstractParty)
-  @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.NodeInfo getNodeByLegalName(net.corda.core.identity.CordaX500Name)
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.concurrent.CordaFuture getNodeReady()
-  @org.jetbrains.annotations.NotNull public abstract List getNodesByLegalIdentityKey(java.security.PublicKey)
-  @org.jetbrains.annotations.NotNull public abstract List getNodesByLegalName(net.corda.core.identity.CordaX500Name)
-  @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party getNotary(net.corda.core.identity.CordaX500Name)
-  @org.jetbrains.annotations.NotNull public abstract List getNotaryIdentities()
-  @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.services.PartyInfo getPartyInfo(net.corda.core.identity.Party)
-  @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party getPeerByLegalName(net.corda.core.identity.CordaX500Name)
-  @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.PartyAndCertificate getPeerCertificateByLegalName(net.corda.core.identity.CordaX500Name)
-  public abstract boolean isNotary(net.corda.core.identity.Party)
-  public abstract boolean isValidatingNotary(net.corda.core.identity.Party)
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed track()
 ##
 public abstract static class net.corda.core.node.services.NetworkMapCache$MapChange extends java.lang.Object
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.NodeInfo getNode()
@@ -1626,6 +1610,24 @@ public static final class net.corda.core.node.services.NetworkMapCache$MapChange
   @org.jetbrains.annotations.NotNull public net.corda.core.node.NodeInfo getNode()
   public int hashCode()
   public String toString()
+##
+public interface net.corda.core.node.services.NetworkMapCacheBase
+  public abstract void clearNetworkMapCache()
+  @org.jetbrains.annotations.NotNull public abstract List getAllNodes()
+  @org.jetbrains.annotations.NotNull public abstract rx.Observable getChanged()
+  @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.NodeInfo getNodeByAddress(net.corda.core.utilities.NetworkHostAndPort)
+  @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.NodeInfo getNodeByLegalName(net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.concurrent.CordaFuture getNodeReady()
+  @org.jetbrains.annotations.NotNull public abstract List getNodesByLegalIdentityKey(java.security.PublicKey)
+  @org.jetbrains.annotations.NotNull public abstract List getNodesByLegalName(net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party getNotary(net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.NotNull public abstract List getNotaryIdentities()
+  @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.services.PartyInfo getPartyInfo(net.corda.core.identity.Party)
+  @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party getPeerByLegalName(net.corda.core.identity.CordaX500Name)
+  @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.PartyAndCertificate getPeerCertificateByLegalName(net.corda.core.identity.CordaX500Name)
+  public abstract boolean isNotary(net.corda.core.identity.Party)
+  public abstract boolean isValidatingNotary(net.corda.core.identity.Party)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed track()
 ##
 public abstract class net.corda.core.node.services.NotaryService extends net.corda.core.serialization.SingletonSerializeAsToken
   public <init>()

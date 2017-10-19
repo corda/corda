@@ -16,6 +16,7 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -28,7 +29,8 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.CordaPersistence
 
-interface NetworkMapCacheInternal : NetworkMapCache {
+interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
+interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
     /**
      * Deregister from updates from the given map service.
      * @param network the network messaging service.

@@ -24,7 +24,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.*
-import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -142,6 +141,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
     protected lateinit var legalIdentity: PartyAndCertificate
+    private lateinit var allIdentities: List<PartyAndCertificate>
     protected lateinit var info: NodeInfo
     protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
@@ -468,8 +468,12 @@ abstract class AbstractNode(config: NodeConfiguration,
         val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
         _services = ServiceHubInternalImpl(schemaService, transactionStorage, stateLoader, MonitoringService(metrics), cordappProvider)
         legalIdentity = obtainIdentity(notaryConfig = null)
+        // TODO  We keep only notary identity as additional legalIdentity if we run it on a node . Multiple identities need more design thinking.
+        myNotaryIdentity = getNotaryIdentity()
+        allIdentities = listOf(legalIdentity, myNotaryIdentity).filterNotNull()
         network = makeMessagingService(legalIdentity)
-        info = makeInfo(legalIdentity)
+        val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
+        info = NodeInfo(addresses, allIdentities, versionInfo.platformVersion, platformClock.instant().toEpochMilli())
         val networkMapCache = services.networkMapCache
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
@@ -486,15 +490,6 @@ abstract class AbstractNode(config: NodeConfiguration,
         VaultSoftLockManager.install(services.vaultService, smm)
         ScheduledActivityObserver.install(services.vaultService, schedulerService)
         HibernateObserver.install(services.vaultService.rawUpdates, database.hibernateConfig)
-    }
-
-    private fun makeInfo(legalIdentity: PartyAndCertificate): NodeInfo {
-        // TODO  We keep only notary identity as additional legalIdentity if we run it on a node . Multiple identities need more design thinking.
-        myNotaryIdentity = getNotaryIdentity()
-        val allIdentitiesList = mutableListOf(legalIdentity)
-        myNotaryIdentity?.let { allIdentitiesList.add(it) }
-        val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
-        return NodeInfo(addresses, allIdentitiesList, versionInfo.platformVersion, platformClock.instant().toEpochMilli())
     }
 
     /**
@@ -665,17 +660,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate, clientCa?.certificate?.cert)
                 .filterNotNull()
                 .toTypedArray()
-        val service = PersistentIdentityService(info.legalIdentitiesAndCerts, trustRoot = trustRoot, caCertificates = *caCertificates)
-        services.networkMapCache.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { service.verifyAndRegisterIdentity(it) } }
-        services.networkMapCache.changed.subscribe { mapChange ->
-            // TODO how should we handle network map removal
-            if (mapChange is MapChange.Added) {
-                mapChange.node.legalIdentitiesAndCerts.forEach {
-                    service.verifyAndRegisterIdentity(it)
-                }
-            }
-        }
-        return service
+        return PersistentIdentityService(allIdentities, trustRoot = trustRoot, caCertificates = *caCertificates)
     }
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
@@ -774,7 +759,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val networkMapCache by lazy { PersistentNetworkMapCache(this) }
+        override val networkMapCache by lazy { NetworkMapCacheImpl(PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration), identityService) }
         override val vaultService by lazy { makeVaultService(keyManagementService, stateLoader) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 
