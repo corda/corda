@@ -18,8 +18,15 @@ import java.util.*
 import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterField
 import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSchema
 
-// TODO: get an assigned number as per AMQP spec
-const val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
+/**
+ * R3 AMQP assigned enterprise number
+ *
+ * see [https://www.iana.org/assignments/enterprise-numbers/enterprise-numbers]
+ *
+ * Repeated here for brevity:
+ *   50530 - R3 - Mike Hearn - mike&r3.com
+ */
+const val DESCRIPTOR_TOP_32BITS: Long = 0xc5620000
 
 const val DESCRIPTOR_DOMAIN: String = "net.corda"
 
