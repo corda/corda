@@ -47,23 +47,17 @@ class InMemoryMessagingTests {
 
     @Test
     fun basics() {
-        val node1 = mockNet.networkMapNode
+        val node1 = mockNet.createNode()
         val node2 = mockNet.createNode()
         val node3 = mockNet.createNode()
 
         val bits = "test-content".toByteArray()
         var finalDelivery: Message? = null
-
-        with(node2) {
-            node2.network.addMessageHandler { msg, _ ->
-                node2.network.send(msg, node3.network.myAddress)
-            }
+        node2.network.addMessageHandler { msg, _ ->
+            node2.network.send(msg, node3.network.myAddress)
         }
-
-        with(node3) {
-            node2.network.addMessageHandler { msg, _ ->
-                finalDelivery = msg
-            }
+        node3.network.addMessageHandler { msg, _ ->
+            finalDelivery = msg
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we run the network
@@ -76,7 +70,7 @@ class InMemoryMessagingTests {
 
     @Test
     fun broadcast() {
-        val node1 = mockNet.networkMapNode
+        val node1 = mockNet.createNode()
         val node2 = mockNet.createNode()
         val node3 = mockNet.createNode()
 
@@ -95,7 +89,7 @@ class InMemoryMessagingTests {
      */
     @Test
     fun `skip unhandled messages`() {
-        val node1 = mockNet.networkMapNode
+        val node1 = mockNet.createNode()
         val node2 = mockNet.createNode()
         var received = 0
 

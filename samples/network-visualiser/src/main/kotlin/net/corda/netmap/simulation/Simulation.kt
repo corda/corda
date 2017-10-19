@@ -3,7 +3,6 @@ package net.corda.netmap.simulation
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.utils.CityDatabase
 import net.corda.finance.utils.WorldMapLocation
@@ -12,7 +11,6 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.testing.DUMMY_MAP
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -50,10 +48,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     // This puts together a mock network of SimulatedNodes.
 
-    open class SimulatedNode(config: NodeConfiguration, mockNet: MockNetwork, networkMapAddress: SingleMessageRecipient?,
+    open class SimulatedNode(config: NodeConfiguration, mockNet: MockNetwork,
                              id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                              entropyRoot: BigInteger)
-        : MockNetwork.MockNode(config, mockNet, networkMapAddress, id, notaryIdentity, entropyRoot) {
+        : MockNetwork.MockNode(config, mockNet, id, notaryIdentity, entropyRoot) {
         override val started: StartedNode<SimulatedNode>? get() = uncheckedCast(super.started)
         override fun findMyLocation(): WorldMapLocation? {
             return configuration.myLegalName.locality.let { CityDatabase[it] }
@@ -63,7 +61,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     inner class BankFactory : MockNetwork.Factory<SimulatedNode> {
         var counter = 0
 
-        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork,
                             id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): SimulatedNode {
             val letter = 'A' + counter
             val (city, country) = bankLocations[counter++ % bankLocations.size]
@@ -71,7 +69,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = CordaX500Name(organisation = "Bank $letter", locality = city, country = country))
-            return SimulatedNode(cfg, network, networkMapAddr, id, notaryIdentity, entropyRoot)
+            return SimulatedNode(cfg, network, id, notaryIdentity, entropyRoot)
         }
 
         fun createAll(): List<SimulatedNode> {
@@ -84,25 +82,15 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     val bankFactory = BankFactory()
 
-    object NetworkMapNodeFactory : MockNetwork.Factory<SimulatedNode> {
-        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): SimulatedNode {
-            val cfg = testNodeConfiguration(
-                    baseDirectory = config.baseDirectory,
-                    myLegalName = DUMMY_MAP.name)
-            return object : SimulatedNode(cfg, network, networkMapAddr, id, notaryIdentity, entropyRoot) {}
-        }
-    }
-
     object NotaryNodeFactory : MockNetwork.Factory<SimulatedNode> {
-        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork,
                             id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): SimulatedNode {
             requireNotNull(config.notary)
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = DUMMY_NOTARY.name,
                     notaryConfig = config.notary)
-            return SimulatedNode(cfg, network, networkMapAddr, id, notaryIdentity, entropyRoot)
+            return SimulatedNode(cfg, network, id, notaryIdentity, entropyRoot)
         }
     }
 
@@ -110,12 +98,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         // TODO: Make a more realistic legal name
         val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
 
-        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork,
                             id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): SimulatedNode {
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = RATES_SERVICE_NAME)
-            return object : SimulatedNode(cfg, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+            return object : SimulatedNode(cfg, network, id, notaryIdentity, entropyRoot) {
                 override fun start() = super.start().apply {
                     registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
                     registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
@@ -130,12 +118,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object RegulatorFactory : MockNetwork.Factory<SimulatedNode> {
-        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork,
                             id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): SimulatedNode {
             val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = DUMMY_REGULATOR.name)
-            return object : SimulatedNode(cfg, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+            return object : SimulatedNode(cfg, network, id, notaryIdentity, entropyRoot) {
                 // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
                 //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
                 //       But that's fine for visualisation purposes.
@@ -148,13 +136,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             threadPerNode = runAsync,
             cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract", "net.corda.irs"))
     // This one must come first.
-    val networkMap = mockNet.startNetworkMapNode(nodeFactory = NetworkMapNodeFactory)
     val notary = mockNet.createNotaryNode(validating = false, nodeFactory = NotaryNodeFactory)
     val regulators = listOf(mockNet.createUnstartedNode(nodeFactory = RegulatorFactory))
     val ratesOracle = mockNet.createUnstartedNode(nodeFactory = RatesOracleFactory)
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
-    val serviceProviders: List<SimulatedNode> = listOf(notary.internals, ratesOracle, networkMap.internals)
+    val serviceProviders: List<SimulatedNode> = listOf(notary.internals, ratesOracle)
     val banks: List<SimulatedNode> = bankFactory.createAll()
 
     val clocks = (serviceProviders + regulators + banks).map { it.platformClock as TestClock }

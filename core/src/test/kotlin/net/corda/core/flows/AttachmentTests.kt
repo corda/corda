@@ -7,7 +7,6 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
@@ -117,10 +116,10 @@ class AttachmentTests {
     fun `malicious response`() {
         // Make a node that doesn't do sanity checking at load time.
         val aliceNode = mockNet.createNotaryNode(legalName = ALICE.name, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+            override fun create(config: NodeConfiguration, network: MockNetwork,
                                 id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+                return object : MockNetwork.MockNode(config, network, id, notaryIdentity, entropyRoot) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }

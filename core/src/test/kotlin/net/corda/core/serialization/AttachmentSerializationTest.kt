@@ -9,7 +9,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.TestDataVendingFlow
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
@@ -161,9 +160,9 @@ class AttachmentSerializationTest {
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
         client = mockNet.createNode(client.internals.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+            override fun create(config: NodeConfiguration, network: MockNetwork,
                                 id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+                return object : MockNetwork.MockNode(config, network, id, notaryIdentity, entropyRoot) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
                 }
             }
