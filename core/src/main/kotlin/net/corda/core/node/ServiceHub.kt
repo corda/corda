@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
@@ -19,6 +20,7 @@ import java.time.Clock
 /**
  * Part of [ServiceHub].
  */
+@DoNotImplement
 interface StateLoader {
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
@@ -164,7 +166,7 @@ interface ServiceHub : ServicesForResolution {
     @Throws(TransactionResolutionException::class)
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outRef<T>(stateRef.index)
+        return stx.resolveBaseTransaction(this).outRef(stateRef.index)
     }
 
     private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey

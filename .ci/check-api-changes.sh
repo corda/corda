@@ -30,7 +30,15 @@ if [ $removalCount -gt 0 ]; then
 fi
 
 # Adding new abstract methods could also break the API.
-newAbstracts=$(echo "$diffContents" | grep "^+" | grep "\(public\|protected\) abstract")
+# However, first exclude anything with the @DoNotImplement annotation.
+
+function forUserImpl() {
+    awk '/DoNotImplement/,/^##/{ next }{ print }' $1
+}
+
+userDiffContents=`diff -u <(forUserImpl $apiCurrent) <(forUserImpl $APIHOME/../build/api/api-corda-*.txt) | tail --lines=+3`
+
+newAbstracts=$(echo "$userDiffContents" | grep "^+" | grep "\(public\|protected\) abstract")
 abstractCount=`grep -v "^$" <<EOF | wc -l
 $newAbstracts
 EOF

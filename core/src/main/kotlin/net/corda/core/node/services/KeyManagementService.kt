@@ -1,6 +1,7 @@
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.DoNotImplement
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.TransactionSignature
@@ -11,6 +12,7 @@ import java.security.PublicKey
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
  * call out to a hardware security module that enforces various auditing and frequency-of-use requirements.
  */
+@DoNotImplement
 interface KeyManagementService {
     /**
      * Returns a snapshot of the current signing [PublicKey]s.

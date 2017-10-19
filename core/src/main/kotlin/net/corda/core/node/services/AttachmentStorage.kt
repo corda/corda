@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import java.io.IOException
@@ -11,6 +12,7 @@ typealias AttachmentId = SecureHash
 /**
  * An attachment store records potentially large binary objects, identified by their hash.
  */
+@DoNotImplement
 interface AttachmentStorage {
     /**
      * Returns a handle to a locally stored attachment, or null if it's not known. The handle can be used to open

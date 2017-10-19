@@ -1,5 +1,6 @@
 package net.corda.client.rpc
 
+import net.corda.core.DoNotImplement
 import net.corda.core.messaging.RPCOps
 import java.io.Closeable
 
@@ -10,6 +11,7 @@ import java.io.Closeable
  * [Closeable.close] may be used to shut down the connection and release associated resources. It is an
  * alias for [notifyServerAndClose].
  */
+@DoNotImplement
 interface RPCConnection<out I : RPCOps> : Closeable {
     /**
      * Holds a synthetic class that automatically forwards method calls to the server, and returns the response.

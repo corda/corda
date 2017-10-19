@@ -1,6 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.CordaException
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
 import java.security.InvalidAlgorithmParameterException
@@ -16,6 +17,7 @@ import java.security.cert.*
  * whereas confidential identities are distributed only on a need to know basis (typically between parties in
  * a transaction being built). See [NetworkMapCache] for retrieving well known identities from the network map.
  */
+@DoNotImplement
 interface IdentityService {
     val trustRoot: X509Certificate
     val trustAnchor: TrustAnchor

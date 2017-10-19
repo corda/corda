@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.DoNotImplement
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 
@@ -41,6 +42,7 @@ import net.corda.core.utilities.UntrustworthyData
  *   will become
  *     otherSideSession.send(something)
  */
+@DoNotImplement
 abstract class FlowSession {
     /**
      * The [Party] on the other side of this session. In the case of a session created by [FlowLogic.initiateFlow]

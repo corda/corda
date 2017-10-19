@@ -16,6 +16,7 @@ import org.gradle.api.tasks.TaskAction;
 
 import java.io.*;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Inherited;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -25,7 +26,7 @@ import java.net.URLClassLoader;
 import java.util.*;
 import java.util.stream.StreamSupport;
 
-import static java.util.Collections.unmodifiableSet;
+import static java.util.Collections.*;
 import static java.util.stream.Collectors.*;
 
 @SuppressWarnings("unused")
@@ -228,9 +229,19 @@ public class ScanApi extends DefaultTask {
 
         private void writeClass(PrintWriter writer, ClassInfo classInfo, int modifiers) {
             if (classInfo.isAnnotation()) {
+                /*
+                 * Annotation declaration.
+                 */
                 writer.append(Modifier.toString(modifiers & INTERFACE_MASK));
                 writer.append(" @interface ").print(classInfo);
             } else if (classInfo.isStandardClass()) {
+                /*
+                 * Class declaration.
+                 */
+                List<String> annotationNames = toNames(readClassAnnotationsFor(classInfo));
+                if (!annotationNames.isEmpty()) {
+                    writer.append(asAnnotations(annotationNames));
+                }
                 writer.append(Modifier.toString(modifiers & CLASS_MASK));
                 writer.append(" class ").print(classInfo);
                 Set<ClassInfo> superclasses = classInfo.getDirectSuperclasses();
@@ -242,6 +253,13 @@ public class ScanApi extends DefaultTask {
                     writer.append(" implements ").print(stringOf(interfaces));
                 }
             } else {
+                /*
+                 * Interface declaration.
+                 */
+                List<String> annotationNames = toNames(readInterfaceAnnotationsFor(classInfo));
+                if (!annotationNames.isEmpty()) {
+                    writer.append(asAnnotations(annotationNames));
+                }
                 writer.append(Modifier.toString(modifiers & INTERFACE_MASK));
                 writer.append(" interface ").print(classInfo);
                 Set<ClassInfo> superinterfaces = classInfo.getDirectSuperinterfaces();
@@ -253,7 +271,7 @@ public class ScanApi extends DefaultTask {
         }
 
         private void writeMethods(PrintWriter writer, List<MethodInfo> methods) {
-            Collections.sort(methods);
+            sort(methods);
             for (MethodInfo method : methods) {
                 if (isVisible(method.getAccessFlags()) // Only public and protected methods
                         && isValid(method.getAccessFlags(), METHOD_MASK) // Excludes bridge and synthetic methods
@@ -264,7 +282,7 @@ public class ScanApi extends DefaultTask {
         }
 
         private void writeFields(PrintWriter output, List<FieldInfo> fields) {
-            Collections.sort(fields);
+            sort(fields);
             for (FieldInfo field : fields) {
                 if (isVisible(field.getAccessFlags()) && isValid(field.getAccessFlags(), FIELD_MASK)) {
                     output.append("  ").println(field);
@@ -284,6 +302,36 @@ public class ScanApi extends DefaultTask {
                 }
             }
             return 0;
+        }
+
+        private List<String> toNames(Collection<ClassInfo> classes) {
+            return classes.stream()
+                .map(ClassInfo::toString)
+                .filter(ScanApi::isApplicationClass)
+                .collect(toList());
+        }
+
+        private Set<ClassInfo> readClassAnnotationsFor(ClassInfo classInfo) {
+            Set<ClassInfo> annotations = new HashSet<>(classInfo.getAnnotations());
+            annotations.addAll(selectInheritedAnnotations(classInfo.getSuperclasses()));
+            annotations.addAll(selectInheritedAnnotations(classInfo.getImplementedInterfaces()));
+            return annotations;
+        }
+
+        private Set<ClassInfo> readInterfaceAnnotationsFor(ClassInfo classInfo) {
+            Set<ClassInfo> annotations = new HashSet<>(classInfo.getAnnotations());
+            annotations.addAll(selectInheritedAnnotations(classInfo.getSuperinterfaces()));
+            return annotations;
+        }
+
+        /**
+         * Returns those annotations which have themselves been annotated as "Inherited".
+         */
+        private List<ClassInfo> selectInheritedAnnotations(Collection<ClassInfo> classes) {
+            return classes.stream()
+                .flatMap(cls -> cls.getAnnotations().stream())
+                .filter(ann -> ann.hasMetaAnnotation(Inherited.class.getName()))
+                .collect(toList());
         }
 
         private MethodInfo filterAnnotationsFor(MethodInfo method) {
@@ -317,6 +365,14 @@ public class ScanApi extends DefaultTask {
 
     private static String stringOf(Collection<ClassInfo> items) {
         return items.stream().map(ClassInfo::toString).collect(joining(", "));
+    }
+
+    private static String asAnnotations(Collection<String> items) {
+        return items.stream().collect(joining(" @", "@", " "));
+    }
+
+    private static boolean isApplicationClass(String typeName) {
+        return !typeName.startsWith("java.") && !typeName.startsWith("kotlin.");
     }
 
     private static URL toURL(File file) throws MalformedURLException {

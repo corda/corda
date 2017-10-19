@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.internal.VisibleForTesting
 import com.google.common.primitives.Primitives
-import net.corda.core.cordapp.CordappContext
 import net.corda.core.flows.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -34,7 +33,7 @@ data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String,
  */
 object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactory {
     // TODO: Replace with a per app classloader/cordapp provider/cordapp loader - this will do for now
-    var classloader = javaClass.classLoader
+    var classloader: ClassLoader = javaClass.classLoader
 
     override fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
