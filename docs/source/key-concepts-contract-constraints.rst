@@ -95,9 +95,9 @@ to specify JAR URLs in the case that the CorDapp(s) involved in testing already 
 MockNetwork/MockNode
 ********************
 
-The most simple way to ensure that a vanilla instance of a MockNode generates the correct CorDapps is to make a call
-to ``setCordappPackages`` before the MockNetwork/Node are created and then ``unsetCordappPackages`` after the test
-has finished. These calls will cause the ``AbstractNode`` to use the named packages as sources for CorDapps. All files
+The most simple way to ensure that a vanilla instance of a MockNode generates the correct CorDapps is to use the
+``cordappPackages`` constructor parameter (Kotlin) or the ``setCordappPackages`` method on ``MockNetworkParameters`` (Java)
+when creating the MockNetwork. This will cause the ``AbstractNode`` to use the named packages as sources for CorDapps. All files
 within those packages will be zipped into a JAR and added to the attachment store and loaded as CorDapps by the
 ``CordappLoader``. An example of this usage would be:
 
@@ -108,17 +108,7 @@ within those packages will be zipped into a JAR and added to the attachment stor
 
          @Before
          void setup() {
-             // The ordering of the two below lines is important - if the MockNetwork is created before the nodes and network
-             // are created the CorDapps will not be loaded into the MockNodes correctly.
-             setCordappPackages(Arrays.asList("com.domain.cordapp"))
-             network = new MockNetwork()
-         }
-
-         @After
-         void teardown() {
-             // This must be called at the end otherwise the global state set by setCordappPackages may leak into future
-             // tests in the same test runner environment.
-             unsetCordappPackages()
+             network = new MockNetwork(new MockNetworkParameters().setCordappPackages(Arrays.asList("com.domain.cordapp")))
          }
 
          ... // Your tests go here

@@ -13,7 +13,7 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `issue key`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(false, true)
+        val mockNet = MockNetwork(threadPerNode = true)
 
         // Set up values we'll need
         val notaryNode = mockNet.createNotaryNode()
@@ -53,7 +53,7 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `verifies identity name`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(false, true)
+        val mockNet = MockNetwork(threadPerNode = true)
 
         // Set up values we'll need
         val notaryNode = mockNet.createNotaryNode(DUMMY_NOTARY.name)
@@ -78,7 +78,7 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `verifies signature`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(false, true)
+        val mockNet = MockNetwork(threadPerNode = true)
 
         // Set up values we'll need
         val notaryNode = mockNet.createNotaryNode(DUMMY_NOTARY.name)

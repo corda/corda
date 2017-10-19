@@ -61,6 +61,23 @@ fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMem
     return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
 }
 
+/** Helper builder for configuring a [MockNetwork] from Java. */
+@Suppress("unused")
+data class MockNetworkParameters(
+        val networkSendManuallyPumped: Boolean = false,
+        val threadPerNode: Boolean = false,
+        val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+        val defaultFactory: MockNetwork.Factory<*> = MockNetwork.DefaultFactory,
+        val initialiseSerialization: Boolean = true,
+        val cordappPackages: List<String> = emptyList()) {
+    fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
+    fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
+    fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
+    fun setDefaultFactory(defaultFactory: MockNetwork.Factory<*>) = copy(defaultFactory = defaultFactory)
+    fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
+    fun setCordappPackages(cordappPackages: List<String>) = copy(cordappPackages = cordappPackages)
+}
+
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
  * Components that do IO are either swapped out for mocks, or pointed to a [Jimfs] in memory filesystem or an in
@@ -74,13 +91,16 @@ fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMem
  *
  *    LogHelper.setLevel("+messages")
  */
-class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
-                  private val threadPerNode: Boolean = false,
-                  servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
-                  InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-                  private val defaultFactory: Factory<*> = MockNetwork.DefaultFactory,
-                  private val initialiseSerialization: Boolean = true,
-                  private val cordappPackages: List<String> = emptyList()) : Closeable {
+class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+                  private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
+                  private val threadPerNode: Boolean = defaultParameters.threadPerNode,
+                  servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
+                  private val defaultFactory: Factory<*> = defaultParameters.defaultFactory,
+                  private val initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
+    /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
+    constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
+
     companion object {
         // TODO In future PR we're removing the concept of network map node so the details of this mock are not important.
         val MOCK_NET_MAP = Party(CordaX500Name(organisation = "Mock Network Map", locality = "Madrid", country = "ES"), DUMMY_KEY_1.public)

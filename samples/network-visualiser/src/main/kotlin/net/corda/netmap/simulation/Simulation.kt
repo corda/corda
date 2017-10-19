@@ -140,7 +140,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val mockNet = MockNetwork(networkSendManuallyPumped, runAsync, cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract"))
+    val mockNet = MockNetwork(
+            networkSendManuallyPumped = networkSendManuallyPumped,
+            threadPerNode = runAsync,
+            cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract"))
     // This one must come first.
     val networkMap = mockNet.startNetworkMapNode(nodeFactory = NetworkMapNodeFactory)
     val notary = mockNet.createNotaryNode(validating = false, nodeFactory = NotaryNodeFactory)
