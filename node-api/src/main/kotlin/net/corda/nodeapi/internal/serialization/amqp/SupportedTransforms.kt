@@ -1,19 +1,19 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
-import net.corda.core.serialization.CordaSerializationTransformRenames
+import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
+import net.corda.core.serialization.CordaSerializationTransformRenames
 
 /**
- * Utility class that defines an instance of a transform we support
+ * Utility class that defines an instance of a transform we support.
  *
- * @property type The transform annotation
+ * @property type The transform annotation.
  * @property enum Maps the annotaiton onto a transform type, we expect there are multiple annotations that
- * would map to a single transform type
- * @property f Anonymous function that should return a list of Annotations encapsualted by the parent annotation
+ * would map to a single transform type.
+ * @property getAnnotations Anonymous function that should return a list of Annotations encapsualted by the parent annotation
  * that reference the transform. Notionally this allows the code that extracts transforms to work on single instances
- * of a transform or a meta list of them
+ * of a transform or a meta list of them.
  */
 data class SupportedTransform(
         val type: Class<out Annotation>,
@@ -37,7 +37,7 @@ private val wrapperExtract = { x: Annotation ->
 private val singleExtract = { x: Annotation -> listOf(x) }
 
 /**
- * Utility list of all transforms we support that simplifies our generator
+ * Utility list of all transforms we support that simplifies our generation code
  *
  * NOTE: We have to support single instances of the transform annotations as well as the wrapping annotation
  * when many instances are repeated

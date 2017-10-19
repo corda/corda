@@ -1,11 +1,11 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import java.util.*
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformRename
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
+import java.util.*
 
 // NOTE: We are effectively going to replicate the annotations, we need to do this because
 // we can't instantiate instances of those annotation classes and this code needs to
@@ -14,7 +14,7 @@ import java.io.NotSerializableException
  * Base class for representations of specific types of transforms as applied to a type within the
  * Corda serialisation framework
  */
-sealed class Transform : DescribedType {
+abstract class Transform : DescribedType {
     companion object : DescribedTypeConstructor<Transform> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_ELEMENT.amqpDescriptor
 
@@ -92,10 +92,10 @@ class EnumDefaultSchemeTransform(val old: String, val new: String) : Transform()
     override fun getDescribed(): Any = listOf(name, old, new)
     override fun params() = "old=${old.esc()} new=${new.esc()}"
 
-    override fun equals(other: Any?): Boolean {
-        val o = other as? EnumDefaultSchemeTransform ?: return super.equals(other)
-        return o.new == new && o.old == old
-    }
+    override fun equals(other: Any?) = (
+            (other is EnumDefaultSchemeTransform && other.new == new && other.old == old) || super.equals(other))
+
+    override fun hashCode() = (17 * new.hashCode()) + old.hashCode()
 
     override val name: String get() = typeName
 }
@@ -130,17 +130,21 @@ class RenameSchemaTransform(val from: String, val to: String) : Transform() {
 
     override fun params() = "from=${from.esc()} to=${to.esc()}"
 
-    override fun equals(other: Any?): Boolean {
-        val o = other as? RenameSchemaTransform ?: return super.equals(other)
-        return o.from == from && o.to == to
-    }
+    override fun equals(other: Any?) = (
+            (other is RenameSchemaTransform && other.from == from && other.to == to) || super.equals(other))
+
+    override fun hashCode() = (11 * from.hashCode()) + to.hashCode()
 
     override val name: String get() = typeName
 }
 
 
 /**
- * @property types is a list of serialised types that have transforms, each list element is a
+ * Represents the set of all transforms that can be a applied to all classes represented as part of
+ * an AMQP schema. It forms a part of the AMQP envelope alongside the [Schema] and the serialized bytes
+ *
+ * @property types maps class names to a map of transformation types. In turn those transformation types
+ * are each a list of instances o that transform.
  */
 data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, MutableList<Transform>>>) : DescribedType {
     companion object : DescribedTypeConstructor<TransformsSchema> {
@@ -158,31 +162,38 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
             val rtn = mutableMapOf<String, EnumMap<TransformTypes, MutableList<Transform>>>()
 
             schema.types.forEach { type ->
-                val clazz = try {
-                    sf.classloader.loadClass(type.name)
-                } catch (e: ClassNotFoundException) {
-                    return@forEach
-                }
+                sf.transformsCache.computeIfAbsent(type.name) {
+                    val transforms = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
+                    try {
+                        val clazz = sf.classloader.loadClass(type.name)
 
-                supportedTransforms.forEach { transform ->
-                    clazz.getAnnotation(transform.type)?.let { list ->
-                        transform.getAnnotations(list).forEach {
-                            val t = transform.enum.build(it)
+                        supportedTransforms.forEach { transform ->
+                            clazz.getAnnotation(transform.type)?.let { list ->
+                                transform.getAnnotations(list).forEach { annotation ->
+                                    val t = transform.enum.build(annotation)
 
-                            val m = rtn.computeIfAbsent(type.name) {
-                                EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
+                                    // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
+                                    // ignore them it feels like a good thing to alert the user to since this is
+                                    // more than likely a typo in their code so best make it an actual error
+                                    if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }
+                                            .filter { t == it }.isNotEmpty()) {
+                                        throw NotSerializableException(
+                                                "Repeated unique transformation annotation of type ${t.name}")
+                                    }
+
+                                    transforms[transform.enum]!!.add(t)
+                                }
                             }
-
-                            // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
-                            // ignore them it feels like a good thing to alert the user to since this is
-                            // more than likely a typo in their code so best make it an actual error
-                            if (m.computeIfAbsent(transform.enum) { mutableListOf() }.filter { it == t }.isNotEmpty()) {
-                                throw NotSerializableException(
-                                        "Repeated unique transformation annotation of type ${t.name}")
-                            }
-
-                            m[transform.enum]!!.add(t)
                         }
+                    } catch (_: ClassNotFoundException) {
+                        // if we can't load the class we'll end up caching an empty list which is fine as that
+                        // list, on lookup, won't be included in the schema because it's empty
+                    }
+
+                    transforms
+                }.apply {
+                    if (isNotEmpty()) {
+                        rtn[type.name] = this
                     }
                 }
             }
@@ -198,7 +209,6 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          */
         override fun newInstance(described: Any?): TransformsSchema {
             val rtn = mutableMapOf<String, EnumMap<TransformTypes, MutableList<Transform>>>()
-
             val describedType = described as? DescribedType ?: return TransformsSchema(rtn)
 
             if (describedType.descriptor != DESCRIPTOR) {
@@ -207,7 +217,6 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
 
             val map = describedType.described as? Map<*, *> ?:
                     throw NotSerializableException("Transform schema must be encoded as a map")
-
 
             map.forEach { type ->
                 val fingerprint = type.key as? String ?:
@@ -238,6 +247,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
     override fun toString(): String {
         data class Indent(val indent: String) {
             @Suppress("UNUSED") constructor(i: Indent) : this("  ${i.indent}")
+
             override fun toString() = indent
         }
 

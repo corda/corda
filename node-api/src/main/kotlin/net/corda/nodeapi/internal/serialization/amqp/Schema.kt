@@ -17,10 +17,10 @@ import java.util.*
 import net.corda.nodeapi.internal.serialization.carpenter.Field as CarpenterField
 import net.corda.nodeapi.internal.serialization.carpenter.Schema as CarpenterSchema
 
+const val DESCRIPTOR_DOMAIN: String = "net.corda"
 
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
 val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
-
 
 /**
  * This and the classes below are OO representations of the AMQP XML schema described in the specification. Their

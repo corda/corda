@@ -1,10 +1,9 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import org.apache.qpid.proton.amqp.DescribedType
-
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
+import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
 

@@ -10,10 +10,17 @@ import org.apache.qpid.proton.amqp.UnsignedLong
  * Repeated here for brevity:
  *   50530 - R3 - Mike Hearn - mike&r3.com
  */
-const val DESCRIPTOR_TOP_32BITS: Long = 0xc5620000
+const val DESCRIPTOR_TOP_32BITS: Long = 0xc562 shl(32 + 16)
 
+/**
+ * AMQP desriptor ID's for our custom types.
+ *
+ * NEVER DELETE OR CHANGE THE ID ASSOCIATED WITH A TYPE
+ *
+ * these are encoded as part of a serialised blob and doing so would render us unable to
+ * de-serialise that blob!!!
+ */
 enum class AMQPDescriptorRegistry(val id: Long) {
-
     ENVELOPE(1),
     SCHEMA(2),
     OBJECT_DESCRIPTOR(3),

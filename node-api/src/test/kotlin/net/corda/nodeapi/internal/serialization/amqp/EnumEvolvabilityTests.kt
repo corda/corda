@@ -377,4 +377,31 @@ class EnumEvolvabilityTests {
         assertEquals(2, e2S[TransformTypes.EnumDefault]!!.size)
         assertEquals(1, e3S[TransformTypes.EnumDefault]!!.size)
     }
+
+    @Test
+    fun testCache() {
+        data class C2(val annotatedEnum: AnnotatedEnumOnce)
+        data class C1(val annotatedEnum: AnnotatedEnumOnce)
+
+        val sf = testDefaultFactory()
+
+        assertEquals(0, sf.transformsCache.size)
+
+        val sb1 = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C1(AnnotatedEnumOnce.D))
+
+        assertEquals(2, sf.transformsCache.size)
+        assertTrue(sf.transformsCache.containsKey(C1::class.java.name))
+        assertTrue(sf.transformsCache.containsKey(AnnotatedEnumOnce::class.java.name))
+
+        val sb2 = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C2(AnnotatedEnumOnce.D))
+
+        assertEquals(3, sf.transformsCache.size)
+        assertTrue(sf.transformsCache.containsKey(C1::class.java.name))
+        assertTrue(sf.transformsCache.containsKey(C2::class.java.name))
+        assertTrue(sf.transformsCache.containsKey(AnnotatedEnumOnce::class.java.name))
+
+        assertEquals (sb1.transformsSchema.types[AnnotatedEnumOnce::class.java.name],
+                sb2.transformsSchema.types[AnnotatedEnumOnce::class.java.name])
+
+    }
 }
