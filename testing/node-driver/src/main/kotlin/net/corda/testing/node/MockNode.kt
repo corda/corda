@@ -2,13 +2,13 @@ package net.corda.testing.node
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
@@ -31,7 +31,6 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
@@ -41,7 +40,6 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -53,7 +51,6 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -353,7 +350,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
                 myLegalName = legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
-            whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
+            doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             configOverrides(it)
         }
         return nodeFactory.create(config, this, networkMapAddress, id, notaryIdentity, entropyRoot).apply {
@@ -391,7 +388,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     @JvmOverloads
     fun createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name, validating: Boolean = true): StartedNode<MockNode> {
         return createNode(legalName = legalName, configOverrides = {
-            whenever(it.notary).thenReturn(NotaryConfig(validating))
+            doReturn(NotaryConfig(validating)).whenever(it).notary
         })
     }
 
@@ -399,7 +396,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                                         validating: Boolean = true,
                                         nodeFactory: Factory<N>): StartedNode<N> {
         return createNode(legalName = legalName, nodeFactory = nodeFactory, configOverrides = {
-            whenever(it.notary).thenReturn(NotaryConfig(validating))
+            doReturn(NotaryConfig(validating)).whenever(it).notary
         })
     }
 

@@ -3,6 +3,7 @@
 
 package net.corda.testing
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -24,6 +25,8 @@ import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.internal.serialization.AMQP_ENABLED
+import org.mockito.internal.stubbing.answers.ThrowsException
+import org.mockito.stubbing.Answer
 import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
@@ -177,3 +180,19 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
 /** Returns the identity of the first notary found on the network */
 fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
+
+/**
+ * A method on a mock was called, but no behaviour was previously specified for that method.
+ * You can use [com.nhaarman.mockito_kotlin.doReturn] or similar to specify behaviour, see Mockito documentation for details.
+ */
+class UndefinedMockBehaviorException(message: String) : RuntimeException(message)
+
+/**
+ * Create a Mockito mock that has [UndefinedMockBehaviorException] as the default behaviour of all methods.
+ * @param T the type to mock. Note if you want to use [com.nhaarman.mockito_kotlin.doCallRealMethod] on a Kotlin interface,
+ * it won't work unless you mock a (trivial) abstract implementation of that interface instead.
+ */
+inline fun <reified T : Any> rigorousMock() = mock<T>(Answer {
+    // Use ThrowsException to hack the stack trace, and lazily so we can customise the message:
+    ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it.")).answer(it)
+})

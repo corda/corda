@@ -1,5 +1,6 @@
 package net.corda.services.messaging
 
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
@@ -61,8 +62,8 @@ class P2PSecurityTest : NodeBasedTest() {
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName).also {
-            whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.chooseIdentity().name))
-            whenever(it.activeMQServer).thenReturn(ActiveMqServerConfiguration(BridgeConfiguration(1001, 2, 3.4)))
+            doReturn(NetworkMapInfo(networkMapNode.internals.configuration.p2pAddress, networkMapNode.info.chooseIdentity().name)).whenever(it).networkMapService
+            doReturn(ActiveMqServerConfiguration(BridgeConfiguration(1001, 2, 3.4))).whenever(it).activeMQServer
         }
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
         return SimpleNode(config, trustRoot = trustRoot).apply { start() }
@@ -73,6 +74,6 @@ class P2PSecurityTest : NodeBasedTest() {
         val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(legalIdentity), 1, serial = 1)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(keyService, identity.public), network.myAddress)
-        return network.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.network.myAddress)
+        return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.network.myAddress)
     }
 }
