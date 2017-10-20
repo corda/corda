@@ -39,7 +39,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import kotlin.test.assertEquals
 
-internal class HTTPNetworkMapClientTest {
+class HTTPNetworkMapClientTest {
     private lateinit var server: Server
 
     private lateinit var networkMapClient: NetworkMapClient
