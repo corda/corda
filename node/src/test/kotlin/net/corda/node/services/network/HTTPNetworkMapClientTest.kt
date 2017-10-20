@@ -11,6 +11,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.testing.TestDependencyInjectionBase
+import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import org.eclipse.jetty.server.Server
@@ -66,8 +67,7 @@ class HTTPNetworkMapClientTest : TestDependencyInjectionBase() {
             Thread.sleep(100)
         }
 
-        val hostAndPort = server.connectors.mapNotNull { it as? ServerConnector }
-                .first()
+        val hostAndPort = server.connectors.mapNotNull { it as? ServerConnector }.first()
         networkMapClient = HTTPNetworkMapClient("http://${hostAndPort.host}:${hostAndPort.localPort}/api/network-map")
     }
 
@@ -77,32 +77,32 @@ class HTTPNetworkMapClientTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun register() {
+    fun `registered node is added to the network map`() {
         // Create node info.
-        val signedNodeInfo = createStubedNodeInfo("Test1")
+        val signedNodeInfo = createNodeInfo("Test1")
         val nodeInfo = signedNodeInfo.verified()
 
         networkMapClient.publish(signedNodeInfo)
 
         val nodeInfoHash = nodeInfo.serialize().sha256()
 
-        assertEquals(listOf(nodeInfoHash), networkMapClient.getNetworkMap())
+        assertThat(networkMapClient.getNetworkMap()).containsExactly(nodeInfoHash)
         assertEquals(nodeInfo, networkMapClient.getNodeInfo(nodeInfoHash))
 
-        val signedNodeInfo2 = createStubedNodeInfo("Test2")
+        val signedNodeInfo2 = createNodeInfo("Test2")
         val nodeInfo2 = signedNodeInfo2.verified()
         networkMapClient.publish(signedNodeInfo2)
 
         val nodeInfoHash2 = nodeInfo2.serialize().sha256()
-        assertEquals(listOf(nodeInfoHash, nodeInfoHash2).sorted(), networkMapClient.getNetworkMap().sorted())
+        assertThat(networkMapClient.getNetworkMap()).containsExactly(nodeInfoHash, nodeInfoHash2)
         assertEquals(nodeInfo2, networkMapClient.getNodeInfo(nodeInfoHash2))
     }
 
-    private fun createStubedNodeInfo(name: String): SignedData<NodeInfo> {
+    private fun createNodeInfo(organisation: String): SignedData<NodeInfo> {
         val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val clientCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = name, locality = "London", country = "GB"), keyPair.public)
+        val clientCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisation, locality = "London", country = "GB"), keyPair.public)
         val certPath = buildCertPath(clientCert.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-        val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.$name.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
+        val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.$organisation.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
 
         // Create digital signature.
         val digitalSignature = DigitalSignature.WithKey(keyPair.public, Crypto.doSign(keyPair.private, nodeInfo.serialize().bytes))
@@ -136,9 +136,12 @@ internal class MockNetworkMapServer {
     @Path("{var}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
-        return nodeInfos[SecureHash.parse(nodeInfoHash)]?.let {
-            Response.ok(it.serialize().bytes).build()
-        } ?: Response.status(Response.Status.NOT_FOUND).build()
+        val nodeInfo = nodeInfos[SecureHash.parse(nodeInfoHash)]
+        return if (nodeInfo != null) {
+            Response.ok(nodeInfo.serialize().bytes)
+        } else {
+            Response.status(Response.Status.NOT_FOUND)
+        }.build()
     }
 }
 
