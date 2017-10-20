@@ -7,9 +7,9 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisMessagingComponent

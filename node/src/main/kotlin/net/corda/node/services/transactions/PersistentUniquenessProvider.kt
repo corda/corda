@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -8,10 +9,11 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.parsePublicKeyBase58
-import net.corda.core.utilities.toBase58String
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import java.io.Serializable
@@ -44,7 +46,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
             var name: String = "",
 
             @Column(name = "requesting_party_key", length = 255)
-            var owningKey: String = ""
+            var owningKey: ByteArray = ByteArray(0)
     ) : Serializable
 
     @Entity
@@ -75,14 +77,14 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                                             inputIndex = it.consumingIndex,
                                             requestingParty = Party(
                                                     name = CordaX500Name.parse(it.party.name),
-                                                    owningKey = parsePublicKeyBase58(it.party.owningKey))))
+                                                    owningKey = Crypto.decodePublicKey(it.party.owningKey))))
                         },
                         toPersistentEntity = { (txHash, index): StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
                             PersistentNotaryCommit(
                                     id = PersistentStateRef(txHash.toString(), index),
                                     consumingTxHash = id.toString(),
                                     consumingIndex = inputIndex,
-                                    party = PersistentParty(requestingParty.name.toString(), requestingParty.owningKey.toBase58String())
+                                    party = PersistentParty(requestingParty.name.toString(), requestingParty.owningKey.encoded)
                             )
                         },
                         persistentEntityClass = PersistentNotaryCommit::class.java
