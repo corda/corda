@@ -1,9 +1,7 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
+import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -32,6 +30,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Test
 import java.math.BigInteger
@@ -81,7 +80,9 @@ private class NodePair(private val mockNet: MockNetwork) {
 }
 
 class VaultSoftLockManagerTest {
-    private val mockVault: VaultServiceInternal = mock()
+    private val mockVault = rigorousMock<VaultServiceInternal>().also {
+        doNothing().whenever(it).softLockRelease(any(), anyOrNull())
+    }
     private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
             return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {

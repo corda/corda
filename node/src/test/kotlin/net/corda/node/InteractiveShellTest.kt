@@ -1,7 +1,6 @@
 package net.corda.node
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.client.jackson.JacksonSupport
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
@@ -17,6 +16,7 @@ import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_IDENTITY
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -83,5 +83,5 @@ class InteractiveShellTest {
     @Test
     fun party() = check("party: \"${MEGA_CORP.name}\"", MEGA_CORP.name.toString())
 
-    class DummyFSM(val flowA: FlowA) : FlowStateMachine<Any?> by mock()
+    class DummyFSM(val flowA: FlowA) : FlowStateMachine<Any?> by rigorousMock()
 }

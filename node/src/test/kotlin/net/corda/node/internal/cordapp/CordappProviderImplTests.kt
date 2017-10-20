@@ -1,6 +1,5 @@
 package net.corda.node.internal.cordapp
 
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Assert
@@ -40,7 +39,7 @@ class CordappProviderImplTests {
     @Test
     fun `test that we find a cordapp class that is loaded into the store`() {
         val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
-        val provider = CordappProviderImpl(loader, mock())
+        val provider = CordappProviderImpl(loader, attachmentStore)
         val className = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
         val expected = provider.cordapps.first()
