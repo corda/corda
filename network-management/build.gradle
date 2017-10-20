@@ -1,0 +1,131 @@
+ext {
+    // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
+    // align with the corresponding Corda release.
+    corda_dependency_version = '2.0-20171017.135310-6'
+}
+
+version "$corda_dependency_version"
+
+description 'Network management module encapsulating components such as Doorman, HSM Signing Service and Network Map'
+
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'kotlin'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev'
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+task buildDoormanJAR(type: FatCapsule, dependsOn: 'jar') {
+    group = 'build'
+    applicationClass 'com.r3.corda.networkmanage.doorman.MainKt'
+    archiveName "doorman-${version}-capsule.jar"
+    capsuleManifest {
+        applicationVersion = corda_dependency_version
+        systemProperties['visualvm.display.name'] = 'Doorman'
+        minJavaVersion = '1.8.0'
+        jvmArgs = ['-XX:+UseG1GC']
+    }
+    // Make the resulting JAR file directly executable on UNIX by prepending a shell script to it.
+    // This lets you run the file like so: ./corda.jar
+    // Other than being slightly less typing, this has one big advantage: Ctrl-C works properly in the terminal.
+    reallyExecutable { trampolining() }
+}
+
+task buildHsmJAR(type: FatCapsule, dependsOn: 'jar') {
+    group = 'build'
+    applicationClass 'com.r3.corda.networkmanage.hsm.MainKt'
+    archiveName "hsm-${version}-capsule.jar"
+    capsuleManifest {
+        applicationVersion = corda_dependency_version
+        systemProperties['visualvm.display.name'] = 'HSM Signing Service'
+        minJavaVersion = '1.8.0'
+        jvmArgs = ['-XX:+UseG1GC']
+    }
+    // Make the resulting JAR file directly executable on UNIX by prepending a shell script to it.
+    // This lets you run the file like so: ./corda.jar
+    // Other than being slightly less typing, this has one big advantage: Ctrl-C works properly in the terminal.
+    reallyExecutable { trampolining() }
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: '*.jar')
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    compile "net.corda:corda-core:$corda_dependency_version"
+    compile "net.corda:corda-node:$corda_dependency_version"
+    compile "net.corda:corda-node-api:$corda_dependency_version"
+    testCompile "net.corda:corda-test-utils:$corda_dependency_version"
+    testCompile "net.corda:corda-node-driver:$corda_dependency_version"
+
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
+
+    // Web stuff: for HTTP[S] servlets
+    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    compile "javax.servlet:javax.servlet-api:3.1.0"
+
+    // Jersey for JAX-RS implementation for use in Jetty
+    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    // JOpt: for command line flags.
+    compile "net.sf.jopt-simple:jopt-simple:5.0.2"
+
+    // TypeSafe Config: for simple and human friendly config files.
+    compile "com.typesafe:config:1.3.0"
+
+    // Hibernate audit plugin
+    compile "org.hibernate:hibernate-envers:5.2.11.Final"
+
+    // Unit testing helpers.
+    testCompile 'junit:junit:4.12'
+    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile "com.nhaarman:mockito-kotlin:0.6.1"
+
+    compile('com.atlassian.jira:jira-rest-java-client-core:4.0.0') {
+        // The jira client includes jersey-core 1.5 which breaks everything.
+        exclude module: 'jersey-core'
+    }
+    // Needed by jira rest client
+    compile "com.atlassian.fugue:fugue:2.6.1"
+}
