@@ -5,14 +5,12 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
-import net.corda.nodeapi.internal.serialization.*
+import net.corda.testing.TestDependencyInjectionBase
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import org.eclipse.jetty.server.Server
@@ -24,7 +22,6 @@ import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer
 import org.junit.After
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -39,7 +36,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import kotlin.test.assertEquals
 
-class HTTPNetworkMapClientTest {
+class HTTPNetworkMapClientTest : TestDependencyInjectionBase() {
     private lateinit var server: Server
 
     private lateinit var networkMapClient: NetworkMapClient
@@ -47,25 +44,6 @@ class HTTPNetworkMapClientTest {
     private val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", organisation = "R3 LTD", locality = "London", country = "GB"), rootCAKey)
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
-
-    companion object {
-        @BeforeClass
-        @JvmStatic
-        fun initSerialization() {
-            try {
-                SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                    registerScheme(KryoServerSerializationScheme())
-                    registerScheme(AMQPServerSerializationScheme())
-                }
-                SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
-                SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
-                SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
-                SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
-            } catch (ignored: Exception) {
-                // Ignored
-            }
-        }
-    }
 
     @Before
     fun setUp() {
