@@ -55,8 +55,8 @@ Helper methods are also provided with default values for arguments:
 The API provides both static (snapshot) and dynamic (snapshot with streaming updates) methods for a defined set of
 filter criteria:
 
-- Use ``queryBy`` to obtain a only current snapshot of data (for a given ``QueryCriteria``)
-- Use ``trackBy`` to obtain a both a current snapshot and a future stream of updates (for a given ``QueryCriteria``)
+- Use ``queryBy`` to obtain a current snapshot of data (for a given ``QueryCriteria``)
+- Use ``trackBy`` to obtain both a current snapshot and a future stream of updates (for a given ``QueryCriteria``)
   
 .. note:: Streaming updates are only filtered based on contract type and state status (UNCONSUMED, CONSUMED, ALL)
 
