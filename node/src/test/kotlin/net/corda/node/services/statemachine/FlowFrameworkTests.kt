@@ -206,7 +206,7 @@ class FlowFrameworkTests {
         // Check flows completed cleanly and didn't get out of phase
         assertEquals(4, receivedCount, "Flow should have exchanged 4 unique messages")// Two messages each way
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
-        assertTrue(sentCount >= receivedCount, "Node restart should have retransmitted messages")
+        assertTrue(sentCount > receivedCount, "Node restart should have retransmitted messages")
         node2b.database.transaction {
             assertEquals(0, node2b.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
         }
