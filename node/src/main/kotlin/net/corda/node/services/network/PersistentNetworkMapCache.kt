@@ -1,6 +1,8 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -17,6 +19,7 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.schemas.NodeInfoSchemaV1
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -323,9 +326,9 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
 
     private fun findByIdentityKey(session: Session, identityKey: PublicKey): List<NodeInfoSchemaV1.PersistentNodeInfo> {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKey = :owningKey",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKeyHash = :owningKeyHash",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
-        query.setParameter("owningKey", identityKey.toBase58String())
+        query.setParameter("owningKeyHash", identityKey.toStringShort())
         return query.resultList
     }
 

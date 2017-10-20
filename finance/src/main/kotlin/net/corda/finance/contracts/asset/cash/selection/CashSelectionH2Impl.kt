@@ -1,6 +1,7 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import net.corda.core.contracts.Amount
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.*
@@ -44,7 +45,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
                 (if (notary != null)
                     " AND vs.notary_name = ?" else "") +
                 (if (onlyFromIssuerParties.isNotEmpty())
-                    " AND ccs.issuer_key IN (?)" else "") +
+                    " AND ccs.issuer_key_hash IN (?)" else "") +
                 (if (withIssuerRefs.isNotEmpty())
                     " AND ccs.issuer_ref IN (?)" else "")
 
@@ -57,7 +58,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
         if (notary != null)
             psSelectJoin.setString(++pIndex, notary.name.toString())
         if (onlyFromIssuerParties.isNotEmpty())
-            psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toBase58String() as Any}.toTypedArray() )
+            psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any}.toTypedArray() )
         if (withIssuerRefs.isNotEmpty())
             psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray())
         log.debug { psSelectJoin.toString() }
