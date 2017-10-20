@@ -45,6 +45,11 @@ We can picture the hierarchy as follows:
 
 .. image:: resources/state-hierarchy.png
 
+.. note:: These interfaces are used by the vault to decide which states to store. By default the vault stores all states
+   on which it is a participant. For states which implement ``OwnableState`` it normally only retains the state if it is the
+   owner. The exception to these two cases is if a state implements ``ObservedState``, in which case the vault will also
+   keep a copy of the state if vault belongs to an observer of the state.
+
 LinearState
 ^^^^^^^^^^^
 The ``LinearState`` interface is defined as follows:
@@ -109,6 +114,9 @@ You can also customize your state by implementing the following interfaces:
 
 * ``SchedulableState``, which allows us to schedule future actions for the state (e.g. a coupon payment on a bond) (see
   :doc:`event-scheduling`)
+
+* ``ObservedState``, which allows observers for a state to be defined, separate to the participants. These are parties
+  which are interested in the state but are not directly involved, such as a regulator.
 
 User-defined fields
 -------------------

@@ -58,7 +58,7 @@ filter criteria:
 - Use ``queryBy`` to obtain a only current snapshot of data (for a given ``QueryCriteria``)
 - Use ``trackBy`` to obtain a both a current snapshot and a future stream of updates (for a given ``QueryCriteria``)
   
-.. note:: Streaming updates are only filtered based on contract type and state status (UNCONSUMED, CONSUMED, ALL)
+.. note:: Streaming updates are only filtered based on contract type and state status (UNCONSUMED, CONSUMED, OBSERVED, ALL)
 
 Simple pagination (page number and size) and sorting (directional ordering using standard or custom property
 attributes) is also specifiable. Defaults are defined for paging (pageNumber = 1, pageSize = 200) and sorting
@@ -78,7 +78,8 @@ and/or composition and a rich set of operators to include:
 There are four implementations of this interface which can be chained together to define advanced filters.
 
 1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED,
-   CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED).
+   CONSUMED, OBSERVED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED,
+   CONSUMED).
 
 	.. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, always include soft
 	   locked states).
@@ -472,7 +473,7 @@ Behavioural notes
 1. ``TrackBy`` updates do not take into account the full criteria specification due to different and more restrictive
    syntax in `observables <https://github.com/ReactiveX/RxJava/wiki>`_ filtering (vs full SQL-92 JDBC filtering as used
    in snapshot views). Specifically, dynamic updates are filtered by ``contractStateType`` and ``stateType``
-   (UNCONSUMED, CONSUMED, ALL) only
+   (UNCONSUMED, CONSUMED, OBSERVED, ALL) only
 2. ``QueryBy`` and ``TrackBy`` snapshot views using pagination may return different result sets as each paging request
    is a separate SQL query on the underlying database, and it is entirely conceivable that state modifications are
    taking place in between and/or in parallel to paging requests. When using pagination, always check the value of the
