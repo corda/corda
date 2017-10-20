@@ -78,7 +78,7 @@ private class BankOfCordaDriver {
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()
-                    }, isDebug = true)
+                    }, isDebug = true, extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset"))
                 }
                 Role.ISSUE_CASH_RPC -> {
                     println("Requesting Cash via RPC ...")
