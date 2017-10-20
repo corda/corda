@@ -3,8 +3,6 @@ Network Map
 
 Protocol Design
 ---------------
-.. note:: This section is intended for developers who want to implement their own network map service.
-
 The node info publishing protocol:
 
 * Create a node info object, and sign it with node's private key to create a ``SignedData<NodeInfo>`` object.

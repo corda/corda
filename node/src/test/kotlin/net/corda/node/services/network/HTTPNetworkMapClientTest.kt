@@ -1,4 +1,4 @@
-package net.corda.core.node.services
+package net.corda.node.services.network
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.crypto.*
