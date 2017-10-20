@@ -16,9 +16,9 @@ The node info publishing protocol:
 
 Node side network map update protocol:
 
-* The Corda node will query the network map service periodically according to the network parameter.
+* The Corda node will query the network map service periodically according to the network parameters.
 
-* The network map service returns a signed ``NetworkMap`` object, containing list of node info hashes and the network parameter hashes.
+* The network map service returns a signed ``NetworkMap`` object, containing list of node info hashes and the network parameters hashes.
 
 * The node updates its local copy of NodeInfos and NetworkParameters if it is different from the newly downloaded NetworkMap.
 
