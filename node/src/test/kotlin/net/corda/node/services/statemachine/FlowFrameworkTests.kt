@@ -75,7 +75,6 @@ class FlowFrameworkTests {
         bobNode = mockNet.createNode(legalName = BOB_NAME)
 
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
 
         // We intentionally create our own notary and ignore the one provided by the network
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing

@@ -277,15 +277,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                 }
             }
         }
-
-        /**
-         * Makes sure that the [MockNode] is correctly registered on the [MockNetwork]
-         * Please note that [MockNetwork.runNetwork] should be invoked to ensure that all the pending registration requests
-         * were duly processed
-         */
-        fun ensureRegistered() {
-            _nodeReadyFuture.getOrThrow()
-        }
     }
 
     fun createUnstartedNode(forcedID: Int? = null,
@@ -340,7 +331,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         return nodeFactory.create(config, this, id, notaryIdentity, entropyRoot).apply {
             if (start) {
                 start()
-                if (threadPerNode /*&& networkMapAddress != null*/) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
+                if (threadPerNode) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
                 ensureNetworkMapCachesHaveNodeInfos()
             }
             _nodes.add(this)
@@ -405,10 +396,9 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     }
 
     private fun ensureNetworkMapCachesHaveNodeInfos() {
-        val infos = nodes.mapNotNull { it.started }.map { it.info }
+        val infos = nodes.mapNotNull { it.started?.info }
         nodes.filter { it.hasDBConnection() }
-                .mapNotNull { it.started }
-                .map { it.services.networkMapCache }
+                .mapNotNull { it.started?.services?.networkMapCache }
                 .forEach {
                     for (nodeInfo in infos) {
                         it.addNode(nodeInfo)

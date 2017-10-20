@@ -39,7 +39,6 @@ class NotaryServiceTests {
         val notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name, validating = false)
         aliceServices = mockNet.createNode(legalName = ALICE_NAME).services
         mockNet.runNetwork() // Clear network map registration messages
-        notaryNode.internals.ensureRegistered()
         notaryServices = notaryNode.services
         notary = notaryServices.getDefaultNotary()
         alice = aliceServices.myInfo.singleIdentity()
