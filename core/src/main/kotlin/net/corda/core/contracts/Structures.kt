@@ -120,7 +120,9 @@ interface LinearState : ContractState {
 
 /**
  * A state which is observed by parties who are not participants in the state. This does not enforce that the observers
- * are sent a copy of the state, if enforcement of observation is required it must be provided by the contract itself.
+ * are sent a copy of the state. If enforcement of observation is required it must be provided by the contract itself
+ * by requiring signatures from the observers for the contract's verify() function to pass. An example of this is provided
+ * in the observer demo.
  */
 interface ObservedState : ContractState {
     /**

@@ -42,7 +42,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      *
      * @property consumed the set of states which have been consumed (spent).
      * @property produced the set of states which have been produced (issued).
-     * @property observed the set of states which have been observed (produced but are not owned by us).
+     * @property observed the set of states which have been observed (states we are interested in but not participants
+     * of).
      */
     @CordaSerializable
     data class Update<U : ContractState>(
