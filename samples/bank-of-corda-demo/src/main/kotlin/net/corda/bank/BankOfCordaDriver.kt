@@ -23,8 +23,8 @@ fun main(args: Array<String>) {
     BankOfCordaDriver().main(args)
 }
 
-val BANK_USERNAME = "bankUser"
-val BIGCORP_USERNAME = "bigCorpUser"
+const val BANK_USERNAME = "bankUser"
+const val BIGCORP_USERNAME = "bigCorpUser"
 
 val BIGCORP_LEGAL_NAME = CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US")
 
@@ -53,9 +53,6 @@ private class BankOfCordaDriver {
         // The ISSUE_CASH will request some Cash from the ISSUER on behalf of Big Corporation node
         val role = options.valueOf(roleArg)!!
 
-        val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,
-                "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = ValidatingNotaryService.id))
-
         try {
             when (role) {
                 Role.ISSUER -> {
@@ -78,16 +75,25 @@ private class BankOfCordaDriver {
                         waitForAllNodesToFinish()
                     }, isDebug = true)
                 }
-                Role.ISSUE_CASH_RPC -> {
-                    println("Requesting Cash via RPC ...")
-                    val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCIssue(requestParams)
-                    println("Success!! You transaction receipt is ${result.tx.id}")
-                }
-                Role.ISSUE_CASH_WEB -> {
-                    println("Requesting Cash via Web ...")
-                    val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10007)).requestWebIssue(requestParams)
-                    if (result)
-                        println("Successfully processed Cash Issue request")
+                else -> {
+                    val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,
+                            "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = ValidatingNotaryService.id))
+                    when(role) {
+                        Role.ISSUE_CASH_RPC -> {
+                            println("Requesting Cash via RPC ...")
+                            val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCIssue(requestParams)
+                            println("Success!! You transaction receipt is ${result.tx.id}")
+                        }
+                        Role.ISSUE_CASH_WEB -> {
+                            println("Requesting Cash via Web ...")
+                            val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10007)).requestWebIssue(requestParams)
+                            if (result)
+                                println("Successfully processed Cash Issue request")
+                        }
+                        else -> {
+                            throw IllegalArgumentException("Unrecognized role: " + role)
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {
