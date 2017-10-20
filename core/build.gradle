@@ -67,16 +67,6 @@ dependencies {
 
     // JPA 2.1 annotations.
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
-
-    // Web stuff: for HTTP[S] servlets
-    testCompile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
-    testCompile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
-    testCompile "javax.servlet:javax.servlet-api:3.1.0"
-
-    // Jersey for JAX-RS implementation for use in Jetty
-    testCompile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-    testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
-    testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
