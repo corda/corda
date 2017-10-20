@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.1.xsd">
+    <!--  Example of a suppressed library -->
+    <!-- The suppress node can be generated from the HTML report by using the 'suppress' option for each vulnerability found
+    <suppress>
+      <notes><![CDATA[
+      file name: some.jar
+      ]]></notes>
+      <sha1>66734244CE86857018B023A8C56AE0635C56B6A1</sha1>
+      <cpe>cpe:/a:apache:struts:2.0.0</cpe>
+   </suppress>
+    -->
+
+</suppressions>
