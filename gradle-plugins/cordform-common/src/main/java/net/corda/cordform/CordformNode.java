@@ -58,7 +58,16 @@ public class CordformNode implements NodeDefinition {
     }
 
     /**
-     * Set the Artemis P2P port for this node.
+     * Get the artemis address for this node.
+     *
+     * @return This node's P2P address.
+     */
+    public String getP2PAddress() {
+        return config.getString("p2pAddress");
+    }
+
+    /**
+     * Set the Artemis P2P port for this node on localhost.
      *
      * @param p2pPort The Artemis messaging queue port.
      */
@@ -67,12 +76,30 @@ public class CordformNode implements NodeDefinition {
     }
 
     /**
-     * Set the Artemis RPC port for this node.
+     * Set the Artemis P2P address for this node.
+     *
+     * @param p2pAddress The Artemis messaging queue host and port.
+     */
+    public void p2pAddress(String p2pAddress) {
+        config = config.withValue("p2pAddress", ConfigValueFactory.fromAnyRef(p2pAddress));
+    }
+
+    /**
+     * Set the Artemis RPC port for this node on localhost.
      *
      * @param rpcPort The Artemis RPC queue port.
      */
     public void rpcPort(Integer rpcPort) {
         config = config.withValue("rpcAddress", ConfigValueFactory.fromAnyRef(DEFAULT_HOST + ':' + rpcPort));
+    }
+
+    /**
+     * Set the Artemis RPC address for this node.
+     *
+     * @param rpcAddress The Artemis RPC queue host and port.
+     */
+    public void rpcAddress(String rpcAddress) {
+        config = config.withValue("rpcAddress", ConfigValueFactory.fromAnyRef(rpcAddress));
     }
 
     /**

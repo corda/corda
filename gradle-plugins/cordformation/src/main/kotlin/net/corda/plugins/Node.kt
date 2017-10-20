@@ -61,13 +61,23 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     /**
-     * Set the HTTP web server port for this node.
+     * Set the HTTP web server port for this node. Will use localhost as the address.
      *
      * @param webPort The web port number for this node.
      */
     fun webPort(webPort: Int) {
         config = config.withValue("webAddress",
                 ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$webPort"))
+    }
+
+    /**
+     * Set the HTTP web server address and port for this node.
+     *
+     * @param webAddress The web address for this node.
+     */
+    fun webAddress(webAddress: String) {
+        config = config.withValue("webAddress",
+                ConfigValueFactory.fromAnyRef(webAddress))
     }
 
     /**
@@ -105,15 +115,6 @@ class Node(private val project: Project) : CordformNode() {
         installCordapps()
         installConfig()
         appendOptionalConfig()
-    }
-
-    /**
-     * Get the artemis address for this node.
-     *
-     * @return This node's P2P address.
-     */
-    fun getP2PAddress(): String {
-        return config.getString("p2pAddress")
     }
 
     internal fun rootDir(rootDir: Path) {
