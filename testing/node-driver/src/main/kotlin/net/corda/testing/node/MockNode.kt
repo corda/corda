@@ -314,7 +314,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
         return uncheckedCast(createNodeImpl(forcedID, nodeFactory, true, legalName, notaryIdentity, entropyRoot, configOverrides).started!!
-                .also { ensureNetworkMapCachesHaveNodeInfos() })
+                .also { ensureAllNetworkMapCachesHaveAllNodeInfos() })
     }
 
     private fun <N : MockNode> createNodeImpl(forcedID: Int?, nodeFactory: Factory<N>,
@@ -332,7 +332,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             if (start) {
                 start()
                 if (threadPerNode) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
-                ensureNetworkMapCachesHaveNodeInfos()
+                ensureAllNetworkMapCachesHaveAllNodeInfos()
             }
             _nodes.add(this)
         }
@@ -348,7 +348,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
      */
     @JvmOverloads
     fun runNetwork(rounds: Int = -1) {
-        ensureNetworkMapCachesHaveNodeInfos()
+        ensureAllNetworkMapCachesHaveAllNodeInfos()
         check(!networkSendManuallyPumped)
         fun pumpAll() = messagingNetwork.endpoints.map { it.pumpReceive(false) }
 
@@ -395,7 +395,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         }
     }
 
-    private fun ensureNetworkMapCachesHaveNodeInfos() {
+    private fun ensureAllNetworkMapCachesHaveAllNodeInfos() {
         val infos = nodes.mapNotNull { it.started?.info }
         nodes.filter { it.hasDBConnection() }
                 .mapNotNull { it.started?.services?.networkMapCache }
@@ -409,7 +409,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     fun startNodes() {
         require(nodes.isNotEmpty())
         nodes.forEach { it.started ?: it.start() }
-        ensureNetworkMapCachesHaveNodeInfos()
+        ensureAllNetworkMapCachesHaveAllNodeInfos()
     }
 
     fun stopNodes() {
