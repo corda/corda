@@ -4,7 +4,6 @@ import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.node.services.messaging.createMessage
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.resetTestSerialization
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -25,8 +24,6 @@ class InMemoryMessagingTests {
     fun tearDown() {
         if (mockNet.nodes.isNotEmpty()) {
             mockNet.stopNodes()
-        } else {
-            resetTestSerialization()
         }
     }
 

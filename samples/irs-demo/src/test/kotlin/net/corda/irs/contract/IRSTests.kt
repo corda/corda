@@ -18,23 +18,9 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.PaymentRule
 import net.corda.finance.contracts.Tenor
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.DUMMY_PARTY
-import net.corda.testing.LedgerDSL
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_KEY
-import net.corda.testing.MEGA_CORP_PUBKEY
-import net.corda.testing.MINI_CORP
-import net.corda.testing.MINI_CORP_KEY
-import net.corda.testing.ORACLE_PUBKEY
-import net.corda.testing.TEST_TX_TIME
-import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.TestLedgerDSLInterpreter
-import net.corda.testing.TestTransactionDSLInterpreter
-import net.corda.testing.ledger
+import net.corda.testing.*
 import net.corda.testing.node.MockServices
-import net.corda.testing.transaction
+import org.junit.Rule
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -222,7 +208,10 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     }
 }
 
-class IRSTests : TestDependencyInjectionBase() {
+class IRSTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP_KEY)
     private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), MINI_CORP_KEY)
     private val notaryServices = MockServices(listOf("net.corda.irs.contract"), DUMMY_NOTARY_KEY)

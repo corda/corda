@@ -45,7 +45,10 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-class VaultQueryTests : TestDependencyInjectionBase() {
+class VaultQueryTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val cordappPackages = setOf(
             "net.corda.testing.contracts", "net.corda.finance.contracts",
             CashSchemaV1::class.packageName, CommercialPaperSchemaV1::class.packageName, DummyLinearStateSchemaV1::class.packageName).toMutableList()

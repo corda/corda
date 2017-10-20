@@ -5,22 +5,25 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.rigorousMock
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 
-class SerializationTokenTest : TestDependencyInjectionBase() {
-
+class SerializationTokenTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
 
     @Before
     fun setup() {
-        factory = SerializationDefaults.SERIALIZATION_FACTORY
-        context = SerializationDefaults.CHECKPOINT_CONTEXT.withWhitelisted(SingletonSerializationToken::class.java)
+        factory = testSerialization.env.SERIALIZATION_FACTORY
+        context = testSerialization.env.CHECKPOINT_CONTEXT.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized

@@ -169,16 +169,25 @@ interface SerializationContext {
     enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint }
 }
 
+interface SerializationEnvironment {
+    val SERIALIZATION_FACTORY: SerializationFactory
+    val P2P_CONTEXT: SerializationContext
+    val RPC_SERVER_CONTEXT: SerializationContext
+    val RPC_CLIENT_CONTEXT: SerializationContext
+    val STORAGE_CONTEXT: SerializationContext
+    val CHECKPOINT_CONTEXT: SerializationContext
+}
+
 /**
  * Global singletons to be used as defaults that are injected elsewhere (generally, in the node or in RPC client).
  */
-object SerializationDefaults {
-    var SERIALIZATION_FACTORY: SerializationFactory by WriteOnceProperty()
-    var P2P_CONTEXT: SerializationContext by WriteOnceProperty()
-    var RPC_SERVER_CONTEXT: SerializationContext by WriteOnceProperty()
-    var RPC_CLIENT_CONTEXT: SerializationContext by WriteOnceProperty()
-    var STORAGE_CONTEXT: SerializationContext by WriteOnceProperty()
-    var CHECKPOINT_CONTEXT: SerializationContext by WriteOnceProperty()
+object SerializationDefaults : SerializationEnvironment {
+    override var SERIALIZATION_FACTORY: SerializationFactory by WriteOnceProperty()
+    override var P2P_CONTEXT: SerializationContext by WriteOnceProperty()
+    override var RPC_SERVER_CONTEXT: SerializationContext by WriteOnceProperty()
+    override var RPC_CLIENT_CONTEXT: SerializationContext by WriteOnceProperty()
+    override var STORAGE_CONTEXT: SerializationContext by WriteOnceProperty()
+    override var CHECKPOINT_CONTEXT: SerializationContext by WriteOnceProperty()
 }
 
 /**

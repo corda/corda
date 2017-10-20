@@ -11,8 +11,8 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
@@ -43,10 +43,7 @@ import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
-import org.junit.After
-import org.junit.Assert
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
@@ -54,8 +51,10 @@ import javax.persistence.EntityManager
 import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
 
-class HibernateConfigurationTest : TestDependencyInjectionBase() {
-
+class HibernateConfigurationTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     lateinit var services: MockServices
     lateinit var issuerServices: MockServices
     lateinit var database: CordaPersistence

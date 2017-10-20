@@ -33,8 +33,9 @@ import static net.corda.testing.TestConstants.*;
 import static net.corda.testing.node.MockServices.*;
 import static org.assertj.core.api.Assertions.*;
 
-public class VaultQueryJavaTests extends TestDependencyInjectionBase {
-
+public class VaultQueryJavaTests {
+    @Rule
+    public SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private MockServices services;
     private MockServices issuerServices;
     private VaultService vaultService;

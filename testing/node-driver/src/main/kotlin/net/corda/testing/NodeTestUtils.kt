@@ -28,13 +28,13 @@ fun ledger(
         initialiseSerialization: Boolean = true,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    if (initialiseSerialization) initialiseTestSerialization()
+    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
     try {
         val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
         dsl(ledgerDsl)
         return ledgerDsl
     } finally {
-        if (initialiseSerialization) resetTestSerialization()
+        serializationEnv.resetTestSerialization()
     }
 }
 
