@@ -47,9 +47,10 @@ Where using outputs from a previous transaction in a new transaction, counterpar
 parties are. One example is the ``TwoPartyTradeFlow``, where an existing asset is exchanged for cash. If confidential
 identities are being used, the buyer will want to ensure that the asset being transferred is owned by the seller, and
 the seller will likewise want to ensure that the cash being transferred is owned by the buyer. Verifying this requires
-both nodes to have a copy of the confidential identities for the asset and cash input states. ``IdentitySyncFlow`` can
-be used to synchronize the confidential identities we have the certificate paths for, in a single transaction, to
-another node.
+both nodes to have a copy of the confidential identities for the asset and cash input states. ``IdentitySyncFlow``
+manages this process. It takes as inputs a transaction and a counterparty, and for every confidential identity involved
+in that transaction for which the calling node holds the certificate path, it sends this certificate path to the
+counterparty.
 
 SwapIdentitiesFlow
 ~~~~~~~~~~~~~~~~~~
