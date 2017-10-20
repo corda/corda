@@ -133,7 +133,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/trade.json")
                 .reader()
                 .readText()
-                .replace("oracleXXX", RatesOracleFactory.RATES_SERVICE_NAME.toString()))
+                .replace("oracleXXX", RatesOracleNode.RATES_SERVICE_NAME.toString()))
         irs.fixedLeg.fixedRatePayer = node1.info.chooseIdentity()
         irs.floatingLeg.floatingRatePayer = node2.info.chooseIdentity()
 

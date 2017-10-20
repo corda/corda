@@ -28,7 +28,6 @@ import net.corda.node.services.api.VaultServiceInternal
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.rigorousMock
-import net.corda.testing.node.MockNodeArgs
 import net.corda.testing.node.MockNodeParameters
 import org.junit.After
 import org.junit.Test
@@ -80,15 +79,13 @@ class VaultSoftLockManagerTest {
     private val mockVault = rigorousMock<VaultServiceInternal>().also {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
-    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-        override fun create(args: MockNodeArgs): MockNetwork.MockNode {
-            return object : MockNetwork.MockNode(args) {
-                override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
-                    val realVault = super.makeVaultService(keyManagementService, stateLoader)
-                    return object : VaultServiceInternal by realVault {
-                        override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
-                            mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
-                        }
+    private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
+        object : MockNetwork.MockNode(args) {
+            override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
+                val realVault = super.makeVaultService(keyManagementService, stateLoader)
+                return object : VaultServiceInternal by realVault {
+                    override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
+                        mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
                     }
                 }
             }

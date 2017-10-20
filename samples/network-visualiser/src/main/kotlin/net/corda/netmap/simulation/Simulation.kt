@@ -57,24 +57,18 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    private object SimulatedNodeFactory : MockNetwork.Factory<SimulatedNode> {
-        override fun create(args: MockNodeArgs) = SimulatedNode(args)
-    }
+    class RatesOracleNode(args: MockNodeArgs) : SimulatedNode(args) {
+        companion object {
+            // TODO: Make a more realistic legal name
+            val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
+        }
 
-    object RatesOracleFactory : MockNetwork.Factory<SimulatedNode> {
-        // TODO: Make a more realistic legal name
-        val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
-
-        override fun create(args: MockNodeArgs): SimulatedNode {
-            return object : SimulatedNode(args) {
-                override fun start() = super.start().apply {
-                    registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
-                    registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
-                    javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
-                        database.transaction {
-                            findTokenizableService(NodeInterestRates.Oracle::class.java)!!.uploadFixes(it.reader().readText())
-                        }
-                    }
+        override fun start() = super.start().apply {
+            registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+            registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
+            javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
+                database.transaction {
+                    findTokenizableService(NodeInterestRates.Oracle::class.java)!!.uploadFixes(it.reader().readText())
                 }
             }
         }
@@ -84,18 +78,18 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             networkSendManuallyPumped = networkSendManuallyPumped,
             threadPerNode = runAsync,
             cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract", "net.corda.irs"))
-    val notary = mockNet.createNotaryNode(defaultParams.copy(legalName = DUMMY_NOTARY.name), false, SimulatedNodeFactory)
+    val notary = mockNet.createNotaryNode(defaultParams.copy(legalName = DUMMY_NOTARY.name), false, ::SimulatedNode)
     // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
     //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
     //       But that's fine for visualisation purposes.
-    val regulators = listOf(mockNet.createUnstartedNode(defaultParams.copy(legalName = DUMMY_REGULATOR.name), SimulatedNodeFactory))
-    val ratesOracle = mockNet.createUnstartedNode(defaultParams.copy(legalName = RatesOracleFactory.RATES_SERVICE_NAME), RatesOracleFactory)
+    val regulators = listOf(mockNet.createUnstartedNode(defaultParams.copy(legalName = DUMMY_REGULATOR.name), ::SimulatedNode))
+    val ratesOracle = mockNet.createUnstartedNode(defaultParams.copy(legalName = RatesOracleNode.RATES_SERVICE_NAME), ::RatesOracleNode)
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary.internals, ratesOracle)
     val banks: List<SimulatedNode> = bankLocations.mapIndexed { i, (city, country) ->
         val legalName = CordaX500Name(organisation = "Bank ${'A' + i}", locality = city, country = country)
         // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
-        mockNet.createUnstartedNode(defaultParams.copy(legalName = legalName, entropyRoot = BigInteger.valueOf(i.toLong())), SimulatedNodeFactory)
+        mockNet.createUnstartedNode(defaultParams.copy(legalName = legalName, entropyRoot = BigInteger.valueOf(i.toLong())), ::SimulatedNode)
     }
     val clocks = (serviceProviders + regulators + banks).map { it.platformClock as TestClock }
 

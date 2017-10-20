@@ -14,7 +14,6 @@ import net.corda.testing.ALICE
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNodeArgs
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.singleIdentity
 import org.junit.After
@@ -109,13 +108,11 @@ class AttachmentTests {
     }
 
     @Test
-    fun `malicious response`() {
+    fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val aliceNode = mockNet.createNotaryNode(MockNodeParameters(legalName = ALICE.name), nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(args: MockNodeArgs): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(args) {
-                    override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
-                }
+        val aliceNode = mockNet.createNotaryNode(MockNodeParameters(legalName = ALICE.name), nodeFactory = { args ->
+            object : MockNetwork.MockNode(args) {
+                override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
             }
         }, validating = false)
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name))
