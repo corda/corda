@@ -55,7 +55,7 @@ private class BankOfCordaDriver {
         val role = options.valueOf(roleArg)!!
 
         val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,
-                "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = "corda.notary.validating"))
+                "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = "corda.notary.simple"))
 
         try {
             when (role) {
