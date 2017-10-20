@@ -28,11 +28,11 @@ identity information. For example, it is possible to construct a transaction usi
 learn of your involvement by inspection of the transaction), yet prove to specific counterparts that this
 ``AnonymousParty`` actually corresponds to your well-known identity. This is achieved using the
 ``PartyAndCertificate`` data class, which contains the X.509 certificate path proving that a given ``AnonymousParty``
-corresponds to a given ``Party``. These ``PartyAndCertificate`` can be propagated to counterparties on a need-to-know
+corresponds to a given ``Party``. Each ``PartyAndCertificate`` can be propagated to counterparties on a need-to-know
 basis.
 
 The ``PartyAndCertificate`` class is also used by the network map service to represent well-known identities, with the
-certificate path proving the certificate was issuance by the doorman service.
+certificate path proving the certificate was issued by the doorman service.
 
 Confidential identities
 -----------------------
@@ -44,15 +44,12 @@ public keys of these confidential identities are then used when generating outpu
 transaction.
 
 Where using outputs from a previous transaction in a new transaction, counterparties may need to know who the involved
-parties are. One example is in ``TwoPartyTradeFlow`` which delegates to ``CollectSignaturesFlow`` to gather
-certificates from both parties. ``CollectSignaturesFlow`` requires that a confidential identity of the initiating node
-has signed the transaction, and verifying this requires the receiving node has a copy of the confidential identity for
-the input state. ``IdentitySyncFlow`` can be used to synchronize the confidential identities we have the certificate
-paths for, in a single transaction, to another node.
-
-.. note:: ``CollectSignaturesFlow`` requires that the initiating node has signed the transaction, and as such all nodes
-   providing signatures must recognise the signing key used by the initiating node as being either its well known
-   identity or a confidential identity they have the certificate for.
+parties are. One example is the ``TwoPartyTradeFlow``, where an existing asset is exchanged for cash. If confidential
+identities are being used, the buyer will want to ensure that the asset being transferred is owned by the seller, and
+the seller will likewise want to ensure that the cash being transferred is owned by the buyer. Verifying this requires
+both nodes to have a copy of the confidential identities for the asset and cash input states. ``IdentitySyncFlow`` can
+be used to synchronize the confidential identities we have the certificate paths for, in a single transaction, to
+another node.
 
 SwapIdentitiesFlow
 ~~~~~~~~~~~~~~~~~~
@@ -75,7 +72,7 @@ You can see an example of using ``SwapIdentitiesFlow`` in ``TwoPartyDealFlow.kt`
 
 1. Generate a nonce value to form a challenge to the other nodes
 2. Send nonce value to all counterparties, and receive their nonce values
-3. Generate a new confidential identity from our well known identity
+3. Generate a new confidential identity from our well-known identity
 4. Create a data blob containing the new confidential identity (public key, name and X.509 certificate path),
    and the hash of the nonce values
 5. Sign the resulting data blob with the confidential identity's private key
