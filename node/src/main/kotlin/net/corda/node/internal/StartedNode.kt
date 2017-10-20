@@ -31,11 +31,6 @@ interface StartedNode<out N : AbstractNode> {
     val rpcOps: CordaRPCOps
     fun dispose() = internals.stop()
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(initiatedFlowClass)
-    /**
-     * Use this method to install your Corda services in your tests. This is automatically done by the node when it
-     * starts up for all classes it finds which are annotated with [CordaService].
-     */
-    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>) = internals.installCordaService(services, serviceClass)
 }
 
 class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : StateLoader {

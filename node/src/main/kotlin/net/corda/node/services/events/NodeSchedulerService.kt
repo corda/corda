@@ -1,9 +1,8 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
+import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
@@ -13,6 +12,7 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.until
 import net.corda.core.node.StateLoader
 import net.corda.core.schemas.PersistentStateRef
@@ -36,6 +36,8 @@ import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.EmbeddedId
 import javax.persistence.Entity
+import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
+import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations
@@ -215,7 +217,7 @@ class NodeSchedulerService(private val clock: Clock,
      * cancelled then we run the scheduled action.  Finally we remove that action from the scheduled actions and
      * recompute the next scheduled action.
      */
-    internal fun rescheduleWakeUp() {
+    private fun rescheduleWakeUp() {
         // Note, we already have the mutex but we need the scope again here
         val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
             rescheduled?.cancel(false)
@@ -245,7 +247,7 @@ class NodeSchedulerService(private val clock: Clock,
                     val scheduledFlow = getScheduledFlow(scheduledState)
                     if (scheduledFlow != null) {
                         flowName = scheduledFlow.javaClass.name
-                        val future = flowStarter.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).resultFuture
+                        val future = flowStarter.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).flatMap { it.resultFuture }
                         future.then {
                             unfinishedSchedules.countDown()
                         }

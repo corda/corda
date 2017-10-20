@@ -1074,9 +1074,13 @@ public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   public <init>()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.identity.Party getCounterparty()
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.flows.FlowInfo getCounterpartyFlowInfo()
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.flows.FlowInfo getCounterpartyFlowInfo(boolean)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.UntrustworthyData receive(Class)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.UntrustworthyData receive(Class, boolean)
   @co.paralleluniverse.fibers.Suspendable public abstract void send(Object)
+  @co.paralleluniverse.fibers.Suspendable public abstract void send(Object, boolean)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.UntrustworthyData sendAndReceive(Class, Object)
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.utilities.UntrustworthyData sendAndReceive(Class, Object, boolean)
 ##
 public final class net.corda.core.flows.FlowStackSnapshot extends java.lang.Object
   public <init>(java.time.Instant, String, List)

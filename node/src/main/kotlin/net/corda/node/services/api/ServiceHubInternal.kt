@@ -20,6 +20,7 @@ import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
@@ -119,13 +120,13 @@ interface FlowStarter {
      * defaults to [FlowInitiator.RPC] with username "Only For Testing".
      */
     @VisibleForTesting
-    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing"))
+    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing")).getOrThrow()
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T>
+    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): CordaFuture<FlowStateMachine<T>>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -138,7 +139,7 @@ interface FlowStarter {
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
-            vararg args: Any?): FlowStateMachineImpl<T> {
+            vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
         val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
         val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
         return startFlow(logic, flowInitiator, ourIdentity = null)
