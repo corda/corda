@@ -72,7 +72,7 @@ fun <A> verifierDriver(
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        systemProperties: Map<String, String> = emptyMap(),
+        extraSystemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         startNodesInProcess: Boolean = false,
@@ -83,7 +83,7 @@ fun <A> verifierDriver(
                 DriverDSL(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
-                        systemProperties = systemProperties,
+                        extraSystemProperties = extraSystemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         networkMapStartStrategy = networkMapStartStrategy,

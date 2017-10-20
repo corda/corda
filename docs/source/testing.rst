@@ -39,3 +39,20 @@ How to manually test each of these areas differs and is currently not fully spec
 ensure the program starts, that you can interact with it, and that no exceptions are generated in normal operation.
 
 TODO: Add instructions on manual testing
+
+External Database Testing
+-------------------------
+
+By default, all tests which need a database, utilize built-in H2 instances. In case the testing with other database backends
+or other database setup (H2 in server mode for example), while running tests extra parameters can be used to specify required
+properties. Appropriate changes will then be applied to all tests in a appropriate manner.
+
+- ``dataSourceProperties.dataSource.url`` - JDBC datasource URL. Appropriate drivers must be available in classpath. Also, for
+    different tests random database name is appended at the end of this string, ie. ``jdbc:h2:tcp://localhost:9092`` will become
+    full, proper URL - ie.``jdbc:h2:tcp://localhost:9092/34jh543gk243g2`` - mind the last slash missing.
+
+- ``dataSourceProperties.dataSourceClassName`` - JDBC driver classname - defaults to ``org.h2.jdbcx.JdbcDataSource``)
+
+- ``dataSourceProperties.dataSource.user`` - JDBC username - defaults to ``sa``
+
+- ``dataSourceProperties.dataSource.password`` - JDBC password - defaults to ``""`` (Empty string)

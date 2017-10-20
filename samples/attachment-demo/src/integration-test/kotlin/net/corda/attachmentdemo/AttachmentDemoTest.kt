@@ -13,14 +13,15 @@ import java.util.concurrent.CompletableFuture.supplyAsync
 
 class AttachmentDemoTest {
     // run with a 10,000,000 bytes in-memory zip file. In practice, a slightly bigger file will be used (~10,002,000 bytes).
+    // Force INFO logging to prevent printing 10MB arrays in logfiles
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
         driver(isDebug = true, portAllocation = PortAllocation.Incremental(20000)) {
             val demoUser = listOf(User("demo", "demo", setOf(startFlowPermission<AttachmentDemoFlow>())))
             val (nodeA, nodeB) = listOf(
-                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
-                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
+                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g", logLevel = "INFO"),
+                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g", logLevel = "INFO"),
                     startNotaryNode(DUMMY_NOTARY.name, validating = false))
                     .map { it.getOrThrow() }
             startWebserver(nodeB).getOrThrow()

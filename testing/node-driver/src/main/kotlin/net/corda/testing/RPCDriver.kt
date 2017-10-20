@@ -225,7 +225,7 @@ fun <A> rpcDriver(
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = globalPortAllocation,
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
-        systemProperties: Map<String, String> = emptyMap(),
+        extraSystemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         initialiseSerialization: Boolean = true,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
@@ -237,7 +237,7 @@ fun <A> rpcDriver(
                 DriverDSL(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
-                        systemProperties = systemProperties,
+                        extraSystemProperties = extraSystemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         networkMapStartStrategy = networkMapStartStrategy,

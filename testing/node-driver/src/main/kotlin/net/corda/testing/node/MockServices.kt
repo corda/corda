@@ -60,6 +60,10 @@ open class MockServices(
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
+        private val systemProperties = System.getProperties().toList().map { it.first.toString() to it.second.toString() }.toMap()
+
+        private val dbNames = mutableMapOf<String, String>()
+
         /**
          * Make properties appropriate for creating a DataSource for unit tests.
          *
@@ -68,11 +72,15 @@ open class MockServices(
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
         fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+            val overriddenDatasourceUrl = systemProperties["dataSourceProperties.dataSource.url"]?.let { property ->
+                dbNames.computeIfAbsent(nodeName, { property + "/" + UUID.randomUUID().toString()})
+            }
+
             val props = Properties()
-            props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-            props.setProperty("dataSource.user", "sa")
-            props.setProperty("dataSource.password", "")
+            props.setProperty("dataSourceClassName", systemProperties["dataSourceProperties.dataSourceClassName"] ?: "org.h2.jdbcx.JdbcDataSource")
+            props.setProperty("dataSource.url", overriddenDatasourceUrl ?: "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+            props.setProperty("dataSource.user", systemProperties["dataSourceProperties.dataSource.user"] ?: "sa")
+            props.setProperty("dataSource.password", systemProperties["dataSourceProperties.dataSource.password"] ?: "")
             return props
         }
 

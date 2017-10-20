@@ -1,9 +1,6 @@
 package net.corda.node.services.config
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
@@ -30,10 +27,9 @@ object ConfigHelper {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
-        val finalConfig = configOf(
+        val finalConfig = configOverrides
                 // Add substitution values here
-                "baseDirectory" to baseDirectory.toString())
-                .withFallback(configOverrides)
+                .withFallback( configOf("baseDirectory" to baseDirectory.toString()))
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()
