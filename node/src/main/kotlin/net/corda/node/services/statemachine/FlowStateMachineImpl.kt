@@ -480,7 +480,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 // Quasar does not terminate the fiber properly if an exception occurs during a suspend. We have to
                 // resume the fiber just so that we can throw it when it's running.
                 exceptionDuringSuspend = t
-                logger.trace("Resuming so fiber can it terminate with the exception thrown during suspend process", t)
+                logger.error("Resuming so fiber can terminate with the exception thrown during suspend process", t)
                 resume(scheduler)
             }
         }
