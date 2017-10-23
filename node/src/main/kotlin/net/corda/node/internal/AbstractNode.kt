@@ -689,6 +689,7 @@ abstract class AbstractNode(config: NodeConfiguration,
             toRun()
         }
         runOnStop.clear()
+        _started = null
     }
 
     protected abstract fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService

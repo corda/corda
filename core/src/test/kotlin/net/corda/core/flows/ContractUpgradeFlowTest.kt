@@ -47,7 +47,6 @@ class ContractUpgradeFlowTest {
 
         // Process registration
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
 
         notary = notaryNode.services.getDefaultNotary()
     }

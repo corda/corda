@@ -7,7 +7,6 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
@@ -41,9 +40,12 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.ServiceInfo
-import net.corda.testing.*
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.resetTestSerialization
+import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import java.io.Closeable
@@ -99,7 +101,6 @@ data class MockNodeParameters(
 data class MockNodeArgs(
         val config: NodeConfiguration,
         val network: MockNetwork,
-        val networkMapAddr: SingleMessageRecipient?,
         val id: Int,
         val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
         val entropyRoot: BigInteger)
@@ -127,10 +128,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
 
-    companion object {
-        // TODO In future PR we're removing the concept of network map node so the details of this mock are not important.
-        val MOCK_NET_MAP = Party(CordaX500Name(organisation = "Mock Network Map", locality = "Madrid", country = "ES"), DUMMY_KEY_1.public)
-    }
     var nextNodeId = 0
         private set
     private val filesystem = Jimfs.newFileSystem(unix())
@@ -141,9 +138,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private val _nodes = mutableListOf<MockNode>()
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
-
-    private var _networkMapNode: StartedNode<MockNode>? = null
-    val networkMapNode: StartedNode<MockNode> get() = _networkMapNode ?: startNetworkMapNode()
 
     init {
         if (initialiseSerialization) initialiseTestSerialization()
@@ -189,7 +183,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch) {
         val mockNet = args.network
-        override val networkMapAddress = args.networkMapAddr
+        override val networkMapAddress = null
         val id = args.id
         internal val notaryIdentity = args.notaryIdentity
         val entropyRoot = args.entropyRoot
@@ -275,6 +269,8 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             dbCloser = null
         }
 
+        fun hasDBConnection() = dbCloser != null
+
         // You can change this from zero if you have custom [FlowLogic] that park themselves.  e.g. [StateMachineManagerTests]
         var acceptableLiveFiberCountOnStop: Int = 0
 
@@ -294,41 +290,22 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                 }
             }
         }
-
-        /**
-         * Makes sure that the [MockNode] is correctly registered on the [MockNetwork]
-         * Please note that [MockNetwork.runNetwork] should be invoked to ensure that all the pending registration requests
-         * were duly processed
-         */
-        fun ensureRegistered() {
-            _nodeReadyFuture.getOrThrow()
-        }
-    }
-
-    fun <N : MockNode> startNetworkMapNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: Factory<N>? = null): StartedNode<N> {
-        check(_networkMapNode == null) { "Trying to start more than one network map node" }
-        return uncheckedCast(createNodeImpl(
-                if (parameters.legalName != null) parameters else parameters.copy(legalName = MOCK_NET_MAP.name),
-                nodeFactory ?: defaultFactory,
-                networkMapAddress = null,
-                start = true
-        ).started!!.apply {
-            _networkMapNode = this
-        })
     }
 
     fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()) = createUnstartedNode(parameters, defaultFactory)
     fun <N : MockNode> createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: Factory<N>): N {
-        return createNodeImpl(parameters, nodeFactory, networkMapNode.network.myAddress, false)
+        return createNodeImpl(parameters, nodeFactory, false)
     }
 
     fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedNode<MockNode> = createNode(parameters, defaultFactory)
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
     fun <N : MockNode> createNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: Factory<N>): StartedNode<N> {
-        return uncheckedCast(createNodeImpl(parameters, nodeFactory, networkMapNode.network.myAddress, true).started)!!
+        val node: StartedNode<N> = uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
+        ensureAllNetworkMapCachesHaveAllNodeInfos()
+        return node
     }
 
-    private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: Factory<N>, networkMapAddress: SingleMessageRecipient?, start: Boolean): N {
+    private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: Factory<N>, start: Boolean): N {
         val id = parameters.forcedID ?: nextNodeId++
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
@@ -336,10 +313,11 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             parameters.configOverrides(it)
         }
-        return nodeFactory.create(MockNodeArgs(config, this, networkMapAddress, id, parameters.notaryIdentity, parameters.entropyRoot)).apply {
+        return nodeFactory.create(MockNodeArgs(config, this, id, parameters.notaryIdentity, parameters.entropyRoot)).apply {
             if (start) {
                 start()
-                if (threadPerNode && networkMapAddress != null) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
+                if (threadPerNode) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
+                ensureAllNetworkMapCachesHaveAllNodeInfos()
             }
             _nodes.add(this)
         }
@@ -355,6 +333,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
      */
     @JvmOverloads
     fun runNetwork(rounds: Int = -1) {
+        ensureAllNetworkMapCachesHaveAllNodeInfos()
         check(!networkSendManuallyPumped)
         fun pumpAll() = messagingNetwork.endpoints.map { it.pumpReceive(false) }
 
@@ -402,9 +381,21 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         }
     }
 
+    private fun ensureAllNetworkMapCachesHaveAllNodeInfos() {
+        val infos = nodes.mapNotNull { it.started?.info }
+        nodes.filter { it.hasDBConnection() }
+                .mapNotNull { it.started?.services?.networkMapCache }
+                .forEach {
+                    for (nodeInfo in infos) {
+                        it.addNode(nodeInfo)
+                    }
+                }
+    }
+
     fun startNodes() {
         require(nodes.isNotEmpty())
         nodes.forEach { it.started ?: it.start() }
+        ensureAllNetworkMapCachesHaveAllNodeInfos()
     }
 
     fun stopNodes() {

@@ -45,7 +45,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): CompletableFuture<Unit> {
-        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap.internals + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }, trustRoot = DEV_TRUST_ROOT))
+        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + ratesOracle).flatMap { it.started!!.info.legalIdentitiesAndCerts }, trustRoot = DEV_TRUST_ROOT))
         registerFinanceJSONMappers(om)
 
         return startIRSDealBetween(0, 1).thenCompose {

@@ -57,7 +57,6 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
         val alice = aliceNode.info.singleIdentity()
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -95,7 +94,6 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -121,9 +119,7 @@ class AttachmentTests {
             }
         }, validating = false)
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name))
-        // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
         val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)

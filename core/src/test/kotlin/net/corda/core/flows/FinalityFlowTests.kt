@@ -30,7 +30,6 @@ class FinalityFlowTests {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
         aliceServices = aliceNode.services
         bobServices = bobNode.services
         alice = aliceNode.info.singleIdentity()

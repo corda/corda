@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity
@@ -9,31 +8,16 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
 
 class NetworkMapCacheTest {
-    lateinit var mockNet: MockNetwork
-
-    @Before
-    fun setUp() {
-        mockNet = MockNetwork()
-    }
+    val mockNet: MockNetwork = MockNetwork()
 
     @After
     fun teardown() {
         mockNet.stopNodes()
-    }
-
-    @Test
-    fun registerWithNetwork() {
-        mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val future = aliceNode.services.networkMapCache.addMapService(aliceNode.network, mockNet.networkMapNode.network.myAddress, false, null)
-        mockNet.runNetwork()
-        future.getOrThrow()
     }
 
     @Test

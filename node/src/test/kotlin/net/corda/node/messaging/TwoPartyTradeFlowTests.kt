@@ -67,7 +67,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     companion object {
         private val cordappPackages = listOf("net.corda.finance.contracts")
         @JvmStatic
-        @Parameterized.Parameters
+        @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> {
             return listOf(true, false)
         }
@@ -314,7 +314,6 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()
@@ -422,7 +421,6 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         val bankNode = makeNodeWithTracking(BOC_NAME)
 
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice: Party = aliceNode.info.singleIdentity()
         val bank: Party = bankNode.info.singleIdentity()
@@ -578,7 +576,6 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         val bankNode = mockNet.createPartyNode(BOC_NAME)
 
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()

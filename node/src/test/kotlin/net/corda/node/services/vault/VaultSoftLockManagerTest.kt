@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
-private class NodePair(private val mockNet: MockNetwork) {
+class NodePair(private val mockNet: MockNetwork) {
     private class ServerLogic(private val session: FlowSession, private val running: AtomicBoolean) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
@@ -100,8 +100,8 @@ class VaultSoftLockManagerTest {
         mockNet.stopNodes()
     }
 
-    private object CommandDataImpl : CommandData
-    private class ClientLogic(nodePair: NodePair, private val state: ContractState) : NodePair.AbstractClientLogic<List<ContractState>>(nodePair) {
+    object CommandDataImpl : CommandData
+    class ClientLogic(nodePair: NodePair, val state: ContractState) : NodePair.AbstractClientLogic<List<ContractState>>(nodePair) {
         override fun callImpl() = run {
             subFlow(FinalityFlow(serviceHub.signInitialTransaction(TransactionBuilder(notary = ourIdentity).apply {
                 addOutputState(state, ContractImpl::class.jvmName)
@@ -113,12 +113,15 @@ class VaultSoftLockManagerTest {
         }
     }
 
-    private abstract class SingleParticipantState(nodePair: NodePair) : ContractState {
-        override val participants = listOf(nodePair.client.info.chooseIdentity())
+    private abstract class ParticipantState(override val participants: List<AbstractParty>) : ContractState
+
+    private class PlainOldState(participants: List<AbstractParty>) : ParticipantState(participants) {
+        constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.chooseIdentity()))
     }
 
-    private class PlainOldState(nodePair: NodePair) : SingleParticipantState(nodePair)
-    private class FungibleAssetImpl(nodePair: NodePair) : SingleParticipantState(nodePair), FungibleAsset<Unit> {
+    private class FungibleAssetImpl(participants: List<AbstractParty>) : ParticipantState(participants), FungibleAsset<Unit> {
+        constructor(nodePair: NodePair) : this(listOf(nodePair.client.info.chooseIdentity()))
+
         override val owner get() = participants[0]
         override fun withNewOwner(newOwner: AbstractParty) = throw UnsupportedOperationException()
         override val amount get() = Amount(1, Issued(PartyAndReference(owner, OpaqueBytes.of(1)), Unit))

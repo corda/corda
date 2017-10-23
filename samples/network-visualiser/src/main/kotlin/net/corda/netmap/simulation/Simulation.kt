@@ -11,7 +11,6 @@ import net.corda.finance.utils.WorldMapLocation
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.testing.DUMMY_MAP
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.node.*
@@ -85,8 +84,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             networkSendManuallyPumped = networkSendManuallyPumped,
             threadPerNode = runAsync,
             cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract", "net.corda.irs"))
-    // This one must come first.
-    val networkMap = mockNet.startNetworkMapNode(defaultParams.copy(legalName = DUMMY_MAP.name), SimulatedNodeFactory)
+    // This one must come first. XXX: Really?
     val notary = mockNet.createNotaryNode(defaultParams.copy(legalName = DUMMY_NOTARY.name), false, SimulatedNodeFactory)
     // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
     //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
@@ -94,7 +92,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val regulators = listOf(mockNet.createUnstartedNode(defaultParams.copy(legalName = DUMMY_REGULATOR.name), SimulatedNodeFactory))
     val ratesOracle = mockNet.createUnstartedNode(defaultParams.copy(legalName = RatesOracleFactory.RATES_SERVICE_NAME), RatesOracleFactory)
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
-    val serviceProviders: List<SimulatedNode> = listOf(notary.internals, ratesOracle, networkMap.internals)
+    val serviceProviders: List<SimulatedNode> = listOf(notary.internals, ratesOracle)
     val banks: List<SimulatedNode> = bankLocations.mapIndexed { i, (city, country) ->
         val legalName = CordaX500Name(organisation = "Bank ${'A' + i}", locality = city, country = country)
         // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.

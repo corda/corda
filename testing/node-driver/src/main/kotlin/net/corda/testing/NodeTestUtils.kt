@@ -59,6 +59,7 @@ fun testNodeConfiguration(
         myLegalName: CordaX500Name): NodeConfiguration {
     abstract class MockableNodeConfiguration : NodeConfiguration // Otherwise Mockito is defeated by val getters.
     return rigorousMock<MockableNodeConfiguration>().also {
+        doReturn(true).whenever(it).noNetworkMapServiceMode
         doReturn(baseDirectory).whenever(it).baseDirectory
         doReturn(myLegalName).whenever(it).myLegalName
         doReturn(1).whenever(it).minimumPlatformVersion
@@ -81,6 +82,5 @@ fun testNodeConfiguration(
         doCallRealMethod().whenever(it).trustStoreFile
         doCallRealMethod().whenever(it).sslKeystore
         doCallRealMethod().whenever(it).nodeKeystore
-        doReturn(false).whenever(it).noNetworkMapServiceMode
     }
 }
