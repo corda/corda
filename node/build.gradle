@@ -182,6 +182,17 @@ dependencies {
     smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
     smokeTestCompile "junit:junit:$junit_version"
+
+    // Jetty dependencies for NetworkMapClient test.
+    // Web stuff: for HTTP[S] servlets
+    testCompile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    testCompile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    testCompile "javax.servlet:javax.servlet-api:3.1.0"
+
+    // Jersey for JAX-RS implementation for use in Jetty
+    testCompile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
+    testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 }
 
 task integrationTest(type: Test) {
