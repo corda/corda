@@ -25,6 +25,19 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
+UNRELEASED
+----------
+
+Testing
+^^^^^^^
+
+* The registration mechanism for CorDapps in ``MockNetwork`` unit tests has changed.
+
+  It is now done via the ``cordappPackages`` constructor parameter of MockNetwork.
+  This takes a list of `String` values which should be the
+  package names of the CorDapps containing the contract verification code you wish to load.
+  The ``unsetCordappPackages`` method is now redundant and has been removed.
+
 :ref:`Milestone 14 <changelog_m14>`
 ------------
 

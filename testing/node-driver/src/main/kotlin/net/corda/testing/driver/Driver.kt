@@ -272,9 +272,8 @@ sealed class PortAllocation {
     }
 }
 
-/**
- * Helper builder for configuring a [Node] from Java.
- */
+/** Helper builder for configuring a [Node] from Java. */
+@Suppress("unused")
 data class NodeParameters(
         val providedName: CordaX500Name? = null,
         val rpcUsers: List<User> = emptyList(),
@@ -366,9 +365,8 @@ fun <A> driver(
     return driver(defaultParameters = parameters, dsl = dsl)
 }
 
-/**
- * Helper builder for configuring a [driver] from Java.
- */
+/** Helper builder for configuring a [driver] from Java. */
+@Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),

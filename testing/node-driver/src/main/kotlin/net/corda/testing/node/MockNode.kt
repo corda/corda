@@ -2,13 +2,13 @@ package net.corda.testing.node
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.cert
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
@@ -31,7 +31,6 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
@@ -41,7 +40,6 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -53,12 +51,28 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
     return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
+}
+
+/** Helper builder for configuring a [MockNetwork] from Java. */
+@Suppress("unused")
+data class MockNetworkParameters(
+        val networkSendManuallyPumped: Boolean = false,
+        val threadPerNode: Boolean = false,
+        val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+        val defaultFactory: MockNetwork.Factory<*> = MockNetwork.DefaultFactory,
+        val initialiseSerialization: Boolean = true,
+        val cordappPackages: List<String> = emptyList()) {
+    fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
+    fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
+    fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
+    fun setDefaultFactory(defaultFactory: MockNetwork.Factory<*>) = copy(defaultFactory = defaultFactory)
+    fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
+    fun setCordappPackages(cordappPackages: List<String>) = copy(cordappPackages = cordappPackages)
 }
 
 /**
@@ -74,13 +88,16 @@ fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMem
  *
  *    LogHelper.setLevel("+messages")
  */
-class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
-                  private val threadPerNode: Boolean = false,
-                  servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
-                  InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-                  private val defaultFactory: Factory<*> = MockNetwork.DefaultFactory,
-                  private val initialiseSerialization: Boolean = true,
-                  private val cordappPackages: List<String> = emptyList()) : Closeable {
+class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+                  private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
+                  private val threadPerNode: Boolean = defaultParameters.threadPerNode,
+                  servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
+                  private val defaultFactory: Factory<*> = defaultParameters.defaultFactory,
+                  private val initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
+    /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
+    constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
+
     companion object {
         // TODO In future PR we're removing the concept of network map node so the details of this mock are not important.
         val MOCK_NET_MAP = Party(CordaX500Name(organisation = "Mock Network Map", locality = "Madrid", country = "ES"), DUMMY_KEY_1.public)
@@ -254,7 +271,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
                     }
                     clusterNodes.forEach {
-                        val notaryService = it.started!!.smm.findServices { it is BFTNonValidatingNotaryService }.single() as BFTNonValidatingNotaryService
+                        val notaryService = it.findTokenizableService(BFTNonValidatingNotaryService::class.java)!!
                         notaryService.waitUntilReplicaHasInitialized()
                     }
                 }
@@ -333,7 +350,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
                 myLegalName = legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
-            whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
+            doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             configOverrides(it)
         }
         return nodeFactory.create(config, this, networkMapAddress, id, notaryIdentity, entropyRoot).apply {
@@ -371,7 +388,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     @JvmOverloads
     fun createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name, validating: Boolean = true): StartedNode<MockNode> {
         return createNode(legalName = legalName, configOverrides = {
-            whenever(it.notary).thenReturn(NotaryConfig(validating))
+            doReturn(NotaryConfig(validating)).whenever(it).notary
         })
     }
 
@@ -379,7 +396,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                                         validating: Boolean = true,
                                         nodeFactory: Factory<N>): StartedNode<N> {
         return createNode(legalName = legalName, nodeFactory = nodeFactory, configOverrides = {
-            whenever(it.notary).thenReturn(NotaryConfig(validating))
+            doReturn(NotaryConfig(validating)).whenever(it).notary
         })
     }
 

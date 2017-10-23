@@ -41,9 +41,11 @@ buildscript {
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
     ext.h2_version = '1.4.194' // Update docs if renamed or removed.
+    ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.14'
     ext.eddsa_version = '0.2.0'
+    ext.dependency_checker_version = '3.0.1'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -66,6 +68,7 @@ buildscript {
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
         classpath "org.ajoberstar:grgit:1.1.0"
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
+        classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
     }
 }
 
@@ -100,7 +103,13 @@ allprojects {
     apply plugin: 'kotlin'
     apply plugin: 'java'
     apply plugin: 'jacoco'
+    apply plugin: 'org.owasp.dependencycheck'
 
+    dependencyCheck {
+        suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
+        cveValidForHours = 1
+        format = 'ALL'
+    }
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 

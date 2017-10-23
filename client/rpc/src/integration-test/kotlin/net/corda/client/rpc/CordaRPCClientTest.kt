@@ -2,6 +2,7 @@ package net.corda.client.rpc
 
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
+import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
@@ -143,7 +144,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
             }
         }
         val nodeIdentity = node.info.chooseIdentity()
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), FlowInitiator.Shell).resultFuture.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), FlowInitiator.Shell).flatMap { it.resultFuture }.getOrThrow()
         proxy.startFlow(::CashIssueFlow,
                 123.DOLLARS,
                 OpaqueBytes.of(0),

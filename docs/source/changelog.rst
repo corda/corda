@@ -9,6 +9,8 @@ UNRELEASED
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
 
+* Experimental support for PostgreSQL: CashSelection done using window functions
+
 * ``FlowLogic`` now exposes a series of function called ``receiveAll(...)`` allowing to join ``receive(...)`` instructions.
 
 * Renamed "plugins" directory on nodes to "cordapps"
@@ -62,6 +64,8 @@ UNRELEASED
 
 * A new function ``checkCommandVisibility(publicKey: PublicKey)`` has been added to ``FilteredTransaction`` to check
   if every command that a signer should receive (e.g. an Oracle) is indeed visible.
+
+* Change the AMQP serialiser to use the oficially assigned R3 identifier rather than a placeholder.
 
 .. _changelog_v1:
 

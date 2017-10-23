@@ -1,5 +1,6 @@
 package net.corda.core.messaging
 
+import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.CordaSerializable
@@ -11,6 +12,7 @@ import rx.Observable
  * @property id The started state machine's ID.
  * @property returnValue A [CordaFuture] of the flow's return value.
  */
+@DoNotImplement
 interface FlowHandle<A> : AutoCloseable {
     val id: StateMachineRunId
     val returnValue: CordaFuture<A>

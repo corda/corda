@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.concurrent.doneFuture
@@ -74,7 +73,7 @@ class ArtemisMessagingTests : TestDependencyInjectionBase() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
-        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config), mock())
+        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config), rigorousMock())
     }
 
     @After

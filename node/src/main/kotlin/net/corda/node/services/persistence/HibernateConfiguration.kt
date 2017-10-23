@@ -93,6 +93,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     // during schema creation / update.
     class NodeDatabaseConnectionProvider : ConnectionProvider {
         override fun closeConnection(conn: Connection) {
+            conn.autoCommit = false
             val tx = DatabaseTransactionManager.current()
             tx.commit()
             tx.close()

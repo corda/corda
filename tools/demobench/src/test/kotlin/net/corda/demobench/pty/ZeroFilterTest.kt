@@ -1,9 +1,12 @@
 package net.corda.demobench.pty
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.testing.rigorousMock
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.*
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets.UTF_8
@@ -15,10 +18,8 @@ class ZeroFilterTest {
     @Before
     fun setup() {
         output = ByteArrayOutputStream()
-
-        val process = mock(Process::class.java)
-        `when`(process.outputStream).thenReturn(output)
-
+        val process = rigorousMock<Process>()
+        doReturn(output).whenever(process).outputStream
         filter = process.zeroFiltered().outputStream
         verify(process).outputStream
     }

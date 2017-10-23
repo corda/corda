@@ -9,9 +9,9 @@ import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.internal.demorun.*
 
-fun main(args: Array<String>) = CustomNotaryCordform.runNodes()
+fun main(args: Array<String>) = CustomNotaryCordform().runNodes()
 
-object CustomNotaryCordform : CordformDefinition("build" / "notary-demo-nodes") {
+class CustomNotaryCordform : CordformDefinition("build" / "notary-demo-nodes") {
     init {
         node {
             name(ALICE.name)

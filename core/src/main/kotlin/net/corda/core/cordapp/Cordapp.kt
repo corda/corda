@@ -1,5 +1,6 @@
 package net.corda.core.cordapp
 
+import net.corda.core.DoNotImplement
 import net.corda.core.flows.FlowLogic
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
@@ -17,13 +18,14 @@ import java.net.URL
  * @property contractClassNames List of contracts
  * @property initiatedFlows List of initiatable flow classes
  * @property rpcFlows List of RPC initiable flows classes
- * @property serviceFlows List of [CordaService] initiable flows classes
+ * @property serviceFlows List of [net.corda.core.node.services.CordaService] initiable flows classes
  * @property schedulableFlows List of flows startable by the scheduler
- * @property servies List of RPC services
+ * @property services List of RPC services
  * @property serializationWhitelists List of Corda plugin registries
  * @property customSchemas List of custom schemas
  * @property jarPath The path to the JAR for this CorDapp
  */
+@DoNotImplement
 interface Cordapp {
     val name: String
     val contractClassNames: List<String>

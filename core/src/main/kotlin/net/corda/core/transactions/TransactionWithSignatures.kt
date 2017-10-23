@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
@@ -10,6 +11,7 @@ import java.security.PublicKey
 import java.security.SignatureException
 
 /** An interface for transactions containing signatures, with logic for signature verification */
+@DoNotImplement
 interface TransactionWithSignatures : NamedByHash {
     val sigs: List<TransactionSignature>
 

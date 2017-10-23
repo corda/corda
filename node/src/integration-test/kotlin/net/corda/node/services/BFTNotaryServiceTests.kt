@@ -1,5 +1,6 @@
 package net.corda.node.services
 
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
@@ -58,7 +59,7 @@ class BFTNotaryServiceTests {
         replicaIds.forEach { replicaId ->
             mockNet.createNode(configOverrides = {
                 val notary = NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces))
-                whenever(it.notary).thenReturn(notary)
+                doReturn(notary).whenever(it).notary
             })
         }
         mockNet.runNetwork() // Exchange initial network map registration messages.

@@ -10,6 +10,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -18,12 +19,12 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
-import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
 import rx.Observable
@@ -94,7 +95,7 @@ class CordaRPCOpsImpl(
         return database.transaction {
             val (allStateMachines, changes) = smm.track()
             DataFeed(
-                    allStateMachines.map { stateMachineInfoFromFlowLogic(it.logic) },
+                    allStateMachines.map { stateMachineInfoFromFlowLogic(it) },
                     changes.map { stateMachineUpdateFromStateMachineChange(it) }
             )
         }
@@ -146,13 +147,13 @@ class CordaRPCOpsImpl(
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
+    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
         val rpcContext = getRpcContext()
         rpcContext.requirePermission(startFlowPermission(logicType))
         val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
         // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
-        return flowStarter.invokeFlowAsync(logicType, currentUser, *args)
+        return flowStarter.invokeFlowAsync(logicType, currentUser, *args).getOrThrow()
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
