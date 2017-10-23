@@ -217,7 +217,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         }
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
-            messagingServiceSpy.messagingService = network
             network = messagingServiceSpy
         }
 
@@ -433,48 +432,7 @@ fun network(nodesCount: Int, action: MockNetwork.(nodes: List<StartedNode<MockNe
 /**
  * Extend this class in order to intercept and modify messages from the inmemory network
  */
-open class MessagingServiceSpy : MessagingService {
-    lateinit var messagingService: MessagingService
-
-    override fun addMessageHandler(topic: String, sessionID: Long, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
-        return messagingService.addMessageHandler(topic, sessionID, callback)
-    }
-
-    override fun addMessageHandler(topicSession: TopicSession, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
-        return messagingService.addMessageHandler(topicSession, callback)
-    }
-
-    override fun removeMessageHandler(registration: MessageHandlerRegistration) {
-        messagingService.removeMessageHandler(registration)
-    }
-
-    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
-        messagingService.send(message, target, retryId, sequenceKey, acknowledgementHandler)
-    }
-
-    override fun send(addressedMessages: List<MessagingService.AddressedMessage>, acknowledgementHandler: (() -> Unit)?) {
-        messagingService.send(addressedMessages, acknowledgementHandler)
-    }
-
-    override fun cancelRedelivery(retryId: Long) {
-        messagingService.cancelRedelivery(retryId)
-    }
-
-    override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
-        return messagingService.createMessage(topicSession, data, uuid)
-    }
-
-    override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
-        return messagingService.getAddressOfParty(partyInfo)
-    }
-
-    override val myAddress: SingleMessageRecipient
-        get() = messagingService.myAddress
-
-    override fun stop() {
-        messagingService.stop()
-    }
-}
+open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
 
 /**
  * Intercept or modify messages sent from the inmemory network
