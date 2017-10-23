@@ -103,6 +103,11 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
 fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
 fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)
 fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
+fun Path.existsOrThrow(vararg options: LinkOption) {
+    if (!this.exists(*options)) {
+        throw IOException("$this does not exist.")
+    }
+}
 fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
     require(targetDir.isDirectory()) { "$targetDir is not a directory" }
     val targetFile = targetDir.resolve(fileName)
@@ -307,3 +312,27 @@ fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationCo
 val KClass<*>.packageName get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
+
+/**
+ * Throws an [IllegalArgumentException] if the [value] is not null.
+ * Provides the converse of the requireNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
+ */
+inline fun <T:Any> requireNull(value: T?) = requireNull(value) { "Required value was not null." }
+
+/**
+ * Throws an [IllegalArgumentException] with the result of calling [lazyMessage] if the [value] is null.
+ * Provides the converse of the requireNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
+ */
+inline fun <T:Any> requireNull(value: T?, lazyMessage: () -> Any) = require(value == null) { lazyMessage() }
+
+/**
+ * Throws an [IllegalStateException] if the [value] is false.
+ * Provides the converse of the checkNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
+ */
+inline fun <T:Any> checkNull(value: T?) = checkNull(value) { "Required value was not null." }
+
+/**
+ * Throws an [IllegalStateException] with the result of calling [lazyMessage] if the [value] is false.
+ * Provides the converse of the checkNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
+ */
+inline fun <T:Any> checkNull(value: T?, lazyMessage: () -> Any) = check(value == null) { lazyMessage() }

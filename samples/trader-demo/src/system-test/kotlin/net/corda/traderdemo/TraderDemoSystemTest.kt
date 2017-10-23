@@ -1,5 +1,7 @@
 package net.corda.traderdemo
 
+import net.corda.core.internal.checkNull
+import net.corda.core.internal.existsOrThrow
 import net.sf.expectit.Expect
 import net.sf.expectit.ExpectBuilder
 import net.sf.expectit.Result
@@ -8,9 +10,9 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.File
-import java.io.FileNotFoundException
 import java.lang.UnsupportedOperationException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -65,7 +67,7 @@ class TraderDemoSystemTest {
 private class TraderDemoNode {
 
     fun start(nodeDirectoryName: String): NodeExpectingProcess {
-        val nodeDirectory: File = File(_nodesDirectory, nodeDirectoryName)
+        val nodeDirectory: Path = _nodesDirectory.resolve(nodeDirectoryName)
         val nodeFileInfo = NodeFileInfo(nodeDirectory, cordaJarType)
         nodeFileInfo.validateFilesOrThrow()
         val expectingProcess = startExpectingProcess(nodeFileInfo)
@@ -85,10 +87,8 @@ private class TraderDemoNode {
                 .build()
     }
 
-    private val _nodesDirectory: File by lazy {
-        Paths
-                .get(System.getProperty("user.dir"), "build", "nodes")
-                .toFile()
+    private val _nodesDirectory: Path by lazy {
+        Paths.get(System.getProperty("user.dir"), "build", "nodes")
     }
 }
 
@@ -150,16 +150,16 @@ private class ExpectingProcess(private val _process: Process, private val _expec
 private class ExpectingProcessBuilder {
 
     private var _command: List<String>? = null
-    private var _workingDirectory: File? = null
+    private var _workingDirectory: Path? = null
 
     fun withCommand(command: List<String>): ExpectingProcessBuilder {
-        _command.expectNullOrThrow("Command")
+        checkNull(_command)
         _command = command
         return this
     }
 
-    fun withWorkingDirectory(workingDirectory: File): ExpectingProcessBuilder {
-        _workingDirectory.expectNullOrThrow("WorkingDirectory")
+    fun withWorkingDirectory(workingDirectory: Path): ExpectingProcessBuilder {
+        checkNull(_workingDirectory)
         _workingDirectory = workingDirectory
         return this
     }
@@ -173,7 +173,7 @@ private class ExpectingProcessBuilder {
     private fun buildProcess(): Process {
         return ProcessBuilder()
                 .command(command())
-                .directory(workingDirectory())
+                .directory(workingDirectoryAsFile())
                 .redirectErrorStream(true)
                 .start()
     }
@@ -187,15 +187,15 @@ private class ExpectingProcessBuilder {
     }
 
     private fun command(): List<String> = _command!!
-    private fun workingDirectory(): File = _workingDirectory!!
+    private fun workingDirectoryAsFile(): File = _workingDirectory!!.toFile()
 }
 
-private class NodeFileInfo(private val _nodeDirectory: File, private val _jarType: JarType) {
+private class NodeFileInfo(private val _nodeDirectory: Path, private val _jarType: JarType) {
 
-    fun validateFilesOrThrow(): Unit = _jarType.validateFilesOrThrow(_nodeDirectory)
-    fun directory(): File = _nodeDirectory
-    fun directoryName(): String = _nodeDirectory.name
-    fun jarFile(): File = File(_nodeDirectory, jarName())
+    fun validateFilesOrThrow() = _jarType.validateFilesOrThrow(_nodeDirectory)
+    fun directory(): Path = _nodeDirectory
+    fun directoryName(): String = _nodeDirectory.fileName.toString()
+    fun jarFile(): Path = _nodeDirectory.resolve(jarName())
     fun jarName(): String = _jarType.jarName()
 }
 
@@ -203,35 +203,35 @@ private abstract class JarType(private val _jarName: String) {
 
     fun jarName(): String = _jarName
 
-    open fun validateFilesOrThrow(nodeDirectory: File): Unit {
+    open fun validateFilesOrThrow(nodeDirectory: Path) {
         throw NotImplementedError()
     }
 
-    protected fun validateFilesExistOrThrow(nodeDirectory: File): Unit {
+    protected fun validateFilesExistOrThrow(nodeDirectory: Path) {
         nodeDirectory.existsOrThrow()
         jarFile(nodeDirectory).existsOrThrow()
         configFile(nodeDirectory).existsOrThrow()
     }
 
-    protected fun jarFile(nodeDirectory: File): File = File(nodeDirectory, jarName())
-    protected fun configFile(nodeDirectory: File): File = File(nodeDirectory, "node.conf")
+    protected fun jarFile(nodeDirectory: Path): Path = nodeDirectory.resolve(jarName())
+    protected fun configFile(nodeDirectory: Path): Path = nodeDirectory.resolve("node.conf")
 }
 
 private object cordaJarType: JarType("corda.jar") {
 
-    override fun validateFilesOrThrow(nodeDirectory: File): Unit = validateFilesExistOrThrow(nodeDirectory)
+    override fun validateFilesOrThrow(nodeDirectory: Path) = validateFilesExistOrThrow(nodeDirectory)
 }
 
 private object webserverJarType: JarType("corda-webserver.jar") {
 
-    override fun validateFilesOrThrow(nodeDirectory: File): Unit {
+    override fun validateFilesOrThrow(nodeDirectory: Path) {
         validateFilesExistOrThrow(nodeDirectory)
         validateConfigOrThrow(configFile(nodeDirectory))
     }
 
-    private fun validateConfigOrThrow(configFile: File): Unit {
+    private fun validateConfigOrThrow(configFile: Path) {
         val isConfigValid = Files
-                .lines(configFile.toPath())
+                .lines(configFile)
                 .anyMatch { "webAddress" in it }
         if (!isConfigValid) {
             throw ConfigurationException("Node config does not contain webAddress.")
@@ -247,25 +247,25 @@ private class NodeCommandBuilder {
     private var _isCapsuleDebugOn: Boolean? = null
 
     fun withNodeFileInfo(nodeFileInfo: NodeFileInfo): NodeCommandBuilder {
-        _nodeFileInfo.expectNullOrThrow("NodeDirectory")
+        checkNull(_nodeFileInfo)
         _nodeFileInfo = nodeFileInfo
         return this
     }
 
     fun withArguments(arguments: List<String>): NodeCommandBuilder {
-        _arguments.expectNullOrThrow("Arguments")
+        checkNull(_arguments)
         _arguments = arguments
         return this
     }
 
     fun withHeadlessFlag(): NodeCommandBuilder {
-        _isHeadless.expectNullOrThrow("Headless")
+        checkNull(_isHeadless)
         _isHeadless = true
         return this
     }
 
     fun withCapsuleDebugOn(): NodeCommandBuilder {
-        _isCapsuleDebugOn.expectNullOrThrow("CapsuleDebugOn")
+        checkNull(_isCapsuleDebugOn)
         _isCapsuleDebugOn = true
         return this
     }
@@ -313,9 +313,9 @@ private class NodeCommandBuilder {
         }
     }
 
-    private fun directory(): File = _nodeFileInfo!!.directory()
+    private fun directory(): Path = _nodeFileInfo!!.directory()
     private fun directoryName(): String = _nodeFileInfo!!.directoryName()
-    private fun jarFile(): File = _nodeFileInfo!!.jarFile()
+    private fun jarFile(): Path = _nodeFileInfo!!.jarFile()
     private fun jarName(): String = _nodeFileInfo!!.jarName()
     private fun arguments(): List<String> = _arguments ?: emptyList()
     private fun isHeadless(): Boolean = _isHeadless == true
@@ -325,23 +325,23 @@ private class NodeCommandBuilder {
 private class JavaCommandBuilder {
 
     private var _javaArguments: List<String>? = null
-    private var _jarFile: File? = null
+    private var _jarFile: Path? = null
     private var _jarArguments: List<String>? = null
 
     fun withJavaArguments(javaArguments: List<String>): JavaCommandBuilder {
-        _javaArguments.expectNullOrThrow("JavaArguments")
+        checkNull(_javaArguments)
         _javaArguments = javaArguments
         return this
     }
 
-    fun withJarFile(jarFile: File): JavaCommandBuilder {
-        _jarFile.expectNullOrThrow("JarFile")
+    fun withJarFile(jarFile: Path): JavaCommandBuilder {
+        checkNull(_jarFile)
         _jarFile = jarFile
         return this
     }
 
     fun withJarArguments(jarArguments: List<String>): JavaCommandBuilder {
-        _jarArguments.expectNullOrThrow("JarArguments")
+        checkNull(_jarArguments)
         _jarArguments = jarArguments
         return this
     }
@@ -351,7 +351,7 @@ private class JavaCommandBuilder {
             add(_javaPathString)
             addAll(javaArguments())
             add("-jar")
-            add(jarName())
+            add(jarNameString())
             addAll(jarArguments())
         }
     }
@@ -363,23 +363,23 @@ private class JavaCommandBuilder {
     }
 
     private fun javaArguments(): List<String> = _javaArguments ?: emptyList()
-    private fun jarName(): String = _jarFile!!.name
+    private fun jarNameString(): String = _jarFile!!.fileName.toString()
     private fun jarArguments(): List<String> = _jarArguments ?: emptyList()
 }
 
 private class ShellCommandBuilder {
 
     private var _command: List<String>? = null
-    private var _workingDirectory: File? = null
+    private var _workingDirectory: Path? = null
 
     fun withCommand(command: List<String>): ShellCommandBuilder {
-        _command.expectNullOrThrow("Command")
+        checkNull(_command)
         _command = command
         return this
     }
 
-    fun withWorkingDirectory(workingDirectory: File): ShellCommandBuilder {
-        _workingDirectory.expectNullOrThrow("WorkingDirectory")
+    fun withWorkingDirectory(workingDirectory: Path): ShellCommandBuilder {
+        checkNull(_workingDirectory)
         _workingDirectory = workingDirectory
         return this
     }
@@ -416,7 +416,7 @@ private class ShellCommandBuilder {
     }
 
     private fun commandString(): String = _command!!.joinToString(" ")
-    private fun workingDirectoryPathString(): String = _workingDirectory!!.path
+    private fun workingDirectoryPathString(): String = _workingDirectory!!.toString()
 }
 
 private enum class OS {
@@ -446,12 +446,4 @@ private object debugPortNumberGenerator {
     fun next(): Int = _portNumber++
 }
 
-private fun File.existsOrThrow(): Unit {
-    if (!this.exists()) {
-        throw FileNotFoundException("${this.path} does not exist.")
-    }
-}
-
-private fun Any?.expectNullOrThrow(name: String = "Nullable"): Unit {
-    this?.let { throw IllegalArgumentException("$name has already been set to a value.") }
 }
