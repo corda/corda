@@ -1,5 +1,7 @@
 package net.corda.traderdemo
 
+import com.github.sgreben.regex_builder.FluentRe
+import com.github.sgreben.regex_builder.Re
 import net.corda.core.internal.checkNull
 import net.corda.core.internal.existsOrThrow
 import net.sf.expectit.Expect
@@ -16,6 +18,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
 import javax.naming.ConfigurationException
 
 class TraderDemoSystemTest {
@@ -446,4 +449,9 @@ private object debugPortNumberGenerator {
     fun next(): Int = _portNumber++
 }
 
+private fun FluentRe.compile(flags: Int): Pattern {
+    val patternString = this
+            .compile()
+            .pattern()
+    return Pattern.compile(patternString, flags)
 }
