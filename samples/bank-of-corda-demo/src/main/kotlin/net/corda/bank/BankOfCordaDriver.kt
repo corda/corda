@@ -5,6 +5,7 @@ import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.finance.flows.CashConfigDataFlow
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -61,20 +62,25 @@ private class BankOfCordaDriver {
             when (role) {
                 Role.ISSUER -> {
                     driver(dsl = {
+                        startNode(providedName = DUMMY_NOTARY.name,
+                                advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
                         val bankUser = User(
                                 BANK_USERNAME,
                                 "test",
                                 permissions = setOf(
+                                        startFlowPermission<CashPaymentFlow>(),
+                                        startFlowPermission<CashConfigDataFlow>(),
+                                        startFlowPermission<CashExitFlow>(),
                                         startFlowPermission<CashIssueAndPaymentFlow>(),
-                                        startFlowPermission<CashExitFlow>()))
-                        val bigCorpUser = User(BIGCORP_USERNAME, "test",
-                                permissions = setOf(
-                                        startFlowPermission<CashPaymentFlow>()))
-                        startNode(providedName = DUMMY_NOTARY.name,
-                                advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+                                        startFlowPermission<CashConfigDataFlow>()
+                                ))
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
                                 rpcUsers = listOf(bankUser))
+                        val bigCorpUser = User(BIGCORP_USERNAME, "test",
+                                permissions = setOf(
+                                        startFlowPermission<CashPaymentFlow>(),
+                                        startFlowPermission<CashConfigDataFlow>()))
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()
