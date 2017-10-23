@@ -9,13 +9,9 @@ import net.corda.core.utilities.loggerFor
 import net.corda.irs.contract.InterestRateSwap
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.*
-
-
-import net.corda.core.utilities.loggerFor
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import java.net.URI
-
 import net.corda.irs.flows.AutoOfferFlow
 
 /**

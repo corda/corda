@@ -55,12 +55,6 @@ class IRSDemoTest : IntegrationTestCategory {
         springDriver(useTestClock = true, isDebug = true, extraCordappPackagesToScan = listOf("net.corda.irs")) {
             val (controller, nodeA, nodeB) = listOf(
                     startNotaryNode(DUMMY_NOTARY.name, validating = true, rpcUsers = rpcUsers),
-//                    startNode(
-//                            providedName = DUMMY_NOTARY.name,
-//                            advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)/*, ServiceInfo(NodeInterestRates.Oracle.type)*/),
-//                            rpcUsers = rpcUsers
-//
-//                    ),
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = rpcUsers),
                     startNode(providedName = DUMMY_BANK_B.name, rpcUsers = rpcUsers)).map { it.getOrThrow() }
 
