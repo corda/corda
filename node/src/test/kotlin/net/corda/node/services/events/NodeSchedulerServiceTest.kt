@@ -138,7 +138,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         resetTestSerialization()
     }
 
-    class TestState(private val flowLogicRef: FlowLogicRef, val instant: Instant, private val myIdentity: Party) : LinearState, SchedulableState {
+    // Ignore IntelliJ when it says these properties can be private, if they are we cannot serialise them
+    // in AMQP.
+    class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, val myIdentity: Party) : LinearState, SchedulableState {
         override val participants: List<AbstractParty>
             get() = listOf(myIdentity)
 
