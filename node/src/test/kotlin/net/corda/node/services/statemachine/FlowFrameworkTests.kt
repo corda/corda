@@ -168,7 +168,7 @@ class FlowFrameworkTests {
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
 
-    @Ignore("This test succeeded because the SMM could not reach certain nodes.")
+    @Ignore("Some changes in startup order make this test's assumptions fail.")
     @Test
     fun `flow with send will resend on interrupted restart`() {
         val payload = random63BitValue()
