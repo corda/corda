@@ -11,7 +11,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.packageName
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.StateLoader
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.queryBy
@@ -84,8 +83,8 @@ class VaultSoftLockManagerTest {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
     private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
-            return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+        override fun create(config: NodeConfiguration, network: MockNetwork, id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
+            return object : MockNetwork.MockNode(config, network, id, notaryIdentity, entropyRoot) {
                 override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
                     val realVault = super.makeVaultService(keyManagementService, stateLoader)
                     return object : VaultServiceInternal by realVault {

@@ -13,7 +13,6 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
 import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.CordaSerializable
@@ -75,7 +74,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     companion object {
         private val cordappPackages = listOf("net.corda.finance.contracts")
         @JvmStatic
-        @Parameterized.Parameters
+        @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> {
             return listOf(true, false)
         }
@@ -269,9 +268,9 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
             bobNode = mockNet.createNode(bobAddr.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
-                override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+                override fun create(config: NodeConfiguration, network: MockNetwork,
                                     id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(config, network, networkMapAddr, bobAddr.id, notaryIdentity, entropyRoot)
+                    return MockNetwork.MockNode(config, network, bobAddr.id, notaryIdentity, entropyRoot)
                 }
             }, BOB_NAME)
 
@@ -311,10 +310,9 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         return mockNet.createNode(nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
             override fun create(config: NodeConfiguration,
                                 network: MockNetwork,
-                                networkMapAddr: SingleMessageRecipient?,
                                 id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+                return object : MockNetwork.MockNode(config, network, id, notaryIdentity, entropyRoot) {
                     // That constructs a recording tx storage
                     override fun makeTransactionStorage(): WritableTransactionStorage {
                         return RecordingTransactionStorage(database, super.makeTransactionStorage())
@@ -332,7 +330,6 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()
@@ -440,7 +437,6 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         val bankNode = makeNodeWithTracking(BOC_NAME)
 
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice: Party = aliceNode.info.singleIdentity()
         val bank: Party = bankNode.info.singleIdentity()
@@ -596,7 +592,6 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         val bankNode = mockNet.createPartyNode(BOC_NAME)
 
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()

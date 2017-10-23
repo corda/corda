@@ -29,9 +29,12 @@ import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.nodeapi.User
-import net.corda.testing.*
+import net.corda.testing.chooseIdentity
+import net.corda.testing.expect
+import net.corda.testing.expectEvents
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.sequence
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -72,7 +75,6 @@ class CordaRPCOpsImplTest {
         ))))
 
         mockNet.runNetwork()
-        mockNet.networkMapNode.internals.ensureRegistered()
         notary = rpc.notaryIdentities().first()
     }
 
