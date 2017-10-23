@@ -5,6 +5,8 @@ import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.finance.flows.CashConfigDataFlow
+import net.corda.finance.flows.CashConfigDataFlow
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -53,20 +55,28 @@ private class BankOfCordaDriver {
         // The ISSUE_CASH will request some Cash from the ISSUER on behalf of Big Corporation node
         val role = options.valueOf(roleArg)!!
 
+        val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,
+                "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = "corda.notary.simple"))
+
         try {
             when (role) {
                 Role.ISSUER -> {
                     driver(dsl = {
+                        startNotaryNode(providedName = DUMMY_NOTARY.name, validating = true)
                         val bankUser = User(
                                 BANK_USERNAME,
                                 "test",
                                 permissions = setOf(
+                                        startFlowPermission<CashPaymentFlow>(),
+                                        startFlowPermission<CashConfigDataFlow>(),
+                                        startFlowPermission<CashExitFlow>(),
                                         startFlowPermission<CashIssueAndPaymentFlow>(),
-                                        startFlowPermission<CashExitFlow>()))
+                                        startFlowPermission<CashConfigDataFlow>()
+                                ))
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
                                 permissions = setOf(
-                                        startFlowPermission<CashPaymentFlow>()))
-                        startNotaryNode(DUMMY_NOTARY.name, validating = true)
+                                        startFlowPermission<CashPaymentFlow>(),
+                                        startFlowPermission<CashConfigDataFlow>()))
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
                                 rpcUsers = listOf(bankUser))
