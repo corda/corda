@@ -39,6 +39,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import rx.Notification
 import rx.Observable
@@ -167,6 +168,7 @@ class FlowFrameworkTests {
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
 
+    @Ignore("This test succeeded because the SMM could not reach certain nodes.")
     @Test
     fun `flow with send will resend on interrupted restart`() {
         val payload = random63BitValue()
