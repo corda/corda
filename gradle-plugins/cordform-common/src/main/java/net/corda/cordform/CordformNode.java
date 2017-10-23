@@ -62,7 +62,7 @@ public class CordformNode implements NodeDefinition {
      *
      * @return This node's P2P address.
      */
-    public String getP2PAddress() {
+    public String getP2pAddress() {
         return config.getString("p2pAddress");
     }
 
