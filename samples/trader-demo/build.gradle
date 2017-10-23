@@ -51,6 +51,7 @@ dependencies {
 
 
     systemTestCompile "net.sf.expectit:expectit-core:${expectit_version}"
+    systemTestCompile "com.github.sgreben:regex-builder:${regex_builder_version}"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

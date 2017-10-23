@@ -46,6 +46,7 @@ buildscript {
     ext.dokka_version = '0.9.14'
     ext.eddsa_version = '0.2.0'
     ext.expectit_version = '0.8.3'
+    ext.regex_builder_version = '188d7b29b1'
     ext.dependency_checker_version = '3.0.1'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
@@ -57,6 +58,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
+        maven { url "https://jitpack.io" }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
