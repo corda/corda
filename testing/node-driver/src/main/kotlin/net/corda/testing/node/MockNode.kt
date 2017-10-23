@@ -430,6 +430,9 @@ fun network(nodesCount: Int, action: MockNetwork.(nodes: List<StartedNode<MockNe
     }
 }
 
+/**
+ * Extend this class in order to intercept and modify messages from the inmemory network
+ */
 open class MessagingServiceSpy : MessagingService {
     lateinit var messagingService: MessagingService
 
@@ -473,6 +476,9 @@ open class MessagingServiceSpy : MessagingService {
     }
 }
 
+/**
+ * Intercept or modify messages sent from the inmemory network
+ */
 fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
     internals.setMessagingServiceSpy(messagingServiceSpy)
 }
