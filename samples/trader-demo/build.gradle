@@ -49,8 +49,8 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
-    // https://mvnrepository.com/artifact/net.sf.expectit/expectit-core
-    systemTestCompile group: 'net.sf.expectit', name: 'expectit-core', version: "${expectit_version}"
+
+    systemTestCompile "net.sf.expectit:expectit-core:${expectit_version}"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
