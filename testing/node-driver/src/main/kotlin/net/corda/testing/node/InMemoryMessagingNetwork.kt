@@ -279,7 +279,7 @@ class InMemoryMessagingNetwork(
         _sentMessages.onNext(transfer)
     }
 
-    private data class InMemoryMessage(override val topicSession: TopicSession,
+    data class InMemoryMessage(override val topicSession: TopicSession,
                                        override val data: ByteArray,
                                        override val uniqueMessageId: UUID,
                                        override val debugTimestamp: Instant = Instant.now()) : Message {

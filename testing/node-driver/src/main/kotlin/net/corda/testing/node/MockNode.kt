@@ -17,6 +17,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -31,7 +32,7 @@ import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.*
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -53,6 +54,7 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -212,6 +214,11 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                     database)
                     .start()
                     .getOrThrow()
+        }
+
+        fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
+            messagingServiceSpy.messagingService = network
+            network = messagingServiceSpy
         }
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
@@ -421,4 +428,51 @@ fun network(nodesCount: Int, action: MockNetwork.(nodes: List<StartedNode<MockNe
         val nodes = (1..nodesCount).map { _ -> it.createPartyNode() }
         action(it, nodes, notary)
     }
+}
+
+open class MessagingServiceSpy : MessagingService {
+    lateinit var messagingService: MessagingService
+
+    override fun addMessageHandler(topic: String, sessionID: Long, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
+        return messagingService.addMessageHandler(topic, sessionID, callback)
+    }
+
+    override fun addMessageHandler(topicSession: TopicSession, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
+        return messagingService.addMessageHandler(topicSession, callback)
+    }
+
+    override fun removeMessageHandler(registration: MessageHandlerRegistration) {
+        messagingService.removeMessageHandler(registration)
+    }
+
+    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
+        messagingService.send(message, target, retryId, sequenceKey, acknowledgementHandler)
+    }
+
+    override fun send(addressedMessages: List<MessagingService.AddressedMessage>, acknowledgementHandler: (() -> Unit)?) {
+        messagingService.send(addressedMessages, acknowledgementHandler)
+    }
+
+    override fun cancelRedelivery(retryId: Long) {
+        messagingService.cancelRedelivery(retryId)
+    }
+
+    override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
+        return messagingService.createMessage(topicSession, data, uuid)
+    }
+
+    override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
+        return messagingService.getAddressOfParty(partyInfo)
+    }
+
+    override val myAddress: SingleMessageRecipient
+        get() = messagingService.myAddress
+
+    override fun stop() {
+        messagingService.stop()
+    }
+}
+
+fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
+    internals.setMessagingServiceSpy(messagingServiceSpy)
 }
