@@ -13,19 +13,17 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.utilities.currentDBSession
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeArgs
+import net.corda.testing.node.MockNodeParameters
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import java.math.BigInteger
 import java.nio.charset.StandardCharsets.UTF_8
-import java.security.KeyPair
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.assertEquals
@@ -158,10 +156,9 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
-        client = mockNet.createNode(client.internals.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(config: NodeConfiguration, network: MockNetwork,
-                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, id, notaryIdentity, entropyRoot) {
+        client = mockNet.createNode(MockNodeParameters(client.internals.id), object : MockNetwork.Factory<MockNetwork.MockNode> {
+            override fun create(args: MockNodeArgs): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(args) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
                 }
             }

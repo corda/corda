@@ -78,6 +78,34 @@ data class MockNetworkParameters(
 }
 
 /**
+ * @param notaryIdentity a set of service entries to use in place of the node's default service entries,
+ * for example where a node's service is part of a cluster.
+ * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
+ * but can be overridden to cause nodes to have stable or colliding identity/service keys.
+ * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
+ */
+@Suppress("unused")
+data class MockNodeParameters(
+        val forcedID: Int? = null,
+        val legalName: CordaX500Name? = null,
+        val notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
+        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+        val configOverrides: (NodeConfiguration) -> Any? = {}) {
+    fun setForcedID(forcedID: Int?) = copy(forcedID = forcedID)
+    fun setLegalName(legalName: CordaX500Name?) = copy(legalName = legalName)
+    fun setNotaryIdentity(notaryIdentity: Pair<ServiceInfo, KeyPair>?) = copy(notaryIdentity = notaryIdentity)
+    fun setEntropyRoot(entropyRoot: BigInteger) = copy(entropyRoot = entropyRoot)
+    fun setConfigOverrides(configOverrides: (NodeConfiguration) -> Any?) = copy(configOverrides = configOverrides)
+}
+
+data class MockNodeArgs(
+        val config: NodeConfiguration,
+        val network: MockNetwork,
+        val id: Int,
+        val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
+        val entropyRoot: BigInteger)
+
+/**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
  * Components that do IO are either swapped out for mocks, or pointed to a [Jimfs] in memory filesystem or an in
  * memory H2 database instance.
@@ -118,24 +146,11 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     /** Allows customisation of how nodes are created. */
     interface Factory<out N : MockNode> {
-        /**
-         * @param config the configuration of the node to be created
-         * @param network a reference to the [MockNetwork] owning the node.
-         * @param id a unique identifier for the node.
-         * @param notaryIdentity is an additional override to use in place of the node's default notary service,
-         *      main usage is for when the node is part of a notary cluster.
-         * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
-         *      but can be overriden to cause nodes to have stable or colliding identity/service keys.
-         */
-        fun create(config: NodeConfiguration, network: MockNetwork, id: Int,
-                   notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): N
+        fun create(args: MockNodeArgs): N
     }
 
     object DefaultFactory : Factory<MockNode> {
-        override fun create(config: NodeConfiguration, network: MockNetwork,
-                            id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNode {
-            return MockNode(config, network, id, notaryIdentity, entropyRoot)
-        }
+        override fun create(args: MockNodeArgs) = MockNode(args)
     }
 
     /**
@@ -161,19 +176,17 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         }
     }
 
-    /**
-     * @param notaryIdentity is an additional override to use in place of the node's default notary service,
-     * main usage is for when the node is part of a notary cluster.
-     * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
-     * but can be overriden to cause nodes to have stable or colliding identity/service keys.
-     */
-    open class MockNode(config: NodeConfiguration,
-                        val mockNet: MockNetwork,
-                        val id: Int,
-                        internal val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                        val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
-            AbstractNode(config, TestClock(), MOCK_VERSION_INFO, CordappLoader.createDefaultWithTestPackages(config, mockNet.cordappPackages), mockNet.busyLatch) {
+    open class MockNode(args: MockNodeArgs) : AbstractNode(
+            args.config,
+            TestClock(),
+            MOCK_VERSION_INFO,
+            CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
+            args.network.busyLatch) {
+        val mockNet = args.network
         override val networkMapAddress = null
+        val id = args.id
+        internal val notaryIdentity = args.notaryIdentity
+        val entropyRoot = args.entropyRoot
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
@@ -279,56 +292,28 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         }
     }
 
-    fun createUnstartedNode(forcedID: Int? = null,
-                            legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
-                            entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                            configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
-        return createUnstartedNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, configOverrides = configOverrides)
+    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()) = createUnstartedNode(parameters, defaultFactory)
+    fun <N : MockNode> createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: Factory<N>): N {
+        return createNodeImpl(parameters, nodeFactory, false)
     }
 
-    fun <N : MockNode> createUnstartedNode(forcedID: Int? = null, nodeFactory: Factory<N>,
-                                           legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
-                                           entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                                           configOverrides: (NodeConfiguration) -> Any? = {}): N {
-        return createNodeImpl(forcedID, nodeFactory, false, legalName, notaryIdentity, entropyRoot, configOverrides)
-    }
-
-    /**
-     * Returns a node, optionally created by the passed factory method.
-     * @param notaryIdentity a set of service entries to use in place of the node's default service entries,
-     * for example where a node's service is part of a cluster.
-     * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
-     * but can be overridden to cause nodes to have stable or colliding identity/service keys.
-     * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
-     */
-    fun createNode(forcedID: Int? = null,
-                   legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
-                   entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<MockNode> {
-        return createNode(forcedID, defaultFactory, legalName, notaryIdentity, entropyRoot, configOverrides = configOverrides)
-    }
-
+    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedNode<MockNode> = createNode(parameters, defaultFactory)
     /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
-    fun <N : MockNode> createNode(forcedID: Int? = null, nodeFactory: Factory<N>,
-                                  legalName: CordaX500Name? = null, notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
-                                  entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                                  configOverrides: (NodeConfiguration) -> Any? = {}): StartedNode<N> {
-        return uncheckedCast(createNodeImpl(forcedID, nodeFactory, true, legalName, notaryIdentity, entropyRoot, configOverrides).started!!
-                .also { ensureAllNetworkMapCachesHaveAllNodeInfos() })
+    fun <N : MockNode> createNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: Factory<N>): StartedNode<N> {
+        val node: StartedNode<N> = uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
+        ensureAllNetworkMapCachesHaveAllNodeInfos()
+        return node
     }
 
-    private fun <N : MockNode> createNodeImpl(forcedID: Int?, nodeFactory: Factory<N>,
-                                              start: Boolean, legalName: CordaX500Name?, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                              entropyRoot: BigInteger,
-                                              configOverrides: (NodeConfiguration) -> Any?): N {
-        val id = forcedID ?: nextNodeId++
+    private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: Factory<N>, start: Boolean): N {
+        val id = parameters.forcedID ?: nextNodeId++
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
-                myLegalName = legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
+                myLegalName = parameters.legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
-            configOverrides(it)
+            parameters.configOverrides(it)
         }
-        return nodeFactory.create(config, this, id, notaryIdentity, entropyRoot).apply {
+        return nodeFactory.create(MockNodeArgs(config, this, id, parameters.notaryIdentity, parameters.entropyRoot)).apply {
             if (start) {
                 start()
                 if (threadPerNode) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
@@ -364,23 +349,24 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     @JvmOverloads
     fun createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name, validating: Boolean = true): StartedNode<MockNode> {
-        return createNode(legalName = legalName, configOverrides = {
+        return createNode(MockNodeParameters(legalName = legalName, configOverrides = {
             doReturn(NotaryConfig(validating)).whenever(it).notary
-        })
+        }))
     }
 
-    fun <N : MockNode> createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name,
+    fun <N : MockNode> createNotaryNode(parameters: MockNodeParameters = MockNodeParameters(legalName = DUMMY_NOTARY.name),
                                         validating: Boolean = true,
                                         nodeFactory: Factory<N>): StartedNode<N> {
-        return createNode(legalName = legalName, nodeFactory = nodeFactory, configOverrides = {
+        return createNode(parameters.copy(configOverrides = {
             doReturn(NotaryConfig(validating)).whenever(it).notary
-        })
+            parameters.configOverrides(it)
+        }), nodeFactory)
     }
 
     @JvmOverloads
     fun createPartyNode(legalName: CordaX500Name? = null,
                         notaryIdentity: Pair<ServiceInfo, KeyPair>? = null): StartedNode<MockNode> {
-        return createNode(legalName = legalName, notaryIdentity = notaryIdentity)
+        return createNode(MockNodeParameters(legalName = legalName, notaryIdentity = notaryIdentity))
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.

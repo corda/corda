@@ -34,17 +34,12 @@ import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.CordaPersistence
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockServices
-import net.corda.testing.node.pumpReceive
+import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -54,8 +49,6 @@ import org.junit.runners.Parameterized
 import rx.Observable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.math.BigInteger
-import java.security.KeyPair
 import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
@@ -267,13 +260,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = mockNet.createNode(bobAddr.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
-                override fun create(config: NodeConfiguration, network: MockNetwork,
-                                    id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(config, network, bobAddr.id, notaryIdentity, entropyRoot)
-                }
-            }, BOB_NAME)
-
+            bobNode = mockNet.createNode(MockNodeParameters(bobAddr.id, BOB_NAME))
             // Find the future representing the result of this state machine again.
             val bobFuture = bobNode.smm.findStateMachines(BuyerAcceptor::class.java).single().second
 
@@ -307,19 +294,16 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     // of gets and puts.
     private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<MockNetwork.MockNode> {
         // Create a node in the mock network ...
-        return mockNet.createNode(nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(config: NodeConfiguration,
-                                network: MockNetwork,
-                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, id, notaryIdentity, entropyRoot) {
+        return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
+            override fun create(args: MockNodeArgs): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(args) {
                     // That constructs a recording tx storage
                     override fun makeTransactionStorage(): WritableTransactionStorage {
                         return RecordingTransactionStorage(database, super.makeTransactionStorage())
                     }
                 }
             }
-        }, legalName = name)
+        })
     }
 
     @Test
