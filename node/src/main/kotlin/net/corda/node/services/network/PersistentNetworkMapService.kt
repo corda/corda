@@ -1,6 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.utilities.toBase58String
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.SingleMessageRecipient
@@ -9,7 +9,9 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.utilities.*
+import net.corda.node.utilities.MAX_HASH_HEX_SIZE
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisMessagingComponent
 import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
@@ -31,8 +33,9 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}network_map_nodes")
     class NetworkNode(
-            @Id @Column(name = "node_party_key")
-            var publicKey: String = "",
+            @Id
+            @Column(name = "node_party_key_hash", length = MAX_HASH_HEX_SIZE)
+            var publicKeyHash: String,
 
             @Column
             var nodeParty: NodeParty = NodeParty(),
@@ -58,14 +61,14 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
 
         fun createNetworkNodesMap(): PersistentMap<PartyAndCertificate, NodeRegistrationInfo, NetworkNode, String> {
             return PersistentMap(
-                    toPersistentEntityKey = { it.owningKey.toBase58String() },
+                    toPersistentEntityKey = { it.owningKey.toStringShort() },
                     fromPersistentEntity = {
                         Pair(PartyAndCertificate(factory.generateCertPath(ByteArrayInputStream(it.nodeParty.certPath))),
                                 it.registrationInfo.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
                     },
                     toPersistentEntity = { key: PartyAndCertificate, value: NodeRegistrationInfo ->
                         NetworkNode(
-                                publicKey = key.owningKey.toBase58String(),
+                                publicKeyHash = key.owningKey.toStringShort(),
                                 nodeParty = NodeParty(
                                         key.name.toString(),
                                         key.certificate.encoded,

@@ -12,6 +12,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
@@ -72,7 +73,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
     class PersistentIdentity(
             @Id
-            @Column(name = "pk_hash", length = 64)
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
             var publicKeyHash: String = "",
 
             @Lob
@@ -87,7 +88,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             @Column(name = "name", length = 128)
             var name: String = "",
 
-            @Column(name = "pk_hash", length = 64)
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
             var publicKeyHash: String = ""
     )
 
