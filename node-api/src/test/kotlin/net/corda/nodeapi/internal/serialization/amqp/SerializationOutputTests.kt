@@ -430,9 +430,7 @@ class SerializationOutputTests {
 
     private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable = withTestSerialization {
         val newContext = SerializationFactory.defaultFactory.defaultContext.withProperty(CommonPropertyNames.IncludeInternalInfo, true)
-
-        val deserializedObj = SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
-        return deserializedObj
+        SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
     }
 
     @Test

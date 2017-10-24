@@ -13,7 +13,7 @@ import org.junit.runner.Description
 import org.junit.runners.model.Statement
 
 class SerializationEnvironmentRule : TestRule {
-    lateinit var env: TestSerializationEnvironment
+    lateinit var env: SerializationEnvironment
     override fun apply(base: Statement, description: Description?) = object : Statement() {
         override fun evaluate() = withTestSerialization {
             env = it
@@ -26,8 +26,8 @@ interface TestSerializationEnvironment : SerializationEnvironment {
     fun resetTestSerialization()
 }
 
-inline fun <T> withTestSerialization(block: (TestSerializationEnvironment) -> T): T {
-    val env = initialiseTestSerialization()
+fun <T> withTestSerialization(block: (SerializationEnvironment) -> T): T {
+    val env = initialiseTestSerializationImpl()
     try {
         return block(env)
     } finally {
@@ -36,7 +36,7 @@ inline fun <T> withTestSerialization(block: (TestSerializationEnvironment) -> T)
 }
 
 /** @param armed true to init, false to do nothing and return a dummy env. */
-fun initialiseTestSerialization(armed: Boolean = true): TestSerializationEnvironment {
+fun initialiseTestSerialization(armed: Boolean): TestSerializationEnvironment {
     return if (armed) {
         val env = initialiseTestSerializationImpl()
         object : TestSerializationEnvironment, SerializationEnvironment by env {
