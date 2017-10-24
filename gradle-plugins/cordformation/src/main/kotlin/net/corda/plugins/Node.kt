@@ -205,7 +205,7 @@ class Node(private val project: Project) : CordformNode() {
                 .defaults()
                 .setOriginComments(false)
                 .setComments(false)
-                .setFormatted(false)
+                .setFormatted(true)
                 .setJson(false)
         val configFileText = config.root().render(options).split("\n").toList()
 
