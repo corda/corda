@@ -97,7 +97,7 @@ class NodeProcess(
         private fun startNode(nodeDir: Path): Process {
             val builder = ProcessBuilder()
                     .command(javaPath.toString(), "-jar", cordaJar.toString())
-                    .directory(nodeDir.toFile())
+                    .directory(nodeDir.toFile()).redirectError(ProcessBuilder.Redirect.INHERIT).redirectOutput(ProcessBuilder.Redirect.INHERIT)
 
             builder.environment().putAll(mapOf(
                     "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()
