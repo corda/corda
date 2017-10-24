@@ -166,9 +166,7 @@ class VaultSoftLockManagerTest {
 
     @Test
     fun AMQP_GO_BOOM() {
-        class A(a: Int) {
-            val b = a + 10
-        }
+        data class A(val a: Int)
 
         val a = A(10)
 
