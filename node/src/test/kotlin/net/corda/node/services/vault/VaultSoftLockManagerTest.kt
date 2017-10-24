@@ -17,6 +17,8 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.SoftLockingCondition
 import net.corda.core.node.services.vault.QueryCriteria.SoftLockingType.LOCKED_ONLY
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -159,4 +161,16 @@ class VaultSoftLockManagerTest {
 
     @Test
     fun `fungible asset is soft locked with checkpoint`() = run(true, FungibleAssetImpl(nodePair), true)
+
+    // the 'this' reference means we can't just move this to the common test utils
+
+    @Test
+    fun AMQP_GO_BOOM() {
+        data class A(val a: Int)
+
+        val a = A(10)
+
+        val sf = SerializationFactory.defaultFactory
+        sf.serialize(a, SerializationDefaults.STORAGE_CONTEXT)
+    }
 }
