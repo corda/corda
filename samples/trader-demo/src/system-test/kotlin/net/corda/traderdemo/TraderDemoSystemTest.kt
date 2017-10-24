@@ -70,7 +70,7 @@ class TraderDemoSystemTest {
 private class TraderDemoNode {
 
     fun start(nodeDirectoryName: String): NodeExpectingProcess {
-        val nodeDirectory: Path = _nodesDirectory.resolve(nodeDirectoryName)
+        val nodeDirectory: Path = nodesDirectory.resolve(nodeDirectoryName)
         val nodeFileInfo = NodeFileInfo(nodeDirectory, cordaJarType)
         nodeFileInfo.validateFilesOrThrow()
         val expectingProcess = startExpectingProcess(nodeFileInfo)
@@ -90,7 +90,7 @@ private class TraderDemoNode {
                 .build()
     }
 
-    private val _nodesDirectory: Path by lazy {
+    private val nodesDirectory: Path by lazy {
         Paths.get(System.getProperty("user.dir"), "build", "nodes")
     }
 }
@@ -152,18 +152,18 @@ private class ExpectingProcess(private val _process: Process, private val _expec
 
 private class ExpectingProcessBuilder {
 
-    private var _command: List<String>? = null
-    private var _workingDirectory: Path? = null
+    private var command: List<String>? = null
+    private var workingDirectory: Path? = null
 
-    fun withCommand(command: List<String>): ExpectingProcessBuilder {
-        checkNull(_command)
-        _command = command
+    fun withCommand(value: List<String>): ExpectingProcessBuilder {
+        checkNull(command)
+        command = value
         return this
     }
 
-    fun withWorkingDirectory(workingDirectory: Path): ExpectingProcessBuilder {
-        checkNull(_workingDirectory)
-        _workingDirectory = workingDirectory
+    fun withWorkingDirectory(value: Path): ExpectingProcessBuilder {
+        checkNull(workingDirectory)
+        workingDirectory = value
         return this
     }
 
@@ -189,22 +189,22 @@ private class ExpectingProcessBuilder {
                 .build()
     }
 
-    private fun command(): List<String> = _command!!
-    private fun workingDirectoryAsFile(): File = _workingDirectory!!.toFile()
+    private fun command(): List<String> = command!!
+    private fun workingDirectoryAsFile(): File = workingDirectory!!.toFile()
 }
 
-private class NodeFileInfo(private val _nodeDirectory: Path, private val _jarType: JarType) {
+private class NodeFileInfo(private val nodeDirectory: Path, private val jarType: JarType) {
 
-    fun validateFilesOrThrow() = _jarType.validateFilesOrThrow(_nodeDirectory)
-    fun directory(): Path = _nodeDirectory
-    fun directoryName(): String = _nodeDirectory.fileName.toString()
-    fun jarFile(): Path = _nodeDirectory.resolve(jarName())
-    fun jarName(): String = _jarType.jarName()
+    fun validateFilesOrThrow() = jarType.validateFilesOrThrow(nodeDirectory)
+    fun directory(): Path = nodeDirectory
+    fun directoryName(): String = nodeDirectory.fileName.toString()
+    fun jarFile(): Path = nodeDirectory.resolve(jarName())
+    fun jarName(): String = jarType.jarName()
 }
 
-private abstract class JarType(private val _jarName: String) {
+private abstract class JarType(private val jarName: String) {
 
-    fun jarName(): String = _jarName
+    fun jarName(): String = jarName
 
     open fun validateFilesOrThrow(nodeDirectory: Path) {
         throw NotImplementedError()
@@ -244,32 +244,32 @@ private object webserverJarType: JarType("corda-webserver.jar") {
 
 private class NodeCommandBuilder {
 
-    private var _nodeFileInfo: NodeFileInfo? = null
-    private var _arguments: List<String>? = null
-    private var _isHeadless: Boolean? = null
-    private var _isCapsuleDebugOn: Boolean? = null
+    private var nodeFileInfo: NodeFileInfo? = null
+    private var arguments: List<String>? = null
+    private var isHeadless: Boolean? = null
+    private var isCapsuleDebugOn: Boolean? = null
 
-    fun withNodeFileInfo(nodeFileInfo: NodeFileInfo): NodeCommandBuilder {
-        checkNull(_nodeFileInfo)
-        _nodeFileInfo = nodeFileInfo
+    fun withNodeFileInfo(value: NodeFileInfo): NodeCommandBuilder {
+        checkNull(nodeFileInfo)
+        nodeFileInfo = value
         return this
     }
 
-    fun withArguments(arguments: List<String>): NodeCommandBuilder {
-        checkNull(_arguments)
-        _arguments = arguments
+    fun withArguments(value: List<String>): NodeCommandBuilder {
+        checkNull(arguments)
+        arguments = value
         return this
     }
 
     fun withHeadlessFlag(): NodeCommandBuilder {
-        checkNull(_isHeadless)
-        _isHeadless = true
+        checkNull(isHeadless)
+        isHeadless = true
         return this
     }
 
     fun withCapsuleDebugOn(): NodeCommandBuilder {
-        checkNull(_isCapsuleDebugOn)
-        _isCapsuleDebugOn = true
+        checkNull(isCapsuleDebugOn)
+        isCapsuleDebugOn = true
         return this
     }
 
@@ -316,42 +316,42 @@ private class NodeCommandBuilder {
         }
     }
 
-    private fun directory(): Path = _nodeFileInfo!!.directory()
-    private fun directoryName(): String = _nodeFileInfo!!.directoryName()
-    private fun jarFile(): Path = _nodeFileInfo!!.jarFile()
-    private fun jarName(): String = _nodeFileInfo!!.jarName()
-    private fun arguments(): List<String> = _arguments ?: emptyList()
-    private fun isHeadless(): Boolean = _isHeadless == true
-    private fun isCapsuleDebugOn(): Boolean = _isCapsuleDebugOn == true
+    private fun directory(): Path = nodeFileInfo!!.directory()
+    private fun directoryName(): String = nodeFileInfo!!.directoryName()
+    private fun jarFile(): Path = nodeFileInfo!!.jarFile()
+    private fun jarName(): String = nodeFileInfo!!.jarName()
+    private fun arguments(): List<String> = arguments ?: emptyList()
+    private fun isHeadless(): Boolean = isHeadless == true
+    private fun isCapsuleDebugOn(): Boolean = isCapsuleDebugOn == true
 }
 
 private class JavaCommandBuilder {
 
-    private var _javaArguments: List<String>? = null
-    private var _jarFile: Path? = null
-    private var _jarArguments: List<String>? = null
+    private var javaArguments: List<String>? = null
+    private var jarFile: Path? = null
+    private var jarArguments: List<String>? = null
 
-    fun withJavaArguments(javaArguments: List<String>): JavaCommandBuilder {
-        checkNull(_javaArguments)
-        _javaArguments = javaArguments
+    fun withJavaArguments(value: List<String>): JavaCommandBuilder {
+        checkNull(javaArguments)
+        javaArguments = value
         return this
     }
 
-    fun withJarFile(jarFile: Path): JavaCommandBuilder {
-        checkNull(_jarFile)
-        _jarFile = jarFile
+    fun withJarFile(value: Path): JavaCommandBuilder {
+        checkNull(jarFile)
+        jarFile = value
         return this
     }
 
-    fun withJarArguments(jarArguments: List<String>): JavaCommandBuilder {
-        checkNull(_jarArguments)
-        _jarArguments = jarArguments
+    fun withJarArguments(value: List<String>): JavaCommandBuilder {
+        checkNull(jarArguments)
+        jarArguments = value
         return this
     }
 
     fun build(): List<String> {
         return mutableListOf<String>().apply {
-            add(_javaPathString)
+            add(javaPathString)
             addAll(javaArguments())
             add("-jar")
             add(jarNameString())
@@ -359,31 +359,31 @@ private class JavaCommandBuilder {
         }
     }
 
-    private val _javaPathString: String by lazy {
+    private val javaPathString: String by lazy {
         Paths
                 .get(System.getProperty("java.home"), "bin", "java")
                 .toString()
     }
 
-    private fun javaArguments(): List<String> = _javaArguments ?: emptyList()
-    private fun jarNameString(): String = _jarFile!!.fileName.toString()
-    private fun jarArguments(): List<String> = _jarArguments ?: emptyList()
+    private fun javaArguments(): List<String> = javaArguments ?: emptyList()
+    private fun jarNameString(): String = jarFile!!.fileName.toString()
+    private fun jarArguments(): List<String> = jarArguments ?: emptyList()
 }
 
 private class ShellCommandBuilder {
 
-    private var _command: List<String>? = null
-    private var _workingDirectory: Path? = null
+    private var command: List<String>? = null
+    private var workingDirectory: Path? = null
 
-    fun withCommand(command: List<String>): ShellCommandBuilder {
-        checkNull(_command)
-        _command = command
+    fun withCommand(value: List<String>): ShellCommandBuilder {
+        checkNull(command)
+        command = value
         return this
     }
 
-    fun withWorkingDirectory(workingDirectory: Path): ShellCommandBuilder {
-        checkNull(_workingDirectory)
-        _workingDirectory = workingDirectory
+    fun withWorkingDirectory(value: Path): ShellCommandBuilder {
+        checkNull(workingDirectory)
+        workingDirectory = value
         return this
     }
 
@@ -418,8 +418,8 @@ private class ShellCommandBuilder {
         }
     }
 
-    private fun commandString(): String = _command!!.joinToString(" ")
-    private fun workingDirectoryPathString(): String = _workingDirectory!!.toString()
+    private fun commandString(): String = command!!.joinToString(" ")
+    private fun workingDirectoryPathString(): String = workingDirectory!!.toString()
 }
 
 private enum class OS {
@@ -444,9 +444,9 @@ private val os: OS by lazy {
 
 private object debugPortNumberGenerator {
 
-    private var _portNumber: Int = 5005
+    private var portNumber: Int = 5005
 
-    fun next(): Int = _portNumber++
+    fun next(): Int = portNumber++
 }
 
 private fun FluentRe.compile(flags: Int): Pattern {
