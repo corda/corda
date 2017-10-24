@@ -22,9 +22,7 @@ class InMemoryMessagingTests {
 
     @After
     fun tearDown() {
-        if (mockNet.nodes.isNotEmpty()) {
-            mockNet.stopNodes()
-        }
+        mockNet.stopNodes()
     }
 
     @Test
