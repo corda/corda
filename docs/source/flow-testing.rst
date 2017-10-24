@@ -67,7 +67,7 @@ full node automatically registers them by scanning the CorDapp jars. In a unit t
 
 MockNetwork message manipulation
 --------------------------------
-The MockNetwork has the ability to manipulate message streams. You can use this to test your flows behaviour on corrupted
+The MockNetwork has the ability to manipulate message streams. You can use this to test your flows behaviour on corrupted,
 or malicious data received.
 
 Message modification example in ``TutorialMockNetwork.kt``:
