@@ -38,7 +38,7 @@ class VaultSoftLockManager private constructor(private val vault: VaultService) 
             //  The downside is we could have a long running flow that holds a lock for a long period of time.
             //  However, the lock can be programmatically released, like any other soft lock,
             //  should we want a long running flow that creates a visible state mid way through.
-            vault.rawUpdates.subscribe { (_, produced, _, flowId) ->
+            vault.rawUpdates.subscribe { (_, produced, flowId) ->
                 if (flowId != null) {
                     val fungible = produced.filter { it.state.data is FungibleAsset<*> }
                     if (fungible.isNotEmpty()) {

@@ -49,17 +49,17 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     data class Update<U : ContractState>(
             val consumed: Set<StateAndRef<U>>,
             val produced: Set<StateAndRef<U>>,
-            val observed: Set<StateAndRef<U>>,
             val flowId: UUID? = null,
             /**
              * Specifies the type of update, currently supported types are general and notary change. Notary
              * change transactions only modify the notary field on states, and potentially need to be handled
              * differently.
              */
-            val type: UpdateType = UpdateType.GENERAL
+            val type: UpdateType = UpdateType.GENERAL,
+            val observed: Set<StateAndRef<U>>
     ) {
         @Deprecated("Use constructor with observed states specified")
-        constructor(consumed: Set<StateAndRef<U>>, produced: Set<StateAndRef<U>>, flowId: UUID? = null, type: UpdateType = UpdateType.GENERAL) : this(consumed, produced, emptySet(), flowId, type)
+        constructor(consumed: Set<StateAndRef<U>>, produced: Set<StateAndRef<U>>, flowId: UUID? = null, type: UpdateType = UpdateType.GENERAL) : this(consumed, produced, flowId, type, emptySet())
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType(): Boolean {
             return consumed.any { it.state.data is T } || produced.any { it.state.data is T } || observed.any { it.state.data is T }
@@ -109,8 +109,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     companion object {
-        val NoUpdate = Update(emptySet(), emptySet(), emptySet(), type = Vault.UpdateType.GENERAL)
-        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), emptySet(), null, type = Vault.UpdateType.NOTARY_CHANGE)
+        val NoUpdate = Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL, observed = emptySet())
+        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), null, type = Vault.UpdateType.NOTARY_CHANGE, observed = emptySet())
     }
 
     @CordaSerializable

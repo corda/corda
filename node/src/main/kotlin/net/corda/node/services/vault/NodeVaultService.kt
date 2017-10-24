@@ -184,7 +184,7 @@ class NodeVaultService(
                 return Vault.NoUpdate
             }
 
-            return Vault.Update(consumedStates, ourNewStates, ourObservedStates)
+            return Vault.Update(consumedStates, ourNewStates, observed = ourObservedStates)
         }
 
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
@@ -219,7 +219,7 @@ class NodeVaultService(
                 return Vault.NoNotaryUpdate
             }
 
-            return Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet(), observedStateAndRefs.toHashSet(), null, Vault.UpdateType.NOTARY_CHANGE)
+            return Vault.Update(consumedStateAndRefs.toHashSet(), producedStateAndRefs.toHashSet(), null, Vault.UpdateType.NOTARY_CHANGE, observed = observedStateAndRefs.toHashSet())
         }
 
         val netDelta = txns.fold(Vault.NoNotaryUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
