@@ -10,7 +10,8 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationEnvironmentImpl
+import net.corda.core.serialization.nodeSerializationEnv
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
@@ -342,14 +343,15 @@ open class Node(override val configuration: NodeConfiguration,
 
     private fun initialiseSerialization() {
         val classloader = cordappLoader.appClassLoader
-        SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-            registerScheme(KryoServerSerializationScheme())
-            registerScheme(AMQPServerSerializationScheme())
-        }
-        SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
+        nodeSerializationEnv = SerializationEnvironmentImpl(
+                SerializationFactoryImpl().apply {
+                    registerScheme(KryoServerSerializationScheme())
+                    registerScheme(AMQPServerSerializationScheme())
+                },
+                KRYO_P2P_CONTEXT.withClassLoader(classloader),
+                rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
+                storageContext = KRYO_STORAGE_CONTEXT.withClassLoader(classloader),
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
     }
 
     /** Starts a blocking event loop for message dispatch. */

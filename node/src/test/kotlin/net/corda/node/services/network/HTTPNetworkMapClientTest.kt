@@ -6,6 +6,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.utilities.CertificateType
@@ -58,7 +59,7 @@ class HTTPNetworkMapClientTest {
                     contextPath = "/"
                     val resourceConfig = ResourceConfig().apply {
                         // Add your API provider classes (annotated for JAX-RS) here
-                        register(MockNetworkMapServer())
+                        register(MockNetworkMapServer(testSerialization.env))
                     }
                     val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
                     addServlet(jerseyServlet, "/api/*")
@@ -117,17 +118,17 @@ class HTTPNetworkMapClientTest {
 
 @Path("network-map")
 // This is a stub implementation of the network map rest API.
-internal class MockNetworkMapServer {
+internal class MockNetworkMapServer(private val serializationEnv: SerializationEnvironment) {
     private val nodeInfos = mutableMapOf<SecureHash, NodeInfo>()
     @POST
     @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    fun publishNodeInfo(input: InputStream): Response {
+    fun publishNodeInfo(input: InputStream) = serializationEnv.asContextEnv {
         val registrationData = input.readBytes().deserialize<SignedData<NodeInfo>>()
         val nodeInfo = registrationData.verified()
         val nodeInfoHash = nodeInfo.serialize().sha256()
         nodeInfos.put(nodeInfoHash, nodeInfo)
-        return ok().build()
+        ok().build()
     }
 
     @GET
@@ -139,9 +140,9 @@ internal class MockNetworkMapServer {
     @GET
     @Path("{var}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
+    fun getNodeInfo(@PathParam("var") nodeInfoHash: String) = serializationEnv.asContextEnv {
         val nodeInfo = nodeInfos[SecureHash.parse(nodeInfoHash)]
-        return if (nodeInfo != null) {
+        if (nodeInfo != null) {
             Response.ok(nodeInfo.serialize().bytes)
         } else {
             Response.status(Response.Status.NOT_FOUND)

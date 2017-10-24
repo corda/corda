@@ -20,10 +20,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.RaftConfig
@@ -48,16 +46,20 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal, private v
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
-        fun createMap(): AppendOnlyPersistentMap<String, Any, RaftState, String> =
+        fun createMap(serializationEnv: SerializationEnvironment = SerializationDefaults): AppendOnlyPersistentMap<String, Any, RaftState, String> =
                 AppendOnlyPersistentMap(
                         toPersistentEntityKey = { it },
                         fromPersistentEntity = {
-                            Pair(it.key, it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
+                            serializationEnv.asContextEnv {
+                                Pair(it.key, it.value.deserialize(context = serializationEnv.STORAGE_CONTEXT))
+                            }
                         },
                         toPersistentEntity = { k: String, v: Any ->
                             RaftState().apply {
                                 key = k
-                                value = v.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                                serializationEnv.asContextEnv {
+                                    value = v.serialize(context = serializationEnv.STORAGE_CONTEXT).bytes
+                                }
                             }
                         },
                         persistentEntityClass = RaftState::class.java
@@ -97,7 +99,7 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal, private v
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
         val stateMachineFactory = {
-            DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createMap)
+            DistributedImmutableMap(db) { RaftUniquenessProvider.createMap() }
         }
         val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)

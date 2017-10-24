@@ -60,7 +60,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     private val realClock: Clock = Clock.systemUTC()
     private val stoppedClock: Clock = Clock.fixed(realClock.instant(), realClock.zone)
     private val testClock = TestClock(stoppedClock)

@@ -38,8 +38,8 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.testing.installNodeSerialization
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
@@ -135,7 +135,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private val _nodes = mutableListOf<MockNode>()
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
-    private val serializationEnv = initialiseTestSerialization(initialiseSerialization)
+    private val serializationEnv = installNodeSerialization(initialiseSerialization)
 
     init {
         filesystem.getPath("/nodes").createDirectory()
@@ -391,7 +391,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
-        serializationEnv.resetTestSerialization()
+        serializationEnv.dispose()
     }
 
     // Test method to block until all scheduled activity, active flows
