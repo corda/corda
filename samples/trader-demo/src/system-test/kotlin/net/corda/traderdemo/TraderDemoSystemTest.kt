@@ -78,16 +78,11 @@ private class TraderDemoNode {
     }
 
     private fun startExpectingProcess(nodeFileInfo: NodeFileInfo): ExpectingProcess {
-        return ExpectingProcessBuilder()
-                .withCommand(buildNodeCommand(nodeFileInfo))
-                .withWorkingDirectory(nodeFileInfo.directory())
-                .start()
+        return ExpectingProcessBuilder(buildNodeCommand(nodeFileInfo), nodeFileInfo.directory()).start()
     }
 
     private fun buildNodeCommand(nodeFileInfo: NodeFileInfo): List<String> {
-        return NodeCommandBuilder()
-                .withNodeFileInfo(nodeFileInfo)
-                .build()
+        return NodeCommandBuilder(nodeFileInfo).build()
     }
 
     private val nodesDirectory: Path by lazy {
@@ -150,23 +145,8 @@ private class ExpectingProcess(private val _process: Process, private val _expec
     }
 }
 
-private class ExpectingProcessBuilder {
 
-    private var command: List<String>? = null
-    private var workingDirectory: Path? = null
-
-    fun withCommand(value: List<String>): ExpectingProcessBuilder {
-        checkNull(command)
-        command = value
-        return this
-    }
-
-    fun withWorkingDirectory(value: Path): ExpectingProcessBuilder {
-        checkNull(workingDirectory)
-        workingDirectory = value
-        return this
-    }
-
+private class ExpectingProcessBuilder(private val command: List<String>, private val workingDirectory: Path) {
     fun start(): ExpectingProcess {
         val process = buildProcess()
         val expect = buildExpect(process)
@@ -194,7 +174,6 @@ private class ExpectingProcessBuilder {
 }
 
 private class NodeFileInfo(private val nodeDirectory: Path, private val jarType: JarType) {
-
     fun validateFilesOrThrow() = jarType.validateFilesOrThrow(nodeDirectory)
     fun directory(): Path = nodeDirectory
     fun directoryName(): String = nodeDirectory.fileName.toString()
@@ -203,9 +182,7 @@ private class NodeFileInfo(private val nodeDirectory: Path, private val jarType:
 }
 
 private abstract class JarType(private val jarName: String) {
-
     fun jarName(): String = jarName
-
     open fun validateFilesOrThrow(nodeDirectory: Path) {
         throw NotImplementedError()
     }
@@ -220,13 +197,11 @@ private abstract class JarType(private val jarName: String) {
     protected fun configFile(nodeDirectory: Path): Path = nodeDirectory.resolve("node.conf")
 }
 
-private object cordaJarType: JarType("corda.jar") {
-
+private object cordaJarType : JarType("corda.jar") {
     override fun validateFilesOrThrow(nodeDirectory: Path) = validateFilesExistOrThrow(nodeDirectory)
 }
 
-private object webserverJarType: JarType("corda-webserver.jar") {
-
+private object webserverJarType : JarType("corda-webserver.jar") {
     override fun validateFilesOrThrow(nodeDirectory: Path) {
         validateFilesExistOrThrow(nodeDirectory)
         validateConfigOrThrow(configFile(nodeDirectory))
@@ -242,19 +217,10 @@ private object webserverJarType: JarType("corda-webserver.jar") {
     }
 }
 
-private class NodeCommandBuilder {
-
-    private var nodeFileInfo: NodeFileInfo? = null
+private class NodeCommandBuilder(private val nodeFileInfo: NodeFileInfo) {
     private var arguments: List<String>? = null
     private var isHeadless: Boolean? = null
     private var isCapsuleDebugOn: Boolean? = null
-
-    fun withNodeFileInfo(value: NodeFileInfo): NodeCommandBuilder {
-        checkNull(nodeFileInfo)
-        nodeFileInfo = value
-        return this
-    }
-
     fun withArguments(value: List<String>): NodeCommandBuilder {
         checkNull(arguments)
         arguments = value
@@ -274,16 +240,12 @@ private class NodeCommandBuilder {
     }
 
     fun build(): List<String> {
-        return ShellCommandBuilder()
-                .withCommand(buildJavaCommand())
-                .withWorkingDirectory(directory())
-                .build()
+        return ShellCommandBuilder(buildJavaCommand(), directory()).build()
     }
 
     private fun buildJavaCommand(): List<String> {
-        return JavaCommandBuilder()
+        return JavaCommandBuilder(jarFile())
                 .withJavaArguments(buildJavaArguments())
-                .withJarFile(jarFile())
                 .withJarArguments(buildJarArguments())
                 .build()
     }
@@ -316,30 +278,21 @@ private class NodeCommandBuilder {
         }
     }
 
-    private fun directory(): Path = nodeFileInfo!!.directory()
-    private fun directoryName(): String = nodeFileInfo!!.directoryName()
-    private fun jarFile(): Path = nodeFileInfo!!.jarFile()
-    private fun jarName(): String = nodeFileInfo!!.jarName()
+    private fun directory(): Path = nodeFileInfo.directory()
+    private fun directoryName(): String = nodeFileInfo.directoryName()
+    private fun jarFile(): Path = nodeFileInfo.jarFile()
+    private fun jarName(): String = nodeFileInfo.jarName()
     private fun arguments(): List<String> = arguments ?: emptyList()
     private fun isHeadless(): Boolean = isHeadless == true
     private fun isCapsuleDebugOn(): Boolean = isCapsuleDebugOn == true
 }
 
-private class JavaCommandBuilder {
-
+private class JavaCommandBuilder(private val jarFile: Path) {
     private var javaArguments: List<String>? = null
-    private var jarFile: Path? = null
     private var jarArguments: List<String>? = null
-
     fun withJavaArguments(value: List<String>): JavaCommandBuilder {
         checkNull(javaArguments)
         javaArguments = value
-        return this
-    }
-
-    fun withJarFile(value: Path): JavaCommandBuilder {
-        checkNull(jarFile)
-        jarFile = value
         return this
     }
 
@@ -354,7 +307,7 @@ private class JavaCommandBuilder {
             add(javaPathString)
             addAll(javaArguments())
             add("-jar")
-            add(jarNameString())
+            add(jarFileName())
             addAll(jarArguments())
         }
     }
@@ -366,27 +319,11 @@ private class JavaCommandBuilder {
     }
 
     private fun javaArguments(): List<String> = javaArguments ?: emptyList()
-    private fun jarNameString(): String = jarFile!!.fileName.toString()
+    private fun jarFileName(): String = jarFile.fileName.toString()
     private fun jarArguments(): List<String> = jarArguments ?: emptyList()
 }
 
-private class ShellCommandBuilder {
-
-    private var command: List<String>? = null
-    private var workingDirectory: Path? = null
-
-    fun withCommand(value: List<String>): ShellCommandBuilder {
-        checkNull(command)
-        command = value
-        return this
-    }
-
-    fun withWorkingDirectory(value: Path): ShellCommandBuilder {
-        checkNull(workingDirectory)
-        workingDirectory = value
-        return this
-    }
-
+private class ShellCommandBuilder(private val command: List<String>, private val workingDirectory: Path) {
     fun build(): List<String> {
         return when (os) {
             OS.WINDOWS -> buildWindows()
@@ -408,7 +345,7 @@ private class ShellCommandBuilder {
         return mutableListOf<String>().apply {
             add("/bin/bash")
             add("-c")
-            add("cd ${workingDirectoryPathString()} ; ${commandString()} && exit")
+            add("cd $workingDirectory ; ${commandString()} && exit")
         }
     }
 
@@ -418,8 +355,7 @@ private class ShellCommandBuilder {
         }
     }
 
-    private fun commandString(): String = command!!.joinToString(" ")
-    private fun workingDirectoryPathString(): String = workingDirectory!!.toString()
+    private fun commandString(): String = command.joinToString(" ")
 }
 
 private enum class OS {
@@ -443,9 +379,7 @@ private val os: OS by lazy {
 }
 
 private object debugPortNumberGenerator {
-
     private var portNumber: Int = 5005
-
     fun next(): Int = portNumber++
 }
 
