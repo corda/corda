@@ -32,7 +32,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     )
     from 'NOTICE' // Copy CDDL notice
     from { project(':node').configurations.runtime.filter { // Include config library JAR.
-        (((it.toString().contains("/com/typesafe/config/") && it.toString().contains("/config-")) ||
+        (((it.toString().contains("/config-")) ||
                 (it.toString().contains("\\com\\typesafe\\config\\") && it.toString().contains("\\config-"))) && it.toString().endsWith(".jar"))
     }.collect { zipTree(it) } }
     from { "$rootDir/node/build/resources/main/reference.conf" }
