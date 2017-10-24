@@ -10,29 +10,4 @@
       <cpe>cpe:/a:apache:struts:2.0.0</cpe>
    </suppress>
     -->
-    <suppress>
-        <notes><![CDATA[file name: commons-collections-3.2.1.jar]]></notes>
-        <gav regex="true">^commons-collections:commons-collections:.*$</gav>
-        <cve>CVE-2015-6420</cve>
-    </suppress>
-    <suppress>
-        <notes><![CDATA[file name: catalyst-netty-1.1.2.jar]]></notes>
-        <gav regex="true">^io\.atomix\.catalyst:catalyst-netty:.*$</gav>
-        <cve>CVE-2014-3488</cve>
-    </suppress>
-    <suppress>
-        <notes><![CDATA[file name: groovy-all-1.8.9.jar]]></notes>
-        <gav regex="true">^commons-cli:commons-cli:.*$</gav>
-        <cve>CVE-2016-6497</cve>
-    </suppress>
-    <suppress>
-        <notes><![CDATA[file name: groovy-all-1.8.9.jar]]></notes>
-        <gav regex="true">^commons-cli:commons-cli:.*$</gav>
-        <cve>CVE-2015-3253</cve>
-    </suppress>
-    <suppress>
-        <notes><![CDATA[file name: jetty-continuation-9.2.14.v20151106.jar]]></notes>
-        <gav regex="true">^org\.eclipse\.jetty:jetty-continuation:.*$</gav>
-        <cve>CVE-2017-9735</cve>
-    </suppress>
 </suppressions>
