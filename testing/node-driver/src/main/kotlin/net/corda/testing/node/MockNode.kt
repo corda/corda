@@ -17,6 +17,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -31,7 +32,7 @@ import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.*
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -53,6 +54,7 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -203,6 +205,10 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                     database)
                     .start()
                     .getOrThrow()
+        }
+
+        fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
+            network = messagingServiceSpy
         }
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
@@ -412,4 +418,16 @@ fun network(nodesCount: Int, action: MockNetwork.(nodes: List<StartedNode<MockNe
         val nodes = (1..nodesCount).map { _ -> it.createPartyNode() }
         action(it, nodes, notary)
     }
+}
+
+/**
+ * Extend this class in order to intercept and modify messages passing through the [MessagingService] when using the [InMemoryNetwork].
+ */
+open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
+
+/**
+ * Attach a [MessagingServiceSpy] to the [MockNode] allowing interception and modification of messages.
+ */
+fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
+    internals.setMessagingServiceSpy(messagingServiceSpy)
 }
