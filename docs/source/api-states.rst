@@ -116,7 +116,10 @@ You can also customize your state by implementing the following interfaces:
   :doc:`event-scheduling`)
 
 * ``ObservedState``, which allows observers for a state to be defined, separate to the participants. These are parties
-  which are interested in the state but are not directly involved, such as a regulator.
+  which are interested in the state but are not directly involved, such as a regulator. It is strongly encouraged that
+  nodes which are notified of the creation of a state are also notified when it is consumed, so that they are aware of
+  the lifecycle of the state and can use this information to decide to archive or delete legacy states depending on
+  local policies.
 
 User-defined fields
 -------------------
