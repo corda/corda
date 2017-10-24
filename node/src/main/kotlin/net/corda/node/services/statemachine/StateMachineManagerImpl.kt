@@ -33,10 +33,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.TopicSession
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -92,7 +89,7 @@ class StateMachineManagerImpl(
     private val scheduler = FiberScheduler()
     private val mutex = ThreadBox(InnerState())
     // This thread (only enabled in dev mode) deserialises checkpoints in the background to shake out bugs in checkpoint restore.
-    private val checkpointCheckerThread = if (serviceHub.configuration.devMode) Executors.newSingleThreadExecutor() else null
+    private val checkpointCheckerThread = if (serviceHub.configuration.devMode && serviceHub.configuration.debugOptions?.getProperty("disableCheckpointChecking") != "true") newNamedSingleThreadExecutor("CheckpointChecker") else null
 
     @Volatile private var unrestorableCheckpoints = false
 

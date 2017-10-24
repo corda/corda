@@ -28,6 +28,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val database: Properties?
     val rpcUsers: List<User>
     val devMode: Boolean
+    val debugOptions: Properties?
     val certificateSigningService: URL
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
@@ -93,6 +94,7 @@ data class FullNodeConfiguration(
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
+        override val debugOptions: Properties? = null,
         val useTestClock: Boolean = false,
         val detectPublicIp: Boolean = true,
         override val activeMQServer: ActiveMqServerConfiguration,
@@ -103,6 +105,7 @@ data class FullNodeConfiguration(
     init {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
+        require(debugOptions == null || devMode){"Cannot use debugOptions outside of dev mode"}
         // TODO Move this to ArtemisMessagingServer
         rpcUsers.forEach {
             require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }

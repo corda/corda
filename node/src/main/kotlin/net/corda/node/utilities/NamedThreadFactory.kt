@@ -14,6 +14,6 @@ class NamedThreadFactory(private val name:String, private val underlyingFactory:
     }
 }
 
-fun newNamedSinleThreadExecutor(name: String): ExecutorService {
+fun newNamedSingleThreadExecutor(name: String): ExecutorService {
     return Executors.newSingleThreadExecutor(NamedThreadFactory(name, Executors.defaultThreadFactory()))
 }
