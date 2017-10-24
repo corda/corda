@@ -4,12 +4,9 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.node.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
@@ -47,17 +44,15 @@ class PersistentKeyManagementService(val identityService: IdentityService,
             var privateKey: ByteArray = ByteArray(0)
     ) {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
-            : this(publicKey.toStringShort(),
-                   publicKey.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes,
-                   privateKey.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes)
+            : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
     }
 
     private companion object {
         fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toStringShort() },
-                    fromPersistentEntity = { Pair(it.publicKey.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
-                                                  it.privateKey.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)) },
+                    fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(
+                            it.privateKey)) },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey(key, value)
                     },
