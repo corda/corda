@@ -30,7 +30,7 @@ class DistributedImmutableMapTests {
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     lateinit var cluster: List<Member>
     lateinit var transaction: DatabaseTransaction
     private val databases: MutableList<CordaPersistence> = mutableListOf()

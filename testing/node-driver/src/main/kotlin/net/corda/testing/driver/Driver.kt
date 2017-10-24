@@ -38,7 +38,7 @@ import net.corda.testing.BOB
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.setGlobalSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -395,7 +395,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
+    val serializationEnv = setGlobalSerialization(initialiseSerialization)
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -406,7 +406,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        serializationEnv.resetTestSerialization()
+        serializationEnv.unset()
     }
 }
 
@@ -433,7 +433,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
+    val serializationEnv = setGlobalSerialization(initialiseSerialization)
     val driverDsl = driverDslWrapper(
             DriverDSL(
                     portAllocation = portAllocation,
@@ -456,7 +456,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        serializationEnv.resetTestSerialization()
+        serializationEnv.unset()
     }
 }
 

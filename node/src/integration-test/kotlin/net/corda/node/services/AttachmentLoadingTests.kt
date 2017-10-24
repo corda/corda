@@ -20,27 +20,19 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.nodeapi.User
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.*
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.eventually
 import net.corda.testing.node.MockServices
 import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
-
     private class Services : MockServices() {
         private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
         private val cordapp get() = provider.cordapps.first()
@@ -101,7 +93,7 @@ class AttachmentLoadingTests {
     }
 
     @Test
-    fun `test a wire transaction has loaded the correct attachment`() {
+    fun `test a wire transaction has loaded the correct attachment`() = withTestSerialization {
         val appClassLoader = services.appContext.classLoader
         val contractClass = appClassLoader.loadClass(ISOLATED_CONTRACT_ID).asSubclass(Contract::class.java)
         val generateInitialMethod = contractClass.getDeclaredMethod("generateInitial", PartyAndReference::class.java, Integer.TYPE, Party::class.java)
@@ -120,7 +112,7 @@ class AttachmentLoadingTests {
 
     @Test
     fun `test that attachments retrieved over the network are not used for code`() {
-        driver(initialiseSerialization = false) {
+        driver {
             installIsolatedCordappTo(bankAName)
             val (_, bankA, bankB) = createNotaryAndTwoNodes()
             eventuallyPassingTest {
@@ -133,7 +125,7 @@ class AttachmentLoadingTests {
 
     @Test
     fun `tests that if the attachment is loaded on both sides already that a flow can run`() {
-        driver(initialiseSerialization = false) {
+        driver {
             installIsolatedCordappTo(bankAName)
             installIsolatedCordappTo(bankBName)
             val (_, bankA, bankB) = createNotaryAndTwoNodes()

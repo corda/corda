@@ -3,9 +3,9 @@
 package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.core.serialization.SerializationEnvironmentImpl
 
 /*
  * Serialisation contexts for the client.
@@ -14,14 +14,14 @@ import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
  */
 
 val KRYO_RPC_CLIENT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
+        SerializationEnvironmentImpl::class.java.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
         SerializationContext.UseCase.RPCClient)
 
 val AMQP_RPC_CLIENT_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
-        SerializationDefaults.javaClass.classLoader,
+        SerializationEnvironmentImpl::class.java.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,

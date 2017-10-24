@@ -11,7 +11,7 @@ import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
-class DriverTests {
+class WebserverDriverTests {
     companion object {
         val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
