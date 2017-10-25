@@ -15,7 +15,7 @@ import java.time.Instant
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 interface FlowStateMachine<R> {
     @Suspendable
-    fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>): FlowInfo
+    fun getFlowInfo(otherParty: Party, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): FlowInfo
 
     @Suspendable
     fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession
@@ -25,16 +25,17 @@ interface FlowStateMachine<R> {
                                  otherParty: Party,
                                  payload: Any,
                                  sessionFlow: FlowLogic<*>,
-                                 retrySend: Boolean = false): UntrustworthyData<T>
+                                 retrySend: Boolean,
+                                 maySkipCheckpoint: Boolean): UntrustworthyData<T>
 
     @Suspendable
-    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
+    fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): UntrustworthyData<T>
 
     @Suspendable
-    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>)
+    fun send(otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean)
 
     @Suspendable
-    fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
+    fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): SignedTransaction
 
     @Suspendable
     fun sleepUntil(until: Instant)

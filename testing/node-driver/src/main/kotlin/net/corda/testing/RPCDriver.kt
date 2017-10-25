@@ -228,7 +228,6 @@ fun <A> rpcDriver(
         extraSystemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         initialiseSerialization: Boolean = true,
-        networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         startNodesInProcess: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         dsl: RPCDriverExposedDSLInterface.() -> A
@@ -240,7 +239,6 @@ fun <A> rpcDriver(
                         extraSystemProperties = extraSystemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
-                        networkMapStartStrategy = networkMapStartStrategy,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
                         extraCordappPackagesToScan = extraCordappPackagesToScan

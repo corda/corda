@@ -41,6 +41,16 @@ import java.time.Instant
  * and request they start their counterpart flow, then make sure it's annotated with [InitiatingFlow]. This annotation
  * also has a version property to allow you to version your flow and enables a node to restrict support for the flow to
  * that particular version.
+ *
+ * Functions that suspend the flow (including all functions on [FlowSession]) accept a [maySkipCheckpoint] parameter
+ * defaulting to false, false meaning a checkpoint should always be created on suspend. This parameter may be set to
+ * true which allows the implementation to potentially optimise away the checkpoint, saving a roundtrip to the database.
+ *
+ * This option however comes with a big warning sign: Setting the parameter to true requires the flow's code to be
+ * replayable from the previous checkpoint (or start of flow) up until the next checkpoint (or end of flow) in order to
+ * prepare for hard failures. As suspending functions always commit the flow's database transaction regardless of this
+ * parameter the flow must be prepared for scenarios where a previous running of the flow *already committed its
+ * relevant database transactions*. Only set this option to true if you know what you're doing.
  */
 abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
@@ -123,7 +133,7 @@ abstract class FlowLogic<out T> {
      */
     @Deprecated("Use FlowSession.getFlowInfo()", level = DeprecationLevel.WARNING)
     @Suspendable
-    fun getFlowInfo(otherParty: Party): FlowInfo = stateMachine.getFlowInfo(otherParty, flowUsedForSessions)
+    fun getFlowInfo(otherParty: Party): FlowInfo = stateMachine.getFlowInfo(otherParty, flowUsedForSessions, maySkipCheckpoint = false)
 
     /**
      * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
@@ -157,7 +167,7 @@ abstract class FlowLogic<out T> {
     @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
     @Suspendable
     open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, otherParty, payload, flowUsedForSessions)
+        return stateMachine.sendAndReceive(receiveType, otherParty, payload, flowUsedForSessions, retrySend = false, maySkipCheckpoint = false)
     }
 
     /**
@@ -171,17 +181,17 @@ abstract class FlowLogic<out T> {
      */
     @Deprecated("Use FlowSession.sendAndReceiveWithRetry()", level = DeprecationLevel.WARNING)
     internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(R::class.java, otherParty, payload, flowUsedForSessions, retrySend = true)
+        return stateMachine.sendAndReceive(R::class.java, otherParty, payload, flowUsedForSessions, retrySend = true, maySkipCheckpoint = false)
     }
 
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, counterparty, payload, flowUsedForSessions, retrySend = true)
+        return stateMachine.sendAndReceive(receiveType, counterparty, payload, flowUsedForSessions, retrySend = true, maySkipCheckpoint = false)
     }
 
     @Suspendable
     internal inline fun <reified R : Any> FlowSession.sendAndReceiveWithRetry(payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(R::class.java, counterparty, payload, flowUsedForSessions, retrySend = true)
+        return stateMachine.sendAndReceive(R::class.java, counterparty, payload, flowUsedForSessions, retrySend = true, maySkipCheckpoint = false)
     }
 
     /**
@@ -206,7 +216,7 @@ abstract class FlowLogic<out T> {
     @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
     @Suspendable
     open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
-        return stateMachine.receive(receiveType, otherParty, flowUsedForSessions)
+        return stateMachine.receive(receiveType, otherParty, flowUsedForSessions, maySkipCheckpoint = false)
     }
 
     /** Suspends until a message has been received for each session in the specified [sessions].
@@ -250,7 +260,9 @@ abstract class FlowLogic<out T> {
      */
     @Deprecated("Use FlowSession.send()", level = DeprecationLevel.WARNING)
     @Suspendable
-    open fun send(otherParty: Party, payload: Any) = stateMachine.send(otherParty, payload, flowUsedForSessions)
+    open fun send(otherParty: Party, payload: Any) {
+        stateMachine.send(otherParty, payload, flowUsedForSessions, maySkipCheckpoint = false)
+    }
 
     /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result
@@ -342,7 +354,10 @@ abstract class FlowLogic<out T> {
      * valid by the local node, but that doesn't imply the vault will consider it relevant.
      */
     @Suspendable
-    fun waitForLedgerCommit(hash: SecureHash): SignedTransaction = stateMachine.waitForLedgerCommit(hash, this)
+    @JvmOverloads
+    fun waitForLedgerCommit(hash: SecureHash, maySkipCheckpoint: Boolean = false): SignedTransaction {
+        return stateMachine.waitForLedgerCommit(hash, this, maySkipCheckpoint = maySkipCheckpoint)
+    }
 
     /**
      * Returns a shallow copy of the Quasar stack frames at the time of call to [flowStackSnapshot]. Use this to inspect

@@ -57,7 +57,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         p2pPort 10002
         rpcPort 10003
         webPort 10004
-        cordapps = ["net.corda:finance:$corda_release_version"]
+        cordapps = ["$project.group:finance:$corda_release_version"]
         useTestClock true
     }
     node {
@@ -65,7 +65,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         p2pPort 10005
         rpcPort 10006
         webPort 10007
-        cordapps = ["net.corda:finance:$corda_release_version"]
+        cordapps = ["$project.group:finance:$corda_release_version"]
         useTestClock true
     }
     node {
@@ -73,7 +73,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         p2pPort 10008
         rpcPort 10009
         webPort 10010
-        cordapps = ["net.corda:finance:$corda_release_version"]
+        cordapps = ["$project.group:finance:$corda_release_version"]
         useTestClock true
     }
 }

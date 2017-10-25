@@ -13,7 +13,6 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
 import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.CordaSerializable
@@ -35,17 +34,12 @@ import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.CordaPersistence
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockServices
-import net.corda.testing.node.pumpReceive
+import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -55,8 +49,6 @@ import org.junit.runners.Parameterized
 import rx.Observable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.math.BigInteger
-import java.security.KeyPair
 import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
@@ -75,7 +67,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     companion object {
         private val cordappPackages = listOf("net.corda.finance.contracts")
         @JvmStatic
-        @Parameterized.Parameters
+        @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> {
             return listOf(true, false)
         }
@@ -99,7 +91,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         // We run this in parallel threads to help catch any race conditions that may exist. The other tests
         // we run in the unit test thread exclusively to speed things up, ensure deterministic results and
         // allow interruption half way through.
-        mockNet = MockNetwork(false, true, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
             val notaryNode = mockNet.createNotaryNode()
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -149,7 +141,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
     @Test(expected = InsufficientBalanceException::class)
     fun `trade cash for commercial paper fails using soft locking`() {
-        mockNet = MockNetwork(false, true, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
             val notaryNode = mockNet.createNotaryNode()
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -205,7 +197,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
     @Test
     fun `shutdown and restore`() {
-        mockNet = MockNetwork(false, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
             val notaryNode = mockNet.createNotaryNode()
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -268,13 +260,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = mockNet.createNode(bobAddr.id, object : MockNetwork.Factory<MockNetwork.MockNode> {
-                override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                    id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(config, network, networkMapAddr, bobAddr.id, notaryIdentity, entropyRoot)
-                }
-            }, BOB_NAME)
-
+            bobNode = mockNet.createNode(MockNodeParameters(bobAddr.id, BOB_NAME))
             // Find the future representing the result of this state machine again.
             val bobFuture = bobNode.smm.findStateMachines(BuyerAcceptor::class.java).single().second
 
@@ -308,31 +294,26 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     // of gets and puts.
     private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<MockNetwork.MockNode> {
         // Create a node in the mock network ...
-        return mockNet.createNode(nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(config: NodeConfiguration,
-                                network: MockNetwork,
-                                networkMapAddr: SingleMessageRecipient?,
-                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+        return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
+            override fun create(args: MockNodeArgs): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(args) {
                     // That constructs a recording tx storage
                     override fun makeTransactionStorage(): WritableTransactionStorage {
                         return RecordingTransactionStorage(database, super.makeTransactionStorage())
                     }
                 }
             }
-        }, legalName = name)
+        })
     }
 
     @Test
     fun `check dependencies of sale asset are resolved`() {
-        mockNet = MockNetwork(false, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(cordappPackages = cordappPackages)
         val notaryNode = mockNet.createNotaryNode()
         val aliceNode = makeNodeWithTracking(ALICE_NAME)
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()
@@ -433,14 +414,13 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
     @Test
     fun `track works`() {
-        mockNet = MockNetwork(false, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(cordappPackages = cordappPackages)
         val notaryNode = mockNet.createNotaryNode()
         val aliceNode = makeNodeWithTracking(ALICE_NAME)
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
 
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice: Party = aliceNode.info.singleIdentity()
         val bank: Party = bankNode.info.singleIdentity()
@@ -515,7 +495,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
     @Test
     fun `dependency with error on buyer side`() {
-        mockNet = MockNetwork(false, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
             runWithError(true, false, "at least one cash input")
         }
@@ -523,7 +503,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
     @Test
     fun `dependency with error on seller side`() {
-        mockNet = MockNetwork(false, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
             runWithError(false, true, "Issuances have a time-window")
         }
@@ -596,7 +576,6 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         val bankNode = mockNet.createPartyNode(BOC_NAME)
 
         mockNet.runNetwork()
-        notaryNode.internals.ensureRegistered()
         val notary = aliceNode.services.getDefaultNotary()
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()

@@ -5,15 +5,13 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
-import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
 import net.corda.testing.node.MockAttachmentStorage
+import net.corda.testing.rigorousMock
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
@@ -106,16 +104,6 @@ class CordaClassResolverTests {
         val emptyListClass = listOf<Any>().javaClass
         val emptySetClass = setOf<Any>().javaClass
         val emptyMapClass = mapOf<Any, Any>().javaClass
-    }
-
-    val factory: SerializationFactory = object : SerializationFactory() {
-        override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-            TODO("not implemented")
-        }
-
-        override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-            TODO("not implemented")
-        }
     }
 
     private val emptyWhitelistContext: SerializationContext = SerializationContextImpl(KryoHeaderV0_1, this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, SerializationContext.UseCase.P2P)
@@ -252,10 +240,11 @@ class CordaClassResolverTests {
     @Test
     fun `Kotlin EmptyList registers as Java emptyList`() {
         val javaEmptyListClass = Collections.emptyList<Any>().javaClass
-        val kryo = mock<Kryo>()
+        val kryo = rigorousMock<Kryo>()
         val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
-        whenever(kryo.getDefaultSerializer(javaEmptyListClass)).thenReturn(DefaultSerializableSerializer())
-
+        doReturn(DefaultSerializableSerializer()).whenever(kryo).getDefaultSerializer(javaEmptyListClass)
+        doReturn(false).whenever(kryo).references
+        doReturn(false).whenever(kryo).references = any()
         val registration = resolver.registerImplicit(emptyListClass)
         assertNotNull(registration)
         assertEquals(javaEmptyListClass, registration.type)
@@ -273,10 +262,11 @@ class CordaClassResolverTests {
     @Test
     fun `Kotlin EmptySet registers as Java emptySet`() {
         val javaEmptySetClass = Collections.emptySet<Any>().javaClass
-        val kryo = mock<Kryo>()
+        val kryo = rigorousMock<Kryo>()
         val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
-        whenever(kryo.getDefaultSerializer(javaEmptySetClass)).thenReturn(DefaultSerializableSerializer())
-
+        doReturn(DefaultSerializableSerializer()).whenever(kryo).getDefaultSerializer(javaEmptySetClass)
+        doReturn(false).whenever(kryo).references
+        doReturn(false).whenever(kryo).references = any()
         val registration = resolver.registerImplicit(emptySetClass)
         assertNotNull(registration)
         assertEquals(javaEmptySetClass, registration.type)
@@ -294,10 +284,11 @@ class CordaClassResolverTests {
     @Test
     fun `Kotlin EmptyMap registers as Java emptyMap`() {
         val javaEmptyMapClass = Collections.emptyMap<Any, Any>().javaClass
-        val kryo = mock<Kryo>()
+        val kryo = rigorousMock<Kryo>()
         val resolver = CordaClassResolver(allButBlacklistedContext).apply { setKryo(kryo) }
-        whenever(kryo.getDefaultSerializer(javaEmptyMapClass)).thenReturn(DefaultSerializableSerializer())
-
+        doReturn(DefaultSerializableSerializer()).whenever(kryo).getDefaultSerializer(javaEmptyMapClass)
+        doReturn(false).whenever(kryo).references
+        doReturn(false).whenever(kryo).references = any()
         val registration = resolver.registerImplicit(emptyMapClass)
         assertNotNull(registration)
         assertEquals(javaEmptyMapClass, registration.type)

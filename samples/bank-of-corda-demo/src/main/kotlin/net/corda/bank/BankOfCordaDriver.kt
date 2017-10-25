@@ -5,6 +5,7 @@ import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.finance.flows.CashConfigDataFlow
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -23,8 +24,8 @@ fun main(args: Array<String>) {
     BankOfCordaDriver().main(args)
 }
 
-val BANK_USERNAME = "bankUser"
-val BIGCORP_USERNAME = "bigCorpUser"
+const val BANK_USERNAME = "bankUser"
+const val BIGCORP_USERNAME = "bigCorpUser"
 
 val BIGCORP_LEGAL_NAME = CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US")
 
@@ -53,41 +54,52 @@ private class BankOfCordaDriver {
         // The ISSUE_CASH will request some Cash from the ISSUER on behalf of Big Corporation node
         val role = options.valueOf(roleArg)!!
 
-        val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,
-                "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = ValidatingNotaryService.id))
-
         try {
             when (role) {
                 Role.ISSUER -> {
                     driver(dsl = {
+                        startNotaryNode(providedName = DUMMY_NOTARY.name, validating = true)
                         val bankUser = User(
                                 BANK_USERNAME,
                                 "test",
                                 permissions = setOf(
+                                        startFlowPermission<CashPaymentFlow>(),
+                                        startFlowPermission<CashConfigDataFlow>(),
+                                        startFlowPermission<CashExitFlow>(),
                                         startFlowPermission<CashIssueAndPaymentFlow>(),
-                                        startFlowPermission<CashExitFlow>()))
-                        val bigCorpUser = User(BIGCORP_USERNAME, "test",
-                                permissions = setOf(
-                                        startFlowPermission<CashPaymentFlow>()))
-                        startNotaryNode(DUMMY_NOTARY.name, validating = true)
+                                        startFlowPermission<CashConfigDataFlow>()
+                                ))
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
                                 rpcUsers = listOf(bankUser))
+                        val bigCorpUser = User(BIGCORP_USERNAME, "test",
+                                permissions = setOf(
+                                        startFlowPermission<CashPaymentFlow>(),
+                                        startFlowPermission<CashConfigDataFlow>()))
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()
-                    }, isDebug = true)
+                    }, isDebug = true, extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset"))
                 }
-                Role.ISSUE_CASH_RPC -> {
-                    println("Requesting Cash via RPC ...")
-                    val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCIssue(requestParams)
-                    println("Success!! You transaction receipt is ${result.tx.id}")
-                }
-                Role.ISSUE_CASH_WEB -> {
-                    println("Requesting Cash via Web ...")
-                    val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10007)).requestWebIssue(requestParams)
-                    if (result)
-                        println("Successfully processed Cash Issue request")
+                else -> {
+                    val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,
+                            "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = ValidatingNotaryService.id))
+                    when(role) {
+                        Role.ISSUE_CASH_RPC -> {
+                            println("Requesting Cash via RPC ...")
+                            val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10004)).requestRPCIssue(requestParams)
+                            println("Success!! You transaction receipt is ${result.tx.id}")
+                        }
+                        Role.ISSUE_CASH_WEB -> {
+                            println("Requesting Cash via Web ...")
+                            val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10005)).requestWebIssue(requestParams)
+                            if (result)
+                                println("Successfully processed Cash Issue request")
+                        }
+                        else -> {
+                            throw IllegalArgumentException("Unrecognized role: " + role)
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {

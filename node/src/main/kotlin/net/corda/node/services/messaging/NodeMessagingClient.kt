@@ -22,7 +22,7 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
-import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
 import net.corda.node.utilities.*
@@ -485,7 +485,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
-    override fun send(message: Message, target: MessageRecipients, retryId: Long?) {
+    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
         // We have to perform sending on a different thread pool, since using the same pool for messaging and
         // fibers leads to Netty buffer memory leaks, caused by both Netty and Quasar fiddling with thread-locals.
         messagingExecutor.fetchFrom {
@@ -502,7 +502,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
 
                     // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
-                    if (amqDelayMillis > 0 && message.topicSession.topic == StateMachineManager.sessionTopic.topic) {
+                    if (amqDelayMillis > 0 && message.topicSession.topic == StateMachineManagerImpl.sessionTopic.topic) {
                         putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
                     }
                 }
@@ -523,6 +523,14 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 }
             }
         }
+        acknowledgementHandler?.invoke()
+    }
+
+    override fun send(addressedMessages: List<MessagingService.AddressedMessage>, acknowledgementHandler: (() -> Unit)?) {
+        for ((message, target, retryId, sequenceKey) in addressedMessages) {
+            send(message, target, retryId, sequenceKey, null)
+        }
+        acknowledgementHandler?.invoke()
     }
 
     private fun sendWithRetry(retryCount: Int, address: String, message: ClientMessage, retryId: Long) {

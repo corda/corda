@@ -1,5 +1,6 @@
 package net.corda.verifier
 
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
@@ -12,12 +13,13 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
 import net.corda.testing.ALICE
+import net.corda.testing.ALICE_NAME
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.*
-import net.corda.testing.driver.NetworkMapStartStrategy
+import net.corda.testing.DUMMY_NOTARY_SERVICE_NAME
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull
 
 class VerifierTests {
@@ -47,6 +49,21 @@ class VerifierTests {
                     throw it
                 }
             }
+        }
+    }
+
+    @Test
+    fun `single verification fails`() {
+        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
+            val aliceFuture = startVerificationRequestor(ALICE.name)
+            // Generate transactions as per usual, but then remove attachments making transaction invalid.
+            val transactions = generateTransactions(1).map { it.copy(attachments = emptyList()) }
+            val alice = aliceFuture.get()
+            startVerifier(alice)
+            alice.waitUntilNumberOfVerifiers(1)
+            val verificationRejection = transactions.map { alice.verifyTransaction(it) }.transpose().get().single()
+            assertTrue { verificationRejection is TransactionVerificationException.MissingAttachmentRejection}
+            assertTrue { verificationRejection!!.message!!.contains("Contract constraints failed, could not find attachment") }
         }
     }
 
@@ -112,10 +129,7 @@ class VerifierTests {
 
     @Test
     fun `single verifier works with a node`() {
-        verifierDriver(
-                networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts")
-        ) {
+        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
             val aliceFuture = startNode(providedName = ALICE.name)
             val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, verifierType = VerifierType.OutOfProcess)
             val aliceNode = aliceFuture.get()

@@ -1,8 +1,6 @@
 package net.corda.node.utilities.registration
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.eq
-import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -11,6 +9,7 @@ import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.getX509Certificate
 import net.corda.node.utilities.loadKeyStore
 import net.corda.testing.ALICE
+import net.corda.testing.rigorousMock
 import net.corda.testing.testNodeConfiguration
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -38,10 +37,9 @@ class NetworkRegistrationHelperTest {
                 .map { CordaX500Name(commonName = it, organisation = "R3 Ltd", locality = "London", country = "GB") }
         val certs = identities.stream().map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
                 .map { it.cert }.toTypedArray()
-
-        val certService: NetworkRegistrationService = mock {
-            on { submitRequest(any()) }.then { id }
-            on { retrieveCertificates(eq(id)) }.then { certs }
+        val certService = rigorousMock<NetworkRegistrationService>().also {
+            doReturn(id).whenever(it).submitRequest(any())
+            doReturn(certs).whenever(it).retrieveCertificates(eq(id))
         }
 
         val config = testNodeConfiguration(

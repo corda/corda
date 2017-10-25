@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.flows.ContractUpgradeFlow
@@ -9,6 +10,7 @@ import net.corda.core.flows.ContractUpgradeFlow
  * a specified and mutually agreed (amongst participants) contract version.
  * See also [ContractUpgradeFlow] to understand the workflow associated with contract upgrades.
  */
+@DoNotImplement
 interface ContractUpgradeService {
 
     /** Get contracts we would be willing to upgrade the suggested contract to. */

@@ -16,8 +16,11 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.testing.*
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert.*
@@ -95,8 +98,6 @@ class ScheduledFlowTests {
         notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
         val a = mockNet.createUnstartedNode()
         val b = mockNet.createUnstartedNode()
-
-        notaryNode.internals.ensureRegistered()
 
         mockNet.startNodes()
         nodeA = a.started!!

@@ -155,6 +155,16 @@ path to the node's base directory.
 :certificateSigningService: Certificate Signing Server address. It is used by the certificate signing request utility to
     obtain SSL certificate. (See :doc:`permissioning` for more information.)
 
+:jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
+    only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
+
+:systemProperties: An optional map of additional system properties to be set when launching via ``corda.jar`` only.  Keys and values
+    of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
+
+:jarDirs: An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
+    Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
+    for including JDBC drivers and the like. e.g. ``jarDirs = [ 'lib' ]``
+
 :relay: If provided, the node will attempt to tunnel inbound connections via an external relay. The relay's address will be
     advertised to the network map service instead of the provided ``p2pAddress``.
 

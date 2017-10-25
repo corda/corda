@@ -84,6 +84,7 @@ open class NodeStartup(val args: Array<String>) {
             exitProcess(1)
         }
 
+        logger.info("Node exiting successfully")
         exitProcess(0)
     }
 

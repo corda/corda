@@ -145,7 +145,7 @@ object NodeInterestRates {
             }
 
             require(ftx.checkWithFun(::check))
-
+            ftx.checkCommandVisibility(services.myInfo.legalIdentities.first().owningKey)
             // It all checks out, so we can return a signature.
             //
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered

@@ -279,7 +279,7 @@ class InMemoryMessagingNetwork(
         _sentMessages.onNext(transfer)
     }
 
-    private data class InMemoryMessage(override val topicSession: TopicSession,
+    data class InMemoryMessage(override val topicSession: TopicSession,
                                        override val data: ByteArray,
                                        override val uniqueMessageId: UUID,
                                        override val debugTimestamp: Instant = Instant.now()) : Message {
@@ -363,12 +363,20 @@ class InMemoryMessagingNetwork(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients, retryId: Long?) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
             check(running)
             msgSend(this, message, target)
+            acknowledgementHandler?.invoke()
             if (!sendManuallyPumped) {
                 pumpSend(false)
             }
+        }
+
+        override fun send(addressedMessages: List<MessagingService.AddressedMessage>, acknowledgementHandler: (() -> Unit)?) {
+            for ((message, target, retryId, sequenceKey) in addressedMessages) {
+                send(message, target, retryId, sequenceKey, null)
+            }
+            acknowledgementHandler?.invoke()
         }
 
         override fun stop() {

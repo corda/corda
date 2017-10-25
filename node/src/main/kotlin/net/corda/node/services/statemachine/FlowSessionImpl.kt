@@ -16,28 +16,46 @@ class FlowSessionImpl(
     internal lateinit var sessionFlow: FlowLogic<*>
 
     @Suspendable
-    override fun getCounterpartyFlowInfo(): FlowInfo {
-        return stateMachine.getFlowInfo(counterparty, sessionFlow)
+    override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
+        return stateMachine.getFlowInfo(counterparty, sessionFlow, maySkipCheckpoint)
     }
 
     @Suspendable
-    override fun <R : Any> sendAndReceive(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, counterparty, payload, sessionFlow)
+    override fun getCounterpartyFlowInfo() = getCounterpartyFlowInfo(maySkipCheckpoint = false)
+
+    @Suspendable
+    override fun <R : Any> sendAndReceive(
+            receiveType: Class<R>,
+            payload: Any,
+            maySkipCheckpoint: Boolean
+    ): UntrustworthyData<R> {
+        return stateMachine.sendAndReceive(
+                receiveType,
+                counterparty,
+                payload,
+                sessionFlow,
+                retrySend = false,
+                maySkipCheckpoint = maySkipCheckpoint
+        )
     }
 
     @Suspendable
-    internal fun <R : Any> sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, counterparty, payload, sessionFlow, retrySend = true)
+    override fun <R : Any> sendAndReceive(receiveType: Class<R>, payload: Any) = sendAndReceive(receiveType, payload, maySkipCheckpoint = false)
+
+    @Suspendable
+    override fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
+        return stateMachine.receive(receiveType, counterparty, sessionFlow, maySkipCheckpoint)
     }
 
     @Suspendable
-    override fun <R : Any> receive(receiveType: Class<R>): UntrustworthyData<R> {
-        return stateMachine.receive(receiveType, counterparty, sessionFlow)
+    override fun <R : Any> receive(receiveType: Class<R>) = receive(receiveType, maySkipCheckpoint = false)
+
+    @Suspendable
+    override fun send(payload: Any, maySkipCheckpoint: Boolean) {
+        return stateMachine.send(counterparty, payload, sessionFlow, maySkipCheckpoint)
     }
 
     @Suspendable
-    override fun send(payload: Any) {
-        return stateMachine.send(counterparty, payload, sessionFlow)
-    }
+    override fun send(payload: Any) = send(payload, maySkipCheckpoint = false)
 }
 

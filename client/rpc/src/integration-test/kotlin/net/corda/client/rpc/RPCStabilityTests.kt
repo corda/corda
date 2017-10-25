@@ -92,6 +92,7 @@ class RPCStabilityTests {
             startAndStop()
         }
         val numberOfThreadsAfter = waitUntilNumberOfThreadsStable(executor)
+
         assertTrue(numberOfThreadsBefore >= numberOfThreadsAfter)
         executor.shutdownNow()
     }

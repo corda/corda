@@ -20,6 +20,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
      * service.
      */
     val networkMapService: NetworkMapInfo?
+    val noNetworkMapServiceMode: Boolean
     val minimumPlatformVersion: Int
     val emailAddress: String
     val exportJMXto: String
@@ -78,6 +79,7 @@ data class FullNodeConfiguration(
         override val database: Properties?,
         override val certificateSigningService: URL,
         override val networkMapService: NetworkMapInfo?,
+        override val noNetworkMapServiceMode: Boolean = false,
         override val minimumPlatformVersion: Int = 1,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,

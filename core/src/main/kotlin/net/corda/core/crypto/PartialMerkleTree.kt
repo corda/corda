@@ -158,4 +158,41 @@ class PartialMerkleTree(val root: PartialTree) {
             return false
         return (verifyRoot == merkleRootHash)
     }
+
+    /**
+     * Method to return the index of the input leaf in the partial Merkle tree structure.
+     * @param leaf the component hash to check.
+     * @return leaf-index of this component (starting from zero).
+     * @throws MerkleTreeException if the provided hash is not in the tree.
+     */
+    @Throws(MerkleTreeException::class)
+    internal fun leafIndex(leaf: SecureHash): Int {
+        // Special handling if the tree consists of one node only.
+        if (root is PartialTree.IncludedLeaf && root.hash == leaf) return 0
+        val flagPath = mutableListOf<Boolean>()
+        if (!leafIndexHelper(leaf, this.root, flagPath)) throw MerkleTreeException("The provided hash $leaf is not in the tree.")
+        return indexFromFlagPath(flagPath)
+    }
+
+    // Helper function to compute the path. False means go to the left and True to the right.
+    // Because the path is updated recursively, the path is returned in reverse order.
+    private fun leafIndexHelper(leaf: SecureHash, node: PartialTree, path: MutableList<Boolean>): Boolean {
+        if (node is PartialTree.IncludedLeaf) {
+            return node.hash == leaf
+        } else if (node is PartialTree.Node) {
+            if (leafIndexHelper(leaf, node.left, path)) {
+                path.add(false)
+                return true
+            }
+            if (leafIndexHelper(leaf, node.right, path)) {
+                path.add(true)
+                return true
+            }
+        }
+        return false
+    }
+
+    // Return the leaf index from the path boolean list.
+    private fun indexFromFlagPath(pathList: List<Boolean>) =
+            pathList.mapIndexed { index, value -> if (value) (1 shl index) else 0 }.sum()
 }

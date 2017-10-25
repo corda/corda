@@ -6,6 +6,7 @@ import com.r3.corda.enterprise.perftestcordapp.flows.CashException
 import com.r3.corda.enterprise.perftestcordapp.flows.CashPaymentFlow
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeParameters
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
@@ -17,11 +18,11 @@ class CashSelectionH2Test {
         val mockNet = MockNetwork(threadPerNode = true)
         try {
             val notaryNode = mockNet.createNotaryNode()
-            val bankA = mockNet.createNode(configOverrides = { existingConfig ->
+            val bankA = mockNet.createNode(MockNodeParameters(configOverrides = { existingConfig ->
                 // Tweak connections to be minimal to make this easier (1 results in a hung node during start up, so use 2 connections).
                 existingConfig.dataSourceProperties.setProperty("maximumPoolSize", "2")
                 existingConfig
-            })
+            }))
 
             mockNet.startNodes()
 

@@ -13,10 +13,11 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeParameters
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -28,8 +29,8 @@ import kotlin.test.assertFailsWith
 
 class NotaryServiceTests {
     lateinit var mockNet: MockNetwork
-    lateinit var notaryServices: ServiceHubInternal
-    lateinit var aliceServices: ServiceHubInternal
+    lateinit var notaryServices: StartedNodeServices
+    lateinit var aliceServices: StartedNodeServices
     lateinit var notary: Party
     lateinit var alice: Party
 
@@ -37,9 +38,8 @@ class NotaryServiceTests {
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         val notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name, validating = false)
-        aliceServices = mockNet.createNode(legalName = ALICE_NAME).services
+        aliceServices = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME)).services
         mockNet.runNetwork() // Clear network map registration messages
-        notaryNode.internals.ensureRegistered()
         notaryServices = notaryNode.services
         notary = notaryServices.getDefaultNotary()
         alice = aliceServices.myInfo.singleIdentity()

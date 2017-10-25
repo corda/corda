@@ -6,6 +6,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.serialization.KRYO_CHECKPOINT_CONTEXT
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
 import net.corda.testing.TestDependencyInjectionBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
@@ -26,7 +27,7 @@ class KotlinUtilsTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `checkpointing a transient property with non-capturing lamba`() {
+    fun `checkpointing a transient property with non-capturing lambda`() {
         val original = NonCapturingTransientProperty()
         val originalVal = original.transientVal
         val copy = original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_CONTEXT)
@@ -36,15 +37,15 @@ class KotlinUtilsTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `serialise transient property with non-capturing lamba`() {
+    fun `serialise transient property with non-capturing lambda`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = NonCapturingTransientProperty()
-        original.serialize()
+        original.serialize(context = KRYO_P2P_CONTEXT)
     }
 
     @Test
-    fun `deserialise transient property with non-capturing lamba`() {
+    fun `deserialise transient property with non-capturing lambda`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = NonCapturingTransientProperty()
@@ -52,7 +53,7 @@ class KotlinUtilsTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `checkpointing a transient property with capturing lamba`() {
+    fun `checkpointing a transient property with capturing lambda`() {
         val original = CapturingTransientProperty("Hello")
         val originalVal = original.transientVal
         val copy = original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_CONTEXT)
@@ -63,15 +64,15 @@ class KotlinUtilsTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `serialise transient property with capturing lamba`() {
+    fun `serialise transient property with capturing lambda`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = CapturingTransientProperty("Hello")
-        original.serialize()
+        original.serialize(context = KRYO_P2P_CONTEXT)
     }
 
     @Test
-    fun `deserialise transient property with capturing lamba`() {
+    fun `deserialise transient property with capturing lambda`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = CapturingTransientProperty("Hello")

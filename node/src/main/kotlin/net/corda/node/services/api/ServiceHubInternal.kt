@@ -16,9 +16,11 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
@@ -28,7 +30,8 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.CordaPersistence
 
-interface NetworkMapCacheInternal : NetworkMapCache {
+interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
+interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
     /**
      * Deregister from updates from the given map service.
      * @param network the network messaging service.
@@ -84,7 +87,6 @@ interface ServiceHubInternal : ServiceHub {
     val monitoringService: MonitoringService
     val schemaService: SchemaService
     override val networkMapCache: NetworkMapCacheInternal
-    val schedulerService: SchedulerService
     val auditService: AuditService
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService
@@ -109,18 +111,22 @@ interface ServiceHubInternal : ServiceHub {
         }
     }
 
+    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+}
+
+interface FlowStarter {
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
      * defaults to [FlowInitiator.RPC] with username "Only For Testing".
      */
     @VisibleForTesting
-    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing"))
+    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing")).getOrThrow()
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T>
+    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): CordaFuture<FlowStateMachine<T>>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -133,15 +139,14 @@ interface ServiceHubInternal : ServiceHub {
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
-            vararg args: Any?): FlowStateMachineImpl<T> {
+            vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
         val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
         val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
         return startFlow(logic, flowInitiator, ourIdentity = null)
     }
-
-    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
 }
 
+interface StartedNodeServices : ServiceHubInternal, FlowStarter
 /**
  * Thread-safe storage of transactions.
  */

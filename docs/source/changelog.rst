@@ -11,6 +11,8 @@ UNRELEASED
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
 
+* Experimental support for PostgreSQL: CashSelection done using window functions
+
 * ``FlowLogic`` now exposes a series of function called ``receiveAll(...)`` allowing to join ``receive(...)`` instructions.
 
 * Renamed "plugins" directory on nodes to "cordapps"
@@ -28,7 +30,7 @@ UNRELEASED
 
 * ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
 
-* Enums now respsect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
+* Enums now respect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
   either annotated with the @CordaSerializable annotation or explicitly whitelisted then a NotSerializableException is
   thrown.
 
@@ -55,6 +57,17 @@ UNRELEASED
 
 * ``TimeWindow`` now has a ``length`` property that returns the length of the time-window, or ``null`` if the
   time-window is open-ended.
+
+* A new ``SIGNERS_GROUP`` with ordinal 6 has been added to ``ComponentGroupEnum`` that corresponds to the ``Command``
+  signers.
+
+* ``PartialMerkleTree`` is equipped with a ``leafIndex`` function that returns the index of a hash (leaf) in the
+  partial Merkle tree structure.
+
+* A new function ``checkCommandVisibility(publicKey: PublicKey)`` has been added to ``FilteredTransaction`` to check
+  if every command that a signer should receive (e.g. an Oracle) is indeed visible.
+
+* Change the AMQP serialiser to use the oficially assigned R3 identifier rather than a placeholder.
 
 .. _changelog_v1:
 

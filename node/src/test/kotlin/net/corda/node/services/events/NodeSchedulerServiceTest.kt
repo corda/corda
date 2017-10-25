@@ -1,6 +1,8 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
+import com.codahale.metrics.MetricRegistry
+import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
@@ -8,35 +10,40 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
+import net.corda.node.internal.FlowStarterImpl
+import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.api.MonitoringService
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.testing.MockServiceHubInternal
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockKeyManagementService
+import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
-import net.corda.testing.node.TestClock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
+import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
@@ -45,20 +52,26 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
+    companion object {
+        private val myInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)
+    }
+
     private val realClock: Clock = Clock.systemUTC()
     private val stoppedClock: Clock = Clock.fixed(realClock.instant(), realClock.zone)
     private val testClock = TestClock(stoppedClock)
 
     private val schedulerGatedExecutor = AffinityExecutor.Gate(true)
 
-    private lateinit var services: MockServiceHubInternal
+    abstract class Services : ServiceHubInternal, TestReference
 
+    private lateinit var services: Services
     private lateinit var scheduler: NodeSchedulerService
     private lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
     private lateinit var database: CordaPersistence
     private lateinit var countDown: CountDownLatch
     private lateinit var smmHasRemovedAllFlows: CountDownLatch
-
+    private lateinit var kms: MockKeyManagementService
+    private lateinit var mockSMM: StateMachineManager
     var calls: Int = 0
 
     /**
@@ -80,35 +93,35 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val databaseProperties = makeTestDatabaseProperties()
         database = configureDatabase(dataSourceProps, databaseProperties, ::makeTestIdentityService)
         val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
-        val kms = MockKeyManagementService(identityService, ALICE_KEY)
-
+        kms = MockKeyManagementService(identityService, ALICE_KEY)
+        val configuration = testNodeConfiguration(Paths.get("."), CordaX500Name("Alice", "London", "GB"))
+        val validatedTransactions = MockTransactionStorage()
+        val stateLoader = StateLoaderImpl(validatedTransactions)
         database.transaction {
-            val nullIdentity = CordaX500Name(organisation = "None", locality = "None", country = "GB")
-            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(
-                    false,
-                    InMemoryMessagingNetwork.PeerHandle(0, nullIdentity),
-                    AffinityExecutor.ServiceAffinityExecutor("test", 1),
-                    database)
-            services = object : MockServiceHubInternal(
-                    database,
-                    testNodeConfiguration(Paths.get("."), CordaX500Name(organisation = "Alice", locality = "London", country = "GB")),
-                    overrideClock = testClock,
-                    keyManagement = kms,
-                    network = mockMessagingService), TestReference {
-                override val vaultService: VaultServiceInternal = NodeVaultService(testClock, kms, stateLoader, database.hibernateConfig)
-                override val testReference = this@NodeSchedulerServiceTest
-                override val cordappProvider = CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), attachments)
+            services = rigorousMock<Services>().also {
+                doReturn(configuration).whenever(it).configuration
+                doReturn(MonitoringService(MetricRegistry())).whenever(it).monitoringService
+                doReturn(validatedTransactions).whenever(it).validatedTransactions
+                doReturn(NetworkMapCacheImpl(MockNetworkMapCache(database, configuration), identityService)).whenever(it).networkMapCache
+                doCallRealMethod().whenever(it).signInitialTransaction(any(), any<PublicKey>())
+                doReturn(myInfo).whenever(it).myInfo
+                doReturn(kms).whenever(it).keyManagementService
+                doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
+                doCallRealMethod().whenever(it).recordTransactions(any<SignedTransaction>())
+                doCallRealMethod().whenever(it).recordTransactions(any<Boolean>(), any<SignedTransaction>())
+                doCallRealMethod().whenever(it).recordTransactions(any(), any<Iterable<SignedTransaction>>())
+                doReturn(NodeVaultService(testClock, kms, stateLoader, database.hibernateConfig)).whenever(it).vaultService
+                doReturn(this@NodeSchedulerServiceTest).whenever(it).testReference
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-            scheduler = NodeSchedulerService(services, schedulerGatedExecutor, serverThread = smmExecutor)
-            val mockSMM = StateMachineManager(services, DBCheckpointStorage(), smmExecutor, database)
+            mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database)
+            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), stateLoader, schedulerGatedExecutor, serverThread = smmExecutor)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllFlows.countDown()
                 }
             }
-            mockSMM.start()
-            services.smm = mockSMM
+            mockSMM.start(emptyList())
             scheduler.start()
         }
     }
@@ -116,7 +129,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     @After
     fun tearDown() {
         // We need to make sure the StateMachineManager is done before shutting down executors.
-        if (services.smm.allStateMachines.isNotEmpty()) {
+        if (mockSMM.allStateMachines.isNotEmpty()) {
             smmHasRemovedAllFlows.await()
         }
         smmExecutor.shutdown()
@@ -125,6 +138,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         resetTestSerialization()
     }
 
+    // Ignore IntelliJ when it says these properties can be private, if they are we cannot serialise them
+    // in AMQP.
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, val myIdentity: Party) : LinearState, SchedulableState {
         override val participants: List<AbstractParty>
             get() = listOf(myIdentity)
@@ -136,7 +151,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         }
     }
 
-    class TestFlowLogic(val increment: Int = 1) : FlowLogic<Unit>() {
+    class TestFlowLogic(private val increment: Int = 1) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             (serviceHub as TestReference).testReference.calls += increment
@@ -279,8 +294,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         var scheduledRef: ScheduledStateRef? = null
         database.transaction {
             apply {
-                val freshKey = services.keyManagementService.freshKey()
-                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, services.myInfo.chooseIdentity())
+                val freshKey = kms.freshKey()
+                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant, myInfo.chooseIdentity())
                 val builder = TransactionBuilder(null).apply {
                     addOutputState(state, DummyContract.PROGRAM_ID, DUMMY_NOTARY)
                     addCommand(Command(), freshKey)

@@ -91,3 +91,14 @@ The following modules are available but we do not commit to their stability or c
    Future releases will reject any CorDapps that use types from these packages.
 
 .. warning:: The web server module will be removed in future. You should call Corda nodes through RPC from your web server of choice e.g., Spring Boot, Vertx, Undertow.
+
+The ``@DoNotImplement`` annotation
+----------------------------------
+
+Certain interfaces and abstract classes within the Corda API have been annotated
+as ``@DoNotImplement``. While we undertake not to remove or modify any of these classes' existing
+functionality, the annotation is a warning that we may need to extend them in future versions of Corda.
+Cordapp developers should therefore just use these classes "as is", and *not* attempt to extend or implement any of them themselves.
+
+This annotation is inherited by subclasses and subinterfaces.
+

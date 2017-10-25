@@ -28,7 +28,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     private val jvm by inject<JVMConfig>()
     private val cordappController by inject<CordappController>()
-    private val nodeInfoFilesCopier by inject<NodeInfoFilesCopier>()
+    private val nodeInfoFilesCopier by inject<DemoBenchNodeInfoFilesCopier>()
 
     private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
     private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")

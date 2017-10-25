@@ -30,6 +30,7 @@ import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
@@ -179,7 +180,7 @@ open class MockServices(
 
     fun makeVaultService(hibernateConfig: HibernateConfiguration): VaultServiceInternal {
         val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, stateLoader, hibernateConfig)
-        hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
+        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
 
