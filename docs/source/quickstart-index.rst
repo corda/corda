@@ -6,6 +6,6 @@ Quickstart
 
    getting-set-up
    tutorial-cordapp
-   running-the-demos
+   Sample CorDapps <https://www.corda.net/samples/>
    building-against-master
    CLI-vs-IDE

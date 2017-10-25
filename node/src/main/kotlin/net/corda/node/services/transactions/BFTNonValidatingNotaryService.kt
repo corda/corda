@@ -3,6 +3,7 @@ package net.corda.node.services.transactions
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -15,6 +16,7 @@ import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
@@ -110,7 +112,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                                     inputIndex = it.consumingIndex,
                                     requestingParty = Party(
                                             name = CordaX500Name.parse(it.party.name),
-                                            owningKey = parsePublicKeyBase58(it.party.owningKey))))
+                                            owningKey = Crypto.decodePublicKey(it.party.owningKey))))
                 },
                 toPersistentEntity = { (txHash, index): StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
                     PersistedCommittedState(
@@ -118,7 +120,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                             consumingTxHash = id.toString(),
                             consumingIndex = inputIndex,
                             party = PersistentUniquenessProvider.PersistentParty(requestingParty.name.toString(),
-                                    requestingParty.owningKey.toBase58String())
+                                    requestingParty.owningKey.encoded)
                     )
                 },
                 persistentEntityClass = PersistedCommittedState::class.java
