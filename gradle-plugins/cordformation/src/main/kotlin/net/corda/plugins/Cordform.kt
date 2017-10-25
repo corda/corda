@@ -176,7 +176,9 @@ open class Cordform : DefaultTask() {
     }
 
     private fun buildNodeProcess(node: Node, logDir: File): Process {
-        return ProcessBuilder("java", "-Dcapsule.log=verbose", "-Dcapsule.dir=./cache", "-jar", Node.nodeJarName, "--just-generate-node-info")
+        val command = listOf("java", "-Dcapsule.log=verbose", "-Dcapsule.dir=./cache", "-jar", Node.nodeJarName, "--just-generate-node-info")
+        println(command.joinToString(" "))
+        return ProcessBuilder(command)
                 .directory(fullNodePath(node).toFile())
                 .redirectErrorStream(true)
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
