@@ -17,12 +17,10 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.finance.utils.WorldMapLocation
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
@@ -54,7 +52,6 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
-import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -241,9 +238,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         // It's OK to not have a network map service in the mock network.
         override fun noNetworkMapConfigured() = doneFuture(Unit)
 
-        // There is no need to slow down the unit tests by initialising CityDatabase
-        open fun findMyLocation(): WorldMapLocation? = null // It's left only for NetworkVisualiserSimulation
-
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
         override fun myAddresses() = emptyList<NetworkHostAndPort>()
@@ -253,13 +247,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         val testSerializationWhitelists by lazy { super.serializationWhitelists.toMutableList() }
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = testSerializationWhitelists
-
-        // This does not indirect through the NodeInfo object so it can be called before the node is started.
-        // It is used from the network visualiser tool.
-        @Suppress("unused")
-        val place: WorldMapLocation
-            get() = findMyLocation()!!
-
         private var dbCloser: (() -> Any?)? = null
         override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T) = super.initialiseDatabasePersistence(schemaService) {
             dbCloser = database::close
@@ -430,12 +417,12 @@ fun network(nodesCount: Int, action: MockNetwork.(nodes: List<StartedNode<MockNe
 }
 
 /**
- * Extend this class in order to intercept and modify messages passing through the [MessagingService] when using the [InMemoryNetwork].
+ * Extend this class in order to intercept and modify messages passing through the [MessagingService] when using the [InMemoryMessagingNetwork].
  */
 open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
 
 /**
- * Attach a [MessagingServiceSpy] to the [MockNode] allowing interception and modification of messages.
+ * Attach a [MessagingServiceSpy] to the [MockNetwork.MockNode] allowing interception and modification of messages.
  */
 fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
     internals.setMessagingServiceSpy(messagingServiceSpy)
