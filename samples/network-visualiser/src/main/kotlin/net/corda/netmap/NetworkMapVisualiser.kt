@@ -15,7 +15,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.netmap.simulation.IRSSimulation
-import net.corda.netmap.simulation.Simulation
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.SessionConfirm
 import net.corda.node.services.statemachine.SessionEnd
@@ -118,7 +117,7 @@ class NetworkMapVisualiser : Application() {
             }
         }
         // Pulse all parties in a trade when the trade completes
-        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<Simulation.SimulatedNode> ->
+        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<MockNetwork.MockNode> ->
             nodes.forEach { viewModel.nodesToWidgets[it]!!.longPulseAnim.play() }
         }
 
