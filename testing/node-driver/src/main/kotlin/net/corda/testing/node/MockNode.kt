@@ -341,10 +341,8 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     }
 
     @JvmOverloads
-    fun createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name, validating: Boolean = true): StartedNode<MockNode> {
-        return createNode(MockNodeParameters(legalName = legalName, configOverrides = {
-            doReturn(NotaryConfig(validating)).whenever(it).notary
-        }))
+    fun createNotaryNode(parameters: MockNodeParameters = MockNodeParameters(legalName = DUMMY_NOTARY.name), validating: Boolean = true): StartedNode<MockNode> {
+        return createNotaryNode(parameters, validating, defaultFactory)
     }
 
     fun <N : MockNode> createNotaryNode(parameters: MockNodeParameters = MockNodeParameters(legalName = DUMMY_NOTARY.name),

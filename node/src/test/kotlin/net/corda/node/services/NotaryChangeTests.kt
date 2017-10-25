@@ -16,6 +16,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeParameters
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
@@ -37,10 +38,10 @@ class NotaryChangeTests {
     @Before
     fun setUp() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        oldNotaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        oldNotaryNode = mockNet.createNotaryNode(MockNodeParameters(legalName = DUMMY_NOTARY.name))
         clientNodeA = mockNet.createNode()
         clientNodeB = mockNet.createNode()
-        newNotaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name.copy(organisation = "Dummy Notary 2"))
+        newNotaryNode = mockNet.createNotaryNode(MockNodeParameters(legalName = DUMMY_NOTARY.name.copy(organisation = "Dummy Notary 2")))
         mockNet.runNetwork() // Clear network map registration messages
         oldNotaryParty = newNotaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
         newNotaryParty = newNotaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME.copy(organisation = "Dummy Notary 2"))!!

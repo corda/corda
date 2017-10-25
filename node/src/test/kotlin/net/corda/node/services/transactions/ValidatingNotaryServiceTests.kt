@@ -37,7 +37,7 @@ class ValidatingNotaryServiceTests {
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        val notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         mockNet.runNetwork() // Clear network map registration messages
         notaryServices = notaryNode.services
