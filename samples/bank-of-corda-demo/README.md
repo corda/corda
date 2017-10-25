@@ -1,58 +1,53 @@
-# Bank of Corda demo
-Please see docs/build/html/running-the-demos.html
+Bank Of Corda demo
+------------------
 
-This program simulates the role of an asset issuing authority (eg. central bank for cash) by accepting requests
-from third parties to issue some quantity of an asset and transfer that ownership to the requester.
-The issuing authority accepts requests via the [IssuerFlow] flow, self-issues the asset and transfers
-ownership to the issue requester. Notarisation and signing form part of the flow.
+This demo brings up three nodes: a notary, a node acting as the Bank of Corda that accepts requests for issuance of 
+some asset and a node acting as Big Corporation which requests issuance of an asset (cash in this example).
 
-The requesting party can be a CorDapp (running locally or remotely to the Bank of Corda node), a remote RPC client or
-a Web Client.
+Upon receipt of a request the Bank of Corda node self-issues the asset and then transfers ownership to the requester
+after successful notarisation and recording of the issue transaction on the ledger.
 
-## Prerequisites
+.. note:: The Bank of Corda is somewhat like a "Bitcoin faucet" that dispenses free bitcoins to developers for
+          testing and experimentation purposes.
 
-You will need to have [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) 
-installed and available on your path.
+To run from the command line in Unix:
 
-## Getting Started
+1. Run ``./gradlew samples:bank-of-corda-demo:deployNodes`` to create a set of configs and installs under 
+   ``samples/bank-of-corda-demo/build/nodes``
+2. Run ``./samples/bank-of-corda-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three 
+   nodes
+3. Run ``./gradlew samples:bank-of-corda-demo:runRPCCashIssue`` to trigger a cash issuance request
+4. Run ``./gradlew samples:bank-of-corda-demo:runWebCashIssue`` to trigger another cash issuance request.
+   Now look at your terminal tab/window to see the output of the demo
 
-1. Launch the Bank of Corda node (and associated Notary) by running:
-[BankOfCordaDriver] --role ISSUER
-(to validate your Node is running you can try navigating to this sample link: http://localhost:10005/api/bank/date)
+To run from the command line in Windows:
 
-Each of the following commands will launch a separate Node called Big Corporation which will become the owner
-of some Cash following an issue request:
+1. Run ``gradlew samples:bank-of-corda-demo:deployNodes`` to create a set of configs and installs under 
+   ``samples\bank-of-corda-demo\build\nodes``
+2. Run ``samples\bank-of-corda-demo\build\nodes\runnodes`` to open up three new terminal tabs/windows with the three 
+   nodes
+3. Run ``gradlew samples:bank-of-corda-demo:runRPCCashIssue`` to trigger a cash issuance request
+4. Run ``gradlew samples:bank-of-corda-demo:runWebCashIssue`` to trigger another cash issuance request.
+   Now look at the your terminal tab/window to see the output of the demo
 
-2. Run the Bank of Corda Client driver (to simulate a web issue requester) by running:
-[BankOfCordaDriver] --role ISSUE_CASH_WEB
-This demonstrates a remote application acting on behalf of the Big Corporation and communicating directly with the
-Bank of Corda node via HTTP to request issuance of some cash.
+To verify that the Bank of Corda node is alive and running, navigate to the following URL: 
+http://localhost:10007/api/bank/date
 
-3. Run the Bank of Corda Client driver (to simulate an RPC issue requester) by running:
-[BankOfCordaDriver] --role ISSUE_CASH_RPC
-Similar to 3 above, but using RPC as the remote communications mechanism.
+In the window you run the command you should see (in case of Web, RPC is similar):
 
-## Developer notes
+- Requesting Cash via Web ...
+- Successfully processed Cash Issue request
 
-Testing of the Bank of Corda application is demonstrated at two levels:
-1. Unit testing the flow uses the [LedgerDSL] and [MockServices]. Please see [IssuerFlowTest]
-   The IssuerFlow is one of several reusable flows defined in the finance package.
-2. Integration testing via RPC and HTTP uses the [Driver] DSL to launch standalone node instances
+If you want to see flow activity enter in node's shell ``flow watch``. It will display all state machines running 
+currently on the node.
 
-Security
-The RPC API requires a client to pass in user credentials:
-    client.start("bankUser","test")
-which are validated on the Bank of Corda node against those configured at node startup:
-    User("bankUser", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
-    startNode(BOC.name, rpcUsers = listOf(user))
+Launch the Explorer application to visualize the issuance and transfer of cash for each node:
 
-Notary
-We are using a [SimpleNotaryService] in this example, but could easily switch to a [ValidatingNotaryService]
+    ``./gradlew tools:explorer:run`` (on Unix) or ``gradlew tools:explorer:run`` (on Windows)
 
-## Integration with other Demos and Tools
+Using the following login details:
 
-The Bank of Corda issuer node concept has been integrated into the Explorer tool (simulation nodes) and Trader Demo.
+- For the Bank of Corda node: localhost / port 10006 / username bankUser / password test
+- For the Big Corporation node: localhost / port 10009 / username bigCorpUser / password test
 
-## Further Reading
-
-Tutorials and developer docs for Cordapps and Corda are [here](https://docs.corda.net/).
+See https://docs.corda.net/node-explorer.html for further details on usage.

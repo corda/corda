@@ -1,14 +1,23 @@
-# Attachment Demo 
+# Attachment Demo
 
-This code demonstrates sending a transaction with an attachment from one to node to another, and the receiving node accessing the attachment.
+This demo brings up three nodes, and sends a transaction containing an attachment from one to the other.
 
-Please see the either the [online documentation](https://docs.corda.net/running-the-demos.html#attachment-demo) for more info on the attachment demo, or the [included offline version](../../docs/build/html/running-the-demos.html#attachment-demo).
+To run from the command line in Unix:
 
-From the root directory of the repository, run the following commands (on mac / unix, replace `gradle` with `./gradlew`)
+1. Run ``./gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under 
+   ``samples/attachment-demo/build/nodes``
+2. Run ``./samples/attachment-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three 
+   nodes and webserver for BankB
+3. Run ``./gradlew samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
+4. Run ``./gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at 
+   the other windows to see the output of the demo
 
-    gradle samples:attachment-demo:deployNodes 
+To run from the command line in Windows:
 
-    ./samples/attachment-demo/build/nodes/runnodes
-
-    gradle samples:attachment-demo:runRecipient  # (in one window)
-    gradle samples:attachment-demo:runSender  # (in another window)
+1. Run ``gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under 
+   ``samples\attachment-demo\build\nodes``
+2. Run ``samples\attachment-demo\build\nodes\runnodes`` to open up three new terminal tabs/windows with the three nodes 
+   and webserver for BankB
+3. Run ``gradlew samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
+4. Run ``gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the 
+   other windows to see the output of the demo
