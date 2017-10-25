@@ -44,7 +44,6 @@ class CollectSignaturesFlowTests {
         bobNode = mockNet.createPartyNode(BOB.name)
         charlieNode = mockNet.createPartyNode(CHARLIE.name)
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
         charlie = charlieNode.info.singleIdentity()

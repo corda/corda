@@ -1,25 +1,19 @@
 package net.corda.node.services.network
 
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeParameters
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
 
 class NetworkMapCacheTest {
-    lateinit var mockNet: MockNetwork
-
-    @Before
-    fun setUp() {
-        mockNet = MockNetwork()
-    }
+    val mockNet: MockNetwork = MockNetwork()
 
     @After
     fun teardown() {
@@ -27,23 +21,14 @@ class NetworkMapCacheTest {
     }
 
     @Test
-    fun registerWithNetwork() {
-        mockNet.createNotaryNode()
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val future = aliceNode.services.networkMapCache.addMapService(aliceNode.network, mockNet.networkMapNode.network.myAddress, false, null)
-        mockNet.runNetwork()
-        future.getOrThrow()
-    }
-
-    @Test
     fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
-        val aliceNode = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = ALICE.name, entropyRoot = entropy)
+        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE.name, entropyRoot = entropy))
         mockNet.runNetwork()
 
         // Node A currently knows only about itself, so this returns node A
         assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(aliceNode.info.chooseIdentity().owningKey).singleOrNull(), aliceNode.info)
-        val bobNode = mockNet.createNode(nodeFactory = MockNetwork.DefaultFactory, legalName = BOB.name, entropyRoot = entropy)
+        val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name, entropyRoot = entropy))
         assertEquals(aliceNode.info.chooseIdentity(), bobNode.info.chooseIdentity())
 
         aliceNode.services.networkMapCache.addNode(bobNode.info)

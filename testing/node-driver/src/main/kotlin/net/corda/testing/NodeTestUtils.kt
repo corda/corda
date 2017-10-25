@@ -10,7 +10,6 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.User
 import net.corda.testing.node.MockServices
@@ -57,17 +56,17 @@ fun transaction(
 
 fun testNodeConfiguration(
         baseDirectory: Path,
-        myLegalName: CordaX500Name,
-        notaryConfig: NotaryConfig? = null): NodeConfiguration {
+        myLegalName: CordaX500Name): NodeConfiguration {
     abstract class MockableNodeConfiguration : NodeConfiguration // Otherwise Mockito is defeated by val getters.
     return rigorousMock<MockableNodeConfiguration>().also {
+        doReturn(true).whenever(it).noNetworkMapServiceMode
         doReturn(baseDirectory).whenever(it).baseDirectory
         doReturn(myLegalName).whenever(it).myLegalName
         doReturn(1).whenever(it).minimumPlatformVersion
         doReturn("cordacadevpass").whenever(it).keyStorePassword
         doReturn("trustpass").whenever(it).trustStorePassword
         doReturn(emptyList<User>()).whenever(it).rpcUsers
-        doReturn(notaryConfig).whenever(it).notary
+        doReturn(null).whenever(it).notary
         doReturn(makeTestDataSourceProperties(myLegalName.organisation)).whenever(it).dataSourceProperties
         doReturn(makeTestDatabaseProperties()).whenever(it).database
         doReturn("").whenever(it).emailAddress
@@ -83,6 +82,5 @@ fun testNodeConfiguration(
         doCallRealMethod().whenever(it).trustStoreFile
         doCallRealMethod().whenever(it).sslKeystore
         doCallRealMethod().whenever(it).nodeKeystore
-        doReturn(false).whenever(it).noNetworkMapServiceMode
     }
 }

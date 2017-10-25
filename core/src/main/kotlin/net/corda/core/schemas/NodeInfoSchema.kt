@@ -1,11 +1,13 @@
 package net.corda.core.schemas
 
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.toBase58String
 import java.io.Serializable
 import javax.persistence.*
 
@@ -85,16 +87,17 @@ object NodeInfoSchemaV1 : MappedSchema(
     @Table(name = "node_info_party_cert")
     data class DBPartyAndCertificate(
             @Id
-            @Column(name = "owning_key", length = 65535, nullable = false)
-            val owningKey: String,
-
-            //@Id // TODO Do we assume that names are unique? Note: We can't have it as Id, because our toString on X500 is inconsistent.
             @Column(name = "party_name", nullable = false)
             val name: String,
 
-            @Column(name = "party_cert_binary")
             @Lob
+            @Column(name = "owning_key_hash", length = MAX_HASH_HEX_SIZE)
+            val owningKeyHash: String,
+
+            @Lob
+            @Column(name = "party_cert_binary")
             val partyCertBinary: ByteArray,
+
 
             val isMain: Boolean,
 
@@ -102,10 +105,12 @@ object NodeInfoSchemaV1 : MappedSchema(
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
     ) {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
-                : this(partyAndCert.party.owningKey.toBase58String(), partyAndCert.party.name.toString(), partyAndCert.serialize().bytes, isMain)
+                : this(partyAndCert.name.toString(),
+                       partyAndCert.party.owningKey.toStringShort(),
+                       partyAndCert.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes, isMain)
 
         fun toLegalIdentityAndCert(): PartyAndCertificate {
-            return partyCertBinary.deserialize<PartyAndCertificate>()
+            return partyCertBinary.deserialize()
         }
     }
 }

@@ -7,24 +7,21 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.nodeapi.internal.ServiceInfo
 import net.corda.testing.ALICE
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeArgs
+import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.singleIdentity
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.math.BigInteger
-import java.security.KeyPair
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -60,7 +57,6 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
         val alice = aliceNode.info.singleIdentity()
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -98,7 +94,6 @@ class AttachmentTests {
 
         // Ensure that registration was successful before progressing any further
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -116,20 +111,15 @@ class AttachmentTests {
     @Test
     fun `malicious response`() {
         // Make a node that doesn't do sanity checking at load time.
-        val aliceNode = mockNet.createNotaryNode(legalName = ALICE.name, nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                id: Int, notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-                                entropyRoot: BigInteger): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(config, network, networkMapAddr, id, notaryIdentity, entropyRoot) {
+        val aliceNode = mockNet.createNotaryNode(MockNodeParameters(legalName = ALICE.name), nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
+            override fun create(args: MockNodeArgs): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(args) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }
         }, validating = false)
-        val bobNode = mockNet.createNode(legalName = BOB.name)
-
-        // Ensure that registration was successful before progressing any further
+        val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name))
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
         val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
