@@ -2374,7 +2374,7 @@ public static final class net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort$
   @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$DBPartyAndCertificate copy(String, String, byte[], boolean, Set)
   public boolean equals(Object)
   @org.jetbrains.annotations.NotNull public final String getName()
-  @org.jetbrains.annotations.NotNull public final String getOwningKey()
+  @org.jetbrains.annotations.NotNull public final String getOwningKeyHash()
   @org.jetbrains.annotations.NotNull public final byte[] getPartyCertBinary()
   public int hashCode()
   public final boolean isMain()

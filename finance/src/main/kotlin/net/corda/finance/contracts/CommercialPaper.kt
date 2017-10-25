@@ -3,7 +3,7 @@ package net.corda.finance.contracts
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys.NULL_PARTY
-import net.corda.core.utilities.toBase58String
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -76,13 +76,13 @@ class CommercialPaper : Contract {
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommercialPaperState(
-                        issuanceParty = this.issuance.party.owningKey.toBase58String(),
+                        issuancePartyHash = this.issuance.party.owningKey.toStringShort(),
                         issuanceRef = this.issuance.reference.bytes,
-                        owner = this.owner.owningKey.toBase58String(),
+                        ownerHash = this.owner.owningKey.toStringShort(),
                         maturity = this.maturityDate,
                         faceValue = this.faceValue.quantity,
                         currency = this.faceValue.token.product.currencyCode,
-                        faceValueIssuerParty = this.faceValue.token.issuer.party.owningKey.toBase58String(),
+                        faceValueIssuerPartyHash = this.faceValue.token.issuer.party.owningKey.toStringShort(),
                         faceValueIssuerRef = this.faceValue.token.issuer.reference.bytes
                 )
             /** Additional schema mappings would be added here (eg. CommercialPaperV2, ...) */

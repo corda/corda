@@ -447,7 +447,7 @@ class HibernateConfigurationTest {
                 criteriaBuilder.sum(cashStates.get<Long>("pennies")))
 
         // group by
-        criteriaQuery.groupBy(cashStates.get<String>("issuerParty"), cashStates.get<String>("currency"))
+        criteriaQuery.groupBy(cashStates.get<String>("issuerPartyHash"), cashStates.get<String>("currency"))
 
         // order by
         criteriaQuery.orderBy(criteriaBuilder.desc(criteriaBuilder.sum(cashStates.get<Long>("pennies"))))

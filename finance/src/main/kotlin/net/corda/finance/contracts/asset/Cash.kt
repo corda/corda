@@ -8,6 +8,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.Amount.Companion.sumOrThrow
 import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -19,7 +20,6 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.toBase58String
 import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
@@ -83,7 +83,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         owner = this.owner,
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
-                        issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
+                        issuerPartyHash = this.amount.token.issuer.party.owningKey.toStringShort(),
                         issuerRef = this.amount.token.issuer.reference.bytes
                 )
             /** Additional schema mappings would be added here (eg. CashSchemaV2, CashSchemaV3, ...) */
