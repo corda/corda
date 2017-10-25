@@ -20,6 +20,13 @@ class HttpApi(val root: URL, val mapper: ObjectMapper = defaultMapper) {
     fun postJson(path: String, data: Any = Unit) = HttpUtils.postJson(URL(root, path), toJson(data))
 
     /**
+     * Send a POST with a payload to the path on the API specified.
+     *
+     * @param data String payload
+     */
+    fun postPlain(path: String, data: String = "") = HttpUtils.postPlain(URL(root, path), data)
+
+    /**
      * Send a GET request to the path on the API specified.
      */
     inline fun <reified T : Any> getJson(path: String, params: Map<String, String> = mapOf()) = HttpUtils.getJson<T>(URL(root, path), params, mapper)
