@@ -1,8 +1,6 @@
 package net.corda.testing.http
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.utilities.loggerFor
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
@@ -33,6 +31,11 @@ object HttpUtils {
     fun postJson(url: URL, data: String): Boolean {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
         return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
+    }
+
+    fun postPlain(url: URL, data: String): Boolean {
+        val body = RequestBody.create(MediaType.parse("text/plain; charset=utf-8"), data)
+        return makeRequest(Request.Builder().url(url).post(body).build())
     }
 
     inline fun <reified T : Any> getJson(url: URL, params: Map<String, String> = mapOf(), mapper: ObjectMapper = defaultMapper): T {
