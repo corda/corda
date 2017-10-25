@@ -274,6 +274,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     /** @param rootPackageName only this package and subpackages may be extracted from [url], or null to allow all packages. */
     private class RestrictedURL(val url: URL, rootPackageName: String?) {
         val qualifiedNamePrefix = rootPackageName?.let { it + '.' } ?: ""
+        override fun toString() = url.toString()
     }
 
     private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) {

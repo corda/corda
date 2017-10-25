@@ -7,6 +7,7 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.ContractUpgradeUtils
+import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 
 // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
@@ -16,8 +17,7 @@ import net.corda.core.transactions.SignedTransaction
 class FinalityHandler(private val sender: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val stx = subFlow(ReceiveTransactionFlow(sender))
-        serviceHub.recordTransactions(stx)
+        subFlow(ReceiveTransactionFlow(sender, true, StatesToRecord.ONLY_RELEVANT))
     }
 }
 
