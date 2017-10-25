@@ -5,6 +5,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.toFuture
@@ -14,7 +15,6 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
@@ -48,7 +48,6 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
         database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), createSchemaService, ::makeTestIdentityService)
 
         database.transaction {
-
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultService get() {
                     val vaultService = NodeVaultService(this, database.hibernateConfig)
@@ -61,7 +60,7 @@ class DBTransactionStorageTests : TestDependencyInjectionBase() {
                         validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    (vaultService as NodeVaultService).notifyAll(txs.map { it.tx })
+                    (vaultService as NodeVaultService).notifyAll(StatesToRecord.ONLY_RELEVANT, txs.map { it.tx })
                 }
             }
         }

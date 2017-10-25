@@ -14,6 +14,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
@@ -88,8 +89,7 @@ interface ServiceHubInternal : ServiceHub {
     val networkService: MessagingService
     val database: CordaPersistence
     val configuration: NodeConfiguration
-
-    override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         require(txs.any()) { "No transactions passed in for recording" }
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
@@ -101,9 +101,9 @@ interface ServiceHubInternal : ServiceHub {
             log.warn("Transactions recorded from outside of a state machine")
         }
 
-        if (notifyVault) {
+        if (statesToRecord != StatesToRecord.NONE) {
             val toNotify = recordedTransactions.map { if (it.isNotaryChangeTransaction()) it.notaryChangeTx else it.tx }
-            (vaultService as NodeVaultService).notifyAll(toNotify)
+            (vaultService as NodeVaultService).notifyAll(statesToRecord, toNotify)
         }
     }
 

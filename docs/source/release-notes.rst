@@ -3,6 +3,12 @@ Release notes
 
 Here are release notes for each snapshot release from M9 onwards.
 
+Release 2.0
+----------
+
+Support for observer/regulator nodes has returned. Read :doc:`tutorial-observer-nodes` to learn more or examine the
+interest rate swaps demo.
+
 Release 1.0
 -----------
 Corda 1.0 is finally here!

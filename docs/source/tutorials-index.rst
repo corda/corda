@@ -19,3 +19,4 @@ Tutorials
    tutorial-tear-offs
    tutorial-attachments
    event-scheduling
+   tutorial-observer-nodes

@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import java.security.SignatureException
@@ -13,26 +14,42 @@ import java.security.SignatureException
  * This flow is a combination of [FlowSession.receive], resolve and [SignedTransaction.verify]. This flow will receive the
  * [SignedTransaction] and perform the resolution back-and-forth required to check the dependencies and download any missing
  * attachments. The flow will return the [SignedTransaction] after it is resolved and then verified using [SignedTransaction.verify].
- * 
- * @param otherSideSession session to the other side which is calling [SendTransactionFlow].
- * @param checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
+ *
+ * Please note that it will *not* store the transaction to the vault unless that is explicitly requested.
+ *
+ * @property otherSideSession session to the other side which is calling [SendTransactionFlow].
+ * @property checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
+ * @property statesToRecord which transaction states should be recorded in the vault, if any.
  */
-class ReceiveTransactionFlow(private val otherSideSession: FlowSession,
-                             private val checkSufficientSignatures: Boolean) : FlowLogic<SignedTransaction>() {
-    /** Receives a [SignedTransaction] from [otherSideSession], verifies it and then records it in the vault. */
-    constructor(otherSideSession: FlowSession) : this(otherSideSession, true)
-
+class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
+                                                       private val checkSufficientSignatures: Boolean = true,
+                                                       private val statesToRecord: StatesToRecord = StatesToRecord.NONE) : FlowLogic<SignedTransaction>() {
+    @Suppress("KDocMissingDocumentation")
     @Suspendable
     @Throws(SignatureException::class,
             AttachmentResolutionException::class,
             TransactionResolutionException::class,
             TransactionVerificationException::class)
     override fun call(): SignedTransaction {
-        return otherSideSession.receive<SignedTransaction>().unwrap {
+        if (checkSufficientSignatures) {
+            logger.trace("Receiving a transaction from ${otherSideSession.counterparty}")
+        } else {
+            logger.trace("Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}")
+        }
+
+        val stx = otherSideSession.receive<SignedTransaction>().unwrap {
             subFlow(ResolveTransactionsFlow(it, otherSideSession))
             it.verify(serviceHub, checkSufficientSignatures)
             it
         }
+
+        if (checkSufficientSignatures) {
+            // We should only send a transaction to the vault for processing if we did in fact fully verify it, and
+            // there are no missing signatures. We don't want partly signed stuff in the vault.
+            logger.trace("Successfully received fully signed tx ${stx.id}, sending to the vault for processing")
+            serviceHub.recordTransactions(statesToRecord, setOf(stx))
+        }
+        return stx
     }
 }
 
