@@ -10,5 +10,4 @@
       <cpe>cpe:/a:apache:struts:2.0.0</cpe>
    </suppress>
     -->
-
 </suppressions>
