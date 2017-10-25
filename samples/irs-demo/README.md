@@ -4,25 +4,28 @@ This demo brings up three nodes: Bank A, Bank B and a node that simultaneously r
 interest rates oracle. The two banks agree on an interest rate swap, and then do regular fixings of the deal as the 
 time on a simulated clock passes.
 
-To run from the command line in Unix:
+Functionality is split into two parts - CordApp which provides actual distributed ledger backend and Spring Boot 
+webapp which provides REST API and web frontend. Application communicate using Corda RPC protocol.
 
-1. Run ``./gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under 
+To run from the command line in Unix:
+1. Run ``./gradlew samples:irs-demo:cordapp:deployNodes`` to install configs and a command line tool under 
    ``samples/irs-demo/build``
-2. Run ``./gradlew samples:irs-demo:installDist``
-3. Move to the ``samples/irs-demo/build`` directory
-4. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm)
+2. Run ``./gradlew samples:irs-demo:web:deployWebapps`` to install configs and tools for running webservers
+3. Move to the ``samples/irs-demo/`` directory
+4. Run ``./cordapp/build/nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm)
+5. Run ``./web/build/webapps/runwebapps`` to open three more terminals for associated webserver
 
 To run from the command line in Windows:
 
-1. Run ``gradlew.bat samples:irs-demo:deployNodes`` to install configs and a command line tool under 
+1. Run ``gradlew.bat samples:irs-demo:cordapp:deployNodes`` to install configs and a command line tool under 
    ``samples\irs-demo\build``
-2. Run ``gradlew.bat samples:irs-demo:installDist``
-3. Run ``cd samples\irs-demo\build`` to change current working directory
-4. Run ``nodes\runnodes`` to open up several 6 terminals, 2 for each node. First terminal is a web-server associated 
-   with every node and second one is Corda interactive shell for the node
+2. Run ``gradlew.bat samples:irs-demo:web:deployWebapps`` to install configs and tools for running webservers
+3. Run ``cd samples\irs-demo`` to change current working directory
+4. Run ``cordapp\build\nodes\runnodes`` to open up several 3 terminals for each nodes
+5. Run ``web\build\webapps\webapps`` to open up several 3 terminals for each nodes' webservers
 
-This demo also has a web app. To use this, run nodes and then navigate to http://localhost:10007/web/irsdemo and 
-http://localhost:10010/web/irsdemo to see each node's view of the ledger.
+This demo also has a web app. To use this, run nodes and then navigate to http://localhost:10007/ and 
+http://localhost:10010/ to see each node's view of the ledger.
 
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then use 
 the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to 
