@@ -34,3 +34,9 @@ the transaction to the regulator. There are two important aspects to note here:
 
 If the states define a relational mapping (see :doc:`api-persistence`) then the regulator will be able to query the
 reports from their database and observe new transactions coming in via RPC.
+
+.. warning:: Nodes which act as both observers and which directly take part in the ledger are not supported at this
+   time. In particular, coin selection may return states which you do not have the private keys to be able to sign
+   for. Future versions of Corda may address this issue, but for now, if you wish to both participate in the ledger
+   and also observe transactions that you can't sign for you will need to run two nodes and have two separate
+   identities.
