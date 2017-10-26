@@ -95,6 +95,9 @@ dependencies {
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Artemis: for reliable p2p message queues.
+    // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
+    compile "org.apache.commons:commons-collections4:${commons_collections_version}"
+    compile "commons-beanutils:commons-beanutils:${beanutils_version}"
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
     runtime ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
