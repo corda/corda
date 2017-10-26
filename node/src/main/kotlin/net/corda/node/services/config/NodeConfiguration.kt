@@ -36,6 +36,10 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
+
+    companion object {
+        val disableCheckpointCheckerFlag = "disableCheckpointChecker"
+    }
 }
 
 fun NodeConfiguration.isDevModeOptionsFlagSet(flag: String):Boolean{
