@@ -49,6 +49,9 @@ dependencies {
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Jersey for JAX-RS implementation for use in Jetty
+    // TODO: remove force upgrade when jersey catches up
+    compile "org.eclipse.jetty:jetty-continuation:${jetty_version}"
+
     compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
     compile "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
     compile "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
