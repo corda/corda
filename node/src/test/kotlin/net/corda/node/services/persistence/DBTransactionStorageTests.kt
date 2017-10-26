@@ -5,13 +5,13 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.VaultService
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
@@ -44,7 +44,6 @@ class DBTransactionStorageTests {
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), ::makeTestIdentityService)
         database.transaction {
-
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultServiceInternal
                     get() {
@@ -58,7 +57,7 @@ class DBTransactionStorageTests {
                         validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
+                    vaultService.notifyAll(StatesToRecord.ONLY_RELEVANT, txs.map { it.tx })
                 }
             }
         }
