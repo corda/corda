@@ -27,6 +27,9 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "node_info_id")
             var id: Int,
 
+            @Column(name="node_info_hash", length = 64)
+            val hash: String,
+
             @Column(name = "addresses")
             @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
             val addresses: List<NodeInfoSchemaV1.DBHostAndPort>,

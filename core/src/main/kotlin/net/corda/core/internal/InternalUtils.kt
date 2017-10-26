@@ -19,6 +19,8 @@ import rx.subjects.UnicastSubject
 import java.io.*
 import java.lang.reflect.Field
 import java.math.BigDecimal
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.*
@@ -303,3 +305,5 @@ fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationCo
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName get() = java.`package`.name
+
+fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
