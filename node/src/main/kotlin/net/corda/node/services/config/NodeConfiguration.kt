@@ -28,7 +28,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val database: Properties?
     val rpcUsers: List<User>
     val devMode: Boolean
-    val debugOptions: Properties?
+    val devModeOptions: Properties?
     val certificateSigningService: URL
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
@@ -36,6 +36,10 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
+}
+
+fun NodeConfiguration.isDevModeOptionsFlagSet(flag: String):Boolean{
+    return this.devModeOptions?.get(flag).toString().toLowerCase() == "true"
 }
 
 data class NotaryConfig(val validating: Boolean,
@@ -94,7 +98,7 @@ data class FullNodeConfiguration(
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
-        override val debugOptions: Properties? = null,
+        override val devModeOptions: Properties? = null,
         val useTestClock: Boolean = false,
         val detectPublicIp: Boolean = true,
         override val activeMQServer: ActiveMqServerConfiguration,
@@ -105,7 +109,7 @@ data class FullNodeConfiguration(
     init {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
-        require(debugOptions == null || devMode){"Cannot use debugOptions outside of dev mode"}
+        require(devModeOptions == null || devMode){ "Cannot use devModeOptions outside of dev mode" }
         // TODO Move this to ArtemisMessagingServer
         rpcUsers.forEach {
             require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }
