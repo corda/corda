@@ -50,7 +50,8 @@ dependencies {
 
     // Jersey for JAX-RS implementation for use in Jetty
     // TODO: remove force upgrade when jersey catches up
-    compile group: 'org.eclipse.jetty', name: 'jetty-continuation', version: "$jetty_version"
+    compile "org.eclipse.jetty:jetty-continuation:${jetty_version}"
+
     compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
     compile "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
     compile "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
