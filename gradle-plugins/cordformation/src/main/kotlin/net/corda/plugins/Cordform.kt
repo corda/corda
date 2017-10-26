@@ -148,42 +148,48 @@ open class Cordform : DefaultTask() {
         installNodeInfos()
     }
 
-
     private fun generateNodeInfos() {
         project.logger.info("Generating node infos")
-        val generateTimeoutSeconds = 60L
-        for (node in nodes) {
-            project.logger.info("Generating node info for ${fullNodePath(node)}")
-            var logDir = File(fullNodePath(node).toFile(), "logs")
-            logDir.mkdirs()
-            var process = buildNodeProcess(node, logDir)
-            try {
-                if (!process.waitFor(generateTimeoutSeconds, TimeUnit.SECONDS)) {
-                    throw GradleException("Node took longer $generateTimeoutSeconds seconds than too to generate node info - see node log at ${fullNodePath(node)}/logs")
-                }
-                if (process.exitValue() != 0) {
-                    throw GradleException("Node exited with ${process.exitValue()} when generating node infos - see node log at ${fullNodePath(node)}/logs")
-                }
-            }
-            finally {
-                if (process.isAlive()) {
-                    process.destroyForcibly()
-                }
-            }
+        var nodeProcesses = buildNodeProcesses()
+        try {
+            nodeProcesses.forEach { (node, process) -> validateNodeProcess(node, process) }
+        }
+        finally {
+            nodeProcesses.forEach { it.second.destroyForcibly() }
         }
     }
 
-    private fun buildNodeProcess(node: Node, logDir: File): Process {
-        val javaPathString = Paths.get(System.getProperty("java.home"), "bin", "java").toString()
-        val command = listOf(javaPathString, "-Dcapsule.log=verbose", "-Dcapsule.dir=./cache", "-jar", Node.nodeJarName, "--just-generate-node-info")
-        var pb = ProcessBuilder(command)
+    private fun buildNodeProcesses(): List<Pair<Node, Process>> {
+        return nodes.map { buildNodeProcess(it, makeLogDirectory(it)) }
+    }
+
+    private fun makeLogDirectory(node: Node): File {
+        var logDir = File(fullNodePath(node).toFile(), "logs")
+        logDir.mkdirs()
+        return logDir
+    }
+
+    private fun buildNodeProcess(node: Node, logDir: File): Pair<Node, Process> {
+        val command = listOf("java", "-Dcapsule.log=verbose", "-Dcapsule.dir=./cache", "-jar", Node.nodeJarName, "--just-generate-node-info")
+        var builder = ProcessBuilder(command)
                 .directory(fullNodePath(node).toFile())
                 .redirectErrorStream(true)
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
                 // Must redirect to output or logger (node log is still written, this is just startup banner)
                 .redirectOutput(File(logDir, "generate-info.log"))
-        pb.environment().put("CAPSULE_CACHE_DIR", "./cache")
-        return pb.start()
+        builder.environment().put("CAPSULE_CACHE_DIR", "./cache")
+        return Pair(node, builder.start())
+    }
+
+    private fun validateNodeProcess(node: Node, process: Process) {
+        val generateTimeoutSeconds = 60L
+        if (!process.waitFor(generateTimeoutSeconds, TimeUnit.SECONDS)) {
+            throw GradleException("Node took longer $generateTimeoutSeconds seconds than too to generate node info - see node log at ${fullNodePath(node)}/logs")
+        }
+        if (process.exitValue() != 0) {
+            throw GradleException("Node exited with ${process.exitValue()} when generating node infos - see node log at ${fullNodePath(node)}/logs")
+        }
+        project.logger.info("Generated node info for ${fullNodePath(node)}")
     }
 
     private fun installNodeInfos() {
