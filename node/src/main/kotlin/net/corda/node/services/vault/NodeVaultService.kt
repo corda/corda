@@ -13,6 +13,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
@@ -50,8 +51,7 @@ private fun CriteriaBuilder.executeUpdate(session: Session, configure: Root<*>.(
 }
 
 /**
- * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
- * we add further functionality as the design for the vault and vault service matures.
+ * The vault service handles storage, retrieval and querying of states.
  *
  * This class needs database transactions to be in-flight during method calls and init, and will throw exceptions if
  * this is not the case.
@@ -59,8 +59,12 @@ private fun CriteriaBuilder.executeUpdate(session: Session, configure: Root<*>.(
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val clock: Clock, private val keyManagementService: KeyManagementService, private val stateLoader: StateLoader, hibernateConfig: HibernateConfiguration) : SingletonSerializeAsToken(), VaultServiceInternal {
-
+class NodeVaultService(
+        private val clock: Clock,
+        private val keyManagementService: KeyManagementService,
+        private val stateLoader: StateLoader,
+        hibernateConfig: HibernateConfiguration
+) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         val log = loggerFor<NodeVaultService>()
     }
@@ -118,7 +122,10 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
     override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }
 
-    override fun notifyAll(txns: Iterable<CoreTransaction>) {
+    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
+        if (statesToRecord == StatesToRecord.NONE)
+            return
+
         // It'd be easier to just group by type, but then we'd lose ordering.
         val regularTxns = mutableListOf<WireTransaction>()
         val notaryChangeTxns = mutableListOf<NotaryChangeWireTransaction>()
@@ -128,30 +135,33 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
                 is WireTransaction -> {
                     regularTxns.add(tx)
                     if (notaryChangeTxns.isNotEmpty()) {
-                        notifyNotaryChange(notaryChangeTxns.toList())
+                        notifyNotaryChange(notaryChangeTxns.toList(), statesToRecord)
                         notaryChangeTxns.clear()
                     }
                 }
                 is NotaryChangeWireTransaction -> {
                     notaryChangeTxns.add(tx)
                     if (regularTxns.isNotEmpty()) {
-                        notifyRegular(regularTxns.toList())
+                        notifyRegular(regularTxns.toList(), statesToRecord)
                         regularTxns.clear()
                     }
                 }
             }
         }
 
-        if (regularTxns.isNotEmpty()) notifyRegular(regularTxns.toList())
-        if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList())
+        if (regularTxns.isNotEmpty()) notifyRegular(regularTxns.toList(), statesToRecord)
+        if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList(), statesToRecord)
     }
 
-    private fun notifyRegular(txns: Iterable<WireTransaction>) {
+    private fun notifyRegular(txns: Iterable<WireTransaction>, statesToRecord: StatesToRecord) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
             val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
-            val ourNewStates = tx.outputs.
-                    filter { isRelevant(it.data, myKeys.toSet()) }.
-                    map { tx.outRef<ContractState>(it.data) }
+
+            val ourNewStates = when (statesToRecord) {
+                StatesToRecord.NONE -> throw AssertionError("Should not reach here")
+                StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, myKeys.toSet()) }
+                StatesToRecord.ALL_VISIBLE -> tx.outputs
+            }.map { tx.outRef<ContractState>(it.data) }
 
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStates(tx.inputs)
@@ -169,7 +179,7 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
         processAndNotify(netDelta)
     }
 
-    private fun notifyNotaryChange(txns: Iterable<NotaryChangeWireTransaction>) {
+    private fun notifyNotaryChange(txns: Iterable<NotaryChangeWireTransaction>, statesToRecord: StatesToRecord) {
         fun makeUpdate(tx: NotaryChangeWireTransaction): Vault.Update<ContractState> {
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
@@ -178,7 +188,12 @@ class NodeVaultService(private val clock: Clock, private val keyManagementServic
             val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
-                    filter { (_, output) -> isRelevant(output.data, myKeys.toSet()) }.
+                    filter { (_, output) ->
+                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT)
+                            isRelevant(output.data, myKeys.toSet())
+                        else
+                            true
+                    }.
                     unzip()
 
             val producedStateAndRefs = producedStates.map { ltx.outRef<ContractState>(it.data) }

@@ -128,7 +128,7 @@ class Node(private val project: Project) : CordformNode() {
             // Can't parse as an X500 name, use the full string
             name
         }
-        nodeDir = File(rootDir.toFile(), dirName.replace("\\s", ""))
+        nodeDir = File(rootDir.toFile(), dirName)
     }
 
     private fun configureProperties() {
@@ -201,7 +201,12 @@ class Node(private val project: Project) : CordformNode() {
      * Installs the configuration file to this node's directory and detokenises it.
      */
     private fun installConfig() {
-        val options = ConfigRenderOptions.defaults().setOriginComments(false).setComments(false).setFormatted(false).setJson(false)
+        val options = ConfigRenderOptions
+                .defaults()
+                .setOriginComments(false)
+                .setComments(false)
+                .setFormatted(true)
+                .setJson(false)
         val configFileText = config.root().render(options).split("\n").toList()
 
         // Need to write a temporary file first to use the project.copy, which resolves directories correctly.

@@ -16,10 +16,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
-import net.corda.core.node.AppServiceHub
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.StateLoader
+import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -803,9 +800,9 @@ abstract class AbstractNode(config: NodeConfiguration,
             return flowFactories[initiatingFlowClass]
         }
 
-        override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+        override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
             database.transaction {
-                super.recordTransactions(notifyVault, txs)
+                super.recordTransactions(statesToRecord, txs)
             }
         }
 

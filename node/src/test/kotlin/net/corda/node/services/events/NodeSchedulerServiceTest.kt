@@ -12,6 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -107,11 +108,12 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
                 doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
-                doCallRealMethod().whenever(it).recordTransactions(any<SignedTransaction>())
-                doCallRealMethod().whenever(it).recordTransactions(any<Boolean>(), any<SignedTransaction>())
-                doCallRealMethod().whenever(it).recordTransactions(any(), any<Iterable<SignedTransaction>>())
+                doCallRealMethod().whenever(it).recordTransactions(any<StatesToRecord>(), any<Iterable<SignedTransaction>>())
+                doCallRealMethod().whenever(it).recordTransactions(any<Iterable<SignedTransaction>>())
+                doCallRealMethod().whenever(it).recordTransactions(any<SignedTransaction>(), anyVararg<SignedTransaction>())
                 doReturn(NodeVaultService(testClock, kms, stateLoader, database.hibernateConfig)).whenever(it).vaultService
                 doReturn(this@NodeSchedulerServiceTest).whenever(it).testReference
+
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database)
