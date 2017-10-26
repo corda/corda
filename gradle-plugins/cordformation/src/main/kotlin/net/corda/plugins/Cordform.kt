@@ -183,7 +183,7 @@ open class Cordform : DefaultTask() {
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
                 // Must redirect to output or logger (node log is still written, this is just startup banner)
                 .redirectOutput(node.logFile().toFile())
-                .addEnvironment("CAPSULE_CACHE_DIR", capsuleCacheDir)
+                .addEnvironment("CAPSULE_CACHE_DIR", Node.capsuleCacheDir)
                 .start()
         return Pair(node, process)
     }
@@ -191,7 +191,7 @@ open class Cordform : DefaultTask() {
     private fun generateNodeInfoCommand(): List<String> = listOf(
             "java",
             "-Dcapsule.log=verbose",
-            "-Dcapsule.dir=$capsuleCacheDir",
+            "-Dcapsule.dir=${Node.capsuleCacheDir}",
             "-jar",
             Node.nodeJarName,
             "--just-generate-node-info"
@@ -225,10 +225,5 @@ open class Cordform : DefaultTask() {
         }
     }
 
-    private const val capsuleCacheDir: String = "./cache"
-    private fun Node.fullPath(): Path = project.projectDir.toPath().resolve(this.nodeDir.toPath())
-    private fun Node.logDirectory(): Path = this.fullPath().resolve("logs")
-    private fun Node.makeLogDirectory() = Files.createDirectories(this.logDirectory())
-    private fun Node.logFile(): Path = this.logDirectory().resolve("generate-info.log")
     private fun ProcessBuilder.addEnvironment(key: String, value: String) = this.apply { environment().put(key, value) }
 }
