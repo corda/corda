@@ -224,6 +224,6 @@ open class Cordform : DefaultTask() {
             }
         }
     }
-    private fun logFile(): Path = this.logDirectory().resolve("generate-info.log")
+    private fun Node.logFile(): Path = this.logDirectory().resolve("generate-info.log")
     private fun ProcessBuilder.addEnvironment(key: String, value: String) = this.apply { environment().put(key, value) }
 }
