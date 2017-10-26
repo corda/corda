@@ -71,17 +71,17 @@ class FullNodeConfigurationTest {
                 additionalNodeInfoPollingFrequencyMsec = 5.seconds.toMillis())
 
         fun configDebugOptions(devMode: Boolean, debugOptions: Properties?) {
-            testConfiguration.copy(devMode = devMode, debugOptions = debugOptions)
+            testConfiguration.copy(devMode = devMode, devModeOptions = debugOptions)
         }
         val debugOptions = Properties()
         configDebugOptions(true, debugOptions)
         configDebugOptions(true,null)
-        assertThatThrownBy{configDebugOptions(false, debugOptions)}.hasMessageMatching("Cannot use debugOptions outside of dev mode")
+        assertThatThrownBy{configDebugOptions(false, debugOptions)}.hasMessageMatching( "Cannot use devModeOptions outside of dev mode" )
         configDebugOptions(false,null)
     }
 
     @Test
-    fun `check properties behave as expected`()
+    fun `check devModeOptions flag helper`()
     {
         val testConfiguration = FullNodeConfiguration(
                 baseDirectory = Paths.get("."),
@@ -106,13 +106,13 @@ class FullNodeConfigurationTest {
                 additionalNodeInfoPollingFrequencyMsec = 5.seconds.toMillis())
 
         fun configDebugOptions(devMode: Boolean, debugOptions: Properties?) : NodeConfiguration {
-            return testConfiguration.copy(devMode = devMode, debugOptions = debugOptions)
+            return testConfiguration.copy(devMode = devMode, devModeOptions = debugOptions)
         }
         val debugOptions = Properties()
-        assertFalse { configDebugOptions(true, debugOptions).debugOptions?.getProperty("foo") == "bar"}
-        assertFalse { configDebugOptions(true,null).debugOptions?.getProperty("foo") == "bar"}
-        debugOptions.setProperty("foo", "bar")
-        assert( configDebugOptions(true, debugOptions).debugOptions?.getProperty("foo") == "bar")
+        assertFalse { configDebugOptions(true,null).isDevModeOptionsFlagSet("foo")}
+        assertFalse { configDebugOptions(true,debugOptions).isDevModeOptionsFlagSet("foo")}
+        debugOptions.setProperty("foo", "tRuE")
+        assert( configDebugOptions(true, debugOptions).isDevModeOptionsFlagSet("foo"))
     }
 
 }

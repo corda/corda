@@ -31,6 +31,7 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.config.isDevModeOptionsFlagSet
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.TopicSession
 import net.corda.node.utilities.*
@@ -43,7 +44,6 @@ import rx.subjects.PublishSubject
 import java.io.NotSerializableException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 import javax.annotation.concurrent.ThreadSafe
 
@@ -89,7 +89,7 @@ class StateMachineManagerImpl(
     private val scheduler = FiberScheduler()
     private val mutex = ThreadBox(InnerState())
     // This thread (only enabled in dev mode) deserialises checkpoints in the background to shake out bugs in checkpoint restore.
-    private val checkpointCheckerThread = if (serviceHub.configuration.devMode && serviceHub.configuration.debugOptions?.getProperty("disableCheckpointChecking") != "true") newNamedSingleThreadExecutor("CheckpointChecker") else null
+    private val checkpointCheckerThread = if (serviceHub.configuration.devMode && !serviceHub.configuration.isDevModeOptionsFlagSet("disableCheckpointChecking")) newNamedSingleThreadExecutor("CheckpointChecker") else null
 
     @Volatile private var unrestorableCheckpoints = false
 
