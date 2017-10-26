@@ -152,15 +152,23 @@ open class Cordform : DefaultTask() {
         project.logger.info("Generating node infos")
         var nodeProcesses = buildNodeProcesses()
         try {
-            nodeProcesses.forEach { (node, process) -> validateNodeProcess(node, process) }
+            validateNodeProcessess(nodeProcesses)
         }
         finally {
-            nodeProcesses.forEach { it.second.destroyForcibly() }
+            destroyNodeProcesses(nodeProcesses)
         }
     }
 
     private fun buildNodeProcesses(): List<Pair<Node, Process>> {
         return nodes.map { buildNodeProcess(it, makeLogDirectory(it)) }
+    }
+
+    private fun validateNodeProcessess(processes: List<Pair<Node, Process>>) {
+        nodeProcesses.forEach { (node, process) -> validateNodeProcess(node, process) }
+    }
+
+    private fun destroyNodeProcesses(processes: List<Pair<Node, Process>>) {
+        nodeProcesses.forEach { it.second.destroyForcibly() }
     }
 
     private fun makeLogDirectory(node: Node): File {
