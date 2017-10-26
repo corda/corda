@@ -11,6 +11,7 @@ import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.net.URLClassLoader
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -141,8 +142,6 @@ open class Cordform : DefaultTask() {
         }
     }
 
-    private fun fullNodePath(node: Node): Path = project.projectDir.toPath().resolve(node.nodeDir.toPath())
-
     private fun generateAndInstallNodeInfos() {
         generateNodeInfos()
         installNodeInfos()
@@ -153,51 +152,60 @@ open class Cordform : DefaultTask() {
         var nodeProcesses = buildNodeProcesses()
         try {
             validateNodeProcessess(nodeProcesses)
-        }
-        finally {
+        } finally {
             destroyNodeProcesses(nodeProcesses)
         }
     }
 
-    private fun buildNodeProcesses(): List<Pair<Node, Process>> {
-        return nodes.map { buildNodeProcess(it, makeLogDirectory(it)) }
+    private fun buildNodeProcesses(): Map<Node, Process> {
+        return nodes
+                .map { buildNodeProcess(it) }
+                .toMap()
     }
 
-    private fun validateNodeProcessess(processes: List<Pair<Node, Process>>) {
-        nodeProcesses.forEach { (node, process) -> validateNodeProcess(node, process) }
+    private fun validateNodeProcessess(nodeProcesses: Map<Node, Process>) {
+        nodeProcesses.forEach { (node, process) ->
+            validateNodeProcess(node, process)
+        }
     }
 
-    private fun destroyNodeProcesses(processes: List<Pair<Node, Process>>) {
-        nodeProcesses.forEach { it.second.destroyForcibly() }
+    private fun destroyNodeProcesses(nodeProcesses: Map<Node, Process>) {
+        nodeProcesses.forEach { (_, process) ->
+            process.destroyForcibly()
+        }
     }
 
-    private fun makeLogDirectory(node: Node): File {
-        var logDir = File(fullNodePath(node).toFile(), "logs")
-        logDir.mkdirs()
-        return logDir
-    }
-
-    private fun buildNodeProcess(node: Node, logDir: File): Pair<Node, Process> {
-        val command = listOf("java", "-Dcapsule.log=verbose", "-Dcapsule.dir=./cache", "-jar", Node.nodeJarName, "--just-generate-node-info")
-        var builder = ProcessBuilder(command)
-                .directory(fullNodePath(node).toFile())
+    private fun buildNodeProcess(node: Node): Pair<Node, Process> {
+        node.makeLogDirectory()
+        var process = ProcessBuilder(generateNodeInfoCommand())
+                .directory(node.fullPath().toFile())
                 .redirectErrorStream(true)
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
                 // Must redirect to output or logger (node log is still written, this is just startup banner)
-                .redirectOutput(File(logDir, "generate-info.log"))
-        builder.environment().put("CAPSULE_CACHE_DIR", "./cache")
-        return Pair(node, builder.start())
+                .redirectOutput(node.logFile().toFile())
+                .addEnvironment("CAPSULE_CACHE_DIR", "./cache")
+                .start()
+        return Pair(node, process)
     }
+
+    private fun generateNodeInfoCommand(): List<String> = listOf(
+            "java",
+            "-Dcapsule.log=verbose",
+            "-Dcapsule.dir=./cache",
+            "-jar",
+            Node.nodeJarName,
+            "--just-generate-node-info"
+    )
 
     private fun validateNodeProcess(node: Node, process: Process) {
         val generateTimeoutSeconds = 60L
         if (!process.waitFor(generateTimeoutSeconds, TimeUnit.SECONDS)) {
-            throw GradleException("Node took longer $generateTimeoutSeconds seconds than too to generate node info - see node log at ${fullNodePath(node)}/logs")
+            throw GradleException("Node took longer $generateTimeoutSeconds seconds than too to generate node info - see node log at ${node.fullPath()}/logs")
         }
         if (process.exitValue() != 0) {
-            throw GradleException("Node exited with ${process.exitValue()} when generating node infos - see node log at ${fullNodePath(node)}/logs")
+            throw GradleException("Node exited with ${process.exitValue()} when generating node infos - see node log at ${node.fullPath()}/logs")
         }
-        project.logger.info("Generated node info for ${fullNodePath(node)}")
+        project.logger.info("Generated node info for ${node.fullPath()}")
     }
 
     private fun installNodeInfos() {
@@ -207,13 +215,19 @@ open class Cordform : DefaultTask() {
                 if (source.nodeDir != destination.nodeDir) {
                     project.copy {
                         it.apply {
-                            from(fullNodePath(source).toString())
+                            from(source.fullPath().toString())
                             include("nodeInfo-*")
-                            into(fullNodePath(destination).resolve(CordformNode.NODE_INFO_DIRECTORY).toString())
+                            into(destination.fullPath().resolve(CordformNode.NODE_INFO_DIRECTORY).toString())
                         }
                     }
                 }
             }
         }
     }
+
+    private fun Node.fullPath(): Path = project.projectDir.toPath().resolve(this.nodeDir.toPath())
+    private fun Node.logDirectory(): Path = this.fullPath().resolve("logs")
+    private fun Node.makeLogDirectory() = Files.createDirectories(this.logDirectory())
+    private fun Node.logFile(): Path = this.logDirectory().resolve("generate-info.log")
+    private fun ProcessBuilder.addEnvironment(key: String, value: String) = this.apply { environment().put(key, value) }
 }
