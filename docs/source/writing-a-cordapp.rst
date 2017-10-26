@@ -1,6 +1,10 @@
 Writing a CorDapp
 =================
 
+.. contents::
+
+Overview
+--------
 CorDapps can be written in either Java, Kotlin, or a combination of the two. Each CorDapp component takes the form
 of a JVM class that subclasses or implements a Corda library type:
 
@@ -17,58 +21,84 @@ For testing purposes, CorDapps may also include:
 * **APIs and static web content**: These are served by Corda's built-in webserver. This webserver is not
   production-ready, and should be used for testing purposes only
 
-* **RPC clients**: These are scripts that automate the process of interacting with a node via RPC
+* **RPC clients**: These are programs that automate the process of interacting with a node via RPC
 
 In production, a production-ready webserver should be used, and these files should be moved into a different module or
 project so that they do not bloat the CorDapp at build time.
 
 Structure
 ---------
-You should base the structure of your CorDapp on the Java or Kotlin templates:
+You should base the structure of your project on the Java or Kotlin templates:
 
 * `Java Template CorDapp <https://github.com/corda/cordapp-template-java>`_
 * `Kotlin Template CorDapp <https://github.com/corda/cordapp-template-kotlin>`_
 
-Here's the structure of the ``src`` directory for the Java template CorDapp:
+The project should be split into two modules:
+
+* A ``cordapp-contracts-states`` module containing classes such as contracts and states that will be sent across the
+  wire as part of a flow
+* A ``cordapp`` module containing the remaining classes
+
+Each module will be compiled into its own CorDapp. This minimises the size of the JAR that has to be sent across the
+wire when nodes are agreeing ledger updates.
+
+Module one - cordapp-contracts-states
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Here is the structure of the ``src`` directory for the ``cordapp-contracts-states`` module:
 
 .. parsed-literal::
 
     .
-    └── src
-        ├── main
-        │   ├── java
-        │   │   └── com
-        │   │       └── template
-        │   │           ├── TemplateApi.java
-        │   │           ├── TemplateClient.java
-        │   │           ├── TemplateContract.java
-        │   │           ├── TemplateFlow.java
-        │   │           ├── TemplateSerializationWhitelist.java
-        │   │           ├── TemplateState.java
-        │   │           └── TemplateWebPlugin.java
-        │   └── resources
-        │       ├── META-INF
-        │       │   └── services
-        │       │       ├── net.corda.core.serialization.SerializationWhitelist
-        │       │       └── net.corda.webserver.services.WebServerPluginRegistry
-        │       ├── certificates
-        │       │   ├── readme.txt
-        │       │   ├── sslkeystore.jks
-        │       │   └── truststore.jks
-        │       └── templateWeb
-        │           └── index.html
-        ├── test
-        │   └── java
-        │       └── com
-        │           └── template
-        │               ├── ContractTests.java
-        │               ├── FlowTests.java
-        │               └── NodeDriver.java
-        └── integrationTest
-            └── java
-                └── com
-                    └── template
-                        └── DriverBasedTest.java
+    └── main
+        └── java
+            └── com
+                └── template
+                    ├── TemplateContract.java
+                    └── TemplateState.java
+
+The directory only contains two class definitions:
+
+* ``TemplateContract``
+* ``TemplateState``
+
+These are definitions for classes that we expect to have to send over the wire. They will be compiled into their own
+CorDapp.
+
+Module two - cordapp
+^^^^^^^^^^^^^^^^^^^^
+Here is the structure of the ``src`` directory for the ``cordapp`` module:
+
+.. parsed-literal::
+
+    .
+    ├── main
+    │   ├── java
+    │   │   └── com
+    │   │       └── template
+    │   │           ├── TemplateApi.java
+    │   │           ├── TemplateClient.java
+    │   │           ├── TemplateFlow.java
+    │   │           ├── TemplateSerializationWhitelist.java
+    │   │           └── TemplateWebPlugin.java
+    │   └── resources
+    │       ├── META-INF
+    │       │   └── services
+    │       │       ├── net.corda.core.serialization.SerializationWhitelist
+    │       │       └── net.corda.webserver.services.WebServerPluginRegistry
+    │       ├── certificates
+    │       └── templateWeb
+    ├── test
+    │   └── java
+    │       └── com
+    │           └── template
+    │               ├── ContractTests.java
+    │               ├── FlowTests.java
+    │               └── NodeDriver.java
+    └── integrationTest
+        └── java
+            └── com
+                └── template
+                    └── DriverBasedTest.java
 
 The ``src`` directory is structured as follows:
 

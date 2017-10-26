@@ -6,25 +6,22 @@ Building a CorDapp
 Cordapps run on the Corda platform and integrate with it and each other. This article explains how to build CorDapps.
 To learn what a CorDapp is, please read :doc:`cordapp-overview`.
 
+CorDapp format
+--------------
+A CorDapp is a semi-fat JAR that contains all of the CorDapp's dependencies *except* the Corda core libraries and any
+other CorDapps it depends on.
+
+For example, if a Cordapp depends on ``corda-core``, ``your-other-cordapp`` and ``apache-commons``, then the Cordapp
+JAR will contain:
+
+* All classes and resources from the ``apache-commons`` JAR and its dependencies
+* *Nothing* from the other two JARs
+
 Build tools
 -----------
-You should use ``gradle`` and the ``cordformation`` plugin to build your CorDapp. See the
-`example build file <https://github.com/corda/cordapp-template-kotlin/blob/release-V1/build.gradle>`_ from the
-CorDapp template.
-
-To ensure you are using the correct version of Gradle, you should use the Gradle wrapper instead of your own Gradle
-installation. The Gradle wrapper is available in the
-`template CorDapp <https://github.com/corda/cordapp-template-kotlin>`_, and consists of three files:
-
-* ``gradlew``, to use the Gradle wrapper on Unix
-* ``gradlew.bat``, to use the Gradle wrapper on Windows
-* ``gradle/wrapper``, which allows the Gradle wrapper to download the correct version
-
-You run a Gradle build using the Gradle wrapper by moving to the folder where the ``gradlew``/``gradlew.bat`` file is,
-and running:
-
-* On Unix: ``./gradlew [taskName]``
-* On Windows: ``gradlew.bat [taskName]``
+In the instructions that follow, we assume you are using ``gradle`` and the ``cordformation`` plugin to build your
+CorDapp. See the `example build file <https://github.com/corda/cordapp-template-kotlin/blob/release-V1/build.gradle>`_
+from the CorDapp template.
 
 Setting your dependencies
 -------------------------
@@ -56,7 +53,7 @@ Corda dependencies
 The ``cordformation`` plugin adds:
 
 * ``cordaCompile`` as a new configuration that ``compile`` extends from
-* ``cordaRuntime`` which ``runtime`` extends from.
+* ``cordaRuntime`` which ``runtime`` extends from
 
 To build against Corda you must add the following to your ``build.gradle`` file;
 
@@ -103,6 +100,9 @@ is already correctly configured and this is for reference only;
             testCompile "net.corda:corda-test-utils:$corda_release_version"
 
             // Corda Plugins: dependent flows and services
+            // Identifying a CorDapp by its module in the same project.
+            cordapp project(":cordapp-contracts-states")
+            // Identifying a CorDapp by its fully-qualified name.
             cordapp "net.corda:bank-of-corda-demo:1.0"
 
             // Some other dependencies
@@ -115,24 +115,13 @@ is already correctly configured and this is for reference only;
 
 Creating the CorDapp jar
 ------------------------
-The gradle ``jar`` task included in the CorDapp template build file will automatically build your JAR correctly as
-long as your dependencies are set correctly.
+The gradle ``jar`` task included in the CorDapp template build file will automatically build your CorDapp JAR correctly
+as long as your dependencies are set correctly.
 
 The filename of the JAR must include a unique identifier to deduplicate it from other releases of the same CorDapp.
 This is typically done by appending the version string to the CorDapp's name. This unique identifier should not change
 once the JAR has been deployed on a node. If it does, make sure no one is relying on ``FlowContext.appName`` in their
 flows (see :doc:`versioning`).
-
-CorDapp jar format
-^^^^^^^^^^^^^^^^^^
-The resulting CorDapp JAR is a semi-fat JAR that contains all of the CorDapp's dependencies *except* the Corda core
-libraries and any other CorDapps it depends on.
-
-For example, if a Cordapp depends on ``corda-core``, ``your-other-cordapp`` and ``apache-commons``, then the Cordapp
-JAR will contain:
-
-* All classes and resources from the ``apache-commons`` JAR and its dependencies
-* *Nothing* from the other two JARs
 
 Installing the CorDapp jar
 --------------------------

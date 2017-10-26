@@ -1,32 +1,30 @@
 What is a CorDapp?
 ==================
 
-In traditional blockchain systems, updating the ledger is a complex process. Even if the smart contract logic is
-already defined, most platforms require the user to handle at least some of the following:
-
-* Generating fresh keypairs
-* Identifying their counterparties
-* Constructing the messages to send to the smart contracts
-* Sending the messages and ensuring the update succeeds
-* Retrying if one of the updates fails
-* Updating and backing up their private data
-
-Worse, this process is not codified in any way. It's easy to construct an erroneous message, not realise an update has
-failed, or send an asset to the wrong person!
-
-Corda addresses this problem by allowing you to codify each ledger update process as a *flow*. A flow is a function
-that tells your node exactly what steps to go through to achieve a ledger update - whether it's trading assets,
-financing a trade, or tracking provenance.
-
-These flows are added to your node by installing plugins called *CorDapps* (Corda Distributed Applications). Once a
-CorDapp is installed, the node owner can invoke the corresponding flows with a single remote procedure call (RPC) or
-HTTP request.
+CorDapps (Corda Distributed Applications) are distributed applications that run on the Corda platform. The goal of a
+CorDapp is to allow nodes to reach agreement on updates to the ledger. They achieve this goal by defining flows that
+Corda node owners can invoke through RPC calls:
 
 .. image:: resources/node-diagram.png
 
-As well as flows, CorDapps will also generally define:
+CorDapps are made up of the following key components:
 
-* States, defining the facts over which agreement is reached
-* Contracts, defining what constitutes a valid ledger update
+* States, defining the facts over which agreement is reached (see :doc:`Key Concepts - States <key-concepts-states>`)
+* Contracts, defining what constitutes a valid ledger update (see
+  :doc:`Key Concepts - Contracts <key-concepts-contracts>`)
 * Services, providing long-lived utilities within the node
 * Serialisation whitelists, restricting what types your node will receive off the wire
+
+Each CorDapp is installed at the level of the individual node, rather than on the network itself. For example, a node
+owner may choose to install the Bond Trading CorDapp, with the following components:
+
+* A ``BondState``, used to represent bonds as shared facts on the ledger
+* A ``BondContract``, used to govern which ledger updates involving ``BondState`` states are valid
+* Three flows:
+
+    * An ``IssueBondFlow``, allowing new ``BondState`` states to be issued onto the ledger
+    * A ``TradeBondFlow``, allowing existing ``BondState`` states to be bought and sold on the ledger
+    * An ``ExitBondFlow``, allowing existing ``BondState`` states to be exited from the ledger
+
+After installing this CorDapp, the node owner will be able to use the flows defined by the CorDapp to agree ledger
+updates related to issuance, sale, purchase and exit of bonds.
