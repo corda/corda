@@ -28,20 +28,6 @@ and running:
 
 Setting your dependencies
 -------------------------
-The ``cordformation`` plugin adds:
-
-* ``cordaCompile`` as a new configuration that ``compile`` extends from
-* ``cordaRuntime`` which ``runtime`` extends from.
-
-To build against Corda you must add the following to your ``build.gradle`` file;
-
-* The ``net.corda:corda:<version>`` JAR as a ``cordaRuntime`` dependency
-* Each compile dependency (eg ``corda-core``) as a ``cordaCompile`` dependency
-
-To use Corda's test facilities you must add ``net.corda:corda-test-utils:<version>`` as a ``testCompile`` dependency
-(i.e. a default Java/Kotlin test compile task).
-
-.. warning:: Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency.
 
 Choosing your Corda version
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -65,8 +51,25 @@ versions can be found here: https://bintray.com/r3/corda/cordformation.
 
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
 
-Depending on other CorDapps
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Corda dependencies
+^^^^^^^^^^^^^^^^^^
+The ``cordformation`` plugin adds:
+
+* ``cordaCompile`` as a new configuration that ``compile`` extends from
+* ``cordaRuntime`` which ``runtime`` extends from.
+
+To build against Corda you must add the following to your ``build.gradle`` file;
+
+* The ``net.corda:corda:<version>`` JAR as a ``cordaRuntime`` dependency
+* Each compile dependency (eg ``corda-core``) as a ``cordaCompile`` dependency
+
+To use Corda's test facilities you must add ``net.corda:corda-test-utils:<version>`` as a ``testCompile`` dependency
+(i.e. a default Java/Kotlin test compile task).
+
+.. warning:: Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency.
+
+Dependencies on other CorDapps
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Sometimes, a CorDapp you build will depend on states, contracts or flows defined in another CorDapp. You must include
 the CorDapp your CorDapp depends upon as a ``cordapp`` dependency in your ``build.gradle`` file.
 
