@@ -102,7 +102,7 @@ class NodePerformanceTests {
 
     @Test
     fun `self pay rate`() {
-        driver(startNodesInProcess = true) {
+        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
             val a = startNotaryNode(
                     DUMMY_NOTARY.name,
                     rpcUsers = listOf(User("A", "A", setOf(startFlowPermission<CashIssueFlow>(), startFlowPermission<CashPaymentFlow>())))
