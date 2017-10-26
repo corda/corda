@@ -14,11 +14,21 @@ import java.io.NotSerializableException
  * @property build should be a function that takes a transform [Annotation] (currently one of
  * [CordaSerializationTransformRename] or [CordaSerializationTransformEnumDefaults])
  * and constructs an instance of the corresponding [Transform] type
+ *
+ * DO NOT REORDER THE CONSTANTS!!! Please append any new entries to the end
  */
 // TODO:  it would be awesome to auto build this list by scanning for transform annotations themselves
 // TODO: annotated with some annotation
 enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType {
-    EnumDefault({ a -> EnumDefaultSchemeTransform((a as CordaSerializationTransformEnumDefault).old, a.new) }) {
+    /**
+     * Placeholder entry for future transforms where a node receives a transform we've subsequently
+     * added and thus the de-serialising node doesn't know about that transform.
+     */
+    Unknown({ UnknownTransform() }) {
+        override fun getDescriptor(): Any = DESCRIPTOR
+        override fun getDescribed(): Any = ordinal
+    },
+    EnumDefault({ a -> EnumDefaultSchemaTransform((a as CordaSerializationTransformEnumDefault).old, a.new) }) {
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
     },
@@ -26,6 +36,13 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
     };
+    // Transform used to test the unknown handler, leave this at as the final constant, uncomment
+    // when regenerating test cases - if Java had a pre-processor this would be much neater
+    //
+    //UnknownTest({ a -> UnknownTestTransform((a as UnknownTransformAnnotation).a, a.b, a.c)}) {
+    //    override fun getDescriptor(): Any = DESCRIPTOR
+    //    override fun getDescribed(): Any = ordinal
+    //};
 
     companion object : DescribedTypeConstructor<TransformTypes> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_ELEMENT_KEY.amqpDescriptor
@@ -42,10 +59,10 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
                 throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
             }
 
-            try {
-                return values()[describedType.described as Int]
+            return try {
+                values()[describedType.described as Int]
             } catch (e: IndexOutOfBoundsException) {
-                throw NotSerializableException("Bad ordinal value ${describedType.described}.")
+                values()[0]
             }
         }
 

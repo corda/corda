@@ -57,6 +57,7 @@ data class Envelope(val obj: Any?, val schema: Schema, val transformsSchema: Tra
                 ENVELOPE_WITH_TRANSFORMS -> list[TRANSFORMS_SCHEMA_IDX] as TransformsSchema
                 else -> throw NotSerializableException("Malformed list, bad length of ${list.size} (should be 2 or 3)")
             }
+
             return Envelope(list[BLOB_IDX], list[SCHEMA_IDX] as Schema, transformSchema)
         }
 

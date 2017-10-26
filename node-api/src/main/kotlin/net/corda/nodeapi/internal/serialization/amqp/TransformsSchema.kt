@@ -37,15 +37,18 @@ abstract class Transform : DescribedType {
          * the schema as a list of class name and parameters.Using the class name (list element 0)
          * create the appropriate class instance
          *
+         * For future proofing any unknown transform types are not treated as errors, rather we
+         * simply create a placeholder object so we can ignore it
+         *
          * @param obj: a serialized instance of a described type, should be one of the
          * descendants of this class
          */
         override fun newInstance(obj: Any?): Transform {
             val described = Transform.checkDescribed(obj) as List<*>
             return when (described[0]) {
-                EnumDefaultSchemeTransform.typeName -> EnumDefaultSchemeTransform.newInstance(described)
+                EnumDefaultSchemaTransform.typeName -> EnumDefaultSchemaTransform.newInstance(described)
                 RenameSchemaTransform.typeName -> RenameSchemaTransform.newInstance(described)
-                else -> throw NotSerializableException("Unexpected transform type ${described[0]}")
+                else -> UnknownTransform()
             }
         }
 
@@ -64,26 +67,63 @@ abstract class Transform : DescribedType {
 }
 
 /**
+ * Transform type placeholder that allows for backward compatibility. Should a noce recieve
+ * a transform type it doesn't recognise, we can will use this as a placeholder
+ */
+class UnknownTransform : Transform() {
+    companion object : DescribedTypeConstructor<UnknownTransform> {
+        val typeName = "UnknownTransform"
+
+        override fun newInstance(obj: Any?) = UnknownTransform()
+
+        override fun getTypeClass(): Class<*> = UnknownTransform::class.java
+    }
+
+    override fun getDescribed(): Any = emptyList<Any>()
+    override fun params() = ""
+
+    override val name: String get() = typeName
+}
+
+class UnknownTestTransform(val a: Int, val b: Int, val c: Int) : Transform() {
+    companion object : DescribedTypeConstructor<UnknownTestTransform> {
+        val typeName = "UnknownTest"
+
+        override fun newInstance(obj: Any?) : UnknownTestTransform {
+            val described = obj as List<*>
+            return UnknownTestTransform(described[1] as Int, described[2] as Int, described[3] as Int)
+        }
+
+        override fun getTypeClass(): Class<*> = UnknownTransform::class.java
+    }
+
+    override fun getDescribed(): Any = listOf(name, a, b, c)
+    override fun params() = ""
+
+    override val name: String get() = typeName
+}
+
+/**
  * Transform to be used on an Enumerated Type whenever a new element is added
  *
  * @property old The value the [new] instance should default to when not available
  * @property new the value (as a String) that has been added
  */
-class EnumDefaultSchemeTransform(val old: String, val new: String) : Transform() {
-    companion object : DescribedTypeConstructor<EnumDefaultSchemeTransform> {
+class EnumDefaultSchemaTransform(val old: String, val new: String) : Transform() {
+    companion object : DescribedTypeConstructor<EnumDefaultSchemaTransform> {
         /**
          * Value encoded into the schema that identifies a transform as this type
          */
         val typeName = "EnumDefault"
 
-        override fun newInstance(obj: Any?): EnumDefaultSchemeTransform {
+        override fun newInstance(obj: Any?): EnumDefaultSchemaTransform {
             val described = obj as List<*>
             val old = described[1] as? String ?: throw IllegalStateException("Was expecting \"old\" as a String")
             val new = described[2] as? String ?: throw IllegalStateException("Was expecting \"new\" as a String")
-            return EnumDefaultSchemeTransform(old, new)
+            return EnumDefaultSchemaTransform(old, new)
         }
 
-        override fun getTypeClass(): Class<*> = EnumDefaultSchemeTransform::class.java
+        override fun getTypeClass(): Class<*> = EnumDefaultSchemaTransform::class.java
     }
 
     @Suppress("UNUSED")
@@ -93,7 +133,7 @@ class EnumDefaultSchemeTransform(val old: String, val new: String) : Transform()
     override fun params() = "old=${old.esc()} new=${new.esc()}"
 
     override fun equals(other: Any?) = (
-            (other is EnumDefaultSchemeTransform && other.new == new && other.old == old) || super.equals(other))
+            (other is EnumDefaultSchemaTransform && other.new == new && other.old == old) || super.equals(other))
 
     override fun hashCode() = (17 * new.hashCode()) + old.hashCode()
 
@@ -137,7 +177,6 @@ class RenameSchemaTransform(val from: String, val to: String) : Transform() {
 
     override val name: String get() = typeName
 }
-
 
 /**
  * Represents the set of all transforms that can be a applied to all classes represented as part of

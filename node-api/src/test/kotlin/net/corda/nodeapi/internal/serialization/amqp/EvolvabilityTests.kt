@@ -5,35 +5,39 @@ import net.corda.core.serialization.SerializedBytes
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
+import java.net.URI
 import kotlin.test.assertEquals
 
 // To regenerate any of the binary test files do the following
 //
+//  0. set localPath accordingly
 //  1. Uncomment the code where the original form of the class is defined in the test
 //  2. Comment out the rest of the test
 //  3. Run the test
 //  4. Using the printed path copy that file to the resources directory
 //  5. Comment back out the generation code and uncomment the actual test
 class EvolvabilityTests {
+    // When regenerating the test files this needs to be set to the file system location of the resource files
+    var localPath = "file:///<path>/<to>/<toplevel of>/corda/node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp"
 
     @Test
     fun simpleOrderSwapSameType() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.simpleOrderSwapSameType")
-        val f = File(path.toURI())
+        val resource= "EvolvabilityTests.simpleOrderSwapSameType"
 
         val A = 1
         val B = 2
 
         // Original version of the class for the serialised version of this class
-        //
         // data class C (val a: Int, val b: Int)
         // val sc = SerializationOutput(sf).serialize(C(A, B))
-        // f.writeBytes(sc.bytes)
-        // println (path)
+        // File(URI("$localPath/$resource")).writeBytes(sc.bytes)
 
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: Int, val a: Int)
+
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
 
         val sc2 = f.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
@@ -45,21 +49,20 @@ class EvolvabilityTests {
     @Test
     fun simpleOrderSwapDifferentType() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.simpleOrderSwapDifferentType")
-        val f = File(path.toURI())
         val A = 1
         val B = "two"
+        val resource = "EvolvabilityTests.simpleOrderSwapDifferentType"
 
         // Original version of the class as it was serialised
-        //
         // data class C (val a: Int, val b: String)
         // val sc = SerializationOutput(sf).serialize(C(A, B))
-        // f.writeBytes(sc.bytes)
-        // println (path)
+        // File(URI("$localPath/$resource")).writeBytes(sc.bytes)
 
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: String, val a: Int)
 
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
         val sc2 = f.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
@@ -70,18 +73,18 @@ class EvolvabilityTests {
     @Test
     fun addAdditionalParamNotMandatory() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addAdditionalParamNotMandatory")
-        val f = File(path.toURI())
         val A = 1
+        val resource = "EvolvabilityTests.addAdditionalParamNotMandatory"
 
         // Original version of the class as it was serialised
-        //
         // data class C(val a: Int)
         // val sc = SerializationOutput(sf).serialize(C(A))
-        // f.writeBytes(sc.bytes)
-        // println ("Path = $path")
+        // File(URI("$localPath/$resource")).writeBytes(sc.bytes)
+
         data class C(val a: Int, val b: Int?)
 
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
         val sc2 = f.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
@@ -119,22 +122,21 @@ class EvolvabilityTests {
     @Test
     fun removeParameters() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.removeParameters")
-        val f = File(path.toURI())
+        val resource = "EvolvabilityTests.removeParameters"
         val A = 1
         val B = "two"
         val C = "three"
         val D = 4
 
         // Original version of the class as it was serialised
-        //
         // data class CC(val a: Int, val b: String, val c: String, val d: Int)
         // val scc = SerializationOutput(sf).serialize(CC(A, B, C, D))
-        // f.writeBytes(scc.bytes)
-        // println ("Path = $path")
+        // File(URI("$localPath/$resource")).writeBytes(scc.bytes)
 
         data class CC(val b: String, val d: Int)
 
+        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.removeParameters")
+        val f = File(path.toURI())
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -146,23 +148,23 @@ class EvolvabilityTests {
     @Test
     fun addAndRemoveParameters() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addAndRemoveParameters")
-        val f = File(path.toURI())
         val A = 1
         val B = "two"
         val C = "three"
         val D = 4
         val E = null
 
+        val resource = "EvolvabilityTests.addAndRemoveParameters"
+
         // Original version of the class as it was serialised
-        //
         // data class CC(val a: Int, val b: String, val c: String, val d: Int)
         // val scc = SerializationOutput(sf).serialize(CC(A, B, C, D))
-        // f.writeBytes(scc.bytes)
-        // println ("Path = $path")
+        // File(URI("$localPath/$resource")).writeBytes(scc.bytes)
 
         data class CC(val a: Int, val e: Boolean?, val d: Int)
 
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -174,16 +176,13 @@ class EvolvabilityTests {
     @Test
     fun addMandatoryFieldWithAltConstructor() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addMandatoryFieldWithAltConstructor")
-        val f = File(path.toURI())
         val A = 1
+        val resource = "EvolvabilityTests.addMandatoryFieldWithAltConstructor"
 
         // Original version of the class as it was serialised
-        //
         // data class CC(val a: Int)
         // val scc = SerializationOutput(sf).serialize(CC(A))
-        // f.writeBytes(scc.bytes)
-        // println ("Path = $path")
+        // File(URI("$localPath/$resource")).writeBytes(scc.bytes)
 
         @Suppress("UNUSED")
         data class CC(val a: Int, val b: String) {
@@ -191,6 +190,8 @@ class EvolvabilityTests {
             constructor (a: Int) : this(a, "hello")
         }
 
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -228,19 +229,15 @@ class EvolvabilityTests {
     @Test
     fun addMandatoryFieldWithAltReorderedConstructor() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource(
-                "EvolvabilityTests.addMandatoryFieldWithAltReorderedConstructor")
-        val f = File(path.toURI())
+        val resource = "EvolvabilityTests.addMandatoryFieldWithAltReorderedConstructor"
         val A = 1
         val B = 100
         val C = "This is not a banana"
 
         // Original version of the class as it was serialised
-        //
         // data class CC(val a: Int, val b: Int, val c: String)
         // val scc = SerializationOutput(sf).serialize(CC(A, B, C))
-        // f.writeBytes(scc.bytes)
-        // println ("Path = $path")
+        // File(URI("$localPath/$resource")).writeBytes(scc.bytes)
 
         @Suppress("UNUSED")
         data class CC(val a: Int, val b: Int, val c: String, val d: String) {
@@ -250,6 +247,8 @@ class EvolvabilityTests {
             constructor (c: String, a: Int, b: Int) : this(a, b, c, "wibble")
         }
 
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -262,20 +261,15 @@ class EvolvabilityTests {
     @Test
     fun addMandatoryFieldWithAltReorderedConstructorAndRemoval() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource(
-                "EvolvabilityTests.addMandatoryFieldWithAltReorderedConstructorAndRemoval")
-        val f = File(path.toURI())
+        val resource = "EvolvabilityTests.addMandatoryFieldWithAltReorderedConstructorAndRemoval"
         val A = 1
         @Suppress("UNUSED_VARIABLE")
         val B = 100
         val C = "This is not a banana"
 
         // Original version of the class as it was serialised
-        //
         // data class CC(val a: Int, val b: Int, val c: String)
-        // val scc = SerializationOutput(sf).serialize(CC(A, B, C))
-        // f.writeBytes(scc.bytes)
-        // println ("Path = $path")
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC(A, B, C)).bytes)
 
         // b is removed, d is added
         data class CC(val a: Int, val c: String, val d: String) {
@@ -286,6 +280,8 @@ class EvolvabilityTests {
             constructor (c: String, a: Int) : this(a, c, "wibble")
         }
 
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
         val sc2 = f.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -297,9 +293,9 @@ class EvolvabilityTests {
     @Test
     fun multiVersion() {
         val sf = testDefaultFactory()
-        val path1 = EvolvabilityTests::class.java.getResource("EvolvabilityTests.multiVersion.1")
-        val path2 = EvolvabilityTests::class.java.getResource("EvolvabilityTests.multiVersion.2")
-        val path3 = EvolvabilityTests::class.java.getResource("EvolvabilityTests.multiVersion.3")
+        val resource1 = "EvolvabilityTests.multiVersion.1"
+        val resource2 = "EvolvabilityTests.multiVersion.2"
+        val resource3 = "EvolvabilityTests.multiVersion.3"
 
         val a = 100
         val b = 200
@@ -310,24 +306,15 @@ class EvolvabilityTests {
         //
         // Version 1:
         // data class C (val a: Int, val b: Int)
-        //
-        // val scc = SerializationOutput(sf).serialize(C(a, b))
-        // File(path1.toURI()).writeBytes(scc.bytes)
-        // println ("Path = $path1")
+        // File(URI("$localPath/$resource1")).writeBytes(SerializationOutput(sf).serialize(C(a, b)).bytes)
         //
         // Version 2 - add param c
         // data class C (val c: Int, val b: Int, val a: Int)
-        //
-        // val scc = SerializationOutput(sf).serialize(C(c, b, a))
-        // File(path2.toURI()).writeBytes(scc.bytes)
-        // println ("Path = $path2")
+        // File(URI("$localPath/$resource2")).writeBytes(SerializationOutput(sf).serialize(C(c, b, a)).bytes)
         //
         // Version 3 - add param d
         // data class C (val b: Int, val c: Int, val d: Int, val a: Int)
-        //
-        // val scc = SerializationOutput(sf).serialize(C(b, c, d, a))
-        // File(path3.toURI()).writeBytes(scc.bytes)
-        // println ("Path = $path3")
+        // File(URI("$localPath/$resource3")).writeBytes(SerializationOutput(sf).serialize(C(b, c, d, a)).bytes)
 
         @Suppress("UNUSED")
         data class C(val e: Int, val c: Int, val b: Int, val a: Int, val d: Int) {
@@ -340,6 +327,10 @@ class EvolvabilityTests {
             @DeprecatedConstructorForDeserialization(3)
             constructor (a: Int, b: Int, c: Int, d: Int) : this(-1, c, b, a, d)
         }
+
+        val path1 = EvolvabilityTests::class.java.getResource(resource1)
+        val path2 = EvolvabilityTests::class.java.getResource(resource2)
+        val path3 = EvolvabilityTests::class.java.getResource(resource3)
 
         val sb1 = File(path1.toURI()).readBytes()
         val db1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb1))
@@ -372,24 +363,21 @@ class EvolvabilityTests {
     @Test
     fun changeSubType() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.changeSubType")
-        val f = File(path.toURI())
+        val resource = "EvolvabilityTests.changeSubType"
         val oa = 100
         val ia = 200
 
         // Original version of the class as it was serialised
-        //
         // data class Inner (val a: Int)
         // data class Outer (val a: Int, val b: Inner)
-        // val scc = SerializationOutput(sf).serialize(Outer(oa, Inner (ia)))
-        // f.writeBytes(scc.bytes)
-        // println ("Path = $path")
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(Outer(oa, Inner (ia))).bytes)
 
         // Add a parameter to inner but keep outer unchanged
         data class Inner(val a: Int, val b: String?)
-
         data class Outer(val a: Int, val b: Inner)
 
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val f = File(path.toURI())
         val sc2 = f.readBytes()
         val outer = DeserializationInput(sf).deserialize(SerializedBytes<Outer>(sc2))
 
@@ -401,9 +389,10 @@ class EvolvabilityTests {
     @Test
     fun multiVersionWithRemoval() {
         val sf = testDefaultFactory()
-        val path1 = EvolvabilityTests::class.java.getResource("EvolvabilityTests.multiVersionWithRemoval.1")
-        val path2 = EvolvabilityTests::class.java.getResource("EvolvabilityTests.multiVersionWithRemoval.2")
-        val path3 = EvolvabilityTests::class.java.getResource("EvolvabilityTests.multiVersionWithRemoval.3")
+
+        val resource1 = "EvolvabilityTests.multiVersionWithRemoval.1"
+        val resource2 = "EvolvabilityTests.multiVersionWithRemoval.2"
+        val resource3 = "EvolvabilityTests.multiVersionWithRemoval.3"
 
         @Suppress("UNUSED_VARIABLE")
         val a = 100
@@ -417,24 +406,15 @@ class EvolvabilityTests {
         //
         // Version 1:
         // data class C (val a: Int, val b: Int, val c: Int)
+        // File(URI("$localPath/$resource1")).writeBytes(SerializationOutput(sf).serialize(C(a, b, c)).bytes)
         //
-        // val scc = SerializationOutput(sf).serialize(C(a, b, c))
-        // File(path1.toURI()).writeBytes(scc.bytes)
-        // println ("Path = $path1")
-        //
-        // Version 2 - add param c
+        // Version 2 - remove property a, add property e
         // data class C (val b: Int, val c: Int, val d: Int, val e: Int)
-        //
-        // val scc = SerializationOutput(sf).serialize(C(b, c, d, e))
-        // File(path2.toURI()).writeBytes(scc.bytes)
-        // println ("Path = $path2")
+        // File(URI("$localPath/$resource2")).writeBytes(SerializationOutput(sf).serialize(C(b, c, d, e)).bytes)
         //
         // Version 3 - add param d
         // data class C (val b: Int, val c: Int, val d: Int, val e: Int, val f: Int)
-        //
-        // val scc = SerializationOutput(sf).serialize(C(b, c, d, e, f))
-        // File(path3.toURI()).writeBytes(scc.bytes)
-        // println ("Path = $path3")
+        // File(URI("$localPath/$resource3")).writeBytes(SerializationOutput(sf).serialize(C(b, c, d, e, f)).bytes)
 
         @Suppress("UNUSED")
         data class C(val b: Int, val c: Int, val d: Int, val e: Int, val f: Int, val g: Int) {
@@ -450,6 +430,10 @@ class EvolvabilityTests {
             @DeprecatedConstructorForDeserialization(4)
             constructor (b: Int, c: Int, d: Int, e: Int, f: Int) : this(b, c, d, e, f, -1)
         }
+
+        val path1 = EvolvabilityTests::class.java.getResource(resource1)
+        val path2 = EvolvabilityTests::class.java.getResource(resource2)
+        val path3 = EvolvabilityTests::class.java.getResource(resource3)
 
         val sb1 = File(path1.toURI()).readBytes()
         val db1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb1))

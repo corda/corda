@@ -1,16 +1,19 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.CordaSerializationTransformEnumDefault
-import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
-import net.corda.core.serialization.CordaSerializationTransformRename
-import net.corda.core.serialization.CordaSerializationTransformRenames
+import net.corda.core.serialization.*
 import org.assertj.core.api.Assertions
 import org.junit.Test
+import java.io.File
 import java.io.NotSerializableException
+import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class EnumEvolvabilityTests {
+//    var localPath = "file:///Users/katelynbaker/srcs-ide/corda/node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp"
+    var localPath = "file:///home/katelyn/srcs/corda/node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp"
+
+
     companion object {
         val VERBOSE = false
     }
@@ -104,9 +107,9 @@ class EnumEvolvabilityTests {
         assertEquals(1, schema.size)
         assertTrue (schema.keys.contains(TransformTypes.EnumDefault))
         assertEquals (1, schema[TransformTypes.EnumDefault]!!.size)
-        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemeTransform)
-        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemeTransform).new)
-        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemeTransform).old)
+        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
+        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
+        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
     }
 
     @Test
@@ -125,12 +128,12 @@ class EnumEvolvabilityTests {
         assertEquals(1, schema.size)
         assertTrue (schema.keys.contains(TransformTypes.EnumDefault))
         assertEquals (2, schema[TransformTypes.EnumDefault]!!.size)
-        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemeTransform)
-        assertEquals ("E", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemeTransform).new)
-        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemeTransform).old)
-        assertTrue (schema[TransformTypes.EnumDefault]!![1] is EnumDefaultSchemeTransform)
-        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemeTransform).new)
-        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemeTransform).old)
+        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
+        assertEquals ("E", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
+        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
+        assertTrue (schema[TransformTypes.EnumDefault]!![1] is EnumDefaultSchemaTransform)
+        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemaTransform).new)
+        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemaTransform).old)
     }
 
     @Test
@@ -157,9 +160,9 @@ class EnumEvolvabilityTests {
 
         assertTrue (schema!!.keys.contains(TransformTypes.EnumDefault))
         assertEquals (1, schema[TransformTypes.EnumDefault]!!.size)
-        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemeTransform)
-        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemeTransform).new)
-        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemeTransform).old)
+        assertTrue (schema[TransformTypes.EnumDefault]!![0] is EnumDefaultSchemaTransform)
+        assertEquals ("D", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
+        assertEquals ("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
     }
 
     @Test
@@ -183,10 +186,10 @@ class EnumEvolvabilityTests {
 
         val enumDefaults = transforms[AnnotatedEnumTwice::class.java.name]!![TransformTypes.EnumDefault]!!
 
-        assertEquals("E", (enumDefaults[0] as EnumDefaultSchemeTransform).new)
-        assertEquals("D", (enumDefaults[0] as EnumDefaultSchemeTransform).old)
-        assertEquals("D", (enumDefaults[1] as EnumDefaultSchemeTransform).new)
-        assertEquals("A", (enumDefaults[1] as EnumDefaultSchemeTransform).old)
+        assertEquals("E", (enumDefaults[0] as EnumDefaultSchemaTransform).new)
+        assertEquals("D", (enumDefaults[0] as EnumDefaultSchemaTransform).old)
+        assertEquals("D", (enumDefaults[1] as EnumDefaultSchemaTransform).new)
+        assertEquals("A", (enumDefaults[1] as EnumDefaultSchemaTransform).old)
     }
 
     @Test
@@ -299,8 +302,8 @@ class EnumEvolvabilityTests {
         assertEquals("X", (serialisedSchema[TransformTypes.Rename]!![0] as RenameSchemaTransform).to)
 
         assertEquals(1, serialisedSchema[TransformTypes.EnumDefault]!!.size)
-        assertEquals("E", (serialisedSchema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemeTransform).new)
-        assertEquals("X", (serialisedSchema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemeTransform).old)
+        assertEquals("E", (serialisedSchema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).new)
+        assertEquals("X", (serialisedSchema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
     }
 
     @CordaSerializationTransformEnumDefaults (
@@ -402,6 +405,32 @@ class EnumEvolvabilityTests {
 
         assertEquals (sb1.transformsSchema.types[AnnotatedEnumOnce::class.java.name],
                 sb2.transformsSchema.types[AnnotatedEnumOnce::class.java.name])
+    }
 
+
+    // @UnknownTransformAnnotation (10, 20, 30)
+    enum class WithUnknownTest {
+        A, B, C, D
+    }
+
+    data class WrapsUnknown(val unknown: WithUnknownTest)
+
+    // To regenerate the types for this test uncomment the UnknownTransformAnnotation from
+    // TransformTypes.kt and SupportedTransforms.kt
+    @Test
+    fun testUnknownTransform() {
+        val resource = "EnumEvolvabilityTests.testUnknownTransform"
+        val sf = testDefaultFactory()
+
+        //File(URI("$localPath/$resource")).writeBytes(
+        //        SerializationOutput(sf).serialize(WrapsUnknown(WithUnknownTest.D)).bytes)
+
+        val path = EvolvabilityTests::class.java.getResource(resource)
+        val sb1 = File(path.toURI()).readBytes()
+
+        val envelope = DeserializationInput(sf).deserializeAndReturnEnvelope(SerializedBytes<WrapsUnknown>(sb1)).envelope
+
+        assertTrue(envelope.transformsSchema.types.containsKey(WithUnknownTest::class.java.name))
+        assertTrue(envelope.transformsSchema.types[WithUnknownTest::class.java.name]!!.containsKey(TransformTypes.Unknown))
     }
 }

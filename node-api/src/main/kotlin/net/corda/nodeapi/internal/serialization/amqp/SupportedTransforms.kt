@@ -36,11 +36,17 @@ private val wrapperExtract = { x: Annotation ->
  */
 private val singleExtract = { x: Annotation -> listOf(x) }
 
+// Transform annotation used to test the handling of transforms the de-serialising node doesn't understand. At
+// some point test cases will have been created with this transform applied.
+//@Target(AnnotationTarget.CLASS)
+//@Retention(AnnotationRetention.RUNTIME)
+//annotation class UnknownTransformAnnotation(val a: Int, val b: Int, val c: Int)
+
 /**
- * Utility list of all transforms we support that simplifies our generation code
+ * Utility list of all transforms we support that simplifies our generation code.
  *
  * NOTE: We have to support single instances of the transform annotations as well as the wrapping annotation
- * when many instances are repeated
+ * when many instances are repeated.
  */
 val supportedTransforms = listOf(
         SupportedTransform(
@@ -63,4 +69,8 @@ val supportedTransforms = listOf(
                 TransformTypes.Rename,
                 singleExtract
         )
+        //,SupportedTransform(
+        //        UnknownTransformAnnotation::class.java,
+        //        TransformTypes.UnknownTest,
+        //        singleExtract)
 )
