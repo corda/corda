@@ -317,13 +317,13 @@ fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLCon
  * Throws an [IllegalArgumentException] if the [value] is not null.
  * Provides the converse of the requireNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
  */
-inline fun <T:Any> requireNull(value: T?) = requireNull(value) { "Required value was not null." }
+inline fun requireNull(value: Any?) = requireNull(value) { "Required value was not null." }
 
 /**
  * Throws an [IllegalArgumentException] with the result of calling [lazyMessage] if the [value] is null.
  * Provides the converse of the requireNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
  */
-inline fun <T:Any> requireNull(value: T?, lazyMessage: () -> Any) = require(value == null, lazyMessage)
+inline fun requireNull(value: Any?, lazyMessage: () -> Any) = require(value == null, lazyMessage)
 
 /**
  * Throws an [IllegalStateException] if the [value] is false.
