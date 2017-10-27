@@ -25,61 +25,20 @@ import java.util.regex.Pattern
 import javax.naming.ConfigurationException
 
 class TraderDemoSystemTest {
-    // Nullable types can be changed to lateinit and use .isInitialized from kotlin 1.2
-    private var bankA: ExpectingProcess? = null
-    private var bankB: ExpectingProcess? = null
-    private var bankOfCorda: ExpectingProcess? = null
-    private var notaryService: ExpectingProcess? = null
+
     @Before
-    fun startNodes() {
-        bankA = startCordaNode("BankA")
-        bankB = startCordaNode("BankB")
-        bankOfCorda = startCordaNode("BankOfCorda")
-        notaryService = startCordaNode("NotaryService")
+    fun setup() {
+
     }
 
     @After
-    fun stopNodes() {
-        bankA?.close()
-        bankB?.close()
-        bankOfCorda?.close()
-        notaryService?.close()
+    fun cleanup() {
+
     }
 
     @Test
     fun `runs trader demo system test`() {
 
-
-        
-
-
-    }
-
-    private fun startCordaNode(nodeDirectoryName: String): ExpectingProcess {
-        TODO()
-    }
-}
-
-private class TraderDemoNode {
-
-    fun start(nodeDirectoryName: String): NodeExpectingProcess {
-        val nodeDirectory: Path = nodesDirectory.resolve(nodeDirectoryName)
-        val nodeFileInfo = NodeFileInfo(nodeDirectory, cordaJarType)
-        nodeFileInfo.validateFilesOrThrow()
-        val expectingProcess = startExpectingProcess(nodeFileInfo)
-        return NodeExpectingProcess(expectingProcess)
-    }
-
-    private fun startExpectingProcess(nodeFileInfo: NodeFileInfo): ExpectingProcess {
-        return ExpectingProcessBuilder(buildNodeCommand(nodeFileInfo), nodeFileInfo.directory()).start()
-    }
-
-    private fun buildNodeCommand(nodeFileInfo: NodeFileInfo): List<String> {
-        return NodeCommandBuilder(nodeFileInfo).build()
-    }
-
-    private val nodesDirectory: Path by lazy {
-        Paths.get(System.getProperty("user.dir"), "build", "nodes")
     }
 }
 
