@@ -16,7 +16,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.NetworkMapCacheInternal
@@ -29,22 +28,22 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.TestClock
+import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
-import org.apache.activemq.artemis.api.core.RoutingType
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
+import javax.annotation.concurrent.ThreadSafe
 import javax.management.ObjectName
 import kotlin.system.exitProcess
+
+@ThreadSafe
+private class SimpleClock(override val delegateClock: Clock) : CordaClock()
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
@@ -75,7 +74,7 @@ open class Node(override val configuration: NodeConfiguration,
         }
 
         private fun createClock(configuration: NodeConfiguration): Clock {
-            return if (configuration.useTestClock) TestClock() else NodeClock()
+            return (if (configuration.useTestClock) ::DemoClock else ::SimpleClock)(Clock.systemUTC())
         }
 
         private val sameVmNodeCounter = AtomicInteger()

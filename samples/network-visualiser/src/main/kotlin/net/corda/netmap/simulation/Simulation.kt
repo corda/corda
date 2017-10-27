@@ -112,7 +112,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     init {
         // Advance node clocks when current time is changed
         dateChanges.subscribe {
-            clocks.setTo(currentDateAndTime.toInstant(ZoneOffset.UTC))
+            val instant = currentDateAndTime.toInstant(ZoneOffset.UTC)
+            clocks.forEach { it.setTo(instant) }
         }
     }
 
