@@ -81,13 +81,12 @@ internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
  *
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
-@Ignore
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     companion object {
         private val cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts")
         @JvmStatic
-        @Parameterized.Parameters
+        @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> {
             return listOf(true, false)
         }
@@ -111,7 +110,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         // We run this in parallel threads to help catch any race conditions that may exist. The other tests
         // we run in the unit test thread exclusively to speed things up, ensure deterministic results and
         // allow interruption half way through.
-        mockNet = MockNetwork(networkSendManuallyPumped = true, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
             val notaryNode = mockNet.createNotaryNode()
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -161,7 +160,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
     @Test(expected = InsufficientBalanceException::class)
     fun `trade cash for commercial paper fails using soft locking`() {
-        mockNet = MockNetwork(networkSendManuallyPumped = true, cordappPackages = cordappPackages)
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
             val notaryNode = mockNet.createNotaryNode()
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -226,6 +225,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             aliceNode.internals.disableDBCloseOnStop()
             bobNode.internals.disableDBCloseOnStop()
 
+            val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
             mockNet.runNetwork() // Clear network map registration messages
 
             val notary = notaryNode.services.getDefaultNotary()
@@ -279,12 +279,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME), nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-                override fun create(args: MockNodeArgs): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(args)
-                }
-            })
-
+            bobNode = mockNet.createNode(MockNodeParameters(bobAddr.id, BOB_NAME))
             // Find the future representing the result of this state machine again.
             val bobFuture = bobNode.smm.findStateMachines(BuyerAcceptor::class.java).single().second
 
