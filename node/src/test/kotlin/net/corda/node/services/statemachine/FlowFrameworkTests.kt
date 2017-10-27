@@ -145,17 +145,7 @@ class FlowFrameworkTests {
         val restoredFlow = bobNode.restartAndGetRestoredFlow<InitiatedReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
-
-    @Test
-    fun `flow added before network map does run after init`() {
-        val charlieNode = mockNet.createNode() //create vanilla node
-        val flow = NoOpFlow()
-        charlieNode.services.startFlow(flow)
-        assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
-        mockNet.runNetwork() // Allow network map messages to flow
-        assertEquals(true, flow.flowStarted) // Now we should have run the flow
-    }
-
+    
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
         aliceNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
