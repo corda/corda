@@ -11,6 +11,8 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
+data class DevModeOptions(val disableCheckpointChecker: Boolean?)
+
 interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
     // TODO: Remove this so we don't accidentally use this identity in the code?
@@ -28,7 +30,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val database: Properties?
     val rpcUsers: List<User>
     val devMode: Boolean
-    val devModeOptions: Properties?
+    val devModeOptions: DevModeOptions?
     val certificateSigningService: URL
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
@@ -40,10 +42,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     companion object {
         const val DISABLE_CHECKPOINT_CHECKER = "disableCheckpointChecker"
     }
-}
-
-fun NodeConfiguration.isDevModeOptionsFlagSet(flag: String): Boolean {
-    return this.devModeOptions?.get(flag).toString().toLowerCase() == "true"
 }
 
 data class NotaryConfig(val validating: Boolean,
@@ -102,7 +100,7 @@ data class FullNodeConfiguration(
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
-        override val devModeOptions: Properties? = null,
+        override val devModeOptions: DevModeOptions? = null,
         val useTestClock: Boolean = false,
         val detectPublicIp: Boolean = true,
         override val activeMQServer: ActiveMqServerConfiguration,

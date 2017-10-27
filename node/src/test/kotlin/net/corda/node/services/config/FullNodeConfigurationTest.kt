@@ -70,10 +70,10 @@ class FullNodeConfigurationTest {
                 activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)),
                 additionalNodeInfoPollingFrequencyMsec = 5.seconds.toMillis())
 
-        fun configDebugOptions(devMode: Boolean, debugOptions: Properties?) {
+        fun configDebugOptions(devMode: Boolean, debugOptions: DevModeOptions?) {
             testConfiguration.copy(devMode = devMode, devModeOptions = debugOptions)
         }
-        val debugOptions = Properties()
+        val debugOptions = DevModeOptions(null)
         configDebugOptions(true, debugOptions)
         configDebugOptions(true,null)
         assertThatThrownBy{configDebugOptions(false, debugOptions)}.hasMessageMatching( "Cannot use devModeOptions outside of dev mode" )
@@ -105,14 +105,13 @@ class FullNodeConfigurationTest {
                 activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)),
                 additionalNodeInfoPollingFrequencyMsec = 5.seconds.toMillis())
 
-        fun configDebugOptions(devMode: Boolean, debugOptions: Properties?) : NodeConfiguration {
-            return testConfiguration.copy(devMode = devMode, devModeOptions = debugOptions)
+        fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?) : NodeConfiguration {
+            return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
         }
-        val debugOptions = Properties()
-        assertFalse { configDebugOptions(true,null).isDevModeOptionsFlagSet("foo")}
-        assertFalse { configDebugOptions(true,debugOptions).isDevModeOptionsFlagSet("foo")}
-        debugOptions.setProperty("foo", "tRuE")
-        assert( configDebugOptions(true, debugOptions).isDevModeOptionsFlagSet("foo"))
+        assertFalse { configDebugOptions(true,null).devModeOptions?.disableCheckpointChecker == true}
+        assertFalse { configDebugOptions(true,DevModeOptions(null)).devModeOptions?.disableCheckpointChecker == true}
+        assertFalse { configDebugOptions(true,DevModeOptions(false)).devModeOptions?.disableCheckpointChecker == true}
+        assert ( configDebugOptions(true,DevModeOptions(true)).devModeOptions?.disableCheckpointChecker == true)
     }
 
 }
