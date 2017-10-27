@@ -42,7 +42,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     }
 }
 
-fun NodeConfiguration.isDevModeOptionsFlagSet(flag: String):Boolean{
+fun NodeConfiguration.isDevModeOptionsFlagSet(flag: String): Boolean {
     return this.devModeOptions?.get(flag).toString().toLowerCase() == "true"
 }
 
@@ -113,7 +113,7 @@ data class FullNodeConfiguration(
     init {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
-        require(devModeOptions == null || devMode){ "Cannot use devModeOptions outside of dev mode" }
+        require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
         // TODO Move this to ArtemisMessagingServer
         rpcUsers.forEach {
             require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }
