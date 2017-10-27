@@ -6,7 +6,10 @@ import net.corda.core.internal.checkNull
 import net.corda.core.internal.existsOrThrow
 import net.sf.expectit.Expect
 import net.sf.expectit.ExpectBuilder
+import net.sf.expectit.MultiResult
 import net.sf.expectit.Result
+import net.sf.expectit.interact.InteractBuilder
+import net.sf.expectit.matcher.Matcher
 import net.sf.expectit.matcher.Matchers
 import org.junit.After
 import org.junit.Before
@@ -23,10 +26,10 @@ import javax.naming.ConfigurationException
 
 class TraderDemoSystemTest {
     // Nullable types can be changed to lateinit and use .isInitialized from kotlin 1.2
-    private var bankA: NodeExpectingProcess? = null
-    private var bankB: NodeExpectingProcess? = null
-    private var bankOfCorda: NodeExpectingProcess? = null
-    private var notaryService: NodeExpectingProcess? = null
+    private var bankA: ExpectingProcess? = null
+    private var bankB: ExpectingProcess? = null
+    private var bankOfCorda: ExpectingProcess? = null
+    private var notaryService: ExpectingProcess? = null
     @Before
     fun startNodes() {
         bankA = startCordaNode("BankA")
@@ -44,25 +47,16 @@ class TraderDemoSystemTest {
     }
 
     @Test
-    fun `runs trader demo system test`(): Unit {
+    fun `runs trader demo system test`() {
 
 
-        Thread.sleep(5000)
-//
-//        var result = expect
-//            .withTimeout(60, TimeUnit.SECONDS)
-//            .expect(Matchers.regexp("(?m)^Node for \"Bank A\" started up and registered in .*"))
-//
-//        println(result!!.input
-//
-//        println(result.isSuccessful)
-////        Node for "Bank A" started up and registered in 5.59 sec
-////        Node for "Bank A" started up and registered in 5.59 sec
+        
+
 
     }
 
-    private fun startCordaNode(nodeDirectoryName: String): NodeExpectingProcess {
-        return TraderDemoNode().start(nodeDirectoryName)
+    private fun startCordaNode(nodeDirectoryName: String): ExpectingProcess {
+        TODO()
     }
 }
 
@@ -89,61 +83,152 @@ private class TraderDemoNode {
     }
 }
 
-private class NodeExpectingProcess(private val _expectingProcess: ExpectingProcess) {
-
-    fun expectCordaLogo(): Result {
-        val pattern = "?(m)" +
-                """^\Q   ______               __ \E.*$\r\n?|\n""" +
-                """^\Q  / ____/     _________/ /___ _\E.*$\r\n?|\n""" +
-                """^\Q / /     __  / ___/ __  / __ `/\E.*$\r\n?|\n""" +
-                """^\Q/ /___  /_/ / /  / /_/ / /_/ /\E.*$\r\n?|\n""" +
-                """^\Q\____/     /_/   \__,_/\__,_/\E.*$\r\n?|\n"""
-        return expectPattern(pattern)
+private object cordaMatchers {
+    fun logoMatcher(): Matcher<MultiResult> {
+        return cordaLogoMatcher
     }
 
-    fun expectLogsLocation(path: String): Result {
-        return expectPattern("(?m)^Logs can be found in +: $path$")
+    fun logsLocationMatcher(path: String): Matcher<Result> {
+        val pattern = FluentRe
+                .match(Re.beginLine())
+                .then(Re.string("Logs can be found in"))
+                .then(Re.repeat(" "))
+                .then(": ")
+                .then(Re.string(path))
+                .then(Re.endLine())
+                .compile(Pattern.MULTILINE)
+        return Matchers.regexp(pattern)
     }
 
-    fun expectDatabaseConnectionUrl(url: String): Result {
-        return expectPattern("(?m)^Database connection url is +: $url$")
+    fun databaseConnectionUrlMatcher(url: String): Matcher<Result> {
+        val pattern = FluentRe
+                .match(Re.beginLine())
+                .then(Re.string("Database connection url is"))
+                .then(Re.repeat(" "))
+                .then(": ")
+                .then(Re.string(url))
+                .then(Re.endLine())
+                .compile(Pattern.MULTILINE)
+        return Matchers.regexp(pattern)
     }
 
-    fun expectIncomingConnectionAddress(host: String, portNumber: Int): Result {
-        return expectPattern("(?m)^Incoming connection address +: $host:$portNumber")
+    fun incomingConnectionAddressMatcher(host: String, portNumber: Int): Matcher<Result> {
+        val pattern = FluentRe
+                .match(Re.beginLine())
+                .then(Re.string("Incoming connection address"))
+                .then(Re.repeat(" "))
+                .then(": ")
+                .then(Re.string(host))
+                .then(":")
+                .then(Re.string(portNumber.toString()))
+                .then(Re.endLine())
+                .compile(Pattern.MULTILINE)
+        return Matchers.regexp(pattern)
     }
 
-    fun expectListeningOnPort(portNumber: Int): Result {
-        return expectPattern("(?m)^Listening on port +: $portNumber$")
+    fun listeningOnPortMatcher(portNumber: Int): Matcher<Result> {
+        val pattern = FluentRe
+                .match(Re.beginLine())
+                .then(Re.string("Listening on port"))
+                .then(Re.repeat(" "))
+                .then(": ")
+                .then(Re.string(portNumber.toString()))
+                .then(Re.endLine())
+                .compile(Pattern.MULTILINE)
+        return Matchers.regexp(pattern)
     }
 
-    fun expectLoadedCorDapps(cordapps: List<String>): Result {
-        return expectPattern("(?m)^Loaded CorDapps +: ${cordapps.joinToString(", ")}$")
+    fun loadedCorDappsMatcher(cordapps: List<String>): Matcher<Result> {
+        val pattern = FluentRe
+                .match(Re.beginLine())
+                .then(Re.string("Loaded CorDapps"))
+                .then(Re.repeat(" "))
+                .then(": ")
+                .then(Re.string(cordapps.joinToString(", ")))
+                .then(Re.endLine())
+                .compile(Pattern.MULTILINE)
+        return Matchers.regexp(pattern)
     }
 
-    fun expectStartedUp(nodeName: String): Result {
-        return expectPattern("(?m)^Node for \"$nodeName\" started up and registered in \\d+(\\.\\d+)? sec$")
+    fun startedUpMatcher(nodeName: String): Matcher<Result> {
+        val pattern = FluentRe
+                .match(Re.beginLine())
+                .then(Re.string("""Node for "$nodeName" started up and registered in """))
+                .then(Re.number())
+                .then(FluentRe
+                        .match(".")
+                        .then(Re.number())
+                        .optional()
+                )
+                .then(Re.string(" sec"))
+                .then(Re.endLine())
+                .compile(Pattern.MULTILINE)
+        return Matchers.regexp(pattern)
     }
-
-    fun close(): Unit = _expectingProcess.close()
-
-    private fun expectPattern(pattern: String): Result = _expectingProcess.expectPattern(pattern)
 }
 
-private class ExpectingProcess(private val _process: Process, private val _expect: Expect) {
-
-    fun expectPattern(pattern: String): Result {
-        return _expect.expect(Matchers.regexp(pattern))
+private object cordaLogoMatcher : Matcher<MultiResult> {
+    override fun matches(input: String, isEof: Boolean): MultiResult {
+        return logoMatcher.matches(input, isEof)
     }
 
-    fun close(): Unit {
-        _expect.close()
-        _process
+    private val logoMatcher: Matcher<MultiResult> by lazy {
+        Matchers.sequence(*logoMatchers())
+    }
+
+    private fun logoMatchers(): Array<Matcher<Result>> {
+        return logoPatterns()
+                .map {
+                    Matchers.regexp(it)
+                }
+                .toList()
+                .toTypedArray()
+    }
+
+    private fun logoPatterns(): Sequence<Pattern> {
+        return logoLines().map {
+            FluentRe
+                    .match(Re.beginLine())
+                    .then(Re.string(it))
+                    .then(Re.repeat(Re.anyCharacter()))
+                    .then(Re.endLine())
+                    .compile(Pattern.MULTILINE)
+        }
+    }
+
+    private fun logoLines(): Sequence<String> = buildLogoString().lineSequence()
+    private fun buildLogoString(): String {
+        return StringBuilder()
+                .appendln("""   ______               __""")
+                .appendln("""  / ____/     _________/ /___ _""")
+                .appendln(""" / /     __  / ___/ __  / __ `/""")
+                .appendln("""/ /___  /_/ / /  / /_/ / /_/ /""")
+                .appendln("""\____/     /_/   \__,_/\__,_/""")
+                .toString()
+    }
+}
+
+private class ExpectingProcess(private val process: Process, private val expect: Expect) : AutoCloseable {
+    override fun close() {
+        expect.close()
+        process
                 .destroyForcibly()
                 .waitFor(5, TimeUnit.SECONDS)
     }
-}
 
+    fun exitValue(): Int = process.exitValue()
+    fun isAlive(): Boolean = process.isAlive
+    fun send(string: String): Expect = expect.send(string)
+    fun sendLine(string: String): Expect = expect.sendLine(string)
+    fun sendLine(): Expect = expect.sendLine()
+    fun sendBytes(bytes: ByteArray): Expect = expect.sendBytes(bytes)
+    fun <R : Result> expect(matcher: Matcher<R>): R = expect.expect(matcher)
+    fun expect(vararg matchers: Matcher<*>): MultiResult = expect.expect(*matchers)
+    fun <R : Result> expectIn(input: Int, matcher: Matcher<R>): R = expect.expectIn(input, matcher)
+    fun withTimeout(duration: Long, unit: TimeUnit): Expect = expect.withTimeout(duration, unit)
+    fun interact(): InteractBuilder = expect.interact()
+    fun interactWith(input: Int): InteractBuilder = expect.interactWith(input)
+}
 
 private class ExpectingProcessBuilder(private val command: List<String>, private val workingDirectory: Path) {
     fun start(): ExpectingProcess {
@@ -154,7 +239,7 @@ private class ExpectingProcessBuilder(private val command: List<String>, private
 
     private fun buildProcess(): Process {
         return ProcessBuilder()
-                .command(command())
+                .command(command)
                 .directory(workingDirectoryAsFile())
                 .redirectErrorStream(true)
                 .start()
@@ -168,47 +253,40 @@ private class ExpectingProcessBuilder(private val command: List<String>, private
                 .build()
     }
 
-    private fun command(): List<String> = command!!
-    private fun workingDirectoryAsFile(): File = workingDirectory!!.toFile()
+    private fun workingDirectoryAsFile(): File = workingDirectory.toFile()
 }
 
-private class NodeFileInfo(private val nodeDirectory: Path, private val jarType: JarType) {
-    fun validateFilesOrThrow() = jarType.validateFilesOrThrow(nodeDirectory)
+private abstract class JarType(private val nodeDirectory: Path, private val jarName: String) {
     fun directory(): Path = nodeDirectory
     fun directoryName(): String = nodeDirectory.fileName.toString()
-    fun jarFile(): Path = nodeDirectory.resolve(jarName())
-    fun jarName(): String = jarType.jarName()
-}
-
-private abstract class JarType(private val jarName: String) {
     fun jarName(): String = jarName
-    open fun validateFilesOrThrow(nodeDirectory: Path) {
+    fun jarFile(): Path = nodeDirectory.resolve(jarName())
+    open fun validateFilesOrThrow() {
         throw NotImplementedError()
     }
 
-    protected fun validateFilesExistOrThrow(nodeDirectory: Path) {
+    protected fun validateFilesExistOrThrow() {
         nodeDirectory.existsOrThrow()
-        jarFile(nodeDirectory).existsOrThrow()
-        configFile(nodeDirectory).existsOrThrow()
+        jarFile().existsOrThrow()
+        configFile().existsOrThrow()
     }
 
-    protected fun jarFile(nodeDirectory: Path): Path = nodeDirectory.resolve(jarName())
-    protected fun configFile(nodeDirectory: Path): Path = nodeDirectory.resolve("node.conf")
+    protected fun configFile(): Path = nodeDirectory.resolve("node.conf")
 }
 
-private object cordaJarType : JarType("corda.jar") {
-    override fun validateFilesOrThrow(nodeDirectory: Path) = validateFilesExistOrThrow(nodeDirectory)
+private class CordaJarType(private val nodeDirectory: Path) : JarType(nodeDirectory, "corda.jar") {
+    override fun validateFilesOrThrow() = validateFilesExistOrThrow()
 }
 
-private object webserverJarType : JarType("corda-webserver.jar") {
-    override fun validateFilesOrThrow(nodeDirectory: Path) {
-        validateFilesExistOrThrow(nodeDirectory)
-        validateConfigOrThrow(configFile(nodeDirectory))
+private class WebserverJarType(private val nodeDirectory: Path) : JarType(nodeDirectory, "corda-webserver.jar") {
+    override fun validateFilesOrThrow() {
+        validateFilesExistOrThrow()
+        validateConfigOrThrow()
     }
 
-    private fun validateConfigOrThrow(configFile: Path) {
+    private fun validateConfigOrThrow() {
         val isConfigValid = Files
-                .lines(configFile)
+                .lines(configFile())
                 .anyMatch { "webAddress" in it }
         if (!isConfigValid) {
             throw ConfigurationException("Node config does not contain webAddress.")
@@ -216,23 +294,23 @@ private object webserverJarType : JarType("corda-webserver.jar") {
     }
 }
 
-private class NodeCommandBuilder(private val nodeFileInfo: NodeFileInfo) {
+private class JarCommandBuilder(private val jarType: JarType) {
     private var arguments: List<String>? = null
     private var isHeadless: Boolean? = null
     private var isCapsuleDebugOn: Boolean? = null
-    fun withArguments(value: List<String>): NodeCommandBuilder {
+    fun withArguments(value: List<String>): JarCommandBuilder {
         checkNull(arguments)
         arguments = value
         return this
     }
 
-    fun withHeadlessFlag(): NodeCommandBuilder {
+    fun withHeadlessFlag(): JarCommandBuilder {
         checkNull(isHeadless)
         isHeadless = true
         return this
     }
 
-    fun withCapsuleDebugOn(): NodeCommandBuilder {
+    fun withCapsuleDebugOn(): JarCommandBuilder {
         checkNull(isCapsuleDebugOn)
         isCapsuleDebugOn = true
         return this
@@ -277,10 +355,10 @@ private class NodeCommandBuilder(private val nodeFileInfo: NodeFileInfo) {
         }
     }
 
-    private fun directory(): Path = nodeFileInfo.directory()
-    private fun directoryName(): String = nodeFileInfo.directoryName()
-    private fun jarFile(): Path = nodeFileInfo.jarFile()
-    private fun jarName(): String = nodeFileInfo.jarName()
+    private fun directory(): Path = jarType.directory()
+    private fun directoryName(): String = jarType.directoryName()
+    private fun jarFile(): Path = jarType.jarFile()
+    private fun jarName(): String = jarType.jarName()
     private fun arguments(): List<String> = arguments ?: emptyList()
     private fun isHeadless(): Boolean = isHeadless == true
     private fun isCapsuleDebugOn(): Boolean = isCapsuleDebugOn == true
