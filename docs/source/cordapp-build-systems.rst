@@ -113,10 +113,14 @@ is already correctly configured and this is for reference only;
             compile "org.apache.commons:commons-lang3:3.6"
         }
 
-Creating the CorDapp jar
+Creating the CorDapp JAR
 ------------------------
 The gradle ``jar`` task included in the CorDapp template build file will automatically build your CorDapp JAR correctly
 as long as your dependencies are set correctly.
+
+Note that the hash of the resulting CorDapp JAR is not deterministic, as it depends on variables such as the timestamp
+at creation. Nodes running the same CorDapp must therefore ensure they are using the exact same CorDapp jar, and not
+different versions of the JAR created from identical sources.
 
 The filename of the JAR must include a unique identifier to deduplicate it from other releases of the same CorDapp.
 This is typically done by appending the version string to the CorDapp's name. This unique identifier should not change
