@@ -22,7 +22,6 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectRequestProperty
@@ -62,7 +61,7 @@ import kotlin.system.exitProcess
  *
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
  */
-open class Node(configuration: FullNodeConfiguration,
+open class Node(override val configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
@@ -84,7 +83,7 @@ open class Node(configuration: FullNodeConfiguration,
             exitProcess(1)
         }
 
-        private fun createClock(configuration: FullNodeConfiguration): Clock {
+        private fun createClock(configuration: NodeConfiguration): Clock {
             return if (configuration.useTestClock) TestClock() else NodeClock()
         }
 
@@ -99,7 +98,6 @@ open class Node(configuration: FullNodeConfiguration,
     }
 
     override val log: Logger get() = logger
-    override val configuration get() = super.configuration as FullNodeConfiguration // Necessary to avoid init order NPE.
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 
@@ -153,14 +151,8 @@ open class Node(configuration: FullNodeConfiguration,
     override fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
-        val (serverAddress, advertisedAddress) = with(configuration) {
-            if (messagingServerAddress != null) {
-                // External broker
-                messagingServerAddress to messagingServerAddress
-            } else {
-                makeLocalMessageBroker() to getAdvertisedAddress()
-            }
-        }
+        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
+        val advertisedAddress = configuration.messagingServerAddress ?: getAdvertisedAddress()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
 

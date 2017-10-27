@@ -31,7 +31,6 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
-import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
@@ -198,13 +197,13 @@ sealed class NodeHandle {
      * will be added and that will be used.
      */
     abstract val rpc: CordaRPCOps
-    abstract val configuration: FullNodeConfiguration
+    abstract val configuration: NodeConfiguration
     abstract val webAddress: NetworkHostAndPort
 
     data class OutOfProcess(
             override val nodeInfo: NodeInfo,
             override val rpc: CordaRPCOps,
-            override val configuration: FullNodeConfiguration,
+            override val configuration: NodeConfiguration,
             override val webAddress: NetworkHostAndPort,
             val debugPort: Int?,
             val process: Process,
@@ -223,7 +222,7 @@ sealed class NodeHandle {
     data class InProcess(
             override val nodeInfo: NodeInfo,
             override val rpc: CordaRPCOps,
-            override val configuration: FullNodeConfiguration,
+            override val configuration: NodeConfiguration,
             override val webAddress: NetworkHostAndPort,
             val node: StartedNode<Node>,
             val nodeThread: Thread,
@@ -697,7 +696,7 @@ class DriverDSL(
         _executorService?.shutdownNow()
     }
 
-    private fun establishRpc(config: FullNodeConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
+    private fun establishRpc(config: NodeConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.rpcAddress!!
         val client = CordaRPCClient(rpcAddress)
         val connectionFuture = poll(executorService, "RPC connection") {
@@ -913,7 +912,7 @@ class DriverDSL(
     }
 
     private fun startNodeInternal(config: Config, webAddress: NetworkHostAndPort, startInProcess: Boolean?, maximumHeapSize: String): CordaFuture<NodeHandle> {
-        val nodeConfiguration = config.parseAs<FullNodeConfiguration>()
+        val nodeConfiguration = config.parseAsNodeConfiguration()
         nodeInfoFilesCopier.addConfig(nodeConfiguration.baseDirectory)
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier.removeConfig(nodeConfiguration.baseDirectory)
@@ -983,7 +982,7 @@ class DriverDSL(
 
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
-                nodeConf: FullNodeConfiguration,
+                nodeConf: NodeConfiguration,
                 config: Config,
                 cordappPackages: List<String>
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
@@ -1002,7 +1001,7 @@ class DriverDSL(
 
         private fun startOutOfProcessNode(
                 executorService: ScheduledExecutorService,
-                nodeConf: FullNodeConfiguration,
+                nodeConf: NodeConfiguration,
                 config: Config,
                 quasarJarPath: String,
                 debugPort: Int?,
