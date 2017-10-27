@@ -91,7 +91,7 @@ class StateMachineManagerImpl(
     private val mutex = ThreadBox(InnerState())
     // This thread (only enabled in dev mode) deserialises checkpoints in the background to shake out bugs in checkpoint restore.
     private val checkpointCheckerThread = if (serviceHub.configuration.devMode
-            && !serviceHub.configuration.isDevModeOptionsFlagSet(NodeConfiguration.disableCheckpointCheckerFlag))
+            && !serviceHub.configuration.isDevModeOptionsFlagSet(NodeConfiguration.DISABLE_CHECKPOINT_CHECKER))
         newNamedSingleThreadExecutor("CheckpointChecker") else null
 
     @Volatile private var unrestorableCheckpoints = false

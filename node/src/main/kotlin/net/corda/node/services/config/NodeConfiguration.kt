@@ -38,7 +38,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val additionalNodeInfoPollingFrequencyMsec: Long
 
     companion object {
-        val disableCheckpointCheckerFlag = "disableCheckpointChecker"
+        const val DISABLE_CHECKPOINT_CHECKER = "disableCheckpointChecker"
     }
 }
 
