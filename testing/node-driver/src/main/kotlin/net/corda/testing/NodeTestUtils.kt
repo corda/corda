@@ -78,6 +78,7 @@ fun testNodeConfiguration(
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(0L).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).networkMapService
+        doReturn(null).whenever(it).devModeOptions
         doCallRealMethod().whenever(it).certificatesDirectory
         doCallRealMethod().whenever(it).trustStoreFile
         doCallRealMethod().whenever(it).sslKeystore
