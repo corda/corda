@@ -22,26 +22,25 @@ import java.util.regex.Pattern
 import javax.naming.ConfigurationException
 
 class TraderDemoSystemTest {
-
-    private var _bankA: NodeExpectingProcess? = null
-    private var _bankB: NodeExpectingProcess? = null
-    private var _bankOfCorda: NodeExpectingProcess? = null
-    private var _notaryService: NodeExpectingProcess? = null
-
+    // Nullable types can be changed to lateinit and use .isInitialized from kotlin 1.2
+    private var bankA: NodeExpectingProcess? = null
+    private var bankB: NodeExpectingProcess? = null
+    private var bankOfCorda: NodeExpectingProcess? = null
+    private var notaryService: NodeExpectingProcess? = null
     @Before
-    fun startNodes(): Unit {
-        _bankA = startCordaNode("BankA")
-        _bankB = startCordaNode("BankB")
-        _bankOfCorda = startCordaNode("BankOfCorda")
-        _notaryService = startCordaNode("NotaryService")
+    fun startNodes() {
+        bankA = startCordaNode("BankA")
+        bankB = startCordaNode("BankB")
+        bankOfCorda = startCordaNode("BankOfCorda")
+        notaryService = startCordaNode("NotaryService")
     }
 
     @After
-    fun stopNodes(): Unit {
-        _bankA?.close()
-        _bankB?.close()
-        _bankOfCorda?.close()
-        _notaryService?.close()
+    fun stopNodes() {
+        bankA?.close()
+        bankB?.close()
+        bankOfCorda?.close()
+        notaryService?.close()
     }
 
     @Test
