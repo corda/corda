@@ -19,6 +19,33 @@ Each Corda node has the following structure:
 The node is configured by editing its ``node.conf`` file. You install CorDapps on the node by dropping the CorDapp JARs
 into the ``plugins`` folder.
 
+Node naming
+-----------
+A node's name must be a valid X500 name that obeys the following additional constraints:
+
+* The fields of the name have the following maximum character lengths:
+
+    * Common name: 64
+    * Organisation: 128
+    * Organisation unit: 64
+    * Locality: 64
+    * State: 64
+
+* The country code is a valid ISO 3166-1 two letter code in upper-case
+
+* The organisation, locality and country attributes are present
+
+* The organisation field of the name obeys the following constraints:
+
+    * Has at least two letters
+    * No leading or trailing whitespace
+    * No double-spacing
+    * Upper-case first letter
+    * Does not contain the words "node" or "server"
+    * Does not include the characters ',' or '=' or '$' or '"' or '\'' or '\\'
+    * Is in NFKC normalization form
+    * Only the latin, common and inherited unicode scripts are supported
+
 The deployNodes task
 --------------------
 The CorDapp template defines a ``deployNodes`` task that allows you to automatically generate and configure a set of
