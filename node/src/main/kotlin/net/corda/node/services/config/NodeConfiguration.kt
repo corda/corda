@@ -76,9 +76,7 @@ data class BridgeConfiguration(val retryIntervalMs: Long,
 
 data class ActiveMqServerConfiguration(val bridge: BridgeConfiguration)
 
-fun Config.parseAsNodeConfiguration(): NodeConfiguration {
-    return this.parseAs<NodeConfigurationImpl>()
-}
+fun Config.parseAsNodeConfiguration(): NodeConfiguration = this.parseAs<NodeConfigurationImpl>()
 
 /**
  * Implementation of [NodeConfiguration]
@@ -120,10 +118,6 @@ data class NodeConfigurationImpl(
     init {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
-        // TODO Move this to ArtemisMessagingServer
-        rpcUsers.forEach {
-            require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }
-        }
         require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
         require(minimumPlatformVersion >= 1) { "minimumPlatformVersion cannot be less than 1" }
     }

@@ -61,7 +61,7 @@ import kotlin.system.exitProcess
  *
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
  */
-open class Node(configuration: NodeConfiguration,
+open class Node(override val configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
@@ -98,7 +98,6 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override val log: Logger get() = logger
-    override val configuration get() = super.configuration  // Necessary to avoid init order NPE.
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 
@@ -152,14 +151,8 @@ open class Node(configuration: NodeConfiguration,
     override fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
-        val (serverAddress, advertisedAddress) = with(configuration) {
-            if (messagingServerAddress != null) {
-                // External broker
-                messagingServerAddress to messagingServerAddress
-            } else {
-                makeLocalMessageBroker() to getAdvertisedAddress()
-            }
-        }
+        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
+        val advertisedAddress = configuration.messagingServerAddress ?: getAdvertisedAddress()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
 
@@ -167,13 +160,13 @@ open class Node(configuration: NodeConfiguration,
         return NodeMessagingClient(
                 configuration,
                 versionInfo,
-                serverAddress!!,
+                serverAddress,
                 myIdentityOrNullIfNetworkMapService,
                 serverThread,
                 database,
                 nodeReadyFuture,
                 services.monitoringService,
-                advertisedAddress!!)
+                advertisedAddress)
     }
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
