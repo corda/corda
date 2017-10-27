@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.utilities.ByteSequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*

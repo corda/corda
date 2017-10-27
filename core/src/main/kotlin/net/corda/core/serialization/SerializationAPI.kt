@@ -3,6 +3,7 @@ package net.corda.core.serialization
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.WriteOnceProperty
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
@@ -167,15 +168,6 @@ interface SerializationContext {
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
     enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint }
-}
-
-interface SerializationEnvironment {
-    val SERIALIZATION_FACTORY: SerializationFactory
-    val P2P_CONTEXT: SerializationContext
-    val RPC_SERVER_CONTEXT: SerializationContext
-    val RPC_CLIENT_CONTEXT: SerializationContext
-    val STORAGE_CONTEXT: SerializationContext
-    val CHECKPOINT_CONTEXT: SerializationContext
 }
 
 /**
