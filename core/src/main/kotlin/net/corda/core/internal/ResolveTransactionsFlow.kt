@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.exactAdd
@@ -94,7 +95,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
             it.verify(serviceHub)
-            serviceHub.recordTransactions(false, it)
+            serviceHub.recordTransactions(StatesToRecord.NONE, listOf(it))
         }
 
         return signedTransaction?.let {
