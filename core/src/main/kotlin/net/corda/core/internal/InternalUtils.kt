@@ -319,7 +319,7 @@ inline fun <T:Any> requireNull(value: T?) = requireNull(value) { "Required value
  * Throws an [IllegalArgumentException] with the result of calling [lazyMessage] if the [value] is null.
  * Provides the converse of the requireNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
  */
-inline fun <T:Any> requireNull(value: T?, lazyMessage: () -> Any) = require(value == null) { lazyMessage() }
+inline fun <T:Any> requireNull(value: T?, lazyMessage: () -> Any) = require(value == null, lazyMessage)
 
 /**
  * Throws an [IllegalStateException] if the [value] is false.
@@ -331,4 +331,4 @@ inline fun <T:Any> checkNull(value: T?) = checkNull(value) { "Required value was
  * Throws an [IllegalStateException] with the result of calling [lazyMessage] if the [value] is false.
  * Provides the converse of the checkNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
  */
-inline fun <T:Any> checkNull(value: T?, lazyMessage: () -> Any) = check(value == null) { lazyMessage() }
+inline fun <T:Any> checkNull(value: T?, lazyMessage: () -> Any) = check(value == null, lazyMessage)
