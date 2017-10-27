@@ -13,7 +13,6 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
-import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.config.toConfig
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.TestDependencyInjectionBase
@@ -190,7 +189,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 ) + configOverrides
         )
 
-        val parsedConfig = config.parseAs<FullNodeConfiguration>()
+        val parsedConfig = config.parseAsNodeConfiguration()
         val node = Node(
                 parsedConfig,
                 MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
