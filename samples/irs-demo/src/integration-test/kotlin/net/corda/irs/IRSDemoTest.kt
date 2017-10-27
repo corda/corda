@@ -19,14 +19,10 @@ import net.corda.core.utilities.seconds
 import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.web.IrsDemoWebApplication
-import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.User
 import net.corda.test.spring.springDriver
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.IntegrationTestCategory
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.http.HttpApi
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
@@ -96,7 +92,7 @@ class IRSDemoTest : IntegrationTestCategory {
 
     fun getFloatingLegFixCount(nodeApi: HttpApi) = getTrades(nodeApi)[0].calculation.floatingLegPaymentSchedule.count { it.value.rate.ratioUnit != null }
 
-    private fun getFixingDateObservable(config: FullNodeConfiguration): Observable<LocalDate?> {
+    private fun getFixingDateObservable(config: NodeConfiguration): Observable<LocalDate?> {
         val client = CordaRPCClient(config.rpcAddress!!)
         val proxy = client.start("user", "password").proxy
         val vaultUpdates = proxy.vaultTrackBy<InterestRateSwap.State>().updates

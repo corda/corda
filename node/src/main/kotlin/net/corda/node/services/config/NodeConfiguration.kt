@@ -1,5 +1,6 @@
 package net.corda.node.services.config
 
+import com.typesafe.config.Config
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -7,6 +8,7 @@ import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
+import net.corda.nodeapi.config.parseAs
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -35,6 +37,12 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
+    val useHTTPS: Boolean
+    val p2pAddress: NetworkHostAndPort
+    val rpcAddress: NetworkHostAndPort?
+    val messagingServerAddress: NetworkHostAndPort?
+    val useTestClock: Boolean get() = false
+    val detectPublicIp: Boolean get() = true
 }
 
 data class NotaryConfig(val validating: Boolean,
@@ -68,7 +76,14 @@ data class BridgeConfiguration(val retryIntervalMs: Long,
 
 data class ActiveMqServerConfiguration(val bridge: BridgeConfiguration)
 
-data class FullNodeConfiguration(
+fun Config.parseAsNodeConfiguration(): NodeConfiguration = this.parseAs<NodeConfigurationImpl>()
+
+/**
+ * Implementation of [NodeConfiguration]
+ * This should be private but it can't because its constructor needs to be invoked reflectively by [parseAs] and
+ * kotlin doesn't allow that.
+ */
+data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
         override val baseDirectory: Path,
         override val myLegalName: CordaX500Name,
@@ -84,17 +99,17 @@ data class FullNodeConfiguration(
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,
         override val messageRedeliveryDelaySeconds: Int = 30,
-        val useHTTPS: Boolean,
-        val p2pAddress: NetworkHostAndPort,
-        val rpcAddress: NetworkHostAndPort?,
+        override val useHTTPS: Boolean,
+        override val p2pAddress: NetworkHostAndPort,
+        override val rpcAddress: NetworkHostAndPort?,
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
-        val messagingServerAddress: NetworkHostAndPort?,
+        override val messagingServerAddress: NetworkHostAndPort?,
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
-        val useTestClock: Boolean = false,
-        val detectPublicIp: Boolean = true,
+        override val useTestClock: Boolean = false,
+        override val detectPublicIp: Boolean = true,
         override val activeMQServer: ActiveMqServerConfiguration,
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
 ) : NodeConfiguration {
@@ -103,10 +118,6 @@ data class FullNodeConfiguration(
     init {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
-        // TODO Move this to ArtemisMessagingServer
-        rpcUsers.forEach {
-            require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }
-        }
         require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
         require(minimumPlatformVersion >= 1) { "minimumPlatformVersion cannot be less than 1" }
     }

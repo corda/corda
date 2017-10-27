@@ -5,10 +5,8 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.NetworkMapInfo
-import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.User
-import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.config.toConfig
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.webserver.WebServerConfig
@@ -43,7 +41,7 @@ class NodeConfigTest {
                 .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                 .withFallback(ConfigFactory.parseResources("reference.conf"))
                 .resolve()
-        val fullConfig = nodeConfig.parseAs<FullNodeConfiguration>()
+        val fullConfig = nodeConfig.parseAsNodeConfiguration()
 
         assertEquals(myLegalName, fullConfig.myLegalName)
         assertEquals(localPort(40002), fullConfig.rpcAddress)
