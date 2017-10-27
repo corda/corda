@@ -13,6 +13,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
@@ -20,7 +21,6 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -45,7 +45,6 @@ class P2PMessagingTest : NodeBasedTest() {
         startNodes().getOrThrow(timeout = startUpDuration * 3)
     }
 
-    @Ignore
     @Test
     fun `communicating with a distributed service which we're part of`() {
         val distributedService = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
@@ -84,6 +83,8 @@ class P2PMessagingTest : NodeBasedTest() {
         assertThat(response).isEqualTo(responseMessage)
     }
 
+    val log = loggerFor<P2PMessagingTest>()
+
     @Test
     fun `distributed service request retries are persisted across client node restarts`() {
         val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
@@ -110,6 +111,7 @@ class P2PMessagingTest : NodeBasedTest() {
         // Wait until the first request is received
         crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
         // Stop alice's node after we ensured that the first request was delivered and ignored.
+        alice.services.networkMapCache.clearNetworkMapCache()
         alice.dispose()
         val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
         assertThat(numberOfRequestsReceived).isGreaterThanOrEqualTo(1)
@@ -117,7 +119,9 @@ class P2PMessagingTest : NodeBasedTest() {
         crashingNodes.ignoreRequests = false
 
         // Restart the node and expect a response
-        val aliceRestarted = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
+        log.error("ZZZZZZZZZZZZZZZZZZZZZZ" + Thread.currentThread().name)
+        val aliceRestarted = startNode(ALICE.name, waitForConnection = true, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 5)).getOrThrow()
+        log.error("TTTTTTTTTTTTTTTTTTTTTT" + Thread.currentThread().name)
         val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
 
         assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)

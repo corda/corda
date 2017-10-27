@@ -1,21 +1,20 @@
 package net.corda.node.services.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
 import io.netty.handler.ssl.SslHandler
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.AddressFormatException
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.node.internal.Node
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
@@ -37,12 +36,10 @@ import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
-import org.apache.activemq.artemis.core.message.impl.CoreMessage
 import org.apache.activemq.artemis.core.remoting.impl.netty.*
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
-import org.apache.activemq.artemis.core.server.impl.RoutingContextImpl
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import org.apache.activemq.artemis.spi.core.remoting.*
@@ -111,14 +108,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private val mutex = ThreadBox(InnerState())
     private lateinit var activeMQServer: ActiveMQServer
     val serverControl: ActiveMQServerControl get() = activeMQServer.activeMQServerControl
-    private val _networkMapConnectionFuture = config.networkMapService?.let { openFuture<Unit>() }
-    /**
-     * A [ListenableFuture] which completes when the server successfully connects to the network map node. If a
-     * non-recoverable error is encountered then the Future will complete with an exception.
-     */
-    val networkMapConnectionFuture: CordaFuture<Unit>? get() = _networkMapConnectionFuture
     private var networkChangeHandle: Subscription? = null
-    private val nodeRunsNetworkMapService = config.networkMapService == null
 
     init {
         config.baseDirectory.requireOnDefaultFileSystem()
@@ -132,9 +122,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
-            // Deploy bridge to the network map service
-            config.networkMapService?.let { deployBridge(NetworkMapAddress(it.address), setOf(it.legalName)) }
-            networkChangeHandle = networkMapCache.changed.subscribe { updateBridgesOnNetworkChange(it) }
+            networkChangeHandle = networkMapCache.changed.subscribe {
+                System.out.println("XXXXXXXXXXXXXXXXXXXXXXXX" + Thread.currentThread().name)
+                updateBridgesOnNetworkChange(it) }
             running = true
         }
     }
@@ -158,7 +148,6 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             // Some types of queue might need special preparation on our side, like dialling back or preparing
             // a lazily initialised subsystem.
             registerPostQueueCreationCallback { deployBridgesFromNewQueue(it.toString()) }
-            if (nodeRunsNetworkMapService) registerPostQueueCreationCallback { handleIpDetectionRequest(it.toString()) }
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
@@ -247,12 +236,6 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
         // TODO remove the NODE_USER role once the webserver doesn't need it
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
-        if (nodeRunsNetworkMapService) {
-            securityRoles["$IP_REQUEST_PREFIX*"] = setOf(
-                    nodeInternalRole,
-                    restrictedRole(PEER_ROLE, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true)
-            )
-        }
         for ((username) in userService.users) {
             securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#"] = setOf(
                     nodeInternalRole,
@@ -330,7 +313,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         log.debug { "Updating bridges on network map change: ${change.node}" }
         fun gatherAddresses(node: NodeInfo): Sequence<ArtemisPeerAddress> {
             val address = node.addresses.first()
-            return node.legalIdentitiesAndCerts.map { getArtemisPeerAddress(it.party, address, config.networkMapService?.legalName) }.asSequence()
+            return node.legalIdentitiesAndCerts.map { NodeAddress(it.party.owningKey, address) }.asSequence()
         }
 
         fun deployBridges(node: NodeInfo) {
@@ -409,47 +392,6 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private val ArtemisPeerAddress.bridgeName: String get() = getBridgeName(queueName, hostAndPort)
 
     private fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
-
-    // This is called on one of Artemis' background threads
-    internal fun hostVerificationFail(expectedLegalNames: Set<CordaX500Name>, errorMsg: String?) {
-        log.error(errorMsg)
-        if (config.networkMapService?.legalName in expectedLegalNames) {
-            // If the peer that failed host verification was the network map node then we're in big trouble and need to bail!
-            _networkMapConnectionFuture!!.setException(IOException("${config.networkMapService} failed host verification check"))
-        }
-    }
-
-    // This is called on one of Artemis' background threads
-    internal fun onTcpConnection(peerLegalName: CordaX500Name) {
-        if (peerLegalName == config.networkMapService?.legalName) {
-            _networkMapConnectionFuture!!.set(Unit)
-        }
-    }
-
-    private fun handleIpDetectionRequest(queueName: String) {
-        fun getRemoteAddress(requestId: String): String? {
-            val session = activeMQServer.sessions.first {
-                it.getMetaData(ipDetectRequestProperty) == requestId
-            }
-            return session.remotingConnection.remoteAddress
-        }
-
-        fun sendResponse(remoteAddress: String?) {
-            val responseMessage = CoreMessage(random63BitValue(), 0).apply {
-                putStringProperty(ipDetectResponseProperty, remoteAddress)
-            }
-            val routingContext = RoutingContextImpl(null)
-            val queue = activeMQServer.locateQueue(SimpleString(queueName))
-            queue.route(responseMessage, routingContext)
-            activeMQServer.postOffice.processRoute(responseMessage, routingContext, true)
-        }
-
-        if (!queueName.startsWith(IP_REQUEST_PREFIX)) return
-        val requestId = queueName.substringAfter(IP_REQUEST_PREFIX)
-        val remoteAddress = getRemoteAddress(requestId)
-        log.debug { "Detected remote address $remoteAddress for request $requestId" }
-        sendResponse(remoteAddress)
-    }
 }
 
 class VerifyingNettyConnectorFactory : NettyConnectorFactory() {
@@ -473,7 +415,10 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                                       scheduledThreadPool: ScheduledExecutorService?,
                                       protocolManager: ClientProtocolManager?) :
         NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
-    private val server = configuration[ArtemisMessagingServer::class.java.name] as ArtemisMessagingServer
+    companion object {
+        private val log = loggerFor<VerifyingNettyConnector>()
+    }
+
     private val sslEnabled = ConfigurationHelper.getBooleanProperty(TransportConstants.SSL_ENABLED_PROP_NAME, TransportConstants.DEFAULT_SSL_ENABLED, configuration)
 
     override fun createConnection(): Connection? {
@@ -504,10 +449,9 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 X509Utilities.validateCertificateChain(session.localCertificates.last() as java.security.cert.X509Certificate, *session.peerCertificates)
-                server.onTcpConnection(peerLegalName)
             } catch (e: IllegalArgumentException) {
                 connection.close()
-                server.hostVerificationFail(expectedLegalNames, e.message)
+                log.error(e.message)
                 return null
             }
         }
