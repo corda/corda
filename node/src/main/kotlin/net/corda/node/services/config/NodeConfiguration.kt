@@ -13,6 +13,8 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
+data class DevModeOptions(val disableCheckpointChecker: Boolean?)
+
 interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
     // TODO: Remove this so we don't accidentally use this identity in the code?
@@ -30,6 +32,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val database: Properties?
     val rpcUsers: List<User>
     val devMode: Boolean
+    val devModeOptions: DevModeOptions?
     val certificateSigningService: URL
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
@@ -108,6 +111,7 @@ data class NodeConfigurationImpl(
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
+        override val devModeOptions: DevModeOptions? = null,
         override val useTestClock: Boolean = false,
         override val detectPublicIp: Boolean = true,
         override val activeMQServer: ActiveMqServerConfiguration,
@@ -118,6 +122,7 @@ data class NodeConfigurationImpl(
     init {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
+        require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
         require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
         require(minimumPlatformVersion >= 1) { "minimumPlatformVersion cannot be less than 1" }
     }
