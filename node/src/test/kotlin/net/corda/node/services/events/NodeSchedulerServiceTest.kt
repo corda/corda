@@ -108,9 +108,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
                 doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
-                doCallRealMethod().whenever(it).recordTransactions(any<StatesToRecord>(), any<Iterable<SignedTransaction>>())
+                doCallRealMethod().whenever(it).recordTransactions(any<StatesToRecord>(), any())
                 doCallRealMethod().whenever(it).recordTransactions(any<Iterable<SignedTransaction>>())
-                doCallRealMethod().whenever(it).recordTransactions(any<SignedTransaction>(), anyVararg<SignedTransaction>())
+                doCallRealMethod().whenever(it).recordTransactions(any<SignedTransaction>(), anyVararg())
                 doReturn(NodeVaultService(testClock, kms, stateLoader, database.hibernateConfig)).whenever(it).vaultService
                 doReturn(this@NodeSchedulerServiceTest).whenever(it).testReference
 
@@ -142,6 +142,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     // Ignore IntelliJ when it says these properties can be private, if they are we cannot serialise them
     // in AMQP.
+    @Suppress("MemberVisibilityCanPrivate")
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, val myIdentity: Party) : LinearState, SchedulableState {
         override val participants: List<AbstractParty>
             get() = listOf(myIdentity)
