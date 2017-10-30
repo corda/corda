@@ -56,7 +56,7 @@ class SwapIdentitiesFlowTests {
         val mockNet = MockNetwork(threadPerNode = true)
 
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode(DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
         val bob: Party = bobNode.services.myInfo.singleIdentity()
@@ -81,7 +81,7 @@ class SwapIdentitiesFlowTests {
         val mockNet = MockNetwork(threadPerNode = true)
 
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode(DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
         val bob: Party = bobNode.services.myInfo.singleIdentity()
