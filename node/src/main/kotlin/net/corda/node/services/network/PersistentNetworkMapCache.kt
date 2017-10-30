@@ -139,10 +139,6 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
 
     override fun addNode(node: NodeInfo) {
         logger.info("Adding node with info: $node")
-        changed.subscribe {
-            _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
-            _registrationFuture.set(null)
-        }
         synchronized(_changed) {
             registeredNodes[node.legalIdentities.first().owningKey]?.let {
                 if (it.serial > node.serial) {
@@ -167,6 +163,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence, con
                 logger.info("Previous node was identical to incoming one - doing nothing")
             }
         }
+        _loadDBSuccess = true // This is used in AbstractNode to indicate that node is ready.
+        _registrationFuture.set(null)
         logger.info("Done adding node with info: $node")
     }
 

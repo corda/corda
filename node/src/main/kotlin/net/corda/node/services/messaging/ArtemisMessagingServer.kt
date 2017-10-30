@@ -122,9 +122,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
-            networkChangeHandle = networkMapCache.changed.subscribe {
-                System.out.println("XXXXXXXXXXXXXXXXXXXXXXXX" + Thread.currentThread().name)
-                updateBridgesOnNetworkChange(it) }
+            networkChangeHandle = networkMapCache.changed.subscribe { updateBridgesOnNetworkChange(it) }
             running = true
         }
     }

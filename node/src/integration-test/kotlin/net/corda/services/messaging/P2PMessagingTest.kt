@@ -83,8 +83,6 @@ class P2PMessagingTest : NodeBasedTest() {
         assertThat(response).isEqualTo(responseMessage)
     }
 
-    val log = loggerFor<P2PMessagingTest>()
-
     @Test
     fun `distributed service request retries are persisted across client node restarts`() {
         val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
@@ -119,9 +117,7 @@ class P2PMessagingTest : NodeBasedTest() {
         crashingNodes.ignoreRequests = false
 
         // Restart the node and expect a response
-        log.error("ZZZZZZZZZZZZZZZZZZZZZZ" + Thread.currentThread().name)
         val aliceRestarted = startNode(ALICE.name, waitForConnection = true, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 5)).getOrThrow()
-        log.error("TTTTTTTTTTTTTTTTTTTTTT" + Thread.currentThread().name)
         val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
 
         assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
