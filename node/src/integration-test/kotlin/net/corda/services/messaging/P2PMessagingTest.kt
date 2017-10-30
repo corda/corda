@@ -109,6 +109,7 @@ class P2PMessagingTest : NodeBasedTest() {
         crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
         // Stop alice's node after we ensured that the first request was delivered and ignored.
         alice.services.networkMapCache.clearNetworkMapCache()
+        Thread.sleep(1000)
         alice.dispose()
         Thread.sleep(1000)
         val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
