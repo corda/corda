@@ -13,14 +13,12 @@ import net.corda.testing.ALICE
 import net.corda.testing.ALICE_KEY
 import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.getTestPartyAndCertificate
+import net.corda.testing.internal.NodeBasedTest
 import net.corda.testing.node.MockKeyManagementService
-import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.contentOf
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import rx.observers.TestSubscriber
 import rx.schedulers.TestScheduler
 import java.nio.file.Path
@@ -29,42 +27,37 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NodeInfoWatcherTest : NodeBasedTest() {
-
-    @Rule
-    @JvmField
-    var folder = TemporaryFolder()
-
-    lateinit var keyManagementService: KeyManagementService
-    lateinit var nodeInfoPath: Path
-    val scheduler = TestScheduler()
-    val testSubscriber = TestSubscriber<NodeInfo>()
-
-    // Object under test
-    lateinit var nodeInfoWatcher: NodeInfoWatcher
-
     companion object {
         val nodeInfo = NodeInfo(listOf(), listOf(getTestPartyAndCertificate(ALICE)), 0, 0)
     }
+
+    private lateinit var keyManagementService: KeyManagementService
+    private lateinit var nodeInfoPath: Path
+    private val scheduler = TestScheduler()
+    private val testSubscriber = TestSubscriber<NodeInfo>()
+
+    // Object under test
+    private lateinit var nodeInfoWatcher: NodeInfoWatcher
 
     @Before
     fun start() {
         val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         keyManagementService = MockKeyManagementService(identityService, ALICE_KEY)
-        nodeInfoWatcher = NodeInfoWatcher(folder.root.toPath(), scheduler = scheduler)
-        nodeInfoPath = folder.root.toPath() / CordformNode.NODE_INFO_DIRECTORY
+        nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler = scheduler)
+        nodeInfoPath = tempFolder.root.toPath() / CordformNode.NODE_INFO_DIRECTORY
     }
 
     @Test
     fun `save a NodeInfo`() {
         assertEquals(0,
-                folder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.size)
-        NodeInfoWatcher.saveToFile(folder.root.toPath(), nodeInfo, keyManagementService)
+                tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.size)
+        NodeInfoWatcher.saveToFile(tempFolder.root.toPath(), nodeInfo, keyManagementService)
 
-        val nodeInfoFiles = folder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }
+        val nodeInfoFiles = tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }
         assertEquals(1, nodeInfoFiles.size)
         val fileName = nodeInfoFiles.first()
         assertTrue(fileName.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX))
-        val file = (folder.root.path / fileName).toFile()
+        val file = (tempFolder.root.path / fileName).toFile()
         // Just check that something is written, another tests verifies that the written value can be read back.
         assertThat(contentOf(file)).isNotEmpty()
     }
