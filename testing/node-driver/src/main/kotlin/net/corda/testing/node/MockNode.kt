@@ -173,7 +173,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch) {
         val mockNet = args.network
-        override val networkMapAddress = null
+        override val networkMapAddress: SingleMessageRecipient? = null
         val id = args.id
         internal val notaryIdentity = args.notaryIdentity
         val entropyRoot = args.entropyRoot
