@@ -18,18 +18,31 @@ class TestSerializationOutput(
         if (verbose) println(schema)
         super.writeSchema(schema, data)
     }
+
+    override fun writeTransformSchema(transformsSchema: TransformsSchema, data: Data) {
+        if(verbose) {
+            println ("Writing Transform Schema")
+            println (transformsSchema)
+        }
+        super.writeTransformSchema(transformsSchema, data)
+    }
 }
 
 fun testName(): String = Thread.currentThread().stackTrace[2].methodName
 
-data class BytesAndSchema<T : Any>(val obj: SerializedBytes<T>, val schema: Schema)
+data class BytesAndSchemas<T : Any>(
+        val obj: SerializedBytes<T>,
+        val schema: Schema,
+        val transformsSchema: TransformsSchema)
 
 // Extension for the serialize routine that returns the scheme encoded into the
 // bytes as well as the bytes for simple testing
 @Throws(NotSerializableException::class)
-fun <T : Any> SerializationOutput.serializeAndReturnSchema(obj: T): BytesAndSchema<T> {
+fun <T : Any> SerializationOutput.serializeAndReturnSchema(obj: T): BytesAndSchemas<T> {
     try {
-        return BytesAndSchema(_serialize(obj), Schema(schemaHistory.toList()))
+        val blob = _serialize(obj)
+        val schema = Schema(schemaHistory.toList())
+        return BytesAndSchemas(blob, schema, TransformsSchema.build(schema, serializerFactory))
     } finally {
         andFinally()
     }

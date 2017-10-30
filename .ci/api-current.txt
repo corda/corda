@@ -2436,6 +2436,20 @@ public interface net.corda.core.serialization.ClassWhitelist
 ##
 public @interface net.corda.core.serialization.CordaSerializable
 ##
+public @interface net.corda.core.serialization.CordaSerializationTransformEnumDefault
+  public abstract String new()
+  public abstract String old()
+##
+public @interface net.corda.core.serialization.CordaSerializationTransformEnumDefaults
+  public abstract net.corda.core.serialization.CordaSerializationTransformEnumDefault[] value()
+##
+public @interface net.corda.core.serialization.CordaSerializationTransformRename
+  public abstract String from()
+  public abstract String to()
+##
+public @interface net.corda.core.serialization.CordaSerializationTransformRenames
+  public abstract net.corda.core.serialization.CordaSerializationTransformRename[] value()
+##
 public @interface net.corda.core.serialization.DeprecatedConstructorForDeserialization
   public abstract int version()
 ##
