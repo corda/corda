@@ -13,7 +13,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
