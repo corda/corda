@@ -4,14 +4,20 @@ Vault
 The vault contains data extracted from the ledger that is considered relevant to the node’s owner, stored in a relational model
 that can be easily queried and worked with.
 
-The vault keeps track of both unconsumed and consumed states:
+The vault keeps track of unconsumed, consumed and observed states:
 
  * Unconsumed (or unspent) states represent fungible states available for spending (including spend-to-self transactions)
    and linear states available for evolution (eg. in response to a lifecycle event on a deal) or transfer to another party.
- * Consumed (or spent) states represent ledger immutable state for the purpose of transaction reporting, audit and archival, including the ability to perform joins with app-private data (like customer notes)
+ * Consumed (or spent) states represent ledger immutable state for the purpose of transaction reporting, audit and archival,
+   including the ability to perform joins with app-private data (like customer notes).
+ * Observed states are those which are of interest to the node owner, but they themselves cannot spend or evolve.
 
 By fungible we refer to assets of measurable quantity (eg. a cash currency, units of stock) which can be combined
 together to represent a single ledger state.
+
+.. note:: Generally nodes do not retain states that the node owner is not a participant of, in order to avoid storing
+   states unnecessarily. States can implement the ``ObservedState`` interface to indicate to the node that they are
+   intended to be observed by parties who are not participants. See :doc:`api-states` for more information.
 
 Like with a cryptocurrency wallet, the Corda vault can create transactions that send value (eg. transfer of state) to
 someone else by combining fungible states and possibly adding a change output that makes the values balance (this

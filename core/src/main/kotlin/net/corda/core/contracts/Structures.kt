@@ -118,6 +118,20 @@ interface LinearState : ContractState {
 }
 // DOCEND 2
 
+/**
+ * A state which is observed by parties who are not participants in the state. This does not enforce that the observers
+ * are sent a copy of the state. If enforcement of observation is required it must be provided by the contract itself
+ * by requiring signatures from the observers for the contract's verify() function to pass. An example of this is provided
+ * in the observer demo.
+ */
+interface ObservedState : ContractState {
+    /**
+     * Parties who observe this state being created; they are not conventional owners or participants, and cannot
+     * affect the state, but retain a copy of the state for their own purposes.
+     */
+    val observers: List<AbstractParty>
+}
+
 interface SchedulableState : ContractState {
     /**
      * Indicate whether there is some activity to be performed at some future point in time with respect to this

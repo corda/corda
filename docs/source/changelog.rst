@@ -6,6 +6,11 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Added a new ``ObservedState`` interface, which the vault uses to recognise states where it is not involved but should
+  retain a copy of the state anyway. Modified the vault to differentiate these observed states from consumed/unconsumed
+  states, as we are not guaranteed to know when these state are consumed, nor can we spend them when they're unconsumed.
+
+* Added a new ``observer-demo`` to demonstrate workflow for observed states.
 
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
