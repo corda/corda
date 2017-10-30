@@ -17,16 +17,16 @@ set(SGX_LIBRARY_PATH ${SGX_SDK}/build/linux)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fvisibility=hidden -fpie -fstack-protector")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fvisibility=hidden -fpie -fstack-protector -s -DNDEBUG")
 set(SGX_SIGN_TOOL ${SGX_SDK}/build/linux/sgx_sign)
-set(ENCLAVE_UNSIGNED noop_enclave.unsigned.so)
-set(ENCLAVE_BLOB_TO_SIGN noop_enclave_blob_to_sign.bin)
-set(ENCLAVE_SIGNED_OPENSSL noop_enclave.signed.openssl.so)
-set(ENCLAVE_SIGNED_HSM noop_enclave.signed.hsm.so)
-set(ENCLAVE_SIGNATURE_OPENSSL noop_enclave.signature.openssl.sha256)
-set(ENCLAVE_SIGNATURE_HSM noop_enclave.signature.hsm.sha256)
-set(ENCLAVE_SIGSTRUCT_OPENSSL noop_enclave.sigstruct.openssl.bin)
-set(ENCLAVE_SIGSTRUCT_HSM noop_enclave.sigstruct.hsm.bin)
-set(ENCLAVE_SIGSTRUCT_PRETTY_OPENSSL noop_enclave.sigstruct-pretty.openssl.txt)
-set(ENCLAVE_SIGSTRUCT_PRETTY_HSM noop_enclave.sigstruct-pretty.hsm.txt)
+set(ENCLAVE_UNSIGNED simple_enclave.unsigned.so)
+set(ENCLAVE_BLOB_TO_SIGN simple_enclave_blob_to_sign.bin)
+set(ENCLAVE_SIGNED_OPENSSL simple_enclave.signed.openssl.so)
+set(ENCLAVE_SIGNED_HSM simple_enclave.signed.hsm.so)
+set(ENCLAVE_SIGNATURE_OPENSSL simple_enclave.signature.openssl.sha256)
+set(ENCLAVE_SIGNATURE_HSM simple_enclave.signature.hsm.sha256)
+set(ENCLAVE_SIGSTRUCT_OPENSSL simple_enclave.sigstruct.openssl.bin)
+set(ENCLAVE_SIGSTRUCT_HSM simple_enclave.sigstruct.hsm.bin)
+set(ENCLAVE_SIGSTRUCT_PRETTY_OPENSSL simple_enclave.sigstruct-pretty.openssl.txt)
+set(ENCLAVE_SIGSTRUCT_PRETTY_HSM simple_enclave.sigstruct-pretty.hsm.txt)
 set(PRIVATE_KEY_NAME_OPENSSL ../sign_helper/selfsigning.pem)
 set(PUBLIC_KEY_NAME_OPENSSL selfsigning.public.pem)
 set(PUBLIC_KEY_NAME_HSM hsm.public.pem)
@@ -35,15 +35,15 @@ set(DEPENDENCIES_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/root)
 set(DEPENDENCIES_LIBRARY_PATH ${DEPENDENCIES_ROOT_DIR}/usr/lib/x86_64-linux-gnu CACHE STRING "")
 set(SIGN_HELPER env LD_LIBRARY_PATH=${DEPENDENCIES_ROOT_DIR}/lib/x86_64-linux-gnu ${PROJECT_SOURCE_DIR}/../sign_helper/sign_helper)
 
-set(NOOP_ENCLAVE noop_enclave_objects)
+set(SIMPLE_ENCLAVE simple_enclave_objects)
 set(SGX_SDK_INCLUDE ${SGX_SDK}/common/inc)
 set(GENERATED_RPC_DIR ${CMAKE_CURRENT_BINARY_DIR}/rpc)
 
-set(GENERATED_EDL_FILES ${GENERATED_RPC_DIR}/empty_t.c ${GENERATED_RPC_DIR}/empty_t.h ${GENERATED_RPC_DIR}/empty_u.c ${GENERATED_RPC_DIR}/empty_u.h)
+set(GENERATED_EDL_FILES ${GENERATED_RPC_DIR}/simple_t.c ${GENERATED_RPC_DIR}/simple_t.h ${GENERATED_RPC_DIR}/simple_u.c ${GENERATED_RPC_DIR}/simple_u.h)
 add_custom_command(
     OUTPUT ${GENERATED_EDL_FILES}
-    COMMAND edger8r --search-path ${CMAKE_CURRENT_SOURCE_DIR}/src --search-path ${SGX_SDK_INCLUDE} --trusted-dir ${GENERATED_RPC_DIR} --untrusted-dir ${GENERATED_RPC_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/empty.edl
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/empty.edl ${SGX_LIBRARY_PATH}/sgx_edger8r ${SGX_SDK_INCLUDE}
+    COMMAND edger8r --search-path ${CMAKE_CURRENT_SOURCE_DIR}/src --search-path ${SGX_SDK_INCLUDE} --trusted-dir ${GENERATED_RPC_DIR} --untrusted-dir ${GENERATED_RPC_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/simple.edl
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/simple.edl ${SGX_LIBRARY_PATH}/sgx_edger8r ${SGX_SDK_INCLUDE}
 )
 set_source_files_properties(${GENERATED_EDL_FILES} PROPERTIES GENERATED TRUE)
 add_custom_target(
@@ -51,11 +51,11 @@ add_custom_target(
     DEPENDS ${GENERATED_EDL_FILES}
 )
 
-add_library(${NOOP_ENCLAVE} ${CMAKE_CURRENT_SOURCE_DIR}/src/noop_enclave.cpp ${GENERATED_RPC_DIR}/empty_t.c)
-add_dependencies(${NOOP_ENCLAVE} GENERATED_EDL)
-set_property(TARGET ${NOOP_ENCLAVE} PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(${NOOP_ENCLAVE} PUBLIC ${SGX_SDK_INCLUDE} ${SGX_SDK_INCLUDE}/tlibc ${GENERATED_RPC_DIR})
-target_compile_options(${NOOP_ENCLAVE} PUBLIC -nostdinc)
+add_library(${SIMPLE_ENCLAVE} ${CMAKE_CURRENT_SOURCE_DIR}/src/simple_enclave.cpp ${GENERATED_RPC_DIR}/simple_t.c)
+add_dependencies(${SIMPLE_ENCLAVE} GENERATED_EDL)
+set_property(TARGET ${SIMPLE_ENCLAVE} PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_include_directories(${SIMPLE_ENCLAVE} PUBLIC ${SGX_SDK_INCLUDE} ${SGX_SDK_INCLUDE}/tlibc ${GENERATED_RPC_DIR})
+target_compile_options(${SIMPLE_ENCLAVE} PUBLIC -nostdinc)
 
 add_executable(edger8r IMPORTED)
 set_target_properties(edger8r PROPERTIES IMPORTED_LOCATION ${SGX_LIBRARY_PATH}/sgx_edger8r)
@@ -82,7 +82,7 @@ set(ENCLAVE_LINKER_FLAGS
             "-l${TRTS_LIB}"
         "-Wl,--no-whole-archive"
         "-Wl,--start-group"
-            "lib${NOOP_ENCLAVE}.a"
+            "lib${SIMPLE_ENCLAVE}.a"
             "-lsgx_tstdc"
             "-lsgx_tstdcxx"
             "-lsgx_tcrypto"
@@ -100,7 +100,7 @@ set(ENCLAVE_LINKER_FLAGS
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_UNSIGNED}
     COMMAND ${CMAKE_CXX_COMPILER} -o ${ENCLAVE_UNSIGNED} ${ENCLAVE_LINKER_FLAGS}
-    DEPENDS ${NOOP_ENCLAVE} ${SGX_LIBRARY_PATH}
+    DEPENDS ${SIMPLE_ENCLAVE} ${SGX_LIBRARY_PATH}
 )
 
 
@@ -214,6 +214,6 @@ find_package(Threads REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g")
 link_directories(${DEPENDENCIES_LIBRARY_PATH})
-add_executable(noop_test src/test.cpp ${GENERATED_RPC_DIR}/empty_u.c)
-target_include_directories(noop_test PUBLIC ${SGX_SDK_INCLUDE} ${GENERATED_RPC_DIR})
-target_link_libraries(noop_test urtslib Threads::Threads)
+add_executable(simple_test src/test.cpp ${GENERATED_RPC_DIR}/simple_u.c)
+target_include_directories(simple_test PUBLIC ${SGX_SDK_INCLUDE} ${GENERATED_RPC_DIR})
+target_link_libraries(simple_test urtslib Threads::Threads)
