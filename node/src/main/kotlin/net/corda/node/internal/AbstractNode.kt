@@ -12,8 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.*
@@ -87,7 +86,6 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
  * Marked as SingletonSerializeAsToken to prevent the invisible reference to AbstractNode in the ServiceHub accidentally
  * sweeping up the Node into the Kryo checkpoint serialization via any flows holding a reference to ServiceHub.
  */
-// TODO: Where this node is the initial network map service, currently no networkMapService is provided.
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode(config: NodeConfiguration,
@@ -108,7 +106,6 @@ abstract class AbstractNode(config: NodeConfiguration,
             override val checkpointStorage: CheckpointStorage,
             override val smm: StateMachineManager,
             override val attachments: NodeAttachmentService,
-            override val inNodeNetworkMapService: NetworkMapService,
             override val network: MessagingService,
             override val database: CordaPersistence,
             override val rpcOps: CordaRPCOps,
@@ -116,14 +113,8 @@ abstract class AbstractNode(config: NodeConfiguration,
             internal val schedulerService: NodeSchedulerService) : StartedNode<N> {
         override val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter {}
     }
-    // TODO: Persist this, as well as whether the node is registered.
-    /**
-     * Sequence number of changes sent to the network map service, when registering/de-registering this node.
-     */
-    var networkMapSeq: Long = 1
 
     protected abstract val log: Logger
-    protected abstract val networkMapAddress: SingleMessageRecipient?
 
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
@@ -143,7 +134,6 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected lateinit var smm: StateMachineManager
     private lateinit var tokenizableServices: List<Any>
     protected lateinit var attachments: NodeAttachmentService
-    protected lateinit var inNodeNetworkMapService: NetworkMapService
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected lateinit var database: CordaPersistence
@@ -229,10 +219,12 @@ abstract class AbstractNode(config: NodeConfiguration,
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
 
             runOnStop += network::stop
-            StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, inNodeNetworkMapService, network, database, rpcOps, flowStarter, schedulerService)
+            StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, schedulerService)
         }
         // If we successfully  loaded network data from database, we set this future to Unit.
-        _nodeReadyFuture.captureLater(registerWithNetworkMapIfConfigured())
+        services.networkMapCache.addNode(info)
+        _nodeReadyFuture.captureLater(services.networkMapCache.nodeReady.map { Unit })
+
         return startedImpl.apply {
             database.transaction {
                 smm.start(tokenizableServices)
@@ -489,7 +481,7 @@ abstract class AbstractNode(config: NodeConfiguration,
                 services.auditService, services.monitoringService, networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, cordappProvider, this)
-        makeNetworkServices(network, networkMapCache, tokenizableServices)
+        makeNetworkServices(tokenizableServices)
         return tokenizableServices
     }
 
@@ -550,16 +542,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         }
     }
 
-    private fun setupInNodeNetworkMapService(networkMapCache: NetworkMapCacheInternal) {
-        inNodeNetworkMapService =
-                if (configuration.networkMapService == null && !configuration.noNetworkMapServiceMode)
-                    makeNetworkMapService(network, networkMapCache)
-                else
-                    NullNetworkMapService
-    }
-
-    private fun makeNetworkServices(network: MessagingService, networkMapCache: NetworkMapCacheInternal, tokenizableServices: MutableList<Any>) {
-        setupInNodeNetworkMapService(networkMapCache)
+    private fun makeNetworkServices(tokenizableServices: MutableList<Any>) {
         configuration.notary?.let {
             val notaryService = makeCoreNotaryService(it)
             tokenizableServices.add(notaryService)
@@ -567,40 +550,6 @@ abstract class AbstractNode(config: NodeConfiguration,
             installCoreFlow(NotaryFlow.Client::class, notaryService::createServiceFlow)
             log.info("Running core notary: ${notaryService.javaClass.name}")
             notaryService.start()
-        }
-    }
-
-    private fun registerWithNetworkMapIfConfigured(): CordaFuture<Unit> {
-        services.networkMapCache.addNode(info)
-        // In the unit test environment, we may sometimes run without any network map service
-        return if (networkMapAddress == null && inNodeNetworkMapService == NullNetworkMapService) {
-            services.networkMapCache.runWithoutMapService()
-            noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
-        } else {
-            val netMapRegistration = registerWithNetworkMap()
-            // We may want to start node immediately with database data and not wait for network map registration (but send it either way).
-            // So we are ready to go.
-            if (services.networkMapCache.loadDBSuccess) {
-                log.info("Node successfully loaded network map data from the database.")
-                doneFuture(Unit)
-            } else {
-                netMapRegistration
-            }
-        }
-    }
-
-    /**
-     * Register this node with the network map cache, and load network map from a remote service (and register for
-     * updates) if one has been supplied.
-     */
-    protected open fun registerWithNetworkMap(): CordaFuture<Unit> {
-        val address: SingleMessageRecipient = networkMapAddress ?:
-                network.getAddressOfParty(PartyInfo.SingleNode(services.myInfo.legalIdentitiesAndCerts.first().party, info.addresses)) as SingleMessageRecipient
-        // Register for updates, even if we're the one running the network map.
-        return sendNetworkMapRegistration(address).flatMap { (error) ->
-            check(error == null) { "Unable to register with the network map service: $error" }
-            // The future returned addMapService will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
-            services.networkMapCache.addMapService(network, address, true, null)
         }
     }
 
@@ -616,14 +565,10 @@ abstract class AbstractNode(config: NodeConfiguration,
     /** Return list of node's addresses. It's overridden in MockNetwork as we don't have real addresses for MockNodes. */
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
-    /** This is overriden by the mock node implementation to enable operation without any network map service */
-    protected open fun noNetworkMapConfigured(): CordaFuture<Unit> {
-        if (services.networkMapCache.loadDBSuccess || configuration.noNetworkMapServiceMode) {
-            return doneFuture(Unit)
-        } else {
+    open protected fun checkNetworkMapIsInitialized() {
+        if (!services.networkMapCache.loadDBSuccess) {
             // TODO: There should be a consistent approach to configuration error exceptions.
-            throw IllegalStateException("Configuration error: this node isn't being asked to act as the network map, nor " +
-                    "has any other map node been configured.")
+            throw NetworkMapCacheEmptyException()
         }
     }
 
@@ -815,3 +760,8 @@ internal class FlowStarterImpl(private val serverThread: AffinityExecutor, priva
         return serverThread.fetchFrom { smm.startFlow(logic, flowInitiator, ourIdentity) }
     }
 }
+
+/**
+ * Thrown when a node is about to start and its network map cache doesn't contain any node.
+ */
+internal class NetworkMapCacheEmptyException: Exception()

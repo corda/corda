@@ -35,7 +35,7 @@ class CustomVaultQueryTest {
                         "net.corda.docs"
                 )
         )
-        mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        mockNet.createNotaryNode()
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)

@@ -4,7 +4,6 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
@@ -47,7 +46,6 @@ class NodeConfigTest {
         assertEquals(localPort(40002), fullConfig.rpcAddress)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
-        assertEquals(NetworkMapInfo(localPort(12345), DUMMY_NOTARY.name), fullConfig.networkMapService)
         assertThat(fullConfig.dataSourceProperties["dataSource.url"] as String).contains("AUTO_SERVER_PORT=30001")
         assertTrue(fullConfig.useTestClock)
         assertFalse(fullConfig.detectPublicIp)

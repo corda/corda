@@ -16,7 +16,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
@@ -95,7 +94,7 @@ class ScheduledFlowTests {
     @Before
     fun setup() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
-        notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name)
+        notaryNode = mockNet.createNotaryNode()
         val a = mockNet.createUnstartedNode()
         val b = mockNet.createUnstartedNode()
 
