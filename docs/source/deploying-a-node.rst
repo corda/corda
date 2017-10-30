@@ -58,28 +58,40 @@ nodes:
         networkMap "O=Controller,L=London,C=GB"
         node {
             name "O=Controller,L=London,C=GB"
+            // The notary will offer a validating notary service.
+            // Set to `corda.notary.simple` for a non-validating notary.
             advertisedServices = ["corda.notary.validating"]
-            p2pPort 10002
-            rpcPort 10003
+            p2pPort  10002
+            rpcPort  10003
+            // No webport property, so no webserver will be created.
+            h2Port   10004
+            sshdPort 22
+            // Includes the corda-finance CorDapp on our node.
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
         }
         node {
             name "O=PartyA,L=London,C=GB"
             advertisedServices = []
-            p2pPort 10005
-            rpcPort 10006
-            webPort 10007
+            p2pPort  10005
+            rpcPort  10006
+            webPort  10007
+            h2Port   10008
+            sshdPort 22
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
+            // Grants user1 all RPC permissions.
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
         }
         node {
             name "O=PartyB,L=New York,C=US"
             advertisedServices = []
-            p2pPort 10008
-            rpcPort 10009
-            webPort 10010
+            p2pPort  10009
+            rpcPort  10010
+            webPort  10011
+            h2Port   10012
+            sshdPort 22
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
+            // Grants user1 the ability to start the MyFlow flow.
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
         }
     }
 
