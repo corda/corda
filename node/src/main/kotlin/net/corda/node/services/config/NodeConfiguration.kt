@@ -13,7 +13,7 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
-data class DevModeOptions(val disableCheckpointChecker: Boolean?)
+data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 
 interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
@@ -44,6 +44,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val p2pAddress: NetworkHostAndPort
     val rpcAddress: NetworkHostAndPort?
     val messagingServerAddress: NetworkHostAndPort?
+    // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
 }
@@ -81,11 +82,6 @@ data class ActiveMqServerConfiguration(val bridge: BridgeConfiguration)
 
 fun Config.parseAsNodeConfiguration(): NodeConfiguration = this.parseAs<NodeConfigurationImpl>()
 
-/**
- * Implementation of [NodeConfiguration]
- * This should be private but it can't because its constructor needs to be invoked reflectively by [parseAs] and
- * kotlin doesn't allow that.
- */
 data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
         override val baseDirectory: Path,
@@ -101,6 +97,8 @@ data class NodeConfigurationImpl(
         override val minimumPlatformVersion: Int = 1,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,
+        // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
+        // Then rename this to messageRedeliveryDelay and make it of type Duration
         override val messageRedeliveryDelaySeconds: Int = 30,
         override val useHTTPS: Boolean,
         override val p2pAddress: NetworkHostAndPort,
@@ -115,6 +113,7 @@ data class NodeConfigurationImpl(
         override val useTestClock: Boolean = false,
         override val detectPublicIp: Boolean = true,
         override val activeMQServer: ActiveMqServerConfiguration,
+        // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
 ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
