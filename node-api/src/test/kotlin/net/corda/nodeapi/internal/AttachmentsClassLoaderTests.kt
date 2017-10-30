@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal
 
-import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -17,10 +17,7 @@ import net.corda.nodeapi.DummyContractBackdoor
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
 import net.corda.nodeapi.internal.serialization.attachmentsClassLoaderEnabledPropertyName
 import net.corda.nodeapi.internal.serialization.withTokenContext
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.kryoSpecific
+import net.corda.testing.*
 import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.node.MockServices
 import org.apache.commons.io.IOUtils
@@ -41,8 +38,8 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
         private const val ISOLATED_CONTRACT_CLASS_NAME = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
         private fun SerializationContext.withAttachmentStorage(attachmentStorage: AttachmentStorage): SerializationContext {
-            val serviceHub = mock<ServiceHub>()
-            whenever(serviceHub.attachments).thenReturn(attachmentStorage)
+            val serviceHub = rigorousMock<ServiceHub>()
+            doReturn(attachmentStorage).whenever(serviceHub).attachments
             return this.withServiceHub(serviceHub)
         }
 
@@ -55,8 +52,7 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
 
     class DummyServiceHub : MockServices() {
         override val cordappProvider: CordappProviderImpl
-                = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH))).start(attachments)
-
+                = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), attachments)
         private val cordapp get() = cordappProvider.cordapps.first()
         val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
         val appContext get() = cordappProvider.getAppContext(cordapp)

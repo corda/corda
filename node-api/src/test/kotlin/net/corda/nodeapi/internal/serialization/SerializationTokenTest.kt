@@ -3,10 +3,10 @@ package net.corda.nodeapi.internal.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
@@ -35,8 +35,7 @@ class SerializationTokenTest : TestDependencyInjectionBase() {
         override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.size == this.bytes.size
     }
 
-    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, mock())
-
+    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, rigorousMock())
     @Test
     fun `write token and read tokenizable`() {
         val tokenizableBefore = LargeTokenizable()

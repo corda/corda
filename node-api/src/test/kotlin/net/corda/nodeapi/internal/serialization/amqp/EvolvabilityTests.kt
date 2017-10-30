@@ -30,6 +30,7 @@ class EvolvabilityTests {
         // data class C (val a: Int, val b: Int)
         // val sc = SerializationOutput(sf).serialize(C(A, B))
         // f.writeBytes(sc.bytes)
+        // println (path)
 
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: Int, val a: Int)
@@ -54,6 +55,7 @@ class EvolvabilityTests {
         // data class C (val a: Int, val b: String)
         // val sc = SerializationOutput(sf).serialize(C(A, B))
         // f.writeBytes(sc.bytes)
+        // println (path)
 
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: String, val a: Int)
@@ -78,7 +80,6 @@ class EvolvabilityTests {
         // val sc = SerializationOutput(sf).serialize(C(A))
         // f.writeBytes(sc.bytes)
         // println ("Path = $path")
-
         data class C(val a: Int, val b: Int?)
 
         val sc2 = f.readBytes()
@@ -300,9 +301,6 @@ class EvolvabilityTests {
         val path2 = EvolvabilityTests::class.java.getResource("EvolvabilityTests.multiVersion.2")
         val path3 = EvolvabilityTests::class.java.getResource("EvolvabilityTests.multiVersion.3")
 
-        @Suppress("UNUSED_VARIABLE")
-        val f = File(path1.toURI())
-
         val a = 100
         val b = 200
         val c = 300
@@ -312,14 +310,24 @@ class EvolvabilityTests {
         //
         // Version 1:
         // data class C (val a: Int, val b: Int)
+        //
+        // val scc = SerializationOutput(sf).serialize(C(a, b))
+        // File(path1.toURI()).writeBytes(scc.bytes)
+        // println ("Path = $path1")
+        //
         // Version 2 - add param c
         // data class C (val c: Int, val b: Int, val a: Int)
+        //
+        // val scc = SerializationOutput(sf).serialize(C(c, b, a))
+        // File(path2.toURI()).writeBytes(scc.bytes)
+        // println ("Path = $path2")
+        //
         // Version 3 - add param d
         // data class C (val b: Int, val c: Int, val d: Int, val a: Int)
         //
         // val scc = SerializationOutput(sf).serialize(C(b, c, d, a))
-        // f.writeBytes(scc.bytes)
-        // println ("Path = $path1")
+        // File(path3.toURI()).writeBytes(scc.bytes)
+        // println ("Path = $path3")
 
         @Suppress("UNUSED")
         data class C(val e: Int, val c: Int, val b: Int, val a: Int, val d: Int) {
@@ -409,14 +417,24 @@ class EvolvabilityTests {
         //
         // Version 1:
         // data class C (val a: Int, val b: Int, val c: Int)
+        //
+        // val scc = SerializationOutput(sf).serialize(C(a, b, c))
+        // File(path1.toURI()).writeBytes(scc.bytes)
+        // println ("Path = $path1")
+        //
         // Version 2 - add param c
         // data class C (val b: Int, val c: Int, val d: Int, val e: Int)
+        //
+        // val scc = SerializationOutput(sf).serialize(C(b, c, d, e))
+        // File(path2.toURI()).writeBytes(scc.bytes)
+        // println ("Path = $path2")
+        //
         // Version 3 - add param d
         // data class C (val b: Int, val c: Int, val d: Int, val e: Int, val f: Int)
         //
         // val scc = SerializationOutput(sf).serialize(C(b, c, d, e, f))
-        // File(path1.toURI()).writeBytes(scc.bytes)
-        // println ("Path = $path1")
+        // File(path3.toURI()).writeBytes(scc.bytes)
+        // println ("Path = $path3")
 
         @Suppress("UNUSED")
         data class C(val b: Int, val c: Int, val d: Int, val e: Int, val f: Int, val g: Int) {

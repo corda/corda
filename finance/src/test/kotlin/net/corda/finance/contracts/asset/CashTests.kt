@@ -3,9 +3,7 @@ package net.corda.finance.contracts.asset
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
+import net.corda.core.identity.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -32,25 +30,25 @@ import java.util.*
 import kotlin.test.*
 
 class CashTests : TestDependencyInjectionBase() {
-    val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
-    val defaultIssuer = MEGA_CORP.ref(defaultRef)
-    val inState = Cash.State(
+    private val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
+    private val defaultIssuer = MEGA_CORP.ref(defaultRef)
+    private val inState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
             owner = AnonymousParty(ALICE_PUBKEY)
     )
     // Input state held by the issuer
-    val issuerInState = inState.copy(owner = defaultIssuer.party)
-    val outState = issuerInState.copy(owner = AnonymousParty(BOB_PUBKEY))
+    private val issuerInState = inState.copy(owner = defaultIssuer.party)
+    private val outState = issuerInState.copy(owner = AnonymousParty(BOB_PUBKEY))
 
-    fun Cash.State.editDepositRef(ref: Byte) = copy(
+    private fun Cash.State.editDepositRef(ref: Byte) = copy(
             amount = Amount(amount.quantity, token = amount.token.copy(amount.token.issuer.copy(reference = OpaqueBytes.of(ref))))
     )
 
-    lateinit var miniCorpServices: MockServices
-    lateinit var megaCorpServices: MockServices
+    private lateinit var miniCorpServices: MockServices
+    private lateinit var megaCorpServices: MockServices
     val vault: VaultService get() = miniCorpServices.vaultService
     lateinit var database: CordaPersistence
-    lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
+    private lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
 
     @Before
     fun setUp() {
@@ -475,19 +473,20 @@ class CashTests : TestDependencyInjectionBase() {
     //
     // Spend tx generation
 
-    val OUR_KEY: KeyPair by lazy { generateKeyPair() }
-    val OUR_IDENTITY_1: AbstractParty get() = AnonymousParty(OUR_KEY.public)
+    private val OUR_KEY: KeyPair by lazy { generateKeyPair() }
+    private val OUR_IDENTITY_1: AbstractParty get() = AnonymousParty(OUR_KEY.public)
+    private val OUR_IDENTITY_AND_CERT = getTestPartyAndCertificate(CordaX500Name(organisation = "Me", locality = "London", country = "GB"), OUR_KEY.public)
 
-    val THEIR_IDENTITY_1 = AnonymousParty(MINI_CORP_PUBKEY)
-    val THEIR_IDENTITY_2 = AnonymousParty(CHARLIE_PUBKEY)
+    private val THEIR_IDENTITY_1 = AnonymousParty(MINI_CORP_PUBKEY)
+    private val THEIR_IDENTITY_2 = AnonymousParty(CHARLIE_PUBKEY)
 
-    fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
+    private fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
             StateAndRef(
-                    TransactionState<Cash.State>(Cash.State(amount `issued by` issuer.ref(depositRef), OUR_IDENTITY_1), Cash.PROGRAM_ID, DUMMY_NOTARY),
+                    TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), OUR_IDENTITY_1), Cash.PROGRAM_ID, DUMMY_NOTARY),
                     StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 
-    val WALLET = listOf(
+    private val WALLET = listOf(
             makeCash(100.DOLLARS, MEGA_CORP),
             makeCash(400.DOLLARS, MEGA_CORP),
             makeCash(80.DOLLARS, MINI_CORP),
@@ -507,7 +506,7 @@ class CashTests : TestDependencyInjectionBase() {
     private fun makeSpend(amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
-            Cash.generateSpend(miniCorpServices, tx, amount, dest)
+            Cash.generateSpend(miniCorpServices, tx, amount, OUR_IDENTITY_AND_CERT, dest)
         }
         return tx.toWireTransaction(miniCorpServices)
     }
@@ -541,7 +540,7 @@ class CashTests : TestDependencyInjectionBase() {
         assertEquals(1, expectedInputs.size)
         val inputState = expectedInputs.single()
         val actualChange = wtx.outputs.single().data as Cash.State
-        val expectedChangeAmount = (inputState.state.data as Cash.State).amount.quantity - 50.DOLLARS.quantity
+        val expectedChangeAmount = inputState.state.data.amount.quantity - 50.DOLLARS.quantity
         val expectedChange = WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount.copy(quantity = expectedChangeAmount), owner = actualChange.owner)
         assertEquals(expectedChange, wtx.getOutput(0))
     }
@@ -588,9 +587,9 @@ class CashTests : TestDependencyInjectionBase() {
     @Test
     fun generateExitWithEmptyVault() {
         initialiseTestSerialization()
-        assertFailsWith<InsufficientBalanceException> {
+        assertFailsWith<IllegalArgumentException> {
             val tx = TransactionBuilder(DUMMY_NOTARY)
-            Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList())
+            Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList(), OUR_IDENTITY_1)
         }
     }
 
@@ -615,7 +614,7 @@ class CashTests : TestDependencyInjectionBase() {
         database.transaction {
 
             val tx = TransactionBuilder(DUMMY_NOTARY)
-            Cash.generateSpend(miniCorpServices, tx, 80.DOLLARS, ALICE, setOf(MINI_CORP))
+            Cash.generateSpend(miniCorpServices, tx, 80.DOLLARS, OUR_IDENTITY_AND_CERT, ALICE, setOf(MINI_CORP))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -631,13 +630,13 @@ class CashTests : TestDependencyInjectionBase() {
         database.transaction {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             val changeAmount = 90.DOLLARS `issued by` defaultIssuer
-            val likelyChangeState = wtx.outputs.map(TransactionState<*>::data).filter { state ->
+            val likelyChangeState = wtx.outputs.map(TransactionState<*>::data).single { state ->
                 if (state is Cash.State) {
                     state.amount == changeAmount
                 } else {
                     false
                 }
-            }.single()
+            }
             val changeOwner = (likelyChangeState as Cash.State).owner
             assertEquals(1, miniCorpServices.keyManagementService.filterMyKeys(setOf(changeOwner.owningKey)).toList().size)
             assertEquals(vaultState.ref, wtx.inputs[0])

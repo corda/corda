@@ -7,23 +7,21 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.io.Closeables
+import net.corda.client.jackson.JacksonSupport
+import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.write
-import net.corda.core.internal.*
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.client.jackson.JacksonSupport
-import net.corda.client.jackson.StringToMethodCallParser
-import net.corda.core.CordaException
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
@@ -200,7 +198,7 @@ object InteractiveShell {
     }
 
     private fun createOutputMapper(factory: JsonFactory): ObjectMapper {
-        return JacksonSupport.createNonRpcMapper(factory).apply({
+        return JacksonSupport.createNonRpcMapper(factory).apply {
             // Register serializers for stateful objects from libraries that are special to the RPC system and don't
             // make sense to print out to the screen. For classes we own, annotations can be used instead.
             val rpcModule = SimpleModule()
@@ -210,7 +208,7 @@ object InteractiveShell {
 
             disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
             enable(SerializationFeature.INDENT_OUTPUT)
-        })
+        }
     }
 
     // TODO: This should become the default renderer rather than something used specifically by commands.
@@ -237,7 +235,7 @@ object InteractiveShell {
         val clazz: Class<FlowLogic<*>> = uncheckedCast(matches.single())
         try {
             // TODO Flow invocation should use startFlowDynamic.
-            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell) }, inputData, clazz)
+            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell).getOrThrow() }, inputData, clazz)
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
             val latch = CountDownLatch(1)
@@ -397,7 +395,7 @@ object InteractiveShell {
     }
 
     private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): CordaFuture<Unit>? {
-        val printerFun = { obj: Any? -> yamlMapper.writeValueAsString(obj) }
+        val printerFun = yamlMapper::writeValueAsString
         toStream.println(printerFun(response))
         toStream.flush()
         return maybeFollow(response, printerFun, toStream)
@@ -443,13 +441,9 @@ object InteractiveShell {
 
         val observable: Observable<*> = when (response) {
             is Observable<*> -> response
-            is Pair<*, *> -> when {
-                response.first is Observable<*> -> response.first as Observable<*>
-                response.second is Observable<*> -> response.second as Observable<*>
-                else -> null
-            }
-            else -> null
-        } ?: return null
+            is DataFeed<*, *> -> response.updates
+            else -> return null
+        }
 
         val subscriber = PrintingSubscriber(printerFun, toStream)
         uncheckedCast(observable).subscribe(subscriber)
@@ -500,8 +494,8 @@ object InteractiveShell {
                     gen.writeString("<not saved>")
                 } else {
                     val path = Paths.get(toPath)
-                    path.write { value.copyTo(it) }
-                    gen.writeString("<saved to: $path>")
+                    value.copyTo(path)
+                    gen.writeString("<saved to: ${path.toAbsolutePath()}>")
                 }
             } finally {
                 try {

@@ -2,6 +2,7 @@
 
 package net.corda.core.node.services.vault
 
+import net.corda.core.DoNotImplement
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
@@ -10,6 +11,7 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.javaGetter
 
 @CordaSerializable
+@DoNotImplement
 interface Operator
 
 enum class BinaryLogicalOperator : Operator {
@@ -138,6 +140,7 @@ data class Sort(val columns: Collection<SortColumn>) {
     }
 
     @CordaSerializable
+    @DoNotImplement
     interface Attribute
 
     enum class CommonStateAttribute(val attributeParent: String, val attributeChild: String?) : Attribute {

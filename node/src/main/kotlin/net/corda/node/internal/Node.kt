@@ -5,8 +5,6 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
@@ -22,7 +20,6 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectRequestProperty
@@ -37,7 +34,6 @@ import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.IP_REQUEST_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ShutdownHook
@@ -62,7 +58,7 @@ import kotlin.system.exitProcess
  *
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
  */
-open class Node(override val configuration: FullNodeConfiguration,
+open class Node(override val configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
@@ -84,7 +80,7 @@ open class Node(override val configuration: FullNodeConfiguration,
             exitProcess(1)
         }
 
-        private fun createClock(configuration: FullNodeConfiguration): Clock {
+        private fun createClock(configuration: NodeConfiguration): Clock {
             return if (configuration.useTestClock) TestClock() else NodeClock()
         }
 
@@ -99,7 +95,6 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 
     override val log: Logger get() = logger
-    override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 
     private val sameVmNodeNumber = sameVmNodeCounter.incrementAndGet() // Under normal (non-test execution) it will always be "1"
@@ -152,23 +147,16 @@ open class Node(override val configuration: FullNodeConfiguration,
     override fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
-        val (serverAddress, advertisedAddress) = with(configuration) {
-            if (messagingServerAddress != null) {
-                // External broker
-                messagingServerAddress to messagingServerAddress
-            } else {
-                makeLocalMessageBroker() to getAdvertisedAddress()
-            }
-        }
+        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
+        val advertisedAddress = configuration.messagingServerAddress ?: getAdvertisedAddress()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
 
-        val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) legalIdentity.owningKey else null
         return NodeMessagingClient(
                 configuration,
                 versionInfo,
                 serverAddress,
-                myIdentityOrNullIfNetworkMapService,
+                legalIdentity.owningKey,
                 serverThread,
                 database,
                 nodeReadyFuture,
@@ -196,16 +184,14 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     /**
      * Checks whether the specified [host] is a public IP address or hostname. If not, tries to discover the current
-     * machine's public IP address to be used instead. It first looks through the network interfaces, and if no public IP
-     * is found, asks the network map service to provide it.
+     * machine's public IP address to be used instead by looking through the network interfaces.
+     * TODO this code used to rely on the networkmap node, we might want to look at a different solution.
      */
     private fun tryDetectIfNotPublicHost(host: String): String? {
         if (!AddressUtils.isPublic(host)) {
             val foundPublicIP = AddressUtils.tryDetectPublicIP()
 
-            if (foundPublicIP == null) {
-                networkMapAddress?.let { return discoverPublicHost(it.hostAndPort) }
-            } else {
+            if (foundPublicIP != null) {
                 log.info("Detected public IP: ${foundPublicIP.hostAddress}. This will be used instead of the provided \"$host\" as the advertised address.")
                 return foundPublicIP.hostAddress
             }
@@ -269,15 +255,6 @@ open class Node(override val configuration: FullNodeConfiguration,
 
         // Start up the MQ client.
         (network as NodeMessagingClient).start(rpcOps, userService)
-    }
-
-    /**
-     * Insert an initial step in the registration process which will throw an exception if a non-recoverable error is
-     * encountered when trying to connect to the network map node.
-     */
-    override fun registerWithNetworkMap(): CordaFuture<Unit> {
-        val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: doneFuture(Unit)
-        return networkMapConnection.flatMap { super.registerWithNetworkMap() }
     }
 
     override fun myAddresses(): List<NetworkHostAndPort> {

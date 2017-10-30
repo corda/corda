@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Bean
  */
 @SpringBootApplication
 class IrsDemoWebApplication {
-
     @Value("\${corda.host}")
     lateinit var cordaHost:String
 

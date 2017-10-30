@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.1.xsd">
+    <!--  Example of a suppressed library -->
+    <!-- The suppress node can be generated from the HTML report by using the 'suppress' option for each vulnerability found
+    <suppress>
+      <notes><![CDATA[
+      file name: some.jar
+      ]]></notes>
+      <sha1>66734244CE86857018B023A8C56AE0635C56B6A1</sha1>
+      <cpe>cpe:/a:apache:struts:2.0.0</cpe>
+   </suppress>
+    -->
+    <suppress>
+        <!-- Vulnerability when using SSLv2 Hello messages. Corda uses TLS1.2-->
+        <notes><![CDATA[file name: catalyst-netty-1.1.2.jar]]></notes>
+        <gav regex="true">^io\.atomix\.catalyst:catalyst-netty:.*$</gav>
+        <cve>CVE-2014-3488</cve>
+    </suppress>
+    <suppress>
+        <!-- Vulnerability to LDAP poisoning attacks. Corda doesn't use LDAP-->
+        <notes><![CDATA[file name: groovy-all-1.8.9.jar]]></notes>
+        <gav regex="true">^commons-cli:commons-cli:.*$</gav>
+        <cve>CVE-2016-6497</cve>
+    </suppress>
+    <suppress>
+        <!-- Java objects serialization disabled in Corda -->
+        <notes><![CDATA[file name: groovy-all-1.8.9.jar]]></notes>
+        <gav regex="true">^commons-cli:commons-cli:.*$</gav>
+        <cve>CVE-2015-3253</cve>
+    </suppress>
+</suppressions>

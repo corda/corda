@@ -2,14 +2,16 @@
 
 package net.corda.testing
 
-import com.nhaarman.mockito_kotlin.spy
+import com.nhaarman.mockito_kotlin.doCallRealMethod
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.VerifierType
+import net.corda.nodeapi.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
@@ -54,26 +56,30 @@ fun transaction(
 
 fun testNodeConfiguration(
         baseDirectory: Path,
-        myLegalName: CordaX500Name,
-        notaryConfig: NotaryConfig? = null): NodeConfiguration {
+        myLegalName: CordaX500Name): NodeConfiguration {
     abstract class MockableNodeConfiguration : NodeConfiguration // Otherwise Mockito is defeated by val getters.
-
-    val nc = spy<MockableNodeConfiguration>()
-    whenever(nc.baseDirectory).thenReturn(baseDirectory)
-    whenever(nc.myLegalName).thenReturn(myLegalName)
-    whenever(nc.minimumPlatformVersion).thenReturn(1)
-    whenever(nc.keyStorePassword).thenReturn("cordacadevpass")
-    whenever(nc.trustStorePassword).thenReturn("trustpass")
-    whenever(nc.rpcUsers).thenReturn(emptyList())
-    whenever(nc.notary).thenReturn(notaryConfig)
-    whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.organisation))
-    whenever(nc.database).thenReturn(makeTestDatabaseProperties())
-    whenever(nc.emailAddress).thenReturn("")
-    whenever(nc.exportJMXto).thenReturn("")
-    whenever(nc.devMode).thenReturn(true)
-    whenever(nc.certificateSigningService).thenReturn(URL("http://localhost"))
-    whenever(nc.certificateChainCheckPolicies).thenReturn(emptyList())
-    whenever(nc.verifierType).thenReturn(VerifierType.InMemory)
-    whenever(nc.messageRedeliveryDelaySeconds).thenReturn(5)
-    return nc
+    return rigorousMock<MockableNodeConfiguration>().also {
+        doReturn(baseDirectory).whenever(it).baseDirectory
+        doReturn(myLegalName).whenever(it).myLegalName
+        doReturn(1).whenever(it).minimumPlatformVersion
+        doReturn("cordacadevpass").whenever(it).keyStorePassword
+        doReturn("trustpass").whenever(it).trustStorePassword
+        doReturn(emptyList<User>()).whenever(it).rpcUsers
+        doReturn(null).whenever(it).notary
+        doReturn(makeTestDataSourceProperties(myLegalName.organisation)).whenever(it).dataSourceProperties
+        doReturn(makeTestDatabaseProperties()).whenever(it).database
+        doReturn("").whenever(it).emailAddress
+        doReturn("").whenever(it).exportJMXto
+        doReturn(true).whenever(it).devMode
+        doReturn(URL("http://localhost")).whenever(it).certificateSigningService
+        doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+        doReturn(VerifierType.InMemory).whenever(it).verifierType
+        doReturn(5).whenever(it).messageRedeliveryDelaySeconds
+        doReturn(0L).whenever(it).additionalNodeInfoPollingFrequencyMsec
+        doReturn(null).whenever(it).devModeOptions
+        doCallRealMethod().whenever(it).certificatesDirectory
+        doCallRealMethod().whenever(it).trustStoreFile
+        doCallRealMethod().whenever(it).sslKeystore
+        doCallRealMethod().whenever(it).nodeKeystore
+    }
 }

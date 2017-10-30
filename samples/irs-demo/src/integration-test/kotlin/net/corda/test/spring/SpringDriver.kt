@@ -40,7 +40,6 @@ fun <A> springDriver(
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
-        networkMapStartStrategy: NetworkMapStartStrategy = defaultParameters.networkMapStartStrategy,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: SpringDriverExposedDSLInterface.() -> A
@@ -53,7 +52,6 @@ fun <A> springDriver(
         systemProperties = systemProperties,
         useTestClock = useTestClock,
         initialiseSerialization = initialiseSerialization,
-        networkMapStartStrategy = networkMapStartStrategy,
         startNodesInProcess = startNodesInProcess,
         extraCordappPackagesToScan = extraCordappPackagesToScan,
         driverDslWrapper = { driverDSL:DriverDSL -> SpringBootDriverDSL(driverDSL) },
@@ -124,5 +122,3 @@ data class SpringBootDriverDSL(
         }.flatMap { process -> addressMustBeBoundFuture(driverDSL.executorService, handle.webAddress, process).map { process } }
     }
 }
-
-

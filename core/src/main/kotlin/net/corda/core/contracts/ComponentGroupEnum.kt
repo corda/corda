@@ -10,5 +10,6 @@ enum class ComponentGroupEnum {
     COMMANDS_GROUP, // ordinal = 2.
     ATTACHMENTS_GROUP, // ordinal = 3.
     NOTARY_GROUP, // ordinal = 4.
-    TIMEWINDOW_GROUP // ordinal = 5.
+    TIMEWINDOW_GROUP, // ordinal = 5.
+    SIGNERS_GROUP // ordinal = 6.
 }

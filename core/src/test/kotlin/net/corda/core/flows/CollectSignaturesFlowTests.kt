@@ -44,11 +44,10 @@ class CollectSignaturesFlowTests {
         bobNode = mockNet.createPartyNode(BOB.name)
         charlieNode = mockNet.createPartyNode(CHARLIE.name)
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
-        alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
-        bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
-        charlie = charlieNode.services.myInfo.identityFromX500Name(CHARLIE_NAME)
-        notary = notaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+        charlie = charlieNode.info.singleIdentity()
+        notary = notaryNode.services.getDefaultNotary()
     }
 
     @After

@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
@@ -19,6 +20,7 @@ import java.time.Clock
 /**
  * Part of [ServiceHub].
  */
+@DoNotImplement
 interface StateLoader {
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
@@ -46,6 +48,26 @@ interface ServicesForResolution : StateLoader {
 
     /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
     val cordappProvider: CordappProvider
+}
+
+/**
+ * Controls whether the transaction is sent to the vault at all, and if so whether states have to be relevant
+ * or not in order to be recorded. Used in [ServiceHub.recordTransactions]
+ */
+enum class StatesToRecord {
+    /** The received transaction is not sent to the vault at all. This is used within transaction resolution. */
+    NONE,
+    /**
+     * All states that can be seen in the transaction will be recorded by the vault, even if none of the identities
+     * on this node are a participant or owner.
+     */
+    ALL_VISIBLE,
+    /**
+     * Only states that involve one of our public keys will be stored in the vault. This is the default. A public
+     * key is involved (relevant) if it's in the [OwnableState.owner] field, or appears in the [ContractState.participants]
+     * collection. This is usually equivalent to "can I change the contents of this state by signing a transaction".
+     */
+    ONLY_RELEVANT
 }
 
 /**
@@ -130,7 +152,9 @@ interface ServiceHub : ServicesForResolution {
      * @param txs The transactions to record.
      * @param notifyVault indicate if the vault should be notified for the update.
      */
-    fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>)
+    fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+        recordTransactions(if (notifyVault) StatesToRecord.ONLY_RELEVANT else StatesToRecord.NONE, txs)
+    }
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
@@ -142,10 +166,20 @@ interface ServiceHub : ServicesForResolution {
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
+     * further processing if [statesToRecord] is not [StatesToRecord.NONE].
+     * This is expected to be run within a database transaction.
+     *
+     * @param txs The transactions to record.
+     * @param statesToRecord how the vault should treat the output states of the transaction.
+     */
+    fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>)
+
+    /**
+     * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.
      */
     fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
-        recordTransactions(true, first, *remaining)
+        recordTransactions(listOf(first, *remaining))
     }
 
     /**
@@ -153,7 +187,7 @@ interface ServiceHub : ServicesForResolution {
      * further processing. This is expected to be run within a database transaction.
      */
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
-        recordTransactions(true, txs)
+        recordTransactions(StatesToRecord.ONLY_RELEVANT, txs)
     }
 
     /**
@@ -164,7 +198,7 @@ interface ServiceHub : ServicesForResolution {
     @Throws(TransactionResolutionException::class)
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outRef<T>(stateRef.index)
+        return stx.resolveBaseTransaction(this).outRef(stateRef.index)
     }
 
     private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey

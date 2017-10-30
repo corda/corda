@@ -118,13 +118,6 @@ path to the node's base directory.
 
     Only one of ``raft``, ``bftSMaRt`` or ``custom`` configuration values may be specified.
 
-:networkMapService: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise this is
-    a config object with the details of the network map service:
-
-        :address: Host and port string of the ArtemisMQ broker hosting the network map node
-        :legalName: Legal name of the node. This is required as part of the TLS host verification process. The node will
-            reject the connection to the network map service if it provides a TLS common name which doesn't match with this value.
-
 :minimumPlatformVersion: Used by the node if it's running the network map service to enforce a minimum version requirement
     on registrations - any node on a Platform Version lower than this value will have their registration rejected.
     Defaults to 1 if absent.
@@ -154,3 +147,13 @@ path to the node's base directory.
 
 :certificateSigningService: Certificate Signing Server address. It is used by the certificate signing request utility to
     obtain SSL certificate. (See :doc:`permissioning` for more information.)
+
+:jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
+    only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
+
+:systemProperties: An optional map of additional system properties to be set when launching via ``corda.jar`` only.  Keys and values
+    of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
+
+:jarDirs: An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
+    Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
+    for including JDBC drivers and the like. e.g. ``jarDirs = [ 'lib' ]``

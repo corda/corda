@@ -3,6 +3,7 @@
 
 package net.corda.testing
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -24,6 +25,8 @@ import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.internal.serialization.AMQP_ENABLED
+import org.mockito.internal.stubbing.answers.ThrowsException
+import org.mockito.stubbing.Answer
 import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
@@ -69,11 +72,11 @@ val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
 val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "MiniCorp", locality = "London", country = "GB"), MINI_CORP_PUBKEY)
 val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
+val BOC_NAME: CordaX500Name = CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB")
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CordaX500Name(organisation = "BankOfCorda", locality = "London", country = "GB"), BOC_PUBKEY)
+val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(BOC_NAME, BOC_PUBKEY)
 val BOC: Party get() = BOC_IDENTITY.party
-val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
@@ -166,5 +169,30 @@ inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit
 fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.first()
 
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
+/**
+ * Extract a single identity from the node info. Throws an error if the node has multiple identities.
+ */
+fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCerts.single()
+
+/**
+ * Extract a single identity from the node info. Throws an error if the node has multiple identities.
+ */
+fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
 /** Returns the identity of the first notary found on the network */
 fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
+
+/**
+ * A method on a mock was called, but no behaviour was previously specified for that method.
+ * You can use [com.nhaarman.mockito_kotlin.doReturn] or similar to specify behaviour, see Mockito documentation for details.
+ */
+class UndefinedMockBehaviorException(message: String) : RuntimeException(message)
+
+/**
+ * Create a Mockito mock that has [UndefinedMockBehaviorException] as the default behaviour of all methods.
+ * @param T the type to mock. Note if you want to use [com.nhaarman.mockito_kotlin.doCallRealMethod] on a Kotlin interface,
+ * it won't work unless you mock a (trivial) abstract implementation of that interface instead.
+ */
+inline fun <reified T : Any> rigorousMock() = mock<T>(Answer {
+    // Use ThrowsException to hack the stack trace, and lazily so we can customise the message:
+    ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it.")).answer(it)
+})

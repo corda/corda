@@ -6,8 +6,11 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
+
+* Experimental support for PostgreSQL: CashSelection done using window functions
 
 * ``FlowLogic`` now exposes a series of function called ``receiveAll(...)`` allowing to join ``receive(...)`` instructions.
 
@@ -26,7 +29,7 @@ UNRELEASED
 
 * ``Cordapp`` now has a name field for identifying CorDapps and all CorDapp names are printed to console at startup.
 
-* Enums now respsect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
+* Enums now respect the whitelist applied to the Serializer factory serializing / deserializing them. If the enum isn't
   either annotated with the @CordaSerializable annotation or explicitly whitelisted then a NotSerializableException is
   thrown.
 
@@ -35,17 +38,17 @@ UNRELEASED
   ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` have also been removed and replaced by a single
   ``notary`` config object. See :doc:`corda-configuration-file` for more details.
 
-* Gradle task ``deployNodes`` can have an additional parameter `configFile` with the path to a properties file
+* Gradle task ``deployNodes`` can have an additional parameter ``configFile`` with the path to a properties file
   to be appended to node.conf.
 
-* Cordformation node building DSL can have an additional parameter `configFile` with the path to a properties file
+* Cordformation node building DSL can have an additional parameter ``configFile`` with the path to a properties file
   to be appended to node.conf.
 
 * ``FlowLogic`` now has a static method called ``sleep`` which can be used in certain circumstances to help with resolving
   contention over states in flows.  This should be used in place of any other sleep primitive since these are not compatible
   with flows and their use will be prevented at some point in the future.  Pay attention to the warnings and limitations
   described in the documentation for this method.  This helps resolve a bug in ``Cash`` coin selection.
-  A new static property `currentTopLevel` returns the top most `FlowLogic` instance, or null if not in a flow.
+  A new static property ``currentTopLevel`` returns the top most ``FlowLogic`` instance, or null if not in a flow.
 
 * ``CordaService`` annotated classes should be upgraded to take a constructor parameter of type ``AppServiceHub`` which
   allows services to start flows marked with the ``StartableByService`` annotation. For backwards compatability
@@ -53,6 +56,20 @@ UNRELEASED
 
 * ``TimeWindow`` now has a ``length`` property that returns the length of the time-window, or ``null`` if the
   time-window is open-ended.
+
+* A new ``SIGNERS_GROUP`` with ordinal 6 has been added to ``ComponentGroupEnum`` that corresponds to the ``Command``
+  signers.
+
+* ``PartialMerkleTree`` is equipped with a ``leafIndex`` function that returns the index of a hash (leaf) in the
+  partial Merkle tree structure.
+
+* A new function ``checkCommandVisibility(publicKey: PublicKey)`` has been added to ``FilteredTransaction`` to check
+  if every command that a signer should receive (e.g. an Oracle) is indeed visible.
+
+* Changed the AMQP serialiser to use the oficially assigned R3 identifier rather than a placeholder.
+
+* The ``ReceiveTransactionFlow`` can now be told to record the transaction at the same time as receiving it. Using this
+  feature, better support for observer/regulator nodes has been added. See :doc:`tutorial-observer-nodes`.
 
 .. _changelog_v1:
 

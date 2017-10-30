@@ -22,7 +22,7 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
-import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
 import net.corda.node.utilities.*
@@ -48,7 +48,6 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
-import javax.security.auth.x500.X500Principal
 
 // TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
 
@@ -76,7 +75,7 @@ import javax.security.auth.x500.X500Principal
 class NodeMessagingClient(override val config: NodeConfiguration,
                           private val versionInfo: VersionInfo,
                           private val serverAddress: NetworkHostAndPort,
-                          private val myIdentity: PublicKey?,
+                          private val myIdentity: PublicKey,
                           private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: CordaPersistence,
                           private val networkMapRegistrationFuture: CordaFuture<Unit>,
@@ -172,14 +171,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     /** An executor for sending messages */
     private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging", 1)
 
-    /**
-     * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
-     */
-    override val myAddress: SingleMessageRecipient = if (myIdentity != null) {
-        NodeAddress.asSingleNode(myIdentity, advertisedAddress)
-    } else {
-        NetworkMapAddress(advertisedAddress)
-    }
+    override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
 
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
@@ -485,7 +477,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
-    override fun send(message: Message, target: MessageRecipients, retryId: Long?) {
+    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
         // We have to perform sending on a different thread pool, since using the same pool for messaging and
         // fibers leads to Netty buffer memory leaks, caused by both Netty and Quasar fiddling with thread-locals.
         messagingExecutor.fetchFrom {
@@ -502,7 +494,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
 
                     // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
-                    if (amqDelayMillis > 0 && message.topicSession.topic == StateMachineManager.sessionTopic.topic) {
+                    if (amqDelayMillis > 0 && message.topicSession.topic == StateMachineManagerImpl.sessionTopic.topic) {
                         putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
                     }
                 }
@@ -523,6 +515,14 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                 }
             }
         }
+        acknowledgementHandler?.invoke()
+    }
+
+    override fun send(addressedMessages: List<MessagingService.AddressedMessage>, acknowledgementHandler: (() -> Unit)?) {
+        for ((message, target, retryId, sequenceKey) in addressedMessages) {
+            send(message, target, retryId, sequenceKey, null)
+        }
+        acknowledgementHandler?.invoke()
     }
 
     private fun sendWithRetry(retryCount: Int, address: String, message: ClientMessage, retryId: Long) {
@@ -626,9 +626,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     // TODO Rethink PartyInfo idea and merging PeerAddress/ServiceAddress (the only difference is that Service address doesn't hold host and port)
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
         return when (partyInfo) {
-            is PartyInfo.SingleNode -> {
-                getArtemisPeerAddress(partyInfo.party, partyInfo.addresses.first(), config.networkMapService?.legalName)
-            }
+            is PartyInfo.SingleNode -> NodeAddress(partyInfo.party.owningKey, partyInfo.addresses.first())
             is PartyInfo.DistributedNode -> ServiceAddress(partyInfo.party.owningKey)
         }
     }

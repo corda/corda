@@ -13,14 +13,14 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `issue key`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(false, true)
+        val mockNet = MockNetwork(threadPerNode = true)
 
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode()
+        mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
-        val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
-        val bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
+        val alice = aliceNode.info.singleIdentity()
+        val bob = bobNode.services.myInfo.singleIdentity()
 
         // Run the flows
         val requesterFlow = aliceNode.services.startFlow(SwapIdentitiesFlow(bob))
@@ -53,13 +53,13 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `verifies identity name`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(false, true)
+        val mockNet = MockNetwork(threadPerNode = true)
 
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode(DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
-        val bob: Party = bobNode.services.myInfo.chooseIdentity()
+        val bob: Party = bobNode.services.myInfo.singleIdentity()
         val notBob = notaryNode.database.transaction {
             notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
         }
@@ -78,13 +78,13 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `verifies signature`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(false, true)
+        val mockNet = MockNetwork(threadPerNode = true)
 
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode(DUMMY_NOTARY.name)
+        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
-        val bob: Party = bobNode.services.myInfo.chooseIdentity()
+        val bob: Party = bobNode.services.myInfo.singleIdentity()
         // Check that the wrong signature is rejected
         notaryNode.database.transaction {
             notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)

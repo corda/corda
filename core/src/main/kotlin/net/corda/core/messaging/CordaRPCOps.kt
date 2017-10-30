@@ -24,7 +24,6 @@ import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
-import java.util.*
 
 @CordaSerializable
 data class StateMachineInfo(

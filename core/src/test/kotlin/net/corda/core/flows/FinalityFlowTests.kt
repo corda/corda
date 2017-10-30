@@ -6,7 +6,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -17,8 +17,8 @@ import kotlin.test.assertFailsWith
 
 class FinalityFlowTests {
     private lateinit var mockNet: MockNetwork
-    private lateinit var aliceServices: ServiceHubInternal
-    private lateinit var bobServices: ServiceHubInternal
+    private lateinit var aliceServices: StartedNodeServices
+    private lateinit var bobServices: StartedNodeServices
     private lateinit var alice: Party
     private lateinit var bob: Party
     private lateinit var notary: Party
@@ -30,12 +30,11 @@ class FinalityFlowTests {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         mockNet.runNetwork()
-        aliceNode.internals.ensureRegistered()
         aliceServices = aliceNode.services
         bobServices = bobNode.services
-        alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
-        bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
-        notary = notaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+        notary = notaryNode.services.getDefaultNotary()
     }
 
     @After

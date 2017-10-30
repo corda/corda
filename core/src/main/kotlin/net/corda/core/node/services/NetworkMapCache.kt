@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -18,8 +19,7 @@ import java.security.PublicKey
  * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
  * with a specified network map service, which it fetches data from and then subscribes to updates of.
  */
-interface NetworkMapCache {
-
+interface NetworkMapCache : NetworkMapCacheBase {
     @CordaSerializable
     sealed class MapChange {
         abstract val node: NodeInfo
@@ -29,6 +29,23 @@ interface NetworkMapCache {
         data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
 
+    /**
+     * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable; if the party
+     * is anonymised and the well known party cannot be resolved, it is impossible ot identify the node and therefore this
+     * returns null.
+     * Notice that when there are more than one node for a given party (in case of distributed services) first service node
+     * found will be returned. See also: [NetworkMapCache.getNodesByLegalIdentityKey].
+     *
+     * @param party party to retrieve node information for.
+     * @return the node for the identity, or null if the node could not be found. This does not necessarily mean there is
+     * no node for the party, only that this cache is unaware of it.
+     */
+    fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
+}
+
+/** Subset of [NetworkMapCache] that doesn't depend on an [IdentityService]. */
+@DoNotImplement
+interface NetworkMapCacheBase {
     // DOCSTART 1
     /**
      * A list of notary services available on the network.
@@ -40,7 +57,7 @@ interface NetworkMapCache {
     // DOCEND 1
 
     /** Tracks changes to the network map cache. */
-    val changed: Observable<MapChange>
+    val changed: Observable<NetworkMapCache.MapChange>
     /** Future to track completion of the NetworkMapService registration. */
     val nodeReady: CordaFuture<Void?>
 
@@ -48,20 +65,7 @@ interface NetworkMapCache {
      * Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */
-    fun track(): DataFeed<List<NodeInfo>, MapChange>
-
-    /**
-     * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable; if the party
-     * is anonymised and the well known party cannot be resolved, it is impossible ot identify the node and therefore this
-     * returns null.
-     * Notice that when there are more than one node for a given party (in case of distributed services) first service node
-     * found will be returned. See also: [getNodesByLegalIdentityKey].
-     *
-     * @param party party to retrieve node information for.
-     * @return the node for the identity, or null if the node could not be found. This does not necessarily mean there is
-     * no node for the party, only that this cache is unaware of it.
-     */
-    fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
+    fun track(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
 
     /**
      * Look up the node info for a legal name.

@@ -62,7 +62,7 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Before
     fun setUp() {
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), createIdentityService = ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         database.transaction {
             oracle = createMockCordaService(services, NodeInterestRates::Oracle)
             oracle.knownFixes = TEST_DATA
@@ -200,13 +200,13 @@ class NodeInterestRatesTest : TestDependencyInjectionBase() {
 
     @Test
     fun `network tearoff`() {
-        val mockNet = MockNetwork(initialiseSerialization = false, cordappPackages = listOf("net.corda.finance.contracts"))
+        val mockNet = MockNetwork(initialiseSerialization = false, cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
         val n1 = mockNet.createNotaryNode()
         val oracleNode = mockNet.createNode().apply {
             internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
-                internals.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+                internals.findTokenizableService(NodeInterestRates.Oracle::class.java)!!.knownFixes = TEST_DATA
             }
         }
         val tx = makePartialTX()

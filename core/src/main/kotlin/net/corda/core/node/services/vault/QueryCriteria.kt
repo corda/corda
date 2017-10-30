@@ -2,6 +2,7 @@
 
 package net.corda.core.node.services.vault
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
@@ -144,6 +145,7 @@ sealed class QueryCriteria {
     infix fun or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)
 }
 
+@DoNotImplement
 interface IQueryCriteriaParser {
     fun parseCriteria(criteria: QueryCriteria.CommonQueryCriteria): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria): Collection<Predicate>
