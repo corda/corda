@@ -38,9 +38,9 @@ private val singleExtract = { x: Annotation -> listOf(x) }
 
 // Transform annotation used to test the handling of transforms the de-serialising node doesn't understand. At
 // some point test cases will have been created with this transform applied.
-//@Target(AnnotationTarget.CLASS)
-//@Retention(AnnotationRetention.RUNTIME)
-//annotation class UnknownTransformAnnotation(val a: Int, val b: Int, val c: Int)
+// @Target(AnnotationTarget.CLASS)
+// @Retention(AnnotationRetention.RUNTIME)
+// annotation class UnknownTransformAnnotation(val a: Int, val b: Int, val c: Int)
 
 /**
  * Utility list of all transforms we support that simplifies our generation code.

@@ -10,7 +10,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class EnumEvolvabilityTests {
-//    var localPath = "file:///Users/katelynbaker/srcs-ide/corda/node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp"
     var localPath = "file:///home/katelyn/srcs/corda/node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp"
 
 
@@ -408,7 +407,7 @@ class EnumEvolvabilityTests {
     }
 
 
-    // @UnknownTransformAnnotation (10, 20, 30)
+    //@UnknownTransformAnnotation (10, 20, 30)
     enum class WithUnknownTest {
         A, B, C, D
     }
@@ -417,6 +416,7 @@ class EnumEvolvabilityTests {
 
     // To regenerate the types for this test uncomment the UnknownTransformAnnotation from
     // TransformTypes.kt and SupportedTransforms.kt
+    // ALSO: remember to re-annotate the enum WithUnkownTest above
     @Test
     fun testUnknownTransform() {
         val resource = "EnumEvolvabilityTests.testUnknownTransform"

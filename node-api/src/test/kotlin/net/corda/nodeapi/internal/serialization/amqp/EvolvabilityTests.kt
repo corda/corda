@@ -30,8 +30,7 @@ class EvolvabilityTests {
 
         // Original version of the class for the serialised version of this class
         // data class C (val a: Int, val b: Int)
-        // val sc = SerializationOutput(sf).serialize(C(A, B))
-        // File(URI("$localPath/$resource")).writeBytes(sc.bytes)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(C(A, B)).bytes)
 
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: Int, val a: Int)
@@ -55,8 +54,7 @@ class EvolvabilityTests {
 
         // Original version of the class as it was serialised
         // data class C (val a: Int, val b: String)
-        // val sc = SerializationOutput(sf).serialize(C(A, B))
-        // File(URI("$localPath/$resource")).writeBytes(sc.bytes)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(C(A, B)).bytes)
 
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: String, val a: Int)
@@ -78,8 +76,7 @@ class EvolvabilityTests {
 
         // Original version of the class as it was serialised
         // data class C(val a: Int)
-        // val sc = SerializationOutput(sf).serialize(C(A))
-        // File(URI("$localPath/$resource")).writeBytes(sc.bytes)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(C(A)).bytes)
 
         data class C(val a: Int, val b: Int?)
 
@@ -90,7 +87,7 @@ class EvolvabilityTests {
 
         assertEquals(A, deserializedC.a)
         assertEquals(null, deserializedC.b)
-    }
+     }
 
     @Test(expected = NotSerializableException::class)
     fun addAdditionalParam() {
@@ -130,8 +127,7 @@ class EvolvabilityTests {
 
         // Original version of the class as it was serialised
         // data class CC(val a: Int, val b: String, val c: String, val d: Int)
-        // val scc = SerializationOutput(sf).serialize(CC(A, B, C, D))
-        // File(URI("$localPath/$resource")).writeBytes(scc.bytes)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC(A, B, C, D)).bytes)
 
         data class CC(val b: String, val d: Int)
 
@@ -158,8 +154,7 @@ class EvolvabilityTests {
 
         // Original version of the class as it was serialised
         // data class CC(val a: Int, val b: String, val c: String, val d: Int)
-        // val scc = SerializationOutput(sf).serialize(CC(A, B, C, D))
-        // File(URI("$localPath/$resource")).writeBytes(scc.bytes)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC(A, B, C, D)).bytes)
 
         data class CC(val a: Int, val e: Boolean?, val d: Int)
 
@@ -181,8 +176,7 @@ class EvolvabilityTests {
 
         // Original version of the class as it was serialised
         // data class CC(val a: Int)
-        // val scc = SerializationOutput(sf).serialize(CC(A))
-        // File(URI("$localPath/$resource")).writeBytes(scc.bytes)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC(A)).bytes)
 
         @Suppress("UNUSED")
         data class CC(val a: Int, val b: String) {
@@ -236,8 +230,7 @@ class EvolvabilityTests {
 
         // Original version of the class as it was serialised
         // data class CC(val a: Int, val b: Int, val c: String)
-        // val scc = SerializationOutput(sf).serialize(CC(A, B, C))
-        // File(URI("$localPath/$resource")).writeBytes(scc.bytes)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC(A, B, C)).bytes)
 
         @Suppress("UNUSED")
         data class CC(val a: Int, val b: Int, val c: String, val d: String) {

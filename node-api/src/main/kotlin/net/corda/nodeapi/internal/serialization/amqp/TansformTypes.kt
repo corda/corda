@@ -35,14 +35,15 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
     Rename({ a -> RenameSchemaTransform((a as CordaSerializationTransformRename).from, a.to) }) {
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
-    };
+    }
     // Transform used to test the unknown handler, leave this at as the final constant, uncomment
     // when regenerating test cases - if Java had a pre-processor this would be much neater
     //
-    //UnknownTest({ a -> UnknownTestTransform((a as UnknownTransformAnnotation).a, a.b, a.c)}) {
+    //,UnknownTest({ a -> UnknownTestTransform((a as UnknownTransformAnnotation).a, a.b, a.c)}) {
     //    override fun getDescriptor(): Any = DESCRIPTOR
     //    override fun getDescribed(): Any = ordinal
-    //};
+    //}
+    ;
 
     companion object : DescribedTypeConstructor<TransformTypes> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_ELEMENT_KEY.amqpDescriptor
