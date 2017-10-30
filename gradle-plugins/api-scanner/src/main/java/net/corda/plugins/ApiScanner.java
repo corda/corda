@@ -32,11 +32,11 @@ public class ApiScanner implements Plugin<Project> {
             project.getLogger().info("Adding scanApi task to {}", project.getName());
             project.getTasks().create("scanApi", ScanApi.class, scanTask -> {
                 scanTask.setClasspath(compilationClasspath(project.getConfigurations()));
+                // Automatically creates a dependency on jar tasks.
                 scanTask.setSources(project.files(jarTasks));
                 scanTask.setExcludeClasses(extension.getExcludeClasses());
                 scanTask.setVerbose(extension.isVerbose());
                 scanTask.setEnabled(extension.isEnabled());
-                scanTask.dependsOn(jarTasks);
 
                 // Declare this ScanApi task to be a dependency of any
                 // GenerateApi tasks belonging to any of our ancestors.
