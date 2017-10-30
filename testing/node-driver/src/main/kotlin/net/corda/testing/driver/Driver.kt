@@ -1022,7 +1022,7 @@ class DriverDSL(
                 )
                 // See experimental/quasar-hook/README.md for how to generate.
                 val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
-                val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
+                val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath=$excludePattern"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
@@ -1074,6 +1074,14 @@ class DriverDSL(
                     .first { it.fileName != "Driver.kt" }
                     .let { Class.forName(it.className).`package`?.name }
                     ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
+        }
+
+        /**
+         * We have an alternative way of specifying classpath for spawned process: by using "-cp" option. So duplicating the setting of this
+         * rather long string is un-necessary and can be harmful on Windows.
+         */
+        private fun Map<String, Any>.removeResolvedClasspath(): Map<String, Any> {
+            return filterNot { it.key == "java.class.path" }
         }
     }
 }
