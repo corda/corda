@@ -1,9 +1,9 @@
 package net.corda.testing.node
 
-import co.paralleluniverse.common.util.VisibleForTesting
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
@@ -27,32 +27,12 @@ class MockNetworkMapCache(database: CordaPersistence, configuration: NodeConfigu
     }
 
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
+    override val nodeReady: CordaFuture<Void?> get() = doneFuture(null)
 
     init {
         val mockNodeA = NodeInfo(listOf(BANK_C_ADDR), listOf(BANK_C), 1, serial = 1L)
         val mockNodeB = NodeInfo(listOf(BANK_D_ADDR), listOf(BANK_D), 1, serial = 1L)
         partyNodes.add(mockNodeA)
         partyNodes.add(mockNodeB)
-        runWithoutMapService()
-    }
-
-    /**
-     * Directly add a registration to the internal cache. DOES NOT fire the change listeners, as it's
-     * not a change being received.
-     */
-    @VisibleForTesting
-    fun addRegistration(node: NodeInfo) {
-        val previousIndex = partyNodes.indexOfFirst { it.legalIdentitiesAndCerts == node.legalIdentitiesAndCerts }
-        if (previousIndex != -1) partyNodes[previousIndex] = node
-        else partyNodes.add(node)
-    }
-
-    /**
-     * Directly remove a registration from the internal cache. DOES NOT fire the change listeners, as it's
-     * not a change being received.
-     */
-    @VisibleForTesting
-    fun deleteRegistration(legalIdentity: Party): Boolean {
-        return partyNodes.removeIf { legalIdentity.owningKey in it.legalIdentitiesAndCerts.map { it.owningKey } }
     }
 }

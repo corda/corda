@@ -8,7 +8,6 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
@@ -182,7 +181,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch) {
         val mockNet = args.network
-        override val networkMapAddress = null
         val id = args.id
         internal val notaryIdentity = args.notaryIdentity
         val entropyRoot = args.entropyRoot
@@ -235,8 +233,11 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             return entropyToKeyPair(counter)
         }
 
-        // It's OK to not have a network map service in the mock network.
-        override fun noNetworkMapConfigured() = doneFuture(Unit)
+        /**
+         * MockNetwork will ensure nodes are connected to each other. The nodes themselves
+         * won't be able to tell if that happened already or not.
+         */
+        override fun checkNetworkMapIsInitialized() = Unit
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
