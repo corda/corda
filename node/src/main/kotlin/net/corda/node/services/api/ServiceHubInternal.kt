@@ -11,7 +11,6 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -33,34 +32,11 @@ import net.corda.node.utilities.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
 interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
-    /**
-     * Deregister from updates from the given map service.
-     * @param network the network messaging service.
-     * @param mapParty the network map service party to fetch current state from.
-     */
-    fun deregisterForUpdates(network: MessagingService, mapParty: Party): CordaFuture<Unit>
-
-    /**
-     * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
-     * updates.
-     * @param network the network messaging service.
-     * @param networkMapAddress the network map service to fetch current state from.
-     * @param subscribe if the cache should subscribe to updates.
-     * @param ifChangedSinceVer an optional version number to limit updating the map based on. If the latest map
-     * version is less than or equal to the given version, no update is fetched.
-     */
-    fun addMapService(network: MessagingService, networkMapAddress: SingleMessageRecipient,
-                      subscribe: Boolean, ifChangedSinceVer: Int? = null): CordaFuture<Unit>
-
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)
 
     /** Removes a node from the local cache. */
     fun removeNode(node: NodeInfo)
-
-    /** For testing where the network map cache is manipulated marks the service as immediately ready. */
-    @VisibleForTesting
-    fun runWithoutMapService()
 
     /** Indicates if loading network map data from database was successful. */
     val loadDBSuccess: Boolean

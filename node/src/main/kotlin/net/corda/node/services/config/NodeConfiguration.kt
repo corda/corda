@@ -4,7 +4,6 @@ import com.typesafe.config.Config
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
@@ -19,12 +18,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
     // TODO: Remove this so we don't accidentally use this identity in the code?
     val myLegalName: CordaX500Name
-    /**
-     * If null then configure the node to run as the netwok map service, otherwise use this to connect to the network map
-     * service.
-     */
-    val networkMapService: NetworkMapInfo?
-    val noNetworkMapServiceMode: Boolean
     val minimumPlatformVersion: Int
     val emailAddress: String
     val exportJMXto: String
@@ -92,8 +85,6 @@ data class NodeConfigurationImpl(
         override val dataSourceProperties: Properties,
         override val database: Properties?,
         override val certificateSigningService: URL,
-        override val networkMapService: NetworkMapInfo?,
-        override val noNetworkMapServiceMode: Boolean = false,
         override val minimumPlatformVersion: Int = 1,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,

@@ -118,13 +118,6 @@ path to the node's base directory.
 
     Only one of ``raft``, ``bftSMaRt`` or ``custom`` configuration values may be specified.
 
-:networkMapService: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise this is
-    a config object with the details of the network map service:
-
-        :address: Host and port string of the ArtemisMQ broker hosting the network map node
-        :legalName: Legal name of the node. This is required as part of the TLS host verification process. The node will
-            reject the connection to the network map service if it provides a TLS common name which doesn't match with this value.
-
 :minimumPlatformVersion: Used by the node if it's running the network map service to enforce a minimum version requirement
     on registrations - any node on a Platform Version lower than this value will have their registration rejected.
     Defaults to 1 if absent.
