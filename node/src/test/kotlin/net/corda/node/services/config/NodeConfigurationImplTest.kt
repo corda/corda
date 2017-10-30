@@ -36,7 +36,6 @@ class NodeConfigurationImplTest {
     private val testConfiguration = NodeConfigurationImpl(
             baseDirectory = Paths.get("."),
             myLegalName = ALICE.name,
-            networkMapService = null,
             emailAddress = "",
             keyStorePassword = "cordacadevpass",
             trustStorePassword = "trustpass",
