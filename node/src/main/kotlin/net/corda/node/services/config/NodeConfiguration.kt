@@ -49,7 +49,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val detectPublicIp: Boolean get() = true
 }
 
-fun NodeConfiguration.shouldCheckCheckpoints(): Boolean{
+fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
 }
 
