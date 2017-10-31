@@ -220,9 +220,7 @@ private abstract class JarType(private val nodeDirectory: Path, private val jarN
     fun directoryName(): String = nodeDirectory.fileName.toString()
     fun jarName(): String = jarName
     fun jarFile(): Path = nodeDirectory.resolve(jarName())
-    open fun validateFilesOrThrow() {
-        throw NotImplementedError()
-    }
+    abstract fun validateFilesOrThrow()
 
     protected fun validateFilesExistOrThrow() {
         nodeDirectory.existsOrThrow()
