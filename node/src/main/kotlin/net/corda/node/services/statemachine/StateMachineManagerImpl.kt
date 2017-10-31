@@ -127,7 +127,7 @@ class StateMachineManagerImpl(
     // Context for tokenized services in checkpoints
     private lateinit var tokenizableServices: List<Any>
     private val serializationContext by lazy {
-        SerializeAsTokenContextImpl(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
+        SerializeAsTokenContextImpl(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub.attachments)
     }
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
