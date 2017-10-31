@@ -326,10 +326,10 @@ inline fun requireNull(value: Any?, lazyMessage: () -> Any) = require(value == n
  * Throws an [IllegalStateException] if the [value] is false.
  * Provides the converse of the checkNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
  */
-inline fun <T:Any> checkNull(value: T?) = checkNull(value) { "Required value was not null." }
+inline fun <T : Any> checkNull(value: T?) = checkNull(value) { "Required value was not null." }
 
 /**
  * Throws an [IllegalStateException] with the result of calling [lazyMessage] if the [value] is false.
  * Provides the converse of the checkNotNull kotlin builtin. See kotlin-stdlib/kotlin/util/Preconditions.kt .
  */
-inline fun <T:Any> checkNull(value: T?, lazyMessage: () -> Any) = check(value == null, lazyMessage)
+inline fun <T : Any> checkNull(value: T?, lazyMessage: () -> Any) = check(value == null, lazyMessage)
