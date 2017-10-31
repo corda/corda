@@ -271,7 +271,7 @@ val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteAr
 
 
 val KRYO_P2P_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
+        SerializationEnvironmentImpl::class.java.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,

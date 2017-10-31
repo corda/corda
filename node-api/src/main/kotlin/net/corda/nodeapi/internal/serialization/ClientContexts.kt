@@ -3,7 +3,7 @@
 package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationEnvironmentImpl
 
 /*
  * Serialisation contexts for the client.
@@ -11,7 +11,7 @@ import net.corda.core.serialization.SerializationDefaults
  * servers from trying to instantiate any of them.
  */
 val KRYO_RPC_CLIENT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        SerializationDefaults.javaClass.classLoader,
+        SerializationEnvironmentImpl::class.java.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,

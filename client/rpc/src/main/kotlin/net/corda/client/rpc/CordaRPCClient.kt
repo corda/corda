@@ -1,6 +1,5 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.messaging.CordaRPCOps
@@ -69,11 +68,6 @@ class CordaRPCClient @JvmOverloads constructor(
         hostAndPort: NetworkHostAndPort,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
 ) {
-    init {
-        // TODO: allow clients to have serialization factory etc injected and align with RPC protocol version?
-        KryoClientSerializationScheme.initialiseSerialization()
-    }
-
     private val rpcClient = RPCClient<CordaRPCOps>(
             tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = null),
             configuration.toRpcClientConfiguration(),

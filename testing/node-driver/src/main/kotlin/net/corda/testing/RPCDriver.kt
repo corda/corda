@@ -12,6 +12,8 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
+import net.corda.core.serialization.SerializationEnvironmentImpl
+import net.corda.core.serialization.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -21,7 +23,10 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.serialization.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.testing.driver.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -520,7 +525,7 @@ class RandomRpcUser {
             val hostAndPort = NetworkHostAndPort.parse(args[1])
             val username = args[2]
             val password = args[3]
-            KryoClientSerializationScheme.initialiseSerialization()
+            initialiseSerialization()
             val handle = RPCClient<RPCOps>(hostAndPort, null, serializationContext = KRYO_RPC_CLIENT_CONTEXT).start(rpcClass, username, password)
             val callGenerators = rpcClass.declaredMethods.map { method ->
                 Generator.sequence(method.parameters.map {
@@ -537,6 +542,16 @@ class RandomRpcUser {
                 call.call()
                 Thread.sleep(100)
             }
+        }
+
+        private fun initialiseSerialization() {
+            nodeSerializationEnv = SerializationEnvironmentImpl(
+                    SerializationFactoryImpl().apply {
+                        registerScheme(KryoClientSerializationScheme())
+                        registerScheme(AMQPClientSerializationScheme())
+                    },
+                    KRYO_P2P_CONTEXT,
+                    rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
         }
     }
 }

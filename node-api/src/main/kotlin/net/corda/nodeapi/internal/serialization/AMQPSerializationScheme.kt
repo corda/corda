@@ -133,7 +133,7 @@ class AMQPClientSerializationScheme : AbstractAMQPSerializationScheme() {
 }
 
 val AMQP_P2P_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
-        SerializationDefaults.javaClass.classLoader,
+        SerializationEnvironmentImpl::class.java.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,

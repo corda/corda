@@ -23,7 +23,7 @@ public final class LambdaCheckpointSerializationTest {
 
     @Before
     public void setup() {
-        factory = testSerialization.env.getSERIALIZATION_FACTORY();
+        factory = testSerialization.getEnv().getSERIALIZATION_FACTORY();
         context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint);
     }
 

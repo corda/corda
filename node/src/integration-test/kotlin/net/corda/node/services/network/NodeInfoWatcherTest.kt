@@ -9,16 +9,18 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.nodeapi.NodeInfoFilesCopier
+import net.corda.testing.*
 import net.corda.testing.ALICE
 import net.corda.testing.ALICE_KEY
 import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.getTestPartyAndCertificate
-import net.corda.testing.internal.NodeBasedTest
 import net.corda.testing.node.MockKeyManagementService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.contentOf
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import rx.observers.TestSubscriber
 import rx.schedulers.TestScheduler
 import java.nio.file.Path
@@ -26,7 +28,14 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class NodeInfoWatcherTest : NodeBasedTest() {
+class NodeInfoWatcherTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
+
     companion object {
         val nodeInfo = NodeInfo(listOf(), listOf(getTestPartyAndCertificate(ALICE)), 0, 0)
     }

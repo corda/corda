@@ -35,7 +35,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()

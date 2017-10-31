@@ -23,7 +23,7 @@ public final class ForbiddenLambdaSerializationTests {
 
     @Before
     public void setup() {
-        factory = testSerialization.env.getSERIALIZATION_FACTORY();
+        factory = testSerialization.getEnv().getSERIALIZATION_FACTORY();
     }
 
     @Test

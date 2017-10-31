@@ -2,8 +2,11 @@ package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.WriteOnceProperty
 import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.internal.UnstackableInheritableThreadLocal
+import net.corda.core.internal.UnstackableProperty
+import net.corda.core.internal.UnstackableThreadLocal
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
@@ -170,17 +173,44 @@ interface SerializationContext {
     enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint }
 }
 
+class SerializationEnvironmentImpl(
+        override val SERIALIZATION_FACTORY: SerializationFactory,
+        override val P2P_CONTEXT: SerializationContext,
+        rpcServerContext: SerializationContext? = null,
+        rpcClientContext: SerializationContext? = null,
+        storageContext: SerializationContext? = null,
+        checkpointContext: SerializationContext? = null) : SerializationEnvironment {
+    // Those that are passed in as null are never inited:
+    override lateinit var RPC_SERVER_CONTEXT: SerializationContext
+    override lateinit var RPC_CLIENT_CONTEXT: SerializationContext
+    override lateinit var STORAGE_CONTEXT: SerializationContext
+    override lateinit var CHECKPOINT_CONTEXT: SerializationContext
+
+    init {
+        rpcServerContext?.let { RPC_SERVER_CONTEXT = it }
+        rpcClientContext?.let { RPC_CLIENT_CONTEXT = it }
+        storageContext?.let { STORAGE_CONTEXT = it }
+        checkpointContext?.let { CHECKPOINT_CONTEXT = it }
+    }
+}
+
+private val _nodeSerializationEnv = UnstackableProperty<SerializationEnvironment>("nodeSerializationEnv")
+@VisibleForTesting
+val _contextSerializationEnv = UnstackableThreadLocal<SerializationEnvironment>("contextSerializationEnv")
+@VisibleForTesting
+val _inheritableContextSerializationEnv = UnstackableInheritableThreadLocal<SerializationEnvironment>("inheritableContextSerializationEnv")
+private val serializationEnvProperties = listOf(_nodeSerializationEnv, _contextSerializationEnv, _inheritableContextSerializationEnv)
 /**
  * Global singletons to be used as defaults that are injected elsewhere (generally, in the node or in RPC client).
  */
-object SerializationDefaults : SerializationEnvironment {
-    override var SERIALIZATION_FACTORY: SerializationFactory by WriteOnceProperty()
-    override var P2P_CONTEXT: SerializationContext by WriteOnceProperty()
-    override var RPC_SERVER_CONTEXT: SerializationContext by WriteOnceProperty()
-    override var RPC_CLIENT_CONTEXT: SerializationContext by WriteOnceProperty()
-    override var STORAGE_CONTEXT: SerializationContext by WriteOnceProperty()
-    override var CHECKPOINT_CONTEXT: SerializationContext by WriteOnceProperty()
-}
+val SerializationDefaults: SerializationEnvironment
+    get() = serializationEnvProperties.mapNotNull { it.get() }.run {
+        singleOrNull() ?: throw IllegalStateException("Expected exactly 1 of {${serializationEnvProperties.joinToString(", ") { it.name }}} but there are: $size").also {
+            it.printStackTrace() // Sadly, it won't always propagate.
+        }
+    }
+/** Should be set once in main. */
+var nodeSerializationEnv by _nodeSerializationEnv
 
 /**
  * Convenience extension method for deserializing a ByteSequence, utilising the defaults.
