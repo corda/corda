@@ -37,8 +37,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     private val nodes = LinkedHashMap<String, NodeConfigWrapper>()
     private val port = AtomicInteger(firstPort)
 
-    private var networkMapConfig: NetworkMapConfig? = null
-
     val activeNodes: List<NodeConfigWrapper>
         get() = nodes.values.filter {
             (it.state == NodeState.RUNNING) || (it.state == NodeState.STARTING)
@@ -70,7 +68,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 rpcAddress = nodeData.rpcPort.toLocalAddress(),
                 webAddress = nodeData.webPort.toLocalAddress(),
                 notary = nodeData.extraServices.filterIsInstance<NotaryService>().noneOrSingle(),
-                networkMapService = networkMapConfig,  // The first node becomes the network map
                 h2port = nodeData.h2Port.value,
                 issuableCurrencies = nodeData.extraServices.filterIsInstance<CurrencyIssuer>().map { it.currency.toString() }
         )
@@ -82,11 +79,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             return null
         }
 
-        if (nodeConfig.isNetworkMap) {
-            networkMapConfig = nodeConfig.let { NetworkMapConfig(it.myLegalName, it.p2pAddress) }
-            log.info("Network map provided by: ${nodeConfig.myLegalName}")
-        }
-
         nodeInfoFilesCopier.addConfig(wrapper)
 
         return wrapper
@@ -96,10 +88,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         config.state = NodeState.DEAD
 
         nodeInfoFilesCopier.removeConfig(config)
-
-        if (config.nodeConfig.isNetworkMap) {
-            log.warning("Network map service (Node '${config.nodeConfig.myLegalName}') has exited.")
-        }
     }
 
     val nextPort: Int get() = port.andIncrement
@@ -110,7 +98,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     fun nameExists(name: String) = keyExists(name.toKey())
 
-    fun hasNetworkMap(): Boolean = networkMapConfig != null
+    fun hasNotary(): Boolean = activeNodes.any { it.nodeConfig.notary != null }
 
     fun runCorda(pty: R3Pty, config: NodeConfigWrapper): Boolean {
         try {
@@ -141,7 +129,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         log.info("Changed base directory: $baseDir")
 
         // Wipe out any knowledge of previous nodes.
-        networkMapConfig = null
         nodes.clear()
         nodeInfoFilesCopier.reset()
     }
@@ -156,10 +143,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         nodeInfoFilesCopier.addConfig(config)
 
         updatePort(config.nodeConfig)
-
-        if (networkMapConfig == null && config.nodeConfig.isNetworkMap) {
-            networkMapConfig = config.nodeConfig.let { NetworkMapConfig(it.myLegalName, it.p2pAddress) }
-        }
 
         return true
     }
