@@ -23,6 +23,7 @@ import net.corda.testing.node.MockServices
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -32,7 +33,7 @@ import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertFailsWith
 
-class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
+class AttachmentsClassLoaderTests {
     companion object {
         val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentsClassLoaderTests::class.java.getResource("isolated.jar")
         private const val ISOLATED_CONTRACT_CLASS_NAME = "net.corda.finance.contracts.isolated.AnotherDummyContract"
@@ -48,6 +49,9 @@ class AttachmentsClassLoaderTests : TestDependencyInjectionBase() {
         }
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private lateinit var serviceHub: DummyServiceHub
 
     class DummyServiceHub : MockServices() {

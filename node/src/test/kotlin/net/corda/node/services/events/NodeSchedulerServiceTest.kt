@@ -42,6 +42,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Paths
 import java.security.PublicKey
@@ -57,6 +58,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         private val myInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val realClock: Clock = Clock.systemUTC()
     private val stoppedClock: Clock = Clock.fixed(realClock.instant(), realClock.zone)
     private val testClock = TestClock(stoppedClock)
@@ -86,7 +90,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Before
     fun setup() {
-        initialiseTestSerialization()
         countDown = CountDownLatch(1)
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
@@ -137,7 +140,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
         database.close()
-        resetTestSerialization()
     }
 
     // Ignore IntelliJ when it says these properties can be private, if they are we cannot serialise them

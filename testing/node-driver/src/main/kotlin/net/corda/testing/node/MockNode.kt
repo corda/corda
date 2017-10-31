@@ -42,7 +42,6 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.resetTestSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -121,7 +120,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val threadPerNode: Boolean = defaultParameters.threadPerNode,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
-                  private val initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                  initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                   private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
@@ -136,9 +135,9 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private val _nodes = mutableListOf<MockNode>()
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
+    private val serializationEnv = initialiseTestSerialization(initialiseSerialization)
 
     init {
-        if (initialiseSerialization) initialiseTestSerialization()
         filesystem.getPath("/nodes").createDirectory()
     }
 
@@ -383,7 +382,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
-        if (initialiseSerialization) resetTestSerialization()
+        serializationEnv.resetTestSerialization()
     }
 
     // Test method to block until all scheduled activity, active flows

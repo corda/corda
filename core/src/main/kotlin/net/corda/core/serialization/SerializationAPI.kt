@@ -3,6 +3,7 @@ package net.corda.core.serialization
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.WriteOnceProperty
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
@@ -172,13 +173,13 @@ interface SerializationContext {
 /**
  * Global singletons to be used as defaults that are injected elsewhere (generally, in the node or in RPC client).
  */
-object SerializationDefaults {
-    var SERIALIZATION_FACTORY: SerializationFactory by WriteOnceProperty()
-    var P2P_CONTEXT: SerializationContext by WriteOnceProperty()
-    var RPC_SERVER_CONTEXT: SerializationContext by WriteOnceProperty()
-    var RPC_CLIENT_CONTEXT: SerializationContext by WriteOnceProperty()
-    var STORAGE_CONTEXT: SerializationContext by WriteOnceProperty()
-    var CHECKPOINT_CONTEXT: SerializationContext by WriteOnceProperty()
+object SerializationDefaults : SerializationEnvironment {
+    override var SERIALIZATION_FACTORY: SerializationFactory by WriteOnceProperty()
+    override var P2P_CONTEXT: SerializationContext by WriteOnceProperty()
+    override var RPC_SERVER_CONTEXT: SerializationContext by WriteOnceProperty()
+    override var RPC_CLIENT_CONTEXT: SerializationContext by WriteOnceProperty()
+    override var STORAGE_CONTEXT: SerializationContext by WriteOnceProperty()
+    override var CHECKPOINT_CONTEXT: SerializationContext by WriteOnceProperty()
 }
 
 /**

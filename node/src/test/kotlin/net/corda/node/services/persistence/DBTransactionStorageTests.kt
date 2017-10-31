@@ -24,11 +24,15 @@ import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
-class DBTransactionStorageTests : TestDependencyInjectionBase() {
+class DBTransactionStorageTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     lateinit var database: CordaPersistence
     lateinit var transactionStorage: DBTransactionStorage
     lateinit var services: MockServices

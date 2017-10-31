@@ -4,8 +4,9 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -13,8 +14,7 @@ import java.security.PrivateKey
 import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
-class PrivateKeySerializationTest(private val privateKey: PrivateKey, private val testName: String) : TestDependencyInjectionBase() {
-
+class PrivateKeySerializationTest(private val privateKey: PrivateKey, private val testName: String) {
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{1}")
@@ -25,6 +25,10 @@ class PrivateKeySerializationTest(private val privateKey: PrivateKey, private va
             return privateKeys.map { arrayOf<Any>(it, PrivateKeySerializationTest::class.java.simpleName + "-" + it.javaClass.simpleName) }
         }
     }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     @Test
     fun `passed with expected UseCases`() {

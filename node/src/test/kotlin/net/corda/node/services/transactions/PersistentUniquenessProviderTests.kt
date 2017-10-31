@@ -10,11 +10,15 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
+class PersistentUniquenessProviderTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val identity = MEGA_CORP
     val txID = SecureHash.randomSHA256()
 

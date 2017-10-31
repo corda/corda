@@ -230,8 +230,7 @@ class CommercialPaperTestsGeneric {
 
     //    @Test
     @Ignore
-    fun `issue move and then redeem`() {
-        initialiseTestSerialization()
+    fun `issue move and then redeem`() = withTestSerialization {
         val aliceDatabaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(ALICE_KEY))
         val databaseAlice = aliceDatabaseAndServices.first
         aliceServices = aliceDatabaseAndServices.second
@@ -311,6 +310,5 @@ class CommercialPaperTestsGeneric {
             validRedemption.toLedgerTransaction(aliceServices).verify()
             // soft lock not released after success either!!! (as transaction not recorded)
         }
-        resetTestSerialization()
     }
 }

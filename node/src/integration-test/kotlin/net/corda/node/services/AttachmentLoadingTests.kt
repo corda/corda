@@ -20,22 +20,24 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.nodeapi.User
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.*
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.eventually
 import net.corda.testing.node.MockServices
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
-class AttachmentLoadingTests : TestDependencyInjectionBase() {
+class AttachmentLoadingTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     private class Services : MockServices() {
         private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
         private val cordapp get() = provider.cordapps.first()

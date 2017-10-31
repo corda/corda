@@ -6,22 +6,27 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
 import net.corda.testing.kryoSpecific
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Assert.assertArrayEquals
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.test.assertEquals
 
-class MapsSerializationTest : TestDependencyInjectionBase() {
+class MapsSerializationTest {
     private companion object {
         val javaEmptyMapClass = Collections.emptyMap<Any, Any>().javaClass
         val smallMap = mapOf("foo" to "bar", "buzz" to "bull")
     }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     @Test
     fun `check EmptyMap serialization`() = amqpSpecific("kotlin.collections.EmptyMap is not enabled for Kryo serialization") {

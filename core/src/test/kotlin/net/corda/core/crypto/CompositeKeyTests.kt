@@ -9,8 +9,8 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
 import net.corda.node.utilities.*
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.kryoSpecific
+import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -20,7 +20,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CompositeKeyTests : TestDependencyInjectionBase() {
+class CompositeKeyTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()

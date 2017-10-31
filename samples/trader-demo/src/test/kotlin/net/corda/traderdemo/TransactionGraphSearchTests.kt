@@ -10,10 +10,15 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockTransactionStorage
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class TransactionGraphSearchTests : TestDependencyInjectionBase() {
+class TransactionGraphSearchTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     class GraphTransactionStorage(val originTx: SignedTransaction, val inputTx: SignedTransaction) : MockTransactionStorage() {
         init {
             addTransaction(originTx)
