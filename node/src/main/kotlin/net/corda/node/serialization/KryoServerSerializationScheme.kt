@@ -4,10 +4,10 @@ import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.ByteSequence
 import net.corda.node.services.messaging.RpcServerObservableSerializer
-import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.DefaultKryoCustomizer
-import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
-import net.corda.nodeapi.internal.serialization.RPCKryo
+import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.RPCKryo
 
 class KryoServerSerializationScheme : AbstractKryoSerializationScheme() {
     override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {

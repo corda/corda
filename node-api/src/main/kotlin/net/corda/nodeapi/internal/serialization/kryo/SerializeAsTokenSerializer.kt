@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serialization
+package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException

@@ -24,7 +24,7 @@ import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
-import net.corda.nodeapi.internal.serialization.AMQP_ENABLED
+import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
 import org.mockito.internal.stubbing.answers.ThrowsException
 import org.mockito.stubbing.Answer
 import java.nio.file.Files
