@@ -8,7 +8,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -41,7 +40,7 @@ class SerializationTokenTest {
         override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.size == this.bytes.size
     }
 
-    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, rigorousMock())
+    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(factory, context, toBeTokenized)
     @Test
     fun `write token and read tokenizable`() {
         val tokenizableBefore = LargeTokenizable()
@@ -74,15 +73,6 @@ class SerializationTokenTest {
         tokenizableBefore.serialize(factory, testContext)
     }
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun `deserialize unregistered token`() {
-        val tokenizableBefore = UnitSerializeAsToken()
-        val context = serializeAsTokenContext(emptyList<Any>())
-        val testContext = this.context.withTokenContext(context)
-        val serializedBytes = tokenizableBefore.toToken(serializeAsTokenContext(emptyList<Any>())).serialize(factory, testContext)
-        serializedBytes.deserialize(factory, testContext)
-    }
-
     @Test(expected = KryoException::class)
     fun `no context set`() {
         val tokenizableBefore = UnitSerializeAsToken()
@@ -103,23 +93,6 @@ class SerializationTokenTest {
             kryo.writeObject(it, emptyList<Any>())
         }
         val serializedBytes = SerializedBytes<Any>(stream.toByteArray())
-        serializedBytes.deserialize(factory, testContext)
-    }
-
-    private class WrongTypeSerializeAsToken : SerializeAsToken {
-        object UnitSerializationToken : SerializationToken {
-            override fun fromToken(context: SerializeAsTokenContext): Any = UnitSerializeAsToken()
-        }
-
-        override fun toToken(context: SerializeAsTokenContext): SerializationToken = UnitSerializationToken
-    }
-
-    @Test(expected = KryoException::class)
-    fun `token returns unexpected type`() {
-        val tokenizableBefore = WrongTypeSerializeAsToken()
-        val context = serializeAsTokenContext(tokenizableBefore)
-        val testContext = this.context.withTokenContext(context)
-        val serializedBytes = tokenizableBefore.serialize(factory, testContext)
         serializedBytes.deserialize(factory, testContext)
     }
 }

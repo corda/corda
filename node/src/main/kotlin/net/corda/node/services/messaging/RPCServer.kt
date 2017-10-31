@@ -25,11 +25,13 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.SerializationPropertyKey
 import net.corda.core.utilities.*
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
+import net.corda.nodeapi.internal.serialization.kryo.serializationProperty
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -452,7 +454,7 @@ class ObservableContext(
 }
 
 object RpcServerObservableSerializer : Serializer<Observable<*>>() {
-    private object RpcObservableContextKey
+    private object RpcObservableContextKey : SerializationPropertyKey<ObservableContext>
 
     private val log = LoggerFactory.getLogger(javaClass)
     fun createContext(observableContext: ObservableContext): SerializationContext {
@@ -465,7 +467,7 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
 
     override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
         val observableId = InvocationId.newInstance()
-        val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
+        val observableContext = kryo.serializationProperty(RpcObservableContextKey)!!
         output.writeInvocationId(observableId)
         val observableWithSubscription = ObservableSubscription(
                 // We capture [observableContext] in the subscriber. Note that all synchronisation/kryo borrowing

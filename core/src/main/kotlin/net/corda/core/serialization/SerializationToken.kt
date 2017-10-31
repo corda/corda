@@ -1,8 +1,5 @@
 package net.corda.core.serialization
 
-import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
-
 /**
  * The interfaces and classes in this file allow large, singleton style classes to
  * mark themselves as needing converting to some form of token representation in the serialised form
@@ -19,36 +16,21 @@ import net.corda.core.serialization.SingletonSerializationToken.Companion.single
  * This models a similar pattern to the readReplace/writeReplace methods in Java serialization.
  */
 @CordaSerializable
-interface SerializeAsToken {
-    fun toToken(context: SerializeAsTokenContext): SerializationToken
-}
-
-/**
- * This represents a token in the serialized stream for an instance of a type that implements [SerializeAsToken].
- */
-interface SerializationToken {
-    fun fromToken(context: SerializeAsTokenContext): Any
-}
+interface SerializeAsToken
 
 /**
  * A context for mapping SerializationTokens to/from SerializeAsTokens.
  */
 interface SerializeAsTokenContext {
-    val serviceHub: ServiceHub
     fun putSingleton(toBeTokenized: SerializeAsToken)
     fun getSingleton(className: String): SerializeAsToken
 }
 
 /**
- * A class representing a [SerializationToken] for some object that is not serializable but can be looked up
+ * A class representing a serialization token for some object that is not serializable but can be looked up
  * (when deserialized) via just the class name.
  */
-class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
-
-    override fun fromToken(context: SerializeAsTokenContext) = context.getSingleton(className)
-
-    fun registerWithContext(context: SerializeAsTokenContext, toBeTokenized: SerializeAsToken) = also { context.putSingleton(toBeTokenized) }
-
+class SingletonSerializationToken private constructor(val className: String) {
     companion object {
         fun <T : SerializeAsToken> singletonSerializationToken(toBeTokenized: Class<T>) = SingletonSerializationToken(toBeTokenized.name)
     }
@@ -58,8 +40,4 @@ class SingletonSerializationToken private constructor(private val className: Str
  * A base class for implementing large objects / components / services that need to serialize themselves to a string token
  * to indicate which instance the token is a serialized form of.
  */
-abstract class SingletonSerializeAsToken : SerializeAsToken {
-    private val token = singletonSerializationToken(javaClass)
-
-    override fun toToken(context: SerializeAsTokenContext) = token.registerWithContext(context, this)
-}
+abstract class SingletonSerializeAsToken : SerializeAsToken

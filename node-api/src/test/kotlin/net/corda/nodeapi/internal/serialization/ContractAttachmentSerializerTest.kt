@@ -1,12 +1,11 @@
 package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.AttachmentStorageKey
 import net.corda.core.serialization.*
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.MockServices
+import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
@@ -24,12 +23,13 @@ class ContractAttachmentSerializerTest {
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
     private lateinit var contextWithToken: SerializationContext
-    private val mockServices = MockServices(emptyList(), rigorousMock(), CordaX500Name("MegaCorp", "London", "GB"))
+    private val attachments = MockAttachmentStorage()
     @Before
     fun setup() {
         factory = testSerialization.env.serializationFactory
         context = testSerialization.env.checkpointContext
-        contextWithToken = context.withTokenContext(SerializeAsTokenContextImpl(Any(), factory, context, mockServices))
+        // XXX: Why is the SerializeAsTokenContextImpl significant?
+        contextWithToken = context.withTokenContext(SerializeAsTokenContextImpl {}).withProperty(AttachmentStorageKey, attachments)
     }
 
     @Test
@@ -47,9 +47,7 @@ class ContractAttachmentSerializerTest {
     @Test
     fun `write contract attachment and read it back using token context`() {
         val attachment = GeneratedAttachment("test".toByteArray())
-
-        mockServices.attachments.importAttachment(attachment.open())
-
+        attachments.importAttachment(attachment.open())
         val contractAttachment = ContractAttachment(attachment, DummyContract.PROGRAM_ID)
         val serialized = contractAttachment.serialize(factory, contextWithToken)
         val deserialized = serialized.deserialize(factory, contextWithToken)
@@ -63,9 +61,7 @@ class ContractAttachmentSerializerTest {
     fun `check only serialize attachment id and contract class name when using token context`() {
         val largeAttachmentSize = 1024 * 1024
         val attachment = GeneratedAttachment(ByteArray(largeAttachmentSize))
-
-        mockServices.attachments.importAttachment(attachment.open())
-
+        attachments.importAttachment(attachment.open())
         val contractAttachment = ContractAttachment(attachment, DummyContract.PROGRAM_ID)
         val serialized = contractAttachment.serialize(factory, contextWithToken)
 

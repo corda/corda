@@ -2,6 +2,7 @@ package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.serialization.internal.SerializationPropertyKey
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
@@ -120,7 +121,7 @@ interface SerializationContext {
     /**
      * A map of any addition properties specific to the particular use case.
      */
-    val properties: Map<Any, Any>
+    val properties: Map<SerializationPropertyKey<*>, Any>
     /**
      * Duplicate references to the same object preserved in the wire format and when deserialized when this is true,
      * otherwise they appear as new copies of the object.
@@ -134,7 +135,7 @@ interface SerializationContext {
     /**
      * Helper method to return a new context based on this context with the property added.
      */
-    fun withProperty(property: Any, value: Any): SerializationContext
+    fun <V : Any> withProperty(property: SerializationPropertyKey<V>, value: V): SerializationContext
 
     /**
      * Helper method to return a new context based on this context with object references disabled.

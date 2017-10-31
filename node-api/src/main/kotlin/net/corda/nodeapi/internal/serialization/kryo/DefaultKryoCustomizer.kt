@@ -17,19 +17,15 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.AbstractAttachment
-import net.corda.core.serialization.MissingAttachmentsException
-import net.corda.core.serialization.SerializationWhitelist
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SerializedBytes
+import net.corda.core.internal.AttachmentStorageKey
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.NonSingletonSerializeAsToken
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.nodeapi.internal.serialization.CordaClassResolver
-import net.corda.nodeapi.internal.serialization.DefaultWhitelist
-import net.corda.nodeapi.internal.serialization.GeneratedAttachment
-import net.corda.nodeapi.internal.serialization.MutableClassWhitelist
+import net.corda.nodeapi.internal.serialization.*
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
@@ -44,7 +40,6 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import sun.security.ec.ECPublicKeyImpl
 import sun.security.provider.certpath.X509CertPath
-import sun.security.x509.X509CertImpl
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
@@ -74,10 +69,10 @@ object DefaultKryoCustomizer {
             // Required for HashCheckingStream (de)serialization.
             // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
-            addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
+            addDefaultSerializer(SerializeAsToken::class.java, SingletonSerializeAsTokenSerializer)
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
             addDefaultSerializer(X509Certificate::class.java, X509CertificateSerializer)
-
+            addDefaultSerializer(NonSingletonSerializeAsToken::class.java, NonSingletonSerializeAsTokenSerializer)
             // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
             // Please add any new registrations to the end.
@@ -199,7 +194,7 @@ object DefaultKryoCustomizer {
 
     private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
         override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
-            if (kryo.serializationContext() != null) {
+            if (kryo.serializationProperty(SerializeAsTokenContextKey) != null) {
                 output.writeBytes(obj.attachment.id.bytes)
             } else {
                 val buffer = ByteArrayOutputStream()
@@ -210,13 +205,10 @@ object DefaultKryoCustomizer {
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
-            if (kryo.serializationContext() != null) {
+            if (kryo.serializationProperty(SerializeAsTokenContextKey) != null) {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
                 val contract = input.readString()
-
-                val context = kryo.serializationContext()!!
-                val attachmentStorage = context.serviceHub.attachments
-
+                val attachmentStorage = kryo.serializationProperty(AttachmentStorageKey)!!
                 val lazyAttachment = object : AbstractAttachment({
                     val attachment = attachmentStorage.openAttachment(attachmentHash) ?: throw MissingAttachmentsException(listOf(attachmentHash))
                     attachment.open().readBytes()

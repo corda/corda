@@ -1,8 +1,6 @@
 package net.corda.node.internal
 
 import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SerializeAsTokenContext
-import net.corda.core.serialization.SingletonSerializationToken
 import rx.Observable
 import rx.Subscriber
 import rx.subscriptions.Subscriptions
@@ -16,8 +14,6 @@ import javax.annotation.concurrent.ThreadSafe
 /** A [Clock] that tokenizes itself when serialized, and delegates to an underlying [Clock] implementation. */
 abstract class CordaClock : Clock(), SerializeAsToken {
     protected abstract val delegateClock: Clock
-    private val token = SingletonSerializationToken.singletonSerializationToken(javaClass)
-    override fun toToken(context: SerializeAsTokenContext) = token.registerWithContext(context, this)
     override fun instant(): Instant = delegateClock.instant()
     override fun getZone(): ZoneId = delegateClock.zone
     @Deprecated("Do not use this. Instead seek to use ZonedDateTime methods.", level = DeprecationLevel.ERROR)

@@ -5,11 +5,11 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.internal.SerializationPropertyKey
 
-val serializationContextKey = SerializeAsTokenContext::class.java
+object SerializeAsTokenContextKey : SerializationPropertyKey<SerializeAsTokenContext>
 
-fun SerializationContext.withTokenContext(serializationContext: SerializeAsTokenContext): SerializationContext = this.withProperty(serializationContextKey, serializationContext)
-
+fun SerializationContext.withTokenContext(serializeAsTokenContext: SerializeAsTokenContext): SerializationContext = withProperty(SerializeAsTokenContextKey, serializeAsTokenContext)
 /**
  * A context for mapping SerializationTokens to/from SerializeAsTokens.
  *
@@ -19,9 +19,9 @@ fun SerializationContext.withTokenContext(serializationContext: SerializeAsToken
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * when serializing to enable/disable tokenization.
  */
-class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
-    constructor(toBeTokenized: Any, serializationFactory: SerializationFactory, context: SerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
-        serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))
+class SerializeAsTokenContextImpl(init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
+    constructor(serializationFactory: SerializationFactory, context: SerializationContext, servicesGraph: Any) : this({
+        serializationFactory.serialize(servicesGraph, context.withTokenContext(this))
     })
 
     private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()

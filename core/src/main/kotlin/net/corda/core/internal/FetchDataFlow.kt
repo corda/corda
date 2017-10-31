@@ -10,10 +10,12 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationToken
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.NonSingletonSerializeAsToken
+import net.corda.core.serialization.internal.SerializationToken
+import net.corda.core.serialization.internal.SerializationPropertyKey
+import net.corda.core.serialization.internal.SerializationProperties
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
@@ -133,7 +135,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 }
 
-
+object AttachmentStorageKey : SerializationPropertyKey<AttachmentStorage>
 /**
  * Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
  * attachments are saved to local storage automatically.
@@ -151,14 +153,14 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
         }
     }
 
-    private class FetchedAttachment(dataLoader: () -> ByteArray) : AbstractAttachment(dataLoader), SerializeAsToken {
+    private class FetchedAttachment(dataLoader: () -> ByteArray) : AbstractAttachment(dataLoader), NonSingletonSerializeAsToken {
         override val id: SecureHash by lazy { attachmentData.sha256() }
 
-        private class Token(private val id: SecureHash) : SerializationToken {
-            override fun fromToken(context: SerializeAsTokenContext) = FetchedAttachment(context.attachmentDataLoader(id))
+        private class Token(private val id: SecureHash) : SerializationToken<FetchedAttachment> {
+            override fun fromToken(properties: SerializationProperties) = FetchedAttachment(properties[AttachmentStorageKey]!!.attachmentDataLoader(id))
         }
 
-        override fun toToken(context: SerializeAsTokenContext) = Token(id)
+        override fun toToken() = Token(id)
     }
 }
 

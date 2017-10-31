@@ -4,7 +4,10 @@ import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.AttachmentStorageKey
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.SerializationPropertyKey
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.AttachmentsClassLoader
 import org.slf4j.LoggerFactory
@@ -13,8 +16,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
 
-val attachmentsClassLoaderEnabledPropertyName = "attachments.class.loader.enabled"
-
+object AttachmentsClassLoaderEnabledKey : SerializationPropertyKey<Boolean>
 object NotSupportedSerializationScheme : SerializationScheme {
     private fun doThrow(): Nothing = throw UnsupportedOperationException("Serialization scheme not supported.")
 
@@ -28,7 +30,7 @@ object NotSupportedSerializationScheme : SerializationScheme {
 data class SerializationContextImpl(override val preferredSerializationVersion: VersionHeader,
                                     override val deserializationClassLoader: ClassLoader,
                                     override val whitelist: ClassWhitelist,
-                                    override val properties: Map<Any, Any>,
+                                    override val properties: Map<SerializationPropertyKey<*>, Any>,
                                     override val objectReferencesEnabled: Boolean,
                                     override val useCase: SerializationContext.UseCase) : SerializationContext {
 
@@ -40,14 +42,14 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
      * We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
      */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
-        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
-        val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContextImpl ?: return this // Some tests don't set one.
+        properties[AttachmentsClassLoaderEnabledKey] == true || return this
+        val attachmentStorage = properties[AttachmentStorageKey] as AttachmentStorage
         try {
             return withClassLoader(cache.get(attachmentHashes) {
                 val missing = ArrayList<SecureHash>()
                 val attachments = ArrayList<Attachment>()
                 attachmentHashes.forEach { id ->
-                    serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
+                    attachmentStorage.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
                 }
                 missing.isNotEmpty() && throw MissingAttachmentsException(missing)
                 AttachmentsClassLoader(attachments, parent = deserializationClassLoader)
@@ -58,7 +60,7 @@ data class SerializationContextImpl(override val preferredSerializationVersion: 
         }
     }
 
-    override fun withProperty(property: Any, value: Any): SerializationContext {
+    override fun <V : Any> withProperty(property: SerializationPropertyKey<V>, value: V): SerializationContext {
         return copy(properties = properties + (property to value))
     }
 
