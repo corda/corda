@@ -49,7 +49,6 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
-
     systemTestCompile "net.sf.expectit:expectit-core:${expectit_version}"
     systemTestCompile "com.github.sgreben:regex-builder:${regex_builder_version}"
 }
