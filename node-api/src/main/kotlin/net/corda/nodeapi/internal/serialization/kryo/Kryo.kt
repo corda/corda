@@ -8,14 +8,18 @@ import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationContext.UseCase.*
+import net.corda.core.serialization.SerializationContext.UseCase.Checkpoint
+import net.corda.core.serialization.SerializationContext.UseCase.Storage
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.toFuture
@@ -262,6 +266,29 @@ object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransa
         val newNotary = kryo.readClassAndObject(input) as Party
 
         return NotaryChangeWireTransaction(inputs, notary, newNotary)
+    }
+}
+
+@ThreadSafe
+object ContractUpgradeWireTransactionSerializer : Serializer<ContractUpgradeWireTransaction>() {
+    override fun write(kryo: Kryo, output: Output, obj: ContractUpgradeWireTransaction) {
+        kryo.writeClassAndObject(output, obj.inputs)
+        kryo.writeClassAndObject(output, obj.notary)
+        kryo.writeClassAndObject(output, obj.legacyContractAttachmentId)
+        kryo.writeClassAndObject(output, obj.upgradeContractClassName)
+        kryo.writeClassAndObject(output, obj.upgradedContractAttachmentId)
+        kryo.writeClassAndObject(output, obj.privacySalt)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<ContractUpgradeWireTransaction>): ContractUpgradeWireTransaction {
+        val inputs: List<StateRef> = uncheckedCast(kryo.readClassAndObject(input))
+        val notary = kryo.readClassAndObject(input) as Party
+        val legacyContractAttachment = kryo.readClassAndObject(input) as SecureHash
+        val upgradeContractClassName = kryo.readClassAndObject(input) as String
+        val upgradedContractAttachment = kryo.readClassAndObject(input) as SecureHash
+        val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
+
+        return ContractUpgradeWireTransaction(inputs, notary, legacyContractAttachment, upgradeContractClassName, upgradedContractAttachment, privacySalt)
     }
 }
 

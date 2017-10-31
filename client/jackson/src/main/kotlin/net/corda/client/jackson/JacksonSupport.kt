@@ -24,10 +24,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.CoreTransaction
-import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.base58ToByteArray
 import net.corda.core.utilities.base64ToByteArray
@@ -338,6 +335,7 @@ object JacksonSupport {
         @JsonProperty protected abstract fun getTransaction(): CoreTransaction
         @JsonIgnore abstract fun getTx(): WireTransaction
         @JsonIgnore abstract fun getNotaryChangeTx(): NotaryChangeWireTransaction
+        @JsonIgnore abstract fun getContractUpgradeTx(): ContractUpgradeWireTransaction
         @JsonIgnore abstract fun getInputs(): List<StateRef>
         @JsonIgnore abstract fun getNotary(): Party?
         @JsonIgnore abstract fun getId(): SecureHash

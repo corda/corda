@@ -246,6 +246,7 @@ annotation class LegalProseReference(val uri: String)
  */
 interface UpgradedContract<in OldState : ContractState, out NewState : ContractState> : Contract {
     val legacyContract: ContractClassName
+    val legacyContractConstraint: AttachmentConstraint
     /**
      * Upgrade contract's state object to a new state object.
      *

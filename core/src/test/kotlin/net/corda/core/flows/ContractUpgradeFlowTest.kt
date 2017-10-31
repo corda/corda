@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
@@ -90,20 +91,12 @@ class ContractUpgradeFlowTest {
         val result = resultFuture.getOrThrow()
 
         fun check(node: StartedNode<*>) {
-            val nodeStx = node.database.transaction {
-                node.services.validatedTransactions.getTransaction(result.ref.txhash)
+            val upgradeTx = node.database.transaction {
+                val wtx = node.services.validatedTransactions.getTransaction(result.ref.txhash)
+                wtx!!.resolveContractUpgradeTransaction(node.services)
             }
-            requireNotNull(nodeStx)
-
-            // Verify inputs.
-            val input = node.database.transaction {
-                node.services.validatedTransactions.getTransaction(nodeStx!!.tx.inputs.single().txhash)
-            }
-            requireNotNull(input)
-            assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
-
-            // Verify outputs.
-            assertTrue(nodeStx!!.tx.outputs.single().data is DummyContractV2.State)
+            assertTrue(upgradeTx.inputs.single().state.data is DummyContract.State)
+            assertTrue(upgradeTx.outputs.single().data is DummyContractV2.State)
         }
         check(aliceNode)
         check(bobNode)
@@ -181,16 +174,12 @@ class ContractUpgradeFlowTest {
             val result = resultFuture.getOrThrow()
             // Check results.
             listOf(aliceNode, bobNode).forEach {
-                val signedTX = aliceNode.database.transaction { aliceNode.services.validatedTransactions.getTransaction(result.ref.txhash) }
-                requireNotNull(signedTX)
-
-                // Verify inputs.
-                val input = aliceNode.database.transaction { aliceNode.services.validatedTransactions.getTransaction(signedTX!!.tx.inputs.single().txhash) }
-                requireNotNull(input)
-                assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
-
-                // Verify outputs.
-                assertTrue(signedTX!!.tx.outputs.single().data is DummyContractV2.State)
+                val upgradeTx = aliceNode.database.transaction {
+                    val wtx = aliceNode.services.validatedTransactions.getTransaction(result.ref.txhash)
+                    wtx!!.resolveContractUpgradeTransaction(aliceNode.services)
+                }
+                assertTrue(upgradeTx.inputs.single().state.data is DummyContract.State)
+                assertTrue(upgradeTx.outputs.single().data is DummyContractV2.State)
             }
         }
     }
@@ -215,9 +204,14 @@ class ContractUpgradeFlowTest {
         assertTrue(firstState.state.data is CashV2.State, "Contract state is upgraded to the new version.")
         assertEquals(Amount(1000000, USD).`issued by`(chosenIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
         assertEquals<Collection<AbstractParty>>(listOf(anonymisedRecipient), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
+
+
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
+        override val legacyContractConstraint = object : AttachmentConstraint {
+            override fun isSatisfiedBy(attachment: Attachment) = true
+        }
         override val legacyContract = Cash.PROGRAM_ID
 
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {

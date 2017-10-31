@@ -8,9 +8,9 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.TransactionWithSignatures
+import net.corda.core.transactions.*
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.testing.amqpSpecific
 import java.security.PublicKey
 import java.security.SignatureException
 
@@ -45,16 +45,17 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
             val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
             val notary = stx.notary
             checkNotary(notary)
-            var timeWindow: TimeWindow? = null
-            val transactionWithSignatures = if (stx.isNotaryChangeTransaction()) {
-                stx.resolveNotaryChangeTransaction(serviceHub)
-            } else {
-                val wtx = stx.tx
-                customVerify(wtx.toLedgerTransaction(serviceHub))
-                timeWindow = wtx.timeWindow
-                stx
-            }
+            val transactionWithSignatures = stx.resolveTransactionWithSignatures(serviceHub)
             checkSignatures(transactionWithSignatures)
+
+            val fullTransaction = when(stx.coreTransaction) {
+                is NotaryChangeWireTransaction -> stx.resolveNotaryChangeTransaction(serviceHub)
+                is ContractUpgradeWireTransaction -> stx.resolveContractUpgradeTransaction(serviceHub)
+                else -> stx.toLedgerTransaction(serviceHub)
+            }
+            customVerify(fullTransaction)
+
+            val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
             return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!)
         } catch (e: Exception) {
             throw when (e) {
@@ -65,7 +66,7 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
         }
     }
 
-    private fun customVerify(transaction: LedgerTransaction) {
+    private fun customVerify(transaction: FullTransaction) {
         // Add custom verification logic
     }
 

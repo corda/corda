@@ -11,7 +11,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.packageName
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.node.StateLoader
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.SoftLockingCondition
@@ -27,8 +27,8 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.rigorousMock
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Test
 import java.util.*
@@ -81,8 +81,8 @@ class VaultSoftLockManagerTest {
     }
     private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
         object : MockNetwork.MockNode(args) {
-            override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
-                val realVault = super.makeVaultService(keyManagementService, stateLoader)
+            override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution): VaultServiceInternal {
+                val realVault = super.makeVaultService(keyManagementService, services)
                 return object : VaultServiceInternal by realVault {
                     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
                         mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
