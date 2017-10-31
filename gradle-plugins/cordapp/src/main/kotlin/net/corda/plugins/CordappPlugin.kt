@@ -61,7 +61,8 @@ class CordappPlugin : Plugin<Project> {
         }
         filteredDeps.forEach {
             // net.corda or com.r3.corda.enterprise may be a core dependency which shouldn't be included in this cordapp so give a warning
-            if ((it.group.startsWith("net.corda.") || it.group.startsWith("com.r3.corda.enterprise."))) {
+            val group = it.group?.toString() ?: ""
+            if (group.startsWith("net.corda.") || group.startsWith("com.r3.corda.enterprise.")) {
                 project.logger.warn("You appear to have included a Corda platform component ($it) using a 'compile' or 'runtime' dependency." +
                         "This can cause node stability problems. Please use 'corda' instead." +
                         "See http://docs.corda.net/cordapp-build-systems.html")
