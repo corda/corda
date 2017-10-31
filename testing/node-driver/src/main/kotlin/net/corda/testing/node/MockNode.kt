@@ -63,13 +63,13 @@ data class MockNetworkParameters(
         val networkSendManuallyPumped: Boolean = false,
         val threadPerNode: Boolean = false,
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
-        val defaultFactory: MockNetwork.Factory<*> = MockNetwork.DefaultFactory,
+        val defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode = MockNetwork::MockNode,
         val initialiseSerialization: Boolean = true,
         val cordappPackages: List<String> = emptyList()) {
     fun setNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean) = copy(networkSendManuallyPumped = networkSendManuallyPumped)
     fun setThreadPerNode(threadPerNode: Boolean) = copy(threadPerNode = threadPerNode)
     fun setServicePeerAllocationStrategy(servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy) = copy(servicePeerAllocationStrategy = servicePeerAllocationStrategy)
-    fun setDefaultFactory(defaultFactory: MockNetwork.Factory<*>) = copy(defaultFactory = defaultFactory)
+    fun setDefaultFactory(defaultFactory: (MockNodeArgs) -> MockNetwork.MockNode) = copy(defaultFactory = defaultFactory)
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setCordappPackages(cordappPackages: List<String>) = copy(cordappPackages = cordappPackages)
 }
@@ -119,7 +119,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
                   private val threadPerNode: Boolean = defaultParameters.threadPerNode,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
-                  private val defaultFactory: Factory<*> = defaultParameters.defaultFactory,
+                  private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                   private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
@@ -139,15 +139,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     init {
         filesystem.getPath("/nodes").createDirectory()
-    }
-
-    /** Allows customisation of how nodes are created. */
-    interface Factory<out N : MockNode> {
-        fun create(args: MockNodeArgs): N
-    }
-
-    object DefaultFactory : Factory<MockNode> {
-        override fun create(args: MockNodeArgs) = MockNode(args)
     }
 
     /**
@@ -286,19 +277,19 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     }
 
     fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()) = createUnstartedNode(parameters, defaultFactory)
-    fun <N : MockNode> createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: Factory<N>): N {
+    fun <N : MockNode> createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): N {
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
     fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedNode<MockNode> = createNode(parameters, defaultFactory)
-    /** Like the other [createNode] but takes a [Factory] and propagates its [MockNode] subtype. */
-    fun <N : MockNode> createNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: Factory<N>): StartedNode<N> {
+    /** Like the other [createNode] but takes a [nodeFactory] and propagates its [MockNode] subtype. */
+    fun <N : MockNode> createNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
         val node: StartedNode<N> = uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
         ensureAllNetworkMapCachesHaveAllNodeInfos()
         return node
     }
 
-    private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: Factory<N>, start: Boolean): N {
+    private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
         val id = parameters.forcedID ?: nextNodeId++
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
@@ -306,7 +297,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             parameters.configOverrides(it)
         }
-        return nodeFactory.create(MockNodeArgs(config, this, id, parameters.notaryIdentity, parameters.entropyRoot)).apply {
+        return nodeFactory(MockNodeArgs(config, this, id, parameters.notaryIdentity, parameters.entropyRoot)).apply {
             if (start) {
                 start()
                 if (threadPerNode) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
@@ -347,7 +338,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     fun <N : MockNode> createNotaryNode(parameters: MockNodeParameters = MockNodeParameters(legalName = DUMMY_NOTARY.name),
                                         validating: Boolean = true,
-                                        nodeFactory: Factory<N>): StartedNode<N> {
+                                        nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
         return createNode(parameters.copy(configOverrides = {
             doReturn(NotaryConfig(validating)).whenever(it).notary
             parameters.configOverrides(it)

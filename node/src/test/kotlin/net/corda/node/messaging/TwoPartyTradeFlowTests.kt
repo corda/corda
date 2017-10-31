@@ -294,13 +294,11 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     // of gets and puts.
     private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<MockNetwork.MockNode> {
         // Create a node in the mock network ...
-        return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(args: MockNodeArgs): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(args) {
-                    // That constructs a recording tx storage
-                    override fun makeTransactionStorage(): WritableTransactionStorage {
-                        return RecordingTransactionStorage(database, super.makeTransactionStorage())
-                    }
+        return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = { args ->
+            object : MockNetwork.MockNode(args) {
+                // That constructs a recording tx storage
+                override fun makeTransactionStorage(): WritableTransactionStorage {
+                    return RecordingTransactionStorage(database, super.makeTransactionStorage())
                 }
             }
         })

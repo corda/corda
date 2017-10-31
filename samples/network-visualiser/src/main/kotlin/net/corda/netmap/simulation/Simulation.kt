@@ -50,20 +50,18 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     val bankLocations = listOf(Pair("London", "GB"), Pair("Frankfurt", "DE"), Pair("Rome", "IT"))
 
-    object RatesOracleFactory : MockNetwork.Factory<MockNode> {
-        // TODO: Make a more realistic legal name
-        val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
+    class RatesOracleNode(args: MockNodeArgs) : MockNode(args) {
+        companion object {
+            // TODO: Make a more realistic legal name
+            val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
+        }
 
-        override fun create(args: MockNodeArgs): MockNode {
-            return object : MockNode(args) {
-                override fun start() = super.start().apply {
-                    registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
-                    registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
-                    javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
-                        database.transaction {
-                            findTokenizableService(NodeInterestRates.Oracle::class.java)!!.uploadFixes(it.reader().readText())
-                        }
-                    }
+        override fun start() = super.start().apply {
+            registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+            registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
+            javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
+                database.transaction {
+                    findTokenizableService(NodeInterestRates.Oracle::class.java)!!.uploadFixes(it.reader().readText())
                 }
             }
         }
@@ -78,7 +76,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
     //       But that's fine for visualisation purposes.
     val regulators = listOf(mockNet.createUnstartedNode(defaultParams.copy(legalName = DUMMY_REGULATOR.name)))
-    val ratesOracle = mockNet.createUnstartedNode(defaultParams.copy(legalName = RatesOracleFactory.RATES_SERVICE_NAME), RatesOracleFactory)
+    val ratesOracle = mockNet.createUnstartedNode(defaultParams.copy(legalName = RatesOracleNode.RATES_SERVICE_NAME), ::RatesOracleNode)
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<MockNode> = listOf(notary.internals, ratesOracle)
     val banks: List<MockNode> = bankLocations.mapIndexed { i, (city, country) ->
