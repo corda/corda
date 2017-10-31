@@ -27,6 +27,7 @@ import net.corda.testing.node.createMockCordaService
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.math.BigDecimal
 import java.util.function.Predicate
@@ -34,7 +35,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
-class NodeInterestRatesTest : TestDependencyInjectionBase() {
+class NodeInterestRatesTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val TEST_DATA = NodeInterestRates.parseFile("""
         LIBOR 2016-03-16 1M = 0.678
         LIBOR 2016-03-16 2M = 0.685

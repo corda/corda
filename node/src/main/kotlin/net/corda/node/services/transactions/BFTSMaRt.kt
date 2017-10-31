@@ -90,6 +90,7 @@ object BFTSMaRt {
 
         private fun awaitClientConnectionToCluster() {
             // TODO: Hopefully we only need to wait for the client's initial connection to the cluster, and this method can be moved to some startup code.
+            // TODO: Investigate ConcurrentModificationException in this method.
             while (true) {
                 val inactive = sessionTable.entries.mapNotNull { if (it.value.channel.isActive) null else it.key }
                 if (inactive.isEmpty()) break

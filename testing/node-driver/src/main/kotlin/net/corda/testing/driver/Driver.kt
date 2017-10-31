@@ -402,7 +402,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    if (initialiseSerialization) initialiseTestSerialization()
+    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -413,7 +413,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        if (initialiseSerialization) resetTestSerialization()
+        serializationEnv.resetTestSerialization()
     }
 }
 
@@ -440,7 +440,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    if (initialiseSerialization) initialiseTestSerialization()
+    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
     val driverDsl = driverDslWrapper(
             DriverDSL(
                     portAllocation = portAllocation,
@@ -463,7 +463,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        if (initialiseSerialization) resetTestSerialization()
+        serializationEnv.resetTestSerialization()
     }
 }
 

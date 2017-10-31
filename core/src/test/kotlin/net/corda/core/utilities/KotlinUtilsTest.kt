@@ -7,13 +7,16 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.serialization.KRYO_CHECKPOINT_CONTEXT
 import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
 
-class KotlinUtilsTest : TestDependencyInjectionBase() {
+class KotlinUtilsTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     @JvmField
     @Rule
     val expectedEx: ExpectedException = ExpectedException.none()

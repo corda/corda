@@ -7,19 +7,20 @@ import net.corda.node.services.statemachine.SessionData
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.Envelope
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.amqpSpecific
 import net.corda.testing.kryoSpecific
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 import java.nio.charset.StandardCharsets.US_ASCII
 import java.util.*
 
-class ListsSerializationTest : TestDependencyInjectionBase() {
+class ListsSerializationTest {
     private companion object {
         val javaEmptyListClass = Collections.emptyList<Any>().javaClass
 
@@ -30,6 +31,10 @@ class ListsSerializationTest : TestDependencyInjectionBase() {
                     envVerBody(envelope)
                 }
     }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     @Test
     fun `check list can be serialized as root of serialization graph`() {

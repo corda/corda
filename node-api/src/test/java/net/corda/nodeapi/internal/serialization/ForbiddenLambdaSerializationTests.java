@@ -2,11 +2,11 @@ package net.corda.nodeapi.internal.serialization;
 
 import com.google.common.collect.Maps;
 import net.corda.core.serialization.SerializationContext;
-import net.corda.core.serialization.SerializationDefaults;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.testing.TestDependencyInjectionBase;
+import net.corda.testing.SerializationEnvironmentRule;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.Serializable;
@@ -16,13 +16,14 @@ import java.util.concurrent.Callable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
-public final class ForbiddenLambdaSerializationTests extends TestDependencyInjectionBase {
-
+public final class ForbiddenLambdaSerializationTests {
+    @Rule
+    public SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private SerializationFactory factory;
 
     @Before
     public void setup() {
-        factory = SerializationDefaults.INSTANCE.getSERIALIZATION_FACTORY();
+        factory = testSerialization.env.getSERIALIZATION_FACTORY();
     }
 
     @Test

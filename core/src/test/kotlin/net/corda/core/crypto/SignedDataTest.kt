@@ -2,13 +2,18 @@ package net.corda.core.crypto
 
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.security.SignatureException
 import kotlin.test.assertEquals
 
-class SignedDataTest : TestDependencyInjectionBase() {
+class SignedDataTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     @Before
     fun initialise() {
         serialized = data.serialize()

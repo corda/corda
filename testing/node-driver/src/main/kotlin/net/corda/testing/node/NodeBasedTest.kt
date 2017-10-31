@@ -15,10 +15,10 @@ import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
+import net.corda.testing.SerializationEnvironmentRule
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Rule
@@ -31,11 +31,14 @@ import kotlin.concurrent.thread
  * purposes. Use the driver if you need to run the nodes in separate processes otherwise this class will suffice.
  */
 // TODO Some of the logic here duplicates what's in the driver
-abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) : TestDependencyInjectionBase() {
+abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()

@@ -3,21 +3,21 @@ package net.corda.core.contracts
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.TestDependencyInjectionBase
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockServices
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.function.Predicate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
-
+class LedgerTransactionQueryTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val services: MockServices = MockServices()
 
     @Before

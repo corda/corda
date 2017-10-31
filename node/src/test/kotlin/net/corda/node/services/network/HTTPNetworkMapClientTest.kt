@@ -10,7 +10,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
@@ -23,6 +23,7 @@ import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -37,7 +38,10 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import kotlin.test.assertEquals
 
-class HTTPNetworkMapClientTest : TestDependencyInjectionBase() {
+class HTTPNetworkMapClientTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private lateinit var server: Server
 
     private lateinit var networkMapClient: NetworkMapClient

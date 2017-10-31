@@ -1,19 +1,10 @@
 package net.corda.testing
 
-import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 
-/**
- * The beginnings of somewhere to inject implementations for unit tests.
- */
+@Deprecated("Instead of extending this class, use SerializationEnvironmentRule in the same way.")
 abstract class TestDependencyInjectionBase {
-    @Before
-    fun initialiseSerialization() {
-        initialiseTestSerialization()
-    }
-
-    @After
-    fun resetInitialisation() {
-        resetTestSerialization()
-    }
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 }

@@ -33,6 +33,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
@@ -43,11 +44,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class NodeVaultServiceTest : TestDependencyInjectionBase() {
+class NodeVaultServiceTest {
     companion object {
         private val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     lateinit var services: MockServices
     private lateinit var issuerServices: MockServices
     val vaultService get() = services.vaultService as NodeVaultService
