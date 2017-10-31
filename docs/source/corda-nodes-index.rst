@@ -6,9 +6,9 @@ Corda nodes
 
    deploying-a-node
    running-a-node
+   corda-configuration-file
    clientrpc
    shell
    node-database
    node-administration
-   corda-configuration-file
    out-of-process-verification
