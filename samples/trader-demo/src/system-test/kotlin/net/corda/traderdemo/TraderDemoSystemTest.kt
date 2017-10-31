@@ -420,8 +420,5 @@ private object debugPortNumberGenerator {
 }
 
 private fun FluentRe.compile(flags: Int): Pattern {
-    val patternString = this
-            .compile()
-            .pattern()
-    return Pattern.compile(patternString, flags)
+    return Pattern.compile(compile().pattern(), flags)
 }
