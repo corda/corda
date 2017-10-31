@@ -105,7 +105,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         if (unsigned.isEmpty()) return partiallySignedTx
 
         val singedParties = groupPublicKeysByWellKnownParty(serviceHub,signed.toSet())
-        val partyToKeysMap = groupPublicKeysByWellKnownParty(serviceHub, unsigned).minus(singedParties)
+        val partyToKeysMap = groupPublicKeysByWellKnownParty(serviceHub, unsigned).filter { !singedParties.containsKey(it.key) }
         // Check that we have a session for all parties.  No more, no less.
         require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeysMap.keys) {
             "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
