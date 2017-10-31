@@ -2,11 +2,13 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockServices
+import net.corda.testing.singleIdentity
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -20,6 +22,7 @@ class LedgerTransactionQueryTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val services: MockServices = MockServices()
+    private val identity: Party = services.myInfo.singleIdentity()
 
     @Before
     fun setup() {
@@ -63,7 +66,6 @@ class LedgerTransactionQueryTests {
 
     private fun makeDummyTransaction(): LedgerTransaction {
         val tx = TransactionBuilder(notary = DUMMY_NOTARY)
-        val identity = services.myInfo.legalIdentitiesAndCerts.single().party
         for (i in 0..4) {
             tx.addInputState(makeDummyStateAndRef(i))
             tx.addInputState(makeDummyStateAndRef(i.toString()))
