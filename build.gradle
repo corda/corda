@@ -185,9 +185,6 @@ if (!JavaVersion.current().java8Compatible)
 repositories {
     mavenCentral()
     jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
 }
 
 // Required for building out the fat JAR.
