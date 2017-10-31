@@ -1,5 +1,7 @@
 package net.corda.core.internal
 
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
 import kotlin.reflect.KProperty
 
 /** May go from null to non-null and vice-versa, and that's it. */
@@ -29,7 +31,7 @@ class UnstackableProperty<T>(name: String) : AbstractUnstackableProperty<T>(name
 }
 
 class UnstackableThreadLocal<T>(name: String) : AbstractUnstackableProperty<T>(name) {
-    private val value = ThreadLocal<T?>() // Logically it's T but T? is safer.
+    private val value = ThreadLocal<T?>() // Force T? in API for safety.
     override fun getImpl() = value.get()
     override fun setImpl(value: T?) {
         this.value.set(value)
@@ -37,7 +39,16 @@ class UnstackableThreadLocal<T>(name: String) : AbstractUnstackableProperty<T>(n
 }
 
 class UnstackableInheritableThreadLocal<T>(name: String) : AbstractUnstackableProperty<T>(name) {
-    private val value = InheritableThreadLocal<T?>()
+    companion object {
+        private val log = loggerFor<UnstackableInheritableThreadLocal<*>>()
+    }
+
+    private val value = object : InheritableThreadLocal<T?>() { // Force T? in API for safety.
+        override fun childValue(value: T?) = value.also {
+            log.debug { "Propagating to current thread: $it" }
+        }
+    }
+
     override fun getImpl() = value.get()
     override fun setImpl(value: T?) {
         this.value.set(value)
