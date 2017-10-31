@@ -108,6 +108,7 @@ fun Path.existsOrThrow(vararg options: LinkOption) {
         throw IOException("$this does not exist.")
     }
 }
+
 fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
     require(targetDir.isDirectory()) { "$targetDir is not a directory" }
     val targetFile = targetDir.resolve(fileName)
