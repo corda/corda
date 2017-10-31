@@ -24,6 +24,22 @@ class NodeControllerTest {
     }
 
     @Test
+    fun `register notary`() {
+        assertFalse(controller.hasNotary())
+        val config = createConfig(commonName = "Name", notary = NotaryService(false))
+        controller.register(config)
+        assertTrue(controller.hasNotary())
+    }
+
+    @Test
+    fun `register non notary`() {
+        assertFalse(controller.hasNotary())
+        val config = createConfig(commonName = "Name")
+        controller.register(config)
+        assertFalse(controller.hasNotary())
+    }
+
+    @Test
     fun `test unique key after validate`() {
         val data = NodeData()
         data.legalName.value = node1Name
