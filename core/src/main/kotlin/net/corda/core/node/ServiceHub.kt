@@ -1,6 +1,5 @@
 package net.corda.core.node
 
-import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
@@ -18,24 +17,10 @@ import java.sql.Connection
 import java.time.Clock
 
 /**
- * Part of [ServiceHub].
- */
-@DoNotImplement
-interface StateLoader {
-    /**
-     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
-     *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
-     */
-    @Throws(TransactionResolutionException::class)
-    fun loadState(stateRef: StateRef): TransactionState<*>
-}
-
-/**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
  * forms ready for verification.
  */
-interface ServicesForResolution : StateLoader {
+interface ServicesForResolution {
     /**
      * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
      * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
@@ -48,6 +33,24 @@ interface ServicesForResolution : StateLoader {
 
     /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
     val cordappProvider: CordappProvider
+
+    /**
+     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
+     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
+     * the transaction data to other nodes that need it.
+     */
+    val validatedTransactions: TransactionStorage
+
+    /**
+     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    @Throws(TransactionResolutionException::class)
+    fun loadState(stateRef: StateRef): TransactionState<*> {
+        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
+        return stx.resolveBaseTransaction(this).outputs[stateRef.index]
+    }
 }
 
 /**
@@ -107,13 +110,6 @@ interface ServiceHub : ServicesForResolution {
      * @see ContractUpgradeFlow to understand the workflow associated with contract upgrades.
      */
     val contractUpgradeService: ContractUpgradeService
-
-    /**
-     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
-     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
-     * the transaction data to other nodes that need it.
-     */
-    val validatedTransactions: TransactionStorage
 
     /**
      * A network map contains lists of nodes on the network along with information about their identity keys, services

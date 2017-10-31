@@ -181,7 +181,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         val schemaService = makeSchemaService()
         initialiseDatabasePersistence(schemaService) {
             val transactionStorage = makeTransactionStorage()
-            makeServices(schemaService, transactionStorage, StateLoaderImpl(transactionStorage))
+            makeServices(schemaService, transactionStorage)
             saveOwnNodeInfo()
         }
     }
@@ -194,12 +194,11 @@ abstract class AbstractNode(config: NodeConfiguration,
         // Do all of this in a database transaction so anything that might need a connection has one.
         val startedImpl = initialiseDatabasePersistence(schemaService) {
             val transactionStorage = makeTransactionStorage()
-            val stateLoader = StateLoaderImpl(transactionStorage)
-            val services = makeServices(schemaService, transactionStorage, stateLoader)
+            val services = makeServices(schemaService, transactionStorage)
             saveOwnNodeInfo()
             smm = makeStateMachineManager()
             val flowStarter = FlowStarterImpl(serverThread, smm)
-            val schedulerService = NodeSchedulerService(platformClock, this@AbstractNode.database, flowStarter, stateLoader, unfinishedSchedules = busyNodeLatch, serverThread = serverThread)
+            val schedulerService = NodeSchedulerService(platformClock, this@AbstractNode.database, flowStarter, _services, unfinishedSchedules = busyNodeLatch, serverThread = serverThread)
             if (serverThread is ExecutorService) {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -462,12 +461,12 @@ abstract class AbstractNode(config: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(schemaService: SchemaService, transactionStorage: WritableTransactionStorage, stateLoader: StateLoader): MutableList<Any> {
+    private fun makeServices(schemaService: SchemaService, transactionStorage: WritableTransactionStorage): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics)
         val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
-        _services = ServiceHubInternalImpl(schemaService, transactionStorage, stateLoader, MonitoringService(metrics), cordappProvider)
+        _services = ServiceHubInternalImpl(schemaService, transactionStorage, MonitoringService(metrics), cordappProvider)
         legalIdentity = obtainIdentity(notaryConfig = null)
         // TODO  We keep only notary identity as additional legalIdentity if we run it on a node . Multiple identities need more design thinking.
         myNotaryIdentity = getNotaryIdentity()
@@ -699,23 +698,23 @@ abstract class AbstractNode(config: NodeConfiguration,
     }
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
-    protected open fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
-        return NodeVaultService(platformClock, keyManagementService, stateLoader, database.hibernateConfig)
+    protected open fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution): VaultServiceInternal {
+        return NodeVaultService(platformClock, keyManagementService, services, database.hibernateConfig)
     }
 
     private inner class ServiceHubInternalImpl(
             override val schemaService: SchemaService,
             override val validatedTransactions: WritableTransactionStorage,
-            private val stateLoader: StateLoader,
+
             override val monitoringService: MonitoringService,
             override val cordappProvider: CordappProviderInternal
-    ) : SingletonSerializeAsToken(), ServiceHubInternal, StateLoader by stateLoader {
+    ) : SingletonSerializeAsToken(), ServiceHubInternal {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
         override val networkMapCache by lazy { NetworkMapCacheImpl(PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration), identityService) }
-        override val vaultService by lazy { makeVaultService(keyManagementService, stateLoader) }
+        override val vaultService by lazy { makeVaultService(keyManagementService, this) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because

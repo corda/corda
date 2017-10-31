@@ -5,15 +5,12 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
-import net.corda.core.node.StateLoader
-import net.corda.core.node.services.*
+import net.corda.core.messaging.DataFeed
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
-import net.corda.core.node.services.vault.SortAttribute
-import net.corda.core.messaging.DataFeed
-import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
@@ -62,7 +59,7 @@ private fun CriteriaBuilder.executeUpdate(session: Session, configure: Root<*>.(
 class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
-        private val stateLoader: StateLoader,
+        private val services: ServicesForResolution,
         hibernateConfig: HibernateConfiguration
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
@@ -184,7 +181,7 @@ class NodeVaultService(
             // We need to resolve the full transaction here because outputs are calculated from inputs
             // We also can't do filtering beforehand, since output encumbrance pointers get recalculated based on
             // input positions
-            val ltx = tx.resolve(stateLoader, emptyList())
+            val ltx = tx.resolve(services, emptyList())
             val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
