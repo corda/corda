@@ -29,7 +29,7 @@ class DistributedImmutableMapTests {
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     lateinit var cluster: List<Member>
     lateinit var transaction: DatabaseTransaction
     private val databases: MutableList<CordaPersistence> = mutableListOf()
@@ -92,7 +92,8 @@ class DistributedImmutableMapTests {
         val address = Address(myAddress.host, myAddress.port)
         val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "PORT_${myAddress.port}_"), ::makeTestIdentityService)
         databases.add(database)
-        val stateMachineFactory = { DistributedImmutableMap(database) { RaftUniquenessProvider.createMap(testSerialization.env) } }
+        val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createMap) }
+
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
                 .withStorage(storage)

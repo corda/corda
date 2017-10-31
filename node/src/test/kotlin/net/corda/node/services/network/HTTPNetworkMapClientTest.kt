@@ -6,7 +6,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.utilities.CertificateType
@@ -42,7 +41,7 @@ import kotlin.test.assertEquals
 class HTTPNetworkMapClientTest {
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     private lateinit var server: Server
 
     private lateinit var networkMapClient: NetworkMapClient
@@ -59,7 +58,7 @@ class HTTPNetworkMapClientTest {
                     contextPath = "/"
                     val resourceConfig = ResourceConfig().apply {
                         // Add your API provider classes (annotated for JAX-RS) here
-                        register(MockNetworkMapServer(testSerialization.env))
+                        register(MockNetworkMapServer())
                     }
                     val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
                     addServlet(jerseyServlet, "/api/*")
@@ -118,17 +117,17 @@ class HTTPNetworkMapClientTest {
 
 @Path("network-map")
 // This is a stub implementation of the network map rest API.
-internal class MockNetworkMapServer(private val serializationEnv: SerializationEnvironment) {
+internal class MockNetworkMapServer {
     private val nodeInfos = mutableMapOf<SecureHash, NodeInfo>()
     @POST
     @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    fun publishNodeInfo(input: InputStream) = serializationEnv.asContextEnv {
+    fun publishNodeInfo(input: InputStream): Response {
         val registrationData = input.readBytes().deserialize<SignedData<NodeInfo>>()
         val nodeInfo = registrationData.verified()
         val nodeInfoHash = nodeInfo.serialize().sha256()
         nodeInfos.put(nodeInfoHash, nodeInfo)
-        ok().build()
+        return ok().build()
     }
 
     @GET
@@ -140,9 +139,9 @@ internal class MockNetworkMapServer(private val serializationEnv: SerializationE
     @GET
     @Path("{var}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    fun getNodeInfo(@PathParam("var") nodeInfoHash: String) = serializationEnv.asContextEnv {
+    fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
         val nodeInfo = nodeInfos[SecureHash.parse(nodeInfoHash)]
-        if (nodeInfo != null) {
+        return if (nodeInfo != null) {
             Response.ok(nodeInfo.serialize().bytes)
         } else {
             Response.status(Response.Status.NOT_FOUND)
