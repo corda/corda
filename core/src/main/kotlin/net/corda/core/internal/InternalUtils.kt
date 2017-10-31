@@ -105,7 +105,7 @@ fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createD
 fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
 fun Path.existsOrThrow(vararg options: LinkOption) {
     if (!this.exists(*options)) {
-        throw IOException("$this does not exist.")
+        throw FileNotFoundException("$this does not exist.")
     }
 }
 
