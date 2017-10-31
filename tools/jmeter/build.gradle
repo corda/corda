@@ -1,0 +1,58 @@
+apply plugin: 'kotlin'
+apply plugin: 'application'
+//apply plugin: 'net.corda.plugins.cordapp'
+//apply plugin: 'net.corda.plugins.cordformation'
+
+mainClassName = 'net.corda.jmeter.Launcher'
+
+dependencies {
+    compile project(':client:rpc')
+
+    // JMeter
+    ext.jmVersion = "3.3"
+
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_components', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_core', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ftp', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_functions', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_http', version: "$jmVersion"
+    compile group: 'org.apache.jmeter', name: 'ApacheJMeter_java', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jdbc', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jms', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_junit', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ldap', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_mail', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_mongodb', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_native', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_tcp', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_config', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'jorphan', version: "$jmVersion"
+
+    compile project(":test-utils")
+    compile project(":finance")
+
+    //cordapp project(':finance')
+    //cordapp project(':samples:bank-of-corda-demo')
+
+}
+
+//jmeter {
+//    testFileDir = file("src/main/resources/jmeter")
+//}
+
+run {
+    systemProperty "search_paths", project(':tools:jmeter').configurations.runtime.files.join(";")
+    //jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+    args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
+             "-d", sourceSets.main.resources.getSrcDirs().first().getPath(),
+             "-j", buildDir.getPath()+"/jmeter.log" ]
+}
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.tools.jmeter'
+        )
+    }
+}
