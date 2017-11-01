@@ -8,8 +8,6 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
-import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.messaging.MessagingService
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisMessagingComponent
@@ -21,13 +19,12 @@ import javax.persistence.*
 /**
  * A network map service backed by a database to survive restarts of the node hosting it.
  *
- * Majority of the logic is inherited from [AbstractNetworkMapService].
+ * Majority of the logic is inherited from [NetworkMapService].
  *
  * This class needs database transactions to be in-flight during method calls and init, otherwise it will throw
  * exceptions.
  */
-class PersistentNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal, minimumPlatformVersion: Int)
-    : AbstractNetworkMapService(network, networkMapCache, minimumPlatformVersion) {
+class PersistentNetworkMapService: NetworkMapService {
 
     // Only the node_party_path column is needed to reconstruct a PartyAndCertificate but we have the others for human readability
     @Entity

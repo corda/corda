@@ -13,8 +13,6 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
-import net.corda.node.services.api.AbstractNodeService
-import net.corda.node.services.messaging.MessagingService
 import net.corda.node.utilities.AddOrRemove
 import java.security.PublicKey
 import java.time.Instant
@@ -35,31 +33,23 @@ import javax.annotation.concurrent.ThreadSafe
 // It may also be that this is replaced or merged with the identity management service; for example if the network has
 // a concept of identity changes over time, should that include the node for an identity? If so, that is likely to
 // replace this service.
+@ThreadSafe
 interface NetworkMapService {
 
+    val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo>
+
+    // Map from subscriber address, to most recently acknowledged update map version.
+    val subscribers: ThreadBox<MutableMap<SingleMessageRecipient, LastAcknowledgeInfo>>
 }
 
+
 @ThreadSafe
-class InMemoryNetworkMapService(network: MessagingService): AbstractNetworkMapService(network) {
+class InMemoryNetworkMapService: NetworkMapService {
 
     override val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
 }
 
-/**
- * Abstracted out core functionality as the basis for a persistent implementation, as well as existing in-memory implementation.
- *
- * Design is slightly refactored to track time and map version of last acknowledge per subscriber to facilitate
- * subscriber clean up and is simpler to persist than the previous implementation based on a set of missing messages acks.
- */
-@ThreadSafe
-abstract class AbstractNetworkMapService(network: MessagingService) : NetworkMapService, AbstractNodeService(network) {
-
-    protected abstract val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo>
-
-    // Map from subscriber address, to most recently acknowledged update map version.
-    protected abstract val subscribers: ThreadBox<MutableMap<SingleMessageRecipient, LastAcknowledgeInfo>>
-}
 
 /**
  * A node registration state in the network map.

@@ -11,7 +11,8 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -22,8 +23,6 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
-import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectRequestProperty
-import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectResponseProperty
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
@@ -32,10 +31,6 @@ import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.ArtemisMessagingComponent
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.IP_REQUEST_PREFIX
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
@@ -46,9 +41,7 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.time.Clock
-import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
@@ -216,7 +209,7 @@ open class Node(override val configuration: NodeConfiguration,
     }
 
     override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-        return PersistentNetworkMapService(network, networkMapCache, configuration.minimumPlatformVersion)
+        return PersistentNetworkMapService()
     }
 
     /**
