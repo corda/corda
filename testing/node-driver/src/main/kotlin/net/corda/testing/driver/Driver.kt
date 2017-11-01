@@ -33,7 +33,10 @@ import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.testing.*
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -62,8 +65,7 @@ import kotlin.concurrent.thread
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
  *
- * The process the driver is run in behaves as an Artemis client and starts up other processes. Namely it first
- * bootstraps a network map service to allow the specified nodes to connect to, then starts up the actual nodes.
+ * The process the driver is run in behaves as an Artemis client and starts up other processes.
  *
  * TODO this file is getting way too big, it should be split into several files.
  */
@@ -301,8 +303,6 @@ data class NodeParameters(
  * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [CordaFuture]
  * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service or
  * loaded node data from database.
- *
- * The driver implicitly bootstraps a [NetworkMapService].
  *
  * @param defaultParameters The default parameters for the driver. Allows the driver to be configured in builder style
  *   when called from Java code.

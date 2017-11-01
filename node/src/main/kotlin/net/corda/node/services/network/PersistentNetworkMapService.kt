@@ -15,8 +15,8 @@ import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisMessagingComponent
 import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
-import javax.persistence.*
 import java.util.*
+import javax.persistence.*
 
 /**
  * A network map service backed by a database to survive restarts of the node hosting it.
@@ -124,10 +124,4 @@ class PersistentNetworkMapService(network: MessagingService, networkMapCache: Ne
     )
 
     override val subscribers = ThreadBox(createNetworkSubscribersMap())
-
-    init {
-        // Initialise the network map version with the current highest persisted version, or zero if there are no entries.
-        _mapVersion.set(nodeRegistrations.values.map { it.mapVersion }.max() ?: 0)
-        setup()
-    }
 }

@@ -116,7 +116,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     /**
      * The server will make sure the bridge exists on network map changes, see method [updateBridgesOnNetworkChange]
-     * We assume network map will be updated accordingly when the client node register with the network map server.
+     * We assume network map will be updated accordingly when the client node register with the network map.
      */
     @Throws(IOException::class, KeyStoreException::class)
     fun start() = mutex.locked {
