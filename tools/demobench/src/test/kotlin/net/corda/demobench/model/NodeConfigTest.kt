@@ -7,7 +7,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.webserver.WebServerConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -32,7 +31,6 @@ class NodeConfigTest {
                 webPort = 20001,
                 h2port = 30001,
                 notary = NotaryService(validating = false),
-                networkMap = NetworkMapConfig(DUMMY_NOTARY.name, localPort(12345)),
                 users = listOf(user("jenny"))
         )
 
@@ -60,7 +58,6 @@ class NodeConfigTest {
                 webPort = 20001,
                 h2port = 30001,
                 notary = NotaryService(validating = false),
-                networkMap = NetworkMapConfig(DUMMY_NOTARY.name, localPort(12345)),
                 users = listOf(user("jenny"))
         )
 
@@ -83,7 +80,6 @@ class NodeConfigTest {
             webPort: Int = -1,
             h2port: Int = -1,
             notary: NotaryService?,
-            networkMap: NetworkMapConfig?,
             users: List<User> = listOf(user("guest"))
     ): NodeConfig {
         return NodeConfig(
@@ -93,7 +89,6 @@ class NodeConfigTest {
                 webAddress = localPort(webPort),
                 h2port = h2port,
                 notary = notary,
-                networkMapService = networkMap,
                 rpcUsers = users
         )
     }
