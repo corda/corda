@@ -214,7 +214,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         }
 
         override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-            return InMemoryNetworkMapService(network)
+            return InMemoryNetworkMapService()
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
