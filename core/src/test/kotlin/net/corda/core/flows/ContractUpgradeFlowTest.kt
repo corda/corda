@@ -23,6 +23,7 @@ import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -127,7 +128,8 @@ class ContractUpgradeFlowTest {
 
     @Test
     fun `2 parties contract upgrade using RPC`() {
-        rpcDriver(initialiseSerialization = false) {
+        rpcDriver(initialiseSerialization = false,
+                portAllocation = PortAllocation.RandomFree) {
             // Create dummy contract.
             val twoPartyDummyContract = DummyContract.generateInitial(0, notary, aliceNode.info.chooseIdentity().ref(1), bobNode.info.chooseIdentity().ref(1))
             val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)
