@@ -232,7 +232,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             this.producer = producer
 
             // Create a queue, consumer and producer for handling P2P network messages.
-            p2pConsumer = makeP2PConsumer(session)
+            p2pConsumer = session.createConsumer(P2P_QUEUE)
 
             val myCert = loadKeyStore(config.sslKeystore, config.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_TLS)
             rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, CordaX500Name.build(myCert.subjectX500Principal))
@@ -253,8 +253,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
         resumeMessageRedelivery()
     }
-
-    private fun makeP2PConsumer(session: ClientSession): ClientConsumer = session.createConsumer(P2P_QUEUE)
 
     private fun resumeMessageRedelivery() {
         messagesToRedeliver.forEach { retryId, (message, target) ->

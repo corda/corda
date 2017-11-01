@@ -1,20 +1,12 @@
 package net.corda.node.services.network
 
-import net.corda.core.CordaException
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
 import net.corda.node.utilities.AddOrRemove
-import java.security.PublicKey
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
@@ -36,7 +28,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 interface NetworkMapService {
 
-    val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo>
+    val nodeRegistrations: Map<PartyAndCertificate, NodeRegistrationInfo>
 
     // Map from subscriber address, to most recently acknowledged update map version.
     val subscribers: ThreadBox<MutableMap<SingleMessageRecipient, LastAcknowledgeInfo>>
@@ -66,40 +58,7 @@ class InMemoryNetworkMapService: NetworkMapService {
 // involves providing both node and paerty, and deregistering a node involves a request with party but no node.
 @CordaSerializable
 data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemove, var expires: Instant) {
-    /**
-     * Build a node registration in wire format.
-     */
-    fun toWire(keyManager: KeyManagementService, publicKey: PublicKey): WireNodeRegistration {
-        val regSerialized = this.serialize()
-        val regSig = keyManager.sign(regSerialized.bytes, publicKey)
-
-        return WireNodeRegistration(regSerialized, regSig)
-    }
-
     override fun toString(): String = "$node #$serial ($type)"
-}
-
-/**
- * A node registration and its signature as a pair.
- */
-@CordaSerializable
-class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalSignature.WithKey) : SignedData<NodeRegistration>(raw, sig) {
-    @Throws(IllegalArgumentException::class)
-    override fun verifyData(data: NodeRegistration) {
-        // Check that the registration is fulfilled by any of node's identities.
-        // TODO It may cause some problems with distributed services? We loose node's main identity. Should be all signatures instead of isFulfilledBy?
-        require(data.node.legalIdentitiesAndCerts.any { it.owningKey.isFulfilledBy(sig.by) })
-    }
-}
-
-@CordaSerializable
-sealed class NodeMapException : CordaException("Network Map Protocol Error") {
-
-    /** Thrown if the signature on the node info does not match the public key for the identity */
-    class InvalidSignature : NodeMapException()
-
-    /** Thrown if the replyTo of a subscription change message is not a single message recipient */
-    class InvalidSubscriber : NodeMapException()
 }
 
 @CordaSerializable

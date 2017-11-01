@@ -142,10 +142,9 @@ physical host and port information required for the physical
 PersistentNetworkMapService
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
- For the
-``PersistentNetworkMapService`` registered ``NodeInfo`` data is 
-persisted and will include nodes that are not currently active. The 
-networking layer will persist any messages directed at such inactive 
+The ``PersistentNetworkMapService`` keeps track of ``NodeInfo`` and
+persists it to the database. It and will include nodes that are not currently active.
+The networking layer will persist any messages directed at such inactive
 nodes with the expectation that they will be delivered eventually, or 
 else that the source flow will be terminated by admin intervention. 
 An ``InMemoryNetworkMapService`` is also available for unit tests 
