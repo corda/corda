@@ -41,4 +41,5 @@ We look forward to seeing what you can do with Corda!
    faq.rst
    troubleshooting.rst
    other-index.rst
+   advanced-index.rst
    glossary.rst
