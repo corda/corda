@@ -33,7 +33,10 @@ import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.testing.*
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -173,15 +176,6 @@ interface DriverDSLExposedInterface : CordformContext {
         return pollUntilNonNull(pollName, pollInterval, warnCount) { if (check()) Unit else null }
     }
 
-    /**
-     * Polls until a given node knows about presence of another node via its own NetworkMap
-     */
-    fun NodeHandle.pollUntilKnowsAbout(another: NodeHandle, pollInterval: Duration = DEFAULT_POLL_INTERVAL, warnCount: Int = DEFAULT_WARN_COUNT): CordaFuture<Unit> {
-        return pollUntilTrue("${nodeInfo.legalIdentities} knows about ${another.nodeInfo.legalIdentities}", pollInterval, warnCount) {
-            another.nodeInfo in rpc.networkMapSnapshot()
-        }
-    }
-
     val shutdownManager: ShutdownManager
 }
 
@@ -200,6 +194,11 @@ sealed class NodeHandle {
     abstract val configuration: NodeConfiguration
     abstract val webAddress: NetworkHostAndPort
 
+    /**
+     * Stops the referenced node.
+     */
+    abstract fun stop()
+
     data class OutOfProcess(
             override val nodeInfo: NodeInfo,
             override val rpc: CordaRPCOps,
@@ -209,13 +208,12 @@ sealed class NodeHandle {
             val process: Process,
             private val onStopCallback: () -> Unit
     ) : NodeHandle() {
-        override fun stop(): CordaFuture<Unit> {
+        override fun stop() {
             with(process) {
                 destroy()
                 waitFor()
             }
             onStopCallback()
-            return doneFuture(Unit)
         }
     }
 
@@ -228,23 +226,17 @@ sealed class NodeHandle {
             val nodeThread: Thread,
             private val onStopCallback: () -> Unit
     ) : NodeHandle() {
-        override fun stop(): CordaFuture<Unit> {
+        override fun stop() {
             node.dispose()
             with(nodeThread) {
                 interrupt()
                 join()
             }
             onStopCallback()
-            return doneFuture(Unit)
         }
     }
 
     fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
-
-    /**
-     * Stops the referenced node.
-     */
-    abstract fun stop(): CordaFuture<Unit>
 }
 
 data class WebserverHandle(
@@ -742,8 +734,7 @@ class DriverDSL(
                         "webAddress" to webAddress.toString(),
                         "useTestClock" to useTestClock,
                         "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers.map { it.toConfig().root().unwrapped() },
-                        "verifierType" to verifierType.name,
-                        "noNetworkMapServiceMode" to true
+                        "verifierType" to verifierType.name
                 ) + customOverrides
         )
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
@@ -769,8 +760,7 @@ class DriverDSL(
                     baseDirectory = baseDirectory(name),
                     allowMissingConfig = true,
                     configOverrides = node.config + notary + mapOf(
-                            "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers,
-                            "noNetworkMapServiceMode" to true
+                            "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
                     )
             )
             startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)

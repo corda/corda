@@ -29,7 +29,7 @@ import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.node.services.messaging.*
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -300,7 +300,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         return nodeFactory(MockNodeArgs(config, this, id, parameters.notaryIdentity, parameters.entropyRoot)).apply {
             if (start) {
                 start()
-                if (threadPerNode) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
                 ensureAllNetworkMapCachesHaveAllNodeInfos()
             }
             _nodes.add(this)
