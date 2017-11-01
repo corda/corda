@@ -155,9 +155,9 @@ A CorDapp template that you can use as the basis for your own CorDapps is availa
 
     https://github.com/corda/cordapp-template-kotlin.git
 
-And a simple example CorDapp for you to explore basic concepts is available here:
+And a list of simple sample CorDapps for you to explore basic concepts is available here:
 
-	https://github.com/corda/cordapp-example.git
+	https://www.corda.net/samples/
 
 You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
 
@@ -169,8 +169,8 @@ The best way to check that everything is working fine is by taking a deeper look
 Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
 By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
-:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the :doc:`API docs <api-index>` along the
-way.
+:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the :doc:`API docs <api-index>`, the
+:doc:`flow cookbook <flow-cookbook>` and the `samples <https://www.corda.net/samples/>`_ along the way.
 
 If you encounter any issues, please see the :doc:`troubleshooting` page, or get in touch with us on the
 `forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.

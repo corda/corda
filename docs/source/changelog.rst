@@ -4,6 +4,12 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
+UNRELEASED
+----------
+
+* ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
+  This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
+
 .. _changelog_v1:
 
 Release 1.0

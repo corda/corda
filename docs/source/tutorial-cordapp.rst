@@ -490,7 +490,7 @@ and make the following changes:
 
 * Change the Artemis messaging address to the machine's IP address (e.g. ``p2pAddress="10.18.0.166:10006"``)
 * Change the network map service's address to the IP address of the machine where the controller node is running
-  (e.g. ``networkMapService { address="10.18.0.166:10002" legalName="O=Controller,L=London,C=GB" ``). The controller
+  (e.g. ``networkMapService { address="10.18.0.166:10002" legalName="O=Controller,L=London,C=GB"``). The controller
   will not have the ``networkMapService`` configuration entry
 
 After starting each node, the nodes will be able to see one another and agree IOUs among themselves.

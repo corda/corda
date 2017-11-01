@@ -914,7 +914,7 @@ class DriverDSL(
                 packagesToScanString: String
         ): CordaFuture<Process> {
             val processFuture = executorService.fork {
-                log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}")
+                log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + debugPort ?: "not enabled")
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
