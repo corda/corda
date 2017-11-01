@@ -11,7 +11,8 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -22,8 +23,6 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
-import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectRequestProperty
-import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectResponseProperty
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
@@ -32,10 +31,6 @@ import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.ArtemisMessagingComponent
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.IP_REQUEST_PREFIX
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
@@ -46,9 +41,7 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.time.Clock
-import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
@@ -160,7 +153,6 @@ open class Node(override val configuration: NodeConfiguration,
                 legalIdentity.owningKey,
                 serverThread,
                 database,
-                nodeReadyFuture,
                 services.monitoringService,
                 advertisedAddress)
     }
@@ -200,53 +192,6 @@ open class Node(override val configuration: NodeConfiguration,
         return null
     }
 
-    /**
-     * Asks the network map service to provide this node's public IP address:
-     * - Connects to the network map service's message broker and creates a special IP request queue with a custom
-     * request id. Marks the established session with the same request id.
-     * - On the server side a special post-queue-creation callback is fired. It finds the session matching the request id
-     * encoded in the queue name. It then extracts the remote IP from the session details and posts a message containing
-     * it back to the queue.
-     * - Once the message is received the session is closed and the queue deleted.
-     */
-    private fun discoverPublicHost(serverAddress: NetworkHostAndPort): String? {
-        log.trace { "Trying to detect public hostname through the Network Map Service at $serverAddress" }
-        val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, configuration)
-        val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
-            initialConnectAttempts = 2 // TODO Public host discovery needs rewriting, as we may start nodes without network map, and we don't want to wait that long on startup.
-            retryInterval = 2.seconds.toMillis()
-            retryIntervalMultiplier = 1.5
-            maxRetryInterval = 3.minutes.toMillis()
-        }
-        val clientFactory = try {
-            locator.createSessionFactory()
-        } catch (e: ActiveMQNotConnectedException) {
-            log.warn("Unable to connect to the Network Map Service at $serverAddress for IP address discovery. " +
-                    "Using the provided \"${configuration.p2pAddress.host}\" as the advertised address.")
-            return null
-        }
-
-        val session = clientFactory.createSession(PEER_USER, PEER_USER, false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
-        val requestId = UUID.randomUUID().toString()
-        session.addMetaData(ipDetectRequestProperty, requestId)
-        session.start()
-
-        val queueName = "$IP_REQUEST_PREFIX$requestId"
-        session.createQueue(queueName, RoutingType.MULTICAST, queueName, false)
-
-        val consumer = session.createConsumer(queueName)
-        val artemisMessage: ClientMessage = consumer.receive(10.seconds.toMillis()) ?:
-                throw IOException("Did not receive a response from the Network Map Service at $serverAddress")
-        val publicHostAndPort = artemisMessage.getStringProperty(ipDetectResponseProperty)
-        log.info("Detected public address: $publicHostAndPort")
-
-        consumer.close()
-        session.deleteQueue(queueName)
-        clientFactory.close()
-
-        return NetworkHostAndPort.parse(publicHostAndPort.removePrefix("/")).host
-    }
-
     override fun startMessagingService(rpcOps: RPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
@@ -264,7 +209,7 @@ open class Node(override val configuration: NodeConfiguration,
     }
 
     override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-        return PersistentNetworkMapService(network, networkMapCache, configuration.minimumPlatformVersion)
+        return PersistentNetworkMapService()
     }
 
     /**

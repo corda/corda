@@ -1,6 +1,5 @@
 package net.corda.node.services.api
 
-import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -18,7 +17,6 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -40,12 +38,6 @@ interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
 
     /** Indicates if loading network map data from database was successful. */
     val loadDBSuccess: Boolean
-}
-
-@CordaSerializable
-sealed class NetworkCacheException : CordaException("Network Cache Error") {
-    /** Indicates a failure to deregister, because of a rejected request from the remote node */
-    class DeregistrationFailed : NetworkCacheException()
 }
 
 interface ServiceHubInternal : ServiceHub {

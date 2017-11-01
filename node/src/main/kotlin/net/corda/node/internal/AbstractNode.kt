@@ -42,10 +42,7 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.*
-import net.corda.node.services.network.NetworkMapService.RegistrationRequest
-import net.corda.node.services.network.NetworkMapService.RegistrationResponse
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -58,7 +55,6 @@ import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
-import net.corda.node.utilities.AddOrRemove.ADD
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -551,15 +547,6 @@ abstract class AbstractNode(config: NodeConfiguration,
             log.info("Running core notary: ${notaryService.javaClass.name}")
             notaryService.start()
         }
-    }
-
-    private fun sendNetworkMapRegistration(networkMapAddress: SingleMessageRecipient): CordaFuture<RegistrationResponse> {
-        // Register this node against the network
-        val instant = platformClock.instant()
-        val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val reg = NodeRegistration(info, info.serial, ADD, expires)
-        val request = RegistrationRequest(reg.toWire(services.keyManagementService, info.legalIdentitiesAndCerts.first().owningKey), network.myAddress)
-        return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
 
     /** Return list of node's addresses. It's overridden in MockNetwork as we don't have real addresses for MockNodes. */

@@ -16,7 +16,7 @@ Running DemoBench
 Configuring a Node
   Each node must have a unique name to identify it to the network map service. DemoBench will suggest node names, nearest cities and local port numbers to use.
 
-  The first node will host the network map service, and we are forcing that node also to be a notary. Hence only notary services will be available to be selected in the ``Services`` list. For subsequent nodes you may also select any of Corda's other built-in services.
+  The first node will be a notary. Hence only notary services will be available to be selected in the ``Services`` list. For subsequent nodes you may also select any of Corda's other built-in services.
 
   Press the ``Start node`` button to launch the Corda node with your configuration.
 
