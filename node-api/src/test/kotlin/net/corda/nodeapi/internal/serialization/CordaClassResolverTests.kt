@@ -10,6 +10,8 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
+import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.node.MockAttachmentStorage
 import net.corda.testing.rigorousMock
 import org.junit.Rule

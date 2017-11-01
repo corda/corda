@@ -12,6 +12,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.serialization.amqp.hasAnnotationInHierarchy
+import net.corda.nodeapi.internal.serialization.kryo.ThrowableSerializer
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets

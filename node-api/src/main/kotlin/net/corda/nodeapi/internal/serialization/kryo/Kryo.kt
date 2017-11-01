@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serialization
+package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.factories.ReflectionSerializerFactory
@@ -21,6 +21,8 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.toFuture
 import net.corda.core.toObservable
 import net.corda.core.transactions.*
+import net.corda.nodeapi.internal.serialization.CordaClassResolver
+import net.corda.nodeapi.internal.serialization.serializationContextKey
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
@@ -280,7 +282,7 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
 
 sealed class UseCaseSerializer<T>(private val allowedUseCases: EnumSet<SerializationContext.UseCase>) : Serializer<T>() {
     protected fun checkUseCase() {
-        checkUseCase(allowedUseCases)
+        net.corda.nodeapi.internal.serialization.checkUseCase(allowedUseCases)
     }
 }
 

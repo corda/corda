@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serialization
+package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
@@ -23,6 +23,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
+import net.corda.nodeapi.internal.serialization.CordaClassResolver
+import net.corda.nodeapi.internal.serialization.DefaultWhitelist
+import net.corda.nodeapi.internal.serialization.GeneratedAttachment
+import net.corda.nodeapi.internal.serialization.MutableClassWhitelist
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.x500.X500Name

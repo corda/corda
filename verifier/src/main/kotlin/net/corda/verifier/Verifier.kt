@@ -18,8 +18,11 @@ import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths

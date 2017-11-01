@@ -1,13 +1,12 @@
 @file:JvmName("AMQPSerializationScheme")
 
-package net.corda.nodeapi.internal.serialization
+package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
-import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
-import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
-import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.DefaultWhitelist
+import net.corda.nodeapi.internal.serialization.MutableClassWhitelist
+import net.corda.nodeapi.internal.serialization.SerializationScheme
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -25,7 +24,7 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
 }
 
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
-    internal companion object {
+    companion object {
         private val serializationWhitelists: List<SerializationWhitelist> by lazy {
             ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
         }
@@ -132,9 +131,3 @@ class AMQPClientSerializationScheme : AbstractAMQPSerializationScheme() {
 
 }
 
-val AMQP_P2P_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
-        SerializationDefaults.javaClass.classLoader,
-        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.P2P)
