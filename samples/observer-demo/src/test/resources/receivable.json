@@ -1,0 +1,26 @@
+{
+  "receivableId": "12345",
+  "type": "invoice",
+  "accountDebtor": {
+    "id": "RmXQnCD2y3tf6xV1MUgVzjJaxCU2JELELoRSKpmW3HEeakaRuba5j4v3t7Y77ugRVH5biHVAywTBYBWH4ocuqKvq4RqSwHz5msttWhBU",
+    "name": "Some Debtor",
+    "address": {
+      "line1": "123 Dummy Street",
+      "line2": null,
+      "city": "Some City",
+      "state": null,
+      "postalCode": "Postcode",
+      "country": "UK"
+    },
+    "organizationId": "Some Debtor"
+  },
+  "paymentAmount": "2000",
+  "paymentCurrency": "USD",
+  "purchaseDate": "2016-02-01",
+  "paymentDueDate": "2016-02-01",
+  "purchaseAmount": "1900",
+  "disclosed": false,
+  "status": "Payable",
+  "url": "http://something",
+  "productType": "Blah"
+}
