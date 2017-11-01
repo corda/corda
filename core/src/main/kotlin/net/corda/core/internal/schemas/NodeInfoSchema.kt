@@ -1,8 +1,9 @@
-package net.corda.core.schemas
+package net.corda.core.internal.schemas
 
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
