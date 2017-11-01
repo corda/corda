@@ -3,7 +3,6 @@ package net.corda.observerdemo.services
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -19,9 +18,8 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MINI_CORP
 import net.corda.testing.TEST_TX_TIME
 import net.corda.testing.getDefaultNotary
-import net.corda.testing.node.MockAttachmentStorage
-import net.corda.testing.node.MockCordappProvider
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeParameters
 import org.junit.Before
 import org.junit.Test
 import java.time.Duration
@@ -38,8 +36,8 @@ class RegistryObserverServiceTests {
 
     @Before fun setup() {
         net = MockNetwork(cordappPackages = listOf("net.corda.observerdemo"))
-        notaryNode = net.createNotaryNode(legalName = DUMMY_NOTARY.name)
-        clientNode = net.createNode(legalName = MINI_CORP.name)
+        notaryNode = net.createNotaryNode(MockNodeParameters(legalName = DUMMY_NOTARY.name))
+        clientNode = net.createNode(MockNodeParameters(legalName = MINI_CORP.name))
         net.runNetwork() // Clear network map registration messages
     }
 

@@ -1,9 +1,8 @@
 package net.corda.observerdemo.flow
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ObservedState
 import net.corda.core.flows.*
-import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -42,14 +41,10 @@ object RegistryObserverFlow {
             stx.tx.toLedgerTransaction(serviceHub).verify()
 
             // Determine the observer
-            val observableStates: Collection<ObservedState> = stx.tx.inputs
-                    .map { stateRef -> serviceHub.loadState(stateRef).data }
-                    .filterIsInstance<ObservedState>() + stx.tx.outputs
-                    .map { it.data }
-                    .filterIsInstance<ObservedState>()
-            val observers = observableStates.flatMap(ObservedState::observers).toSet()
+            val observers = stx.tx.commands.filter { it.value is Observed }.flatMap { it.signers }.toSet()
             require(observers.isNotEmpty()) { "No observers are specified for transaction ${stx.id}" }
-            val observerParty: AbstractParty = observers.singleOrNull() ?: throw IllegalArgumentException("Multiple observers specified for transaction ${stx.id}")
+            val observerKey: PublicKey = observers.singleOrNull() ?: throw IllegalArgumentException("Multiple observers specified for transaction ${stx.id}")
+            val observerParty = AnonymousParty(observerKey)
 
             val session = initiateFlow(serviceHub.identityService.requireWellKnownPartyFromAnonymous(observerParty))
             val response = session.sendAndReceive<Result>(stx)
@@ -91,9 +86,15 @@ object RegistryObserverFlow {
 
             val result = try {
                 val observedCommand = wtx.commands.singleOrNull(){ it.value is Observed } ?: throw RegistryException(Error.NothingToObserve())
+                val observerKey = serviceHub.keyManagementService.filterMyKeys(observedCommand.signers).single()
                 // Checks that we're the correct registry are handled by the contract, so the transaction will not
                 // verify if it doesn't match.
-                val stxWithOurs = serviceHub.addSignature(stx, serviceHub.keyManagementService.filterMyKeys(observedCommand.signers).single())
+                val stxWithOurs = serviceHub.addSignature(stx, observerKey)
+
+                // Check we're not signing anything we don't expect to be
+                val otherSigners = wtx.commands.filter { it.value !is Observed }.flatMap { it.signers }
+                require(observerKey !in otherSigners) { "Registry will not sign any command except \"Observed\"" }
+
                 val notarySig = subFlow(NotaryFlow.Client(stxWithOurs))
                 val completeTx = stxWithOurs.withAdditionalSignatures(notarySig)
                 serviceHub.recordTransactions(listOf(completeTx))
