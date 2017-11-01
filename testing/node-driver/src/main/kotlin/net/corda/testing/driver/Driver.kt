@@ -27,7 +27,6 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
@@ -499,7 +498,7 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
  * It's been observed that nodes can take up to 30 seconds to shut down, so just to stay on the safe side the 40 seconds
  * timeout has been chosen.
  */
-fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort, timeout: Duration = 40.seconds) {
+fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort, timeout: Duration = 60.seconds) {
     addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow(timeout)
 }
 
