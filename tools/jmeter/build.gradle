@@ -1,7 +1,5 @@
 apply plugin: 'kotlin'
 apply plugin: 'application'
-//apply plugin: 'net.corda.plugins.cordapp'
-//apply plugin: 'net.corda.plugins.cordformation'
 
 mainClassName = 'net.corda.jmeter.Launcher'
 
@@ -29,17 +27,21 @@ dependencies {
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'jorphan', version: "$jmVersion"
 
-    compile project(":test-utils")
+    //compile project(":test-utils")
     compile project(":finance")
-
-    //cordapp project(':finance')
-    //cordapp project(':samples:bank-of-corda-demo')
-
 }
 
-//jmeter {
-//    testFileDir = file("src/main/resources/jmeter")
-//}
+task(runServer, dependsOn: 'classes', type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.jmeter.Launcher'
+    systemProperty "search_paths", project(':tools:jmeter').configurations.runtime.files.join(";")
+    systemProperty "java.rmi.server.hostname", InetAddress.getLocalHost().getHostName()
+    //jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+    args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
+             "-d", sourceSets.main.resources.getSrcDirs().first().getPath(),
+             "-j", buildDir.getPath()+"/jmeter.log",
+             "-s" ]
+}
 
 run {
     systemProperty "search_paths", project(':tools:jmeter').configurations.runtime.files.join(";")
@@ -50,9 +52,16 @@ run {
 }
 
 jar {
+    from(configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
     manifest {
         attributes(
-                'Automatic-Module-Name': 'net.corda.tools.jmeter'
+                'Automatic-Module-Name': 'net.corda.tools.jmeter',
+                'Main-Class': mainClassName
         )
     }
+    zip64 = true
 }
