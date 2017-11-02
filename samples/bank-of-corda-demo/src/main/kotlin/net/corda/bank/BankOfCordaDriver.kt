@@ -9,7 +9,7 @@ import net.corda.finance.flows.CashConfigDataFlow
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
@@ -63,19 +63,19 @@ private class BankOfCordaDriver {
                                 BANK_USERNAME,
                                 "test",
                                 permissions = setOf(
-                                        startFlowPermission<CashPaymentFlow>(),
-                                        startFlowPermission<CashConfigDataFlow>(),
-                                        startFlowPermission<CashExitFlow>(),
-                                        startFlowPermission<CashIssueAndPaymentFlow>(),
-                                        startFlowPermission<CashConfigDataFlow>()
+                                        startFlow<CashPaymentFlow>(),
+                                        startFlow<CashConfigDataFlow>(),
+                                        startFlow<CashExitFlow>(),
+                                        startFlow<CashIssueAndPaymentFlow>(),
+                                        startFlow<CashConfigDataFlow>()
                                 ))
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
                                 rpcUsers = listOf(bankUser))
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
                                 permissions = setOf(
-                                        startFlowPermission<CashPaymentFlow>(),
-                                        startFlowPermission<CashConfigDataFlow>()))
+                                        startFlow<CashPaymentFlow>(),
+                                        startFlow<CashConfigDataFlow>()))
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()
@@ -119,5 +119,4 @@ private class BankOfCordaDriver {
         parser.printHelpOn(System.out)
     }
 }
-
 

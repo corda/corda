@@ -17,7 +17,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.FlowPermissions
+import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
@@ -39,7 +40,7 @@ class NodeStatePersistenceTests {
         // More investigation is needed to establish why.
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
 
-        val user = User("mark", "dadada", setOf(FlowPermissions.startFlowPermission<SendMessageFlow>()))
+        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
             val (nodeName, notaryNodeHandle) = {

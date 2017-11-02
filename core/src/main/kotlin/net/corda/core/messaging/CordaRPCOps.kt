@@ -100,21 +100,13 @@ interface CordaRPCOps : RPCOps {
     // Java Helpers
 
     // DOCSTART VaultQueryAPIHelpers
-    fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {
-        return vaultQueryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T>
 
-    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T> {
-        return vaultQueryBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T>
 
-    fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
-        return vaultQueryBy(criteria, paging, Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T>
 
-    fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
-        return vaultQueryBy(criteria, PageSpecification(), sorting, contractStateType)
-    }
+    fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T>
     // DOCEND VaultQueryAPIHelpers
 
     /**
@@ -141,21 +133,13 @@ interface CordaRPCOps : RPCOps {
     // Java Helpers
 
     // DOCSTART VaultTrackAPIHelpers
-    fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
-    fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
-    fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, paging, Sort(emptySet()), contractStateType)
-    }
+    fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
-    fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
-    }
+    fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>>
     // DOCEND VaultTrackAPIHelpers
 
     /**

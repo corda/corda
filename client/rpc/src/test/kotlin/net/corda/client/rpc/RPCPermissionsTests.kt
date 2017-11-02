@@ -1,7 +1,9 @@
 package net.corda.client.rpc
 
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
-import net.corda.node.services.messaging.getRpcContext
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.messaging.rpcContext
 import net.corda.node.services.messaging.requirePermission
 import net.corda.nodeapi.User
 import net.corda.testing.RPCDriverExposedDSLInterface
@@ -9,6 +11,8 @@ import net.corda.testing.rpcDriver
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import kotlin.reflect.KVisibility
+import kotlin.reflect.full.declaredMemberFunctions
 import kotlin.test.assertFailsWith
 
 @RunWith(Parameterized::class)
@@ -28,7 +32,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
 
     class TestOpsImpl : TestOps {
         override val protocolVersion = 1
-        override fun validatePermission(str: String) = getRpcContext().requirePermission(str)
+        override fun validatePermission(str: String) { rpcContext().requirePermission(str) }
     }
 
     /**
@@ -89,4 +93,19 @@ class RPCPermissionsTests : AbstractRPCTest() {
         }
     }
 
+    @Test
+    fun `fine grained permissions are enforced`() {
+        val allPermissions = CordaRPCOps::class.declaredMemberFunctions.filter { it.visibility == KVisibility.PUBLIC }.map { invokeRpc(it) }
+        allPermissions.forEach { permission ->
+            rpcDriver {
+                val user = userOf("Mark", setOf(permission))
+                val proxy = testProxyFor(user)
+
+                proxy.validatePermission(permission)
+                (allPermissions - permission).forEach { notOwnedPermission ->
+                    assertFailsWith(PermissionException::class, { proxy.validatePermission(notOwnedPermission) })
+                }
+            }
+        }
+    }
 }

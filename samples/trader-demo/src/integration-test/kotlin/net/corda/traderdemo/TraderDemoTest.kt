@@ -6,7 +6,8 @@ import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.FlowPermissions
+import net.corda.node.services.Permissions.Companion.all
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
@@ -22,11 +23,12 @@ import java.util.concurrent.Executors
 class TraderDemoTest {
     @Test
     fun `runs trader demo`() {
-        val demoUser = User("demo", "demo", setOf(FlowPermissions.startFlowPermission<SellerFlow>()))
+        val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
         val bankUser = User("user1", "test", permissions = setOf(
-                FlowPermissions.startFlowPermission<CashIssueFlow>(),
-                FlowPermissions.startFlowPermission<CashPaymentFlow>(),
-                FlowPermissions.startFlowPermission<CommercialPaperIssueFlow>()))
+                startFlow<CashIssueFlow>(),
+                startFlow<CashPaymentFlow>(),
+                startFlow<CommercialPaperIssueFlow>(),
+                all()))
         driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),

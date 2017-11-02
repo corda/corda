@@ -1,6 +1,7 @@
 package net.corda.docs
 
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.Vault
@@ -10,7 +11,8 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -24,11 +26,18 @@ class IntegrationTestingTutorial {
         driver(startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
-                    startFlowPermission<CashIssueFlow>(),
-                    startFlowPermission<CashPaymentFlow>()
+                    startFlow<CashIssueFlow>(),
+                    startFlow<CashPaymentFlow>(),
+                    invokeRpc(CordaRPCOps::waitUntilNetworkReady),
+                    invokeRpc("vaultTrackBy"),
+                    invokeRpc(CordaRPCOps::notaryIdentities),
+                    invokeRpc(CordaRPCOps::networkMapFeed)
             ))
             val bobUser = User("bobUser", "testPassword2", permissions = setOf(
-                    startFlowPermission<CashPaymentFlow>()
+                    startFlow<CashPaymentFlow>(),
+                    invokeRpc(CordaRPCOps::waitUntilNetworkReady),
+                    invokeRpc("vaultTrackBy"),
+                    invokeRpc(CordaRPCOps::networkMapFeed)
             ))
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),

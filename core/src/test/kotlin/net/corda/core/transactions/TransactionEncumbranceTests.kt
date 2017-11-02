@@ -1,7 +1,9 @@
-package net.corda.core.contracts
+package net.corda.core.transactions
 
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
@@ -12,7 +14,7 @@ import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-val TEST_TIMELOCK_ID = "net.corda.core.contracts.TransactionEncumbranceTests\$DummyTimeLock"
+val TEST_TIMELOCK_ID = "net.corda.core.transactions.TransactionEncumbranceTests\$DummyTimeLock"
 
 class TransactionEncumbranceTests {
     val defaultIssuer = MEGA_CORP.ref(1)

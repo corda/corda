@@ -1,12 +1,13 @@
 package net.corda.attachmentdemo
 
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
@@ -17,7 +18,14 @@ class AttachmentDemoTest {
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
         driver(isDebug = true) {
-            val demoUser = listOf(User("demo", "demo", setOf(startFlowPermission<AttachmentDemoFlow>())))
+            val demoUser = listOf(User("demo", "demo", setOf(
+                    startFlow<AttachmentDemoFlow>(),
+                    invokeRpc(CordaRPCOps::attachmentExists),
+                    invokeRpc(CordaRPCOps::uploadAttachment),
+                    invokeRpc(CordaRPCOps::openAttachment),
+                    invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
+                    invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed)
+            )))
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
                     startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g"),

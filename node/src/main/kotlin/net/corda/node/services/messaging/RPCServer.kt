@@ -373,7 +373,7 @@ internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcContext> = ThreadLocal()
  * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
  * around explicitly.
  */
-fun getRpcContext(): RpcContext = CURRENT_RPC_CONTEXT.get()
+fun rpcContext(): RpcContext = CURRENT_RPC_CONTEXT.get()
 
 /**
  * @param currentUser This is available to RPC implementations to query the validated [User] that is calling it. Each

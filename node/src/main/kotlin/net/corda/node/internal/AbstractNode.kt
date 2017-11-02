@@ -154,7 +154,7 @@ abstract class AbstractNode(config: NodeConfiguration,
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(flowStarter: FlowStarter): CordaRPCOps {
-        return CordaRPCOpsImpl(services, smm, database, flowStarter)
+        return SecureCordaRPCOps(services, smm, database, flowStarter)
     }
 
     private fun saveOwnNodeInfo() {

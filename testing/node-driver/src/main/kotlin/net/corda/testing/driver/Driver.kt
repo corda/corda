@@ -26,6 +26,7 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.NodeInfoFilesCopier
@@ -75,6 +76,12 @@ private val log: Logger = loggerFor<DriverDSL>()
 private val DEFAULT_POLL_INTERVAL = 500.millis
 
 private const val DEFAULT_WARN_COUNT = 120
+
+private val DRIVER_REQUIRED_PERMISSIONS = setOf(
+        invokeRpc(CordaRPCOps::nodeInfo),
+        invokeRpc(CordaRPCOps::networkMapFeed),
+        invokeRpc(CordaRPCOps::networkMapSnapshot)
+)
 
 /**
  * This is the interface that's exposed to DSL users.
@@ -722,6 +729,7 @@ class DriverDSL(
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name(organisation = "${oneOf(names).organisation}-${p2pAddress.port}", locality = "London", country = "GB")
+        val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
@@ -731,7 +739,7 @@ class DriverDSL(
                         "rpcAddress" to rpcAddress.toString(),
                         "webAddress" to webAddress.toString(),
                         "useTestClock" to useTestClock,
-                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers.map { it.toConfig().root().unwrapped() },
+                        "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
                         "verifierType" to verifierType.name
                 ) + customOverrides
         )

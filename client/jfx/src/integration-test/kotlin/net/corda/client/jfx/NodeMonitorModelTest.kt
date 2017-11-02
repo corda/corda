@@ -26,7 +26,8 @@ import net.corda.finance.USD
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -52,9 +53,16 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     override fun setup() = driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
         val cashUser = User("user1", "test", permissions = setOf(
-                startFlowPermission<CashIssueFlow>(),
-                startFlowPermission<CashPaymentFlow>(),
-                startFlowPermission<CashExitFlow>())
+                startFlow<CashIssueFlow>(),
+                startFlow<CashPaymentFlow>(),
+                startFlow<CashExitFlow>(),
+                invokeRpc(CordaRPCOps::notaryIdentities),
+                invokeRpc("vaultTrackBy"),
+                invokeRpc("vaultQueryBy"),
+                invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
+                invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                invokeRpc(CordaRPCOps::networkMapFeed))
         )
         val aliceNodeFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser))
         val notaryHandle = startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()

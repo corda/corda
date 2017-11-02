@@ -14,7 +14,8 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
@@ -42,10 +43,11 @@ fun main(args: Array<String>) {
     val printOrVisualise = PrintOrVisualise.valueOf(args[0])
 
     val baseDirectory = Paths.get("build/rpc-api-tutorial")
-    val user = User("user", "password", permissions = setOf(startFlowPermission<CashIssueFlow>(),
-            startFlowPermission<CashPaymentFlow>(),
-            startFlowPermission<CashExitFlow>()))
-
+    val user = User("user", "password", permissions = setOf(startFlow<CashIssueFlow>(),
+            startFlow<CashPaymentFlow>(),
+            startFlow<CashExitFlow>(),
+            invokeRpc(CordaRPCOps::nodeInfo)
+    ))
     driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance")) {
         startNotaryNode(DUMMY_NOTARY.name)
         val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()

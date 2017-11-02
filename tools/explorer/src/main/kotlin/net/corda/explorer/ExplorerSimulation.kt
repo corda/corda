@@ -20,7 +20,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.*
 import net.corda.finance.flows.CashExitFlow.ExitRequest
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -33,14 +33,14 @@ import java.util.*
 
 class ExplorerSimulation(val options: OptionSet) {
     private val user = User("user1", "test", permissions = setOf(
-            startFlowPermission<CashPaymentFlow>(),
-            startFlowPermission<CashConfigDataFlow>()
+            startFlow<CashPaymentFlow>(),
+            startFlow<CashConfigDataFlow>()
     ))
     private val manager = User("manager", "test", permissions = setOf(
-            startFlowPermission<CashIssueAndPaymentFlow>(),
-            startFlowPermission<CashPaymentFlow>(),
-            startFlowPermission<CashExitFlow>(),
-            startFlowPermission<CashConfigDataFlow>())
+            startFlow<CashIssueAndPaymentFlow>(),
+            startFlow<CashPaymentFlow>(),
+            startFlow<CashExitFlow>(),
+            startFlow<CashConfigDataFlow>())
     )
 
     private lateinit var notaryNode: NodeHandle
