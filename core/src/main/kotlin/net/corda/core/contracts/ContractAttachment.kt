@@ -6,6 +6,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
+import java.util.*
 
 /**
  * Wrap an attachment in this if it is to be used as an executable contract attachment
@@ -27,11 +28,5 @@ class ContractAttachment(override val id: SecureHash, dataLoader: () -> ByteArra
 
     override fun equals(other: Any?) = other === this || other is ContractAttachment && other.id == this.id && other.contract == this.contract
 
-    override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + id.hashCode()
-        result = 31 * result + contract.hashCode()
-        return result
-    }
-
+    override fun hashCode() = super.hashCode() + 31 * Objects.hash(id, contract)
 }
