@@ -11,7 +11,6 @@ import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
-import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.PartyAndCertificate
@@ -25,7 +24,6 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
-import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.MutableClassWhitelist
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -44,7 +42,6 @@ import org.slf4j.Logger
 import sun.security.ec.ECPublicKeyImpl
 import sun.security.provider.certpath.X509CertPath
 import java.io.BufferedInputStream
-import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
 import java.io.InputStream
 import java.lang.reflect.Modifier.isPublic
@@ -119,9 +116,6 @@ object DefaultKryoCustomizer {
             // Don't deserialize PrivacySalt via its default constructor.
             register(PrivacySalt::class.java, PrivacySaltSerializer)
 
-            // Used by the remote verifier, and will possibly be removed in future.
-            register(ContractAttachment::class.java, ContractAttachmentSerializer)
-
             register(java.lang.invoke.SerializedLambda::class.java)
             register(ClosureSerializer.Closure::class.java, CordaClosureBlacklistSerializer)
 
@@ -191,20 +185,6 @@ object DefaultKryoCustomizer {
 
         override fun read(kryo: Kryo, input: Input, type: Class<PrivacySalt>): PrivacySalt {
             return PrivacySalt(input.readBytesWithLength())
-        }
-    }
-
-    private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
-        override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
-            val buffer = ByteArrayOutputStream()
-            obj.attachment.open().use { it.copyTo(buffer) }
-            output.writeBytesWithLength(buffer.toByteArray())
-            output.writeString(obj.contract)
-        }
-
-        override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
-            val attachment = GeneratedAttachment(input.readBytesWithLength())
-            return ContractAttachment(attachment, input.readString())
         }
     }
 }

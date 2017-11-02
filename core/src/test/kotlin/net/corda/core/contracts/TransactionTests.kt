@@ -103,7 +103,7 @@ class TransactionTests {
         val inputs = emptyList<StateAndRef<*>>()
         val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
         val commands = emptyList<CommandWithParties<CommandData>>()
-        val attachments = listOf<Attachment>(ContractAttachment(MockAttachment(), DummyContract.PROGRAM_ID))
+        val attachments = listOf<Attachment>(ContractAttachment(SecureHash.zeroHash, { ByteArray(0) }, DummyContract.PROGRAM_ID))
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt: PrivacySalt = PrivacySalt()
