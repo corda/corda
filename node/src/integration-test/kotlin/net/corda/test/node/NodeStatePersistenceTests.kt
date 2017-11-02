@@ -7,7 +7,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -23,8 +22,6 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
-import net.corda.testing.driver.DriverDSLExposedInterface
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import org.junit.Assume
 import org.junit.Test
@@ -49,17 +46,15 @@ class NodeStatePersistenceTests {
             val (nodeName, notaryNodeHandle) = {
                 val notaryNodeHandle = startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-                ensureAcquainted(notaryNodeHandle, nodeHandle)
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
                 nodeHandle.rpcClientToNode().start(user.username, user.password).use {
                     it.proxy.startFlow(::SendMessageFlow, message).returnValue.getOrThrow()
                 }
-                nodeHandle.stop().getOrThrow()
+                nodeHandle.stop()
                 nodeName to notaryNodeHandle
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-            ensureAcquainted(notaryNodeHandle, nodeHandle)
             nodeHandle.rpcClientToNode().start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
                 val stateAndRef = page.states.singleOrNull()
@@ -68,10 +63,6 @@ class NodeStatePersistenceTests {
                 assertEquals(message, retrievedMessage)
             }
         }
-    }
-
-    private fun DriverDSLExposedInterface.ensureAcquainted(one: NodeHandle, another: NodeHandle) {
-        listOf(one.pollUntilKnowsAbout(another), another.pollUntilKnowsAbout(one)).transpose().getOrThrow()
     }
 }
 

@@ -300,7 +300,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         return nodeFactory(MockNodeArgs(config, this, id, parameters.notaryIdentity, parameters.entropyRoot)).apply {
             if (start) {
                 start()
-                if (threadPerNode) nodeReadyFuture.getOrThrow() // XXX: What about manually-started nodes?
                 ensureAllNetworkMapCachesHaveAllNodeInfos()
             }
             _nodes.add(this)
