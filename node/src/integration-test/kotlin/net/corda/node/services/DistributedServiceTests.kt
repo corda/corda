@@ -11,7 +11,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
@@ -34,8 +35,10 @@ class DistributedServiceTests : DriverBasedTest() {
         // Start Alice and 3 notaries in a RAFT cluster
         val clusterSize = 3
         val testUser = User("test", "test", permissions = setOf(
-                startFlowPermission<CashIssueFlow>(),
-                startFlowPermission<CashPaymentFlow>())
+                startFlow<CashIssueFlow>(),
+                startFlow<CashPaymentFlow>(),
+                invokeRpc(CordaRPCOps::nodeInfo),
+                invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
         val aliceFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser))
         val notariesFuture = startNotaryCluster(

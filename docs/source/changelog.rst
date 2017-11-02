@@ -6,6 +6,7 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
 
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.

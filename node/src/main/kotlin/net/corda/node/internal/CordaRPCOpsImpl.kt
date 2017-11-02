@@ -20,11 +20,9 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.messaging.getRpcContext
-import net.corda.node.services.messaging.requirePermission
+import net.corda.node.services.messaging.rpcContext
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
 import rx.Observable
@@ -36,7 +34,7 @@ import java.time.Instant
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
  * thread (i.e. serially). Arguments are serialised and deserialised automatically.
  */
-class CordaRPCOpsImpl(
+internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val database: CordaPersistence,
@@ -149,9 +147,7 @@ class CordaRPCOpsImpl(
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
-        val rpcContext = getRpcContext()
-        rpcContext.requirePermission(startFlowPermission(logicType))
-        val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
+        val currentUser = FlowInitiator.RPC(rpcContext().currentUser.username)
         // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
         return flowStarter.invokeFlowAsync(logicType, currentUser, *args).getOrThrow()
     }
@@ -221,6 +217,38 @@ class CordaRPCOpsImpl(
         }
     }
 
+    override fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {
+        return vaultQueryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
+    }
+
+    override fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T> {
+        return vaultQueryBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
+    }
+
+    override fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
+        return vaultQueryBy(criteria, paging, Sort(emptySet()), contractStateType)
+    }
+
+    override fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
+        return vaultQueryBy(criteria, PageSpecification(), sorting, contractStateType)
+    }
+
+    override fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
+    }
+
+    override fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractStateType)
+    }
+
+    override fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return vaultTrackBy(criteria, paging, Sort(emptySet()), contractStateType)
+    }
+
+    override fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
+    }
+
     companion object {
         private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
             return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.flowInitiator, flowLogic.track())
@@ -233,6 +261,4 @@ class CordaRPCOpsImpl(
             }
         }
     }
-
 }
-

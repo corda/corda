@@ -1,9 +1,9 @@
-package net.corda.core.contracts
+package net.corda.core.transactions
 
+import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
@@ -399,8 +399,7 @@ class CompatibleTransactionTests {
     @Test
     fun `FilteredTransaction signer manipulation tests`() {
         // Required to call the private constructor.
-        val ftxConstructor = FilteredTransaction::class.java.declaredConstructors[1]
-        ftxConstructor.isAccessible = true
+        val ftxConstructor = ::FilteredTransaction
 
         // 1st and 3rd commands require a signature from KEY_1.
         val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public),  dummyCommand(DUMMY_KEY_1.public))
@@ -479,12 +478,12 @@ class CompatibleTransactionTests {
         // A command with no corresponding signer detected
         // because the pointer of CommandData (3rd leaf) cannot find a corresponding (3rd) signer.
         val updatedFilteredComponentsNoSignersKey1SamePMT = listOf(key1CommandsFtx.filteredComponentGroups[0], noLastSignerGroupSamePartialTree)
-        assertFails { ftxConstructor.newInstance(key1CommandsFtx.id, updatedFilteredComponentsNoSignersKey1SamePMT, key1CommandsFtx.groupHashes) }
+        assertFails { ftxConstructor.invoke(key1CommandsFtx.id, updatedFilteredComponentsNoSignersKey1SamePMT, key1CommandsFtx.groupHashes) }
 
         // Remove both last signer (KEY1) and related command.
         // Update partial Merkle tree for signers.
         val updatedFilteredComponentsNoLastCommandAndSigners = listOf(noLastCommandDataGroup, noLastSignerGroup)
-        val ftxNoLastCommandAndSigners = ftxConstructor.newInstance(key1CommandsFtx.id, updatedFilteredComponentsNoLastCommandAndSigners, key1CommandsFtx.groupHashes) as FilteredTransaction
+        val ftxNoLastCommandAndSigners = ftxConstructor.invoke(key1CommandsFtx.id, updatedFilteredComponentsNoLastCommandAndSigners, key1CommandsFtx.groupHashes) as FilteredTransaction
         // verify() will pass as the transaction is well-formed.
         ftxNoLastCommandAndSigners.verify()
         // checkCommandVisibility() will not pass, because checkAllComponentsVisible(ComponentGroupEnum.SIGNERS_GROUP) will fail.
@@ -493,7 +492,7 @@ class CompatibleTransactionTests {
         // Remove last signer for which there is no pointer from a visible commandData. This is the case of Key2.
         // Do not change partial Merkle tree for signers.
         // This time the object can be constructed as there is no pointer mismatch.
-        val ftxNoLastSigner = ftxConstructor.newInstance(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2SamePMT, key2CommandsFtx.groupHashes) as FilteredTransaction
+        val ftxNoLastSigner = ftxConstructor.invoke(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2SamePMT, key2CommandsFtx.groupHashes) as FilteredTransaction
         // verify() will fail as we didn't change the partial Merkle tree.
         assertFailsWith<FilteredTransactionVerificationException> { ftxNoLastSigner.verify() }
         // checkCommandVisibility() will not pass.
@@ -501,7 +500,7 @@ class CompatibleTransactionTests {
 
         // Remove last signer for which there is no pointer from a visible commandData. This is the case of Key2.
         // Update partial Merkle tree for signers.
-        val ftxNoLastSignerB = ftxConstructor.newInstance(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2, key2CommandsFtx.groupHashes) as FilteredTransaction
+        val ftxNoLastSignerB = ftxConstructor.invoke(key2CommandsFtx.id, updatedFilteredComponentsNoSignersKey2, key2CommandsFtx.groupHashes) as FilteredTransaction
         // verify() will pass, the transaction is well-formed.
         ftxNoLastSignerB.verify()
         // But, checkAllComponentsVisible() will not pass.
@@ -526,20 +525,18 @@ class CompatibleTransactionTests {
         val alterFilteredComponents = listOf(key1CommandsFtx.filteredComponentGroups[0], alterSignerGroup)
 
         // Do not update groupHashes.
-        val ftxAlterSigner = ftxConstructor.newInstance(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes) as FilteredTransaction
+        val ftxAlterSigner = ftxConstructor.invoke(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes) as FilteredTransaction
         // Visible components in signers group cannot be verified against their partial Merkle tree.
         assertFailsWith<FilteredTransactionVerificationException> { ftxAlterSigner.verify() }
         // Also, checkAllComponentsVisible() will not pass (groupHash matching will fail).
         assertFailsWith<ComponentVisibilityException> { ftxAlterSigner.checkCommandVisibility(DUMMY_KEY_1.public) }
 
         // Update groupHashes.
-        val ftxAlterSignerB = ftxConstructor.newInstance(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes.subList(0, 6) + alterMTree.hash) as FilteredTransaction
+        val ftxAlterSignerB = ftxConstructor.invoke(key1CommandsFtx.id, alterFilteredComponents, key1CommandsFtx.groupHashes.subList(0, 6) + alterMTree.hash) as FilteredTransaction
         // Visible components in signers group cannot be verified against their partial Merkle tree.
         assertFailsWith<FilteredTransactionVerificationException> { ftxAlterSignerB.verify() }
         // Also, checkAllComponentsVisible() will not pass (top level Merkle tree cannot be verified against transaction's id).
         assertFailsWith<ComponentVisibilityException> { ftxAlterSignerB.checkCommandVisibility(DUMMY_KEY_1.public) }
-
-        ftxConstructor.isAccessible = false
     }
 }
 

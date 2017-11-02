@@ -1,8 +1,7 @@
-package net.corda.core.contracts
+package net.corda.core.transactions
 
+import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices
