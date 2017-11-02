@@ -4,10 +4,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.packageName
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.messaging.startFlow
-import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.messaging.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
@@ -20,7 +17,8 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
@@ -36,9 +34,12 @@ import kotlin.test.assertTrue
 
 class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
     private val rpcUser = User("user1", "test", permissions = setOf(
-            startFlowPermission<CashIssueFlow>(),
-            startFlowPermission<CashPaymentFlow>()
-    ))
+            startFlow<CashIssueFlow>(),
+            startFlow<CashPaymentFlow>(),
+            invokeRpc("vaultQueryBy"),
+            invokeRpc(CordaRPCOps::stateMachinesFeed),
+            invokeRpc("vaultQueryByCriteria"))
+    )
     private lateinit var node: StartedNode<Node>
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null

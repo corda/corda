@@ -12,7 +12,7 @@ import net.corda.core.utilities.minutes
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
@@ -59,7 +59,7 @@ class NodePerformanceTests {
     @Test
     fun `empty flow per second`() {
         driver(startNodesInProcess = true) {
-            val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlowPermission<EmptyFlow>())))).get()
+            val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
 
             a.rpcClientToNode().use("A", "A") { connection ->
                 val timings = Collections.synchronizedList(ArrayList<Long>())
@@ -89,7 +89,7 @@ class NodePerformanceTests {
     @Test
     fun `empty flow rate`() {
         driver(startNodesInProcess = true) {
-            val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlowPermission<EmptyFlow>())))).get()
+            val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
             a as NodeHandle.InProcess
             val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
             a.rpcClientToNode().use("A", "A") { connection ->
@@ -105,7 +105,7 @@ class NodePerformanceTests {
         driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
             val a = startNotaryNode(
                     DUMMY_NOTARY.name,
-                    rpcUsers = listOf(User("A", "A", setOf(startFlowPermission<CashIssueFlow>(), startFlowPermission<CashPaymentFlow>())))
+                    rpcUsers = listOf(User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>())))
             ).getOrThrow()
             a as NodeHandle.InProcess
             val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
