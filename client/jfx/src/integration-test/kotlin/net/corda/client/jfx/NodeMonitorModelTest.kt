@@ -64,7 +64,7 @@ class NodeMonitorModelTest {
                     invokeRpc(CordaRPCOps::stateMachinesFeed),
                     invokeRpc(CordaRPCOps::networkMapFeed))
             )
-            val aliceNodeHandle = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser)).getOrThrow()
+            val aliceNodeHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
             aliceNode = aliceNodeHandle.nodeInfo
             newNode = { nodeName -> startNode(providedName = nodeName).getOrThrow().nodeInfo }
             val monitor = NodeMonitorModel()
@@ -79,7 +79,7 @@ class NodeMonitorModelTest {
             rpc = monitor.proxyObservable.value!!
             notaryParty = defaultNotaryIdentity
 
-            val bobNodeHandle = startNode(providedName = BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
+            val bobNodeHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
             bobNode = bobNodeHandle.nodeInfo
             val monitorBob = NodeMonitorModel()
             stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
@@ -91,20 +91,20 @@ class NodeMonitorModelTest {
 
     @Test
     fun `network map update`() = setup {
-        val charlieNode = newNode(CHARLIE.name)
+        val charlieNode = newNode(CHARLIE_NAME)
         val nonServiceIdentities = aliceNode.legalIdentitiesAndCerts + bobNode.legalIdentitiesAndCerts + charlieNode.legalIdentitiesAndCerts
         networkMapUpdates.filter { it.node.legalIdentitiesAndCerts.any { it in nonServiceIdentities } }
                 .expectEvents(isStrict = false) {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.map(Party::name).contains(ALICE_NAME)) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.any { it.name == ALICE_NAME }) { "Expecting : ${ALICE_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.map(Party::name).contains(BOB_NAME)) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.any { it.name == BOB_NAME }) { "Expecting : ${BOB_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.map(Party::name).contains(CHARLIE.name)) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.any { it.name == CHARLIE_NAME }) { "Expecting : ${CHARLIE_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             }
                     )
                 }
