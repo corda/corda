@@ -37,14 +37,10 @@ class IRSDemoTest : IntegrationTestCategory {
         val log = loggerFor<IRSDemoTest>()
     }
 
-    val rpcUsers = listOf(User("user", "password",
-            setOf("StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
-                    "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
-                    "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow")))
-
-    val currentDate: LocalDate = LocalDate.now()
-    val futureDate: LocalDate = currentDate.plusMonths(6)
-    val maxWaitTime: Duration = 60.seconds
+    private val rpcUsers = listOf(User("user", "password", setOf("ALL")))
+    private val currentDate: LocalDate = LocalDate.now()
+    private val futureDate: LocalDate = currentDate.plusMonths(6)
+    private val maxWaitTime: Duration = 60.seconds
 
     @Test
     fun `runs IRS demo`() {
