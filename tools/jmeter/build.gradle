@@ -1,10 +1,12 @@
 apply plugin: 'kotlin'
+apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'application'
 
 mainClassName = 'net.corda.jmeter.Launcher'
 
 dependencies {
     compile project(':client:rpc')
+    compile project(":finance")
 
     // JMeter
     ext.jmVersion = "3.3"
@@ -14,7 +16,7 @@ dependencies {
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ftp', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_functions', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_http', version: "$jmVersion"
-    compile group: 'org.apache.jmeter', name: 'ApacheJMeter_java', version: "$jmVersion"
+    compile group: 'org.apache.jmeter', name: 'ApacheJMeter_java', version: "$jmVersion" // 'compile' because we extend Java sampler.
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jdbc', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jms', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_junit', version: "$jmVersion"
@@ -26,37 +28,29 @@ dependencies {
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_config', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'jorphan', version: "$jmVersion"
-
-    //compile project(":test-utils")
-    compile project(":finance")
 }
 
 task(runServer, dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.jmeter.Launcher'
     systemProperty "search_paths", project(':tools:jmeter').configurations.runtime.files.join(";")
-    systemProperty "java.rmi.server.hostname", InetAddress.getLocalHost().getHostName()
-    //jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+    systemProperty "java.rmi.server.hostname", "0.0.0.0"
+    systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
+    // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
     args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
              "-d", sourceSets.main.resources.getSrcDirs().first().getPath(),
-             "-j", buildDir.getPath()+"/jmeter.log",
              "-s" ]
 }
 
 run {
     systemProperty "search_paths", project(':tools:jmeter').configurations.runtime.files.join(";")
-    //jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+    systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
+    // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
     args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
-             "-d", sourceSets.main.resources.getSrcDirs().first().getPath(),
-             "-j", buildDir.getPath()+"/jmeter.log" ]
+             "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
 }
 
 jar {
-    from(configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }) {
-        exclude "META-INF/*.SF"
-        exclude "META-INF/*.DSA"
-        exclude "META-INF/*.RSA"
-    }
     manifest {
         attributes(
                 'Automatic-Module-Name': 'net.corda.tools.jmeter',
@@ -64,4 +58,28 @@ jar {
         )
     }
     zip64 = true
+}
+
+// For building a runnable jar with no other dependencies for remote JMeter slave server, that has Corda code on classpath.
+// Run with: java -jar corda-jmeter-<version>.jar
+// No additional args required but will be passed if specified.
+task buildJMeterJAR(type: FatCapsule, dependsOn: 'jar') {
+    applicationClass 'net.corda.jmeter.Launcher'
+    archiveName "corda-jmeter-${corda_release_version}.jar"
+    applicationSource = files(
+            project(':tools:jmeter').jar
+    )
+    from 'NOTICE' // Copy CDDL notice
+    from { "$rootDir/tools/jmeter/build/resources/main/jmeter.properties" }
+    from { "$rootDir/tools/jmeter/build/resources/main/log4j2.xml" }
+
+    capsuleManifest {
+        applicationVersion = corda_release_version
+        systemProperties['java.rmi.server.hostname'] = '0.0.0.0'
+        minJavaVersion = '1.8.0'
+        minUpdateVersion['1.8'] = java8_minUpdateVersion
+
+        // JVM configuration.  Can be overridden on java command line.
+        jvmArgs = ['-Xms512m', '-Xmx512m', '-XX:+UseG1GC']
+    }
 }
