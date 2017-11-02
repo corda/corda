@@ -70,8 +70,8 @@ interface VerifierInternalDSLInterface : DriverDSLInternalInterface, VerifierExp
 fun <A> verifierDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        portAllocation: PortAllocation = globalPortAllocation,
+        debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
