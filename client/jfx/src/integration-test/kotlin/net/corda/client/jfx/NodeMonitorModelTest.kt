@@ -31,11 +31,10 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
-import net.corda.testing.node.DriverBasedTest
 import org.junit.Test
 import rx.Observable
 
-class NodeMonitorModelTest : DriverBasedTest() {
+class NodeMonitorModelTest {
     lateinit var aliceNode: NodeInfo
     lateinit var bobNode: NodeInfo
     lateinit var notaryParty: Party
@@ -50,8 +49,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     lateinit var newNode: (CordaX500Name) -> NodeInfo
-
-    override fun setup() = driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
+    private fun setup(runTest: () -> Unit) = driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
         val cashUser = User("user1", "test", permissions = setOf(
                 startFlow<CashIssueFlow>(),
                 startFlow<CashPaymentFlow>(),
@@ -91,7 +89,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     }
 
     @Test
-    fun `network map update`() {
+    fun `network map update`() = setup {
         val charlieNode = newNode(CHARLIE.name)
         val nonServiceIdentities = aliceNode.legalIdentitiesAndCerts + bobNode.legalIdentitiesAndCerts + charlieNode.legalIdentitiesAndCerts
         networkMapUpdates.filter { it.node.legalIdentitiesAndCerts.any { it in nonServiceIdentities } }
@@ -112,7 +110,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     }
 
     @Test
-    fun `cash issue works end to end`() {
+    fun `cash issue works end to end`() = setup {
         rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
                 OpaqueBytes(ByteArray(1, { 1 })),
@@ -136,7 +134,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     }
 
     @Test
-    fun `cash issue and move`() {
+    fun `cash issue and move`() = setup {
         val (_, issueIdentity) = rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryParty).returnValue.getOrThrow()
         rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.chooseIdentity()).returnValue.getOrThrow()
 
