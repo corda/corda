@@ -35,6 +35,7 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
@@ -243,9 +244,17 @@ data class WebserverHandle(
 )
 
 class PortAllocation(startingPort: Int) {
-    private val portCounter = AtomicInteger(startingPort)
+    companion object {
+        private val directory = projectRootDir?.let { (it / "build" / "PortAllocation").toFile().apply { mkdir() } }
+    }
 
-    fun nextPort() = portCounter.andIncrement
+    private val portCounter = AtomicInteger(startingPort)
+    fun nextPort(): Int {
+        while (true) {
+            val candidate = portCounter.andIncrement
+            if (directory == null || File(directory, candidate.toString()).mkdir()) return candidate
+        }
+    }
 
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
 }

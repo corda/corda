@@ -6,10 +6,10 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 object ProjectStructure {
-    val projectRootDir: Path = run {
+    val projectRootDir: Path? = run {
         var dir = Paths.get(javaClass.getResource("/").toURI())
         while (!(dir / ".git").isDirectory()) {
-            dir = dir.parent
+            dir = dir.parent ?: break
         }
         dir
     }
