@@ -145,7 +145,7 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val notary = serviceHub.networkMapCache.notaryIdentities.first()
+        val notary = serviceHub.networkMapCacheBase.notaryIdentities.first()
 
         progressTracker.currentStep = GENERATING_TRANSACTION
 

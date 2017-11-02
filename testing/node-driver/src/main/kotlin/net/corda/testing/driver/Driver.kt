@@ -19,7 +19,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.toFuture
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
@@ -863,18 +863,18 @@ class DriverDSL(
 
     /**
      * @param initial number of nodes currently in the network map of a running node.
-     * @param networkMapCacheChangeObservable an observable returning the updates to the node network map.
+     * @param networkMapCacheBaseChangeObservable an observable returning the updates to the node network map.
      * @return a [ConnectableObservable] which emits a new [Int] every time the number of registered nodes changes
      *   the initial value emitted is always [initial]
      */
-    private fun nodeCountObservable(initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>):
+    private fun nodeCountObservable(initial: Int, networkMapCacheBaseChangeObservable: Observable<NetworkMapCacheBase.MapChange>):
             ConnectableObservable<Int> {
         val count = AtomicInteger(initial)
-        return networkMapCacheChangeObservable.map { it ->
+        return networkMapCacheBaseChangeObservable.map { it ->
             when (it) {
-                is NetworkMapCache.MapChange.Added -> count.incrementAndGet()
-                is NetworkMapCache.MapChange.Removed -> count.decrementAndGet()
-                is NetworkMapCache.MapChange.Modified -> count.get()
+                is NetworkMapCacheBase.MapChange.Added -> count.incrementAndGet()
+                is NetworkMapCacheBase.MapChange.Removed -> count.decrementAndGet()
+                is NetworkMapCacheBase.MapChange.Modified -> count.get()
             }
         }.startWith(initial).replay()
     }

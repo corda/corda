@@ -45,8 +45,8 @@ object AutoOfferFlow {
 
         @Suspendable
         override fun call(): SignedTransaction {
-            require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
-            val notary = serviceHub.networkMapCache.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
+            require(serviceHub.networkMapCacheBase.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
+            val notary = serviceHub.networkMapCacheBase.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
             // need to pick which ever party is not us
             val otherParty = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, dealToBeOffered.participants)).keys.single()
             progressTracker.currentStep = DEALING

@@ -124,12 +124,12 @@ public class FlowCookbookJava {
             // We retrieve a notary from the network map.
             // DOCSTART 01
             CordaX500Name notaryName = new CordaX500Name("Notary Service", "London", "GB");
-            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(notaryName);
+            Party specificNotary = getServiceHub().getNetworkMapCacheBase().getNotary(notaryName);
             // Alternatively, we can pick an arbitrary notary from the notary
             // list. However, it is always preferable to specify the notary
             // explicitly, as the notary list might change when new notaries are
             // introduced, or old ones decommissioned.
-            Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
+            Party firstNotary = getServiceHub().getNetworkMapCacheBase().getNotaryIdentities().get(0);
             // DOCEND 01
 
             // We may also need to identify a specific counterparty. We do so

@@ -13,7 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
@@ -46,9 +46,9 @@ internal class CordaRPCOpsImpl(
         return snapshot
     }
 
-    override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
+    override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCacheBase.MapChange> {
         return database.transaction {
-            services.networkMapCache.track()
+            services.networkMapCacheBase.track()
         }
     }
 
@@ -116,7 +116,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun notaryIdentities(): List<Party> {
-        return services.networkMapCache.notaryIdentities
+        return services.networkMapCacheBase.notaryIdentities
     }
 
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
@@ -175,7 +175,7 @@ internal class CordaRPCOpsImpl(
 
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
 
-    override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady
+    override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCacheBase.nodeReady
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         return database.transaction {
@@ -195,7 +195,7 @@ internal class CordaRPCOpsImpl(
         }
     }
 
-    override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? = services.networkMapCache.getNotary(x500Name)
+    override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? = services.networkMapCacheBase.getNotary(x500Name)
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
@@ -207,7 +207,7 @@ internal class CordaRPCOpsImpl(
         return database.transaction {
             val wellKnownParty = services.identityService.wellKnownPartyFromAnonymous(party)
             wellKnownParty?.let {
-               services.networkMapCache.getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+               services.networkMapCacheBase.getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
             }
         }
     }
@@ -216,7 +216,7 @@ internal class CordaRPCOpsImpl(
 
     override fun clearNetworkMapCache() {
         database.transaction {
-            services.networkMapCache.clearNetworkMapCache()
+            services.networkMapCacheBase.clearNetworkMapCache()
         }
     }
 

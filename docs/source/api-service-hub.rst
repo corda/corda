@@ -3,7 +3,7 @@ API: ServiceHub
 Within ``FlowLogic.call``, the flow developer has access to the node's ``ServiceHub``, which provides access to the
 various services the node provides. The services offered by the ``ServiceHub`` are split into the following categories:
 
-* ``ServiceHub.networkMapCache``
+* ``ServiceHub.networkMapCacheBase``
     * Provides information on other nodes on the network (e.g. notaries…)
 * ``ServiceHub.identityService``
     * Allows you to resolve anonymous identities to well-known identities if you have the required certificates

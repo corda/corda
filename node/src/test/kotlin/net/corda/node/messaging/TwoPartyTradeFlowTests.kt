@@ -553,7 +553,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         @Suspendable
         override fun call(): SignedTransaction {
             val (notary, price, anonymous) = sellerSession.receive<TestTx>().unwrap {
-                require(serviceHub.networkMapCache.isNotary(it.notaryIdentity)) { "${it.notaryIdentity} is not a notary" }
+                require(serviceHub.networkMapCacheBase.isNotary(it.notaryIdentity)) { "${it.notaryIdentity} is not a notary" }
                 it
             }
             return subFlow(Buyer(sellerSession, notary, price, CommercialPaper.State::class.java, anonymous))

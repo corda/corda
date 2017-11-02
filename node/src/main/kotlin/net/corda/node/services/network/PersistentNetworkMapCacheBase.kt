@@ -10,15 +10,15 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.node.services.NetworkMapCacheBase
+import net.corda.core.node.services.NetworkMapCacheBase.MapChange
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.api.NetworkMapCacheIntenal
+import net.corda.node.services.api.NetworkMapCacheBaseIntenal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.bufferUntilDatabaseCommit
@@ -32,15 +32,15 @@ import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashMap
 
 /**
- * Plumb thorough the updates coming from a [NetworkMapCacheIntenal] to an [IdentityService].
+ * Plumb thorough the updates coming from a [NetworkMapCacheBaseIntenal] to an [IdentityService].
  * Specifically add all the known nodes from the cache to the IdentityService and subscribe to the updates from the
  * cache and update the IdentityService accordingly.
  */
-fun registerNetworkMapUpdatesInIdentityService(networkMapCacheIntenal: NetworkMapCacheIntenal, identityService: IdentityService) {
+fun registerNetworkMapUpdatesInIdentityService(networkMapCacheIntenal: NetworkMapCacheBaseIntenal, identityService: IdentityService) {
     networkMapCacheIntenal.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
     networkMapCacheIntenal.changed.subscribe { mapChange ->
         // TODO how should we handle network map removal
-        if (mapChange is NetworkMapCache.MapChange.Added) {
+        if (mapChange is NetworkMapCacheBase.MapChange.Added) {
             mapChange.node.legalIdentitiesAndCerts.forEach {
                 identityService.verifyAndRegisterIdentity(it)
             }
@@ -52,9 +52,9 @@ fun registerNetworkMapUpdatesInIdentityService(networkMapCacheIntenal: NetworkMa
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence, configuration: NodeConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheIntenal {
+open class PersistentNetworkMapCacheBase(private val database: CordaPersistence, configuration: NodeConfiguration) : SingletonSerializeAsToken(), NetworkMapCacheBaseIntenal {
     companion object {
-        val logger = loggerFor<PersistentNetworkMapCache>()
+        val logger = loggerFor<PersistentNetworkMapCacheBase>()
     }
 
     // TODO Small explanation, partyNodes and registeredNodes is left in memory as it was before, because it will be removed in

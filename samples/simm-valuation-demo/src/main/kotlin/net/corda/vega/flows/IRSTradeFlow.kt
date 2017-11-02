@@ -19,8 +19,8 @@ object IRSTradeFlow {
     class Requester(val swap: SwapData, val otherParty: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            require(serviceHub.networkMapCache.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
-            val notary = serviceHub.networkMapCache.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
+            require(serviceHub.networkMapCacheBase.notaryIdentities.isNotEmpty()) { "No notary nodes registered" }
+            val notary = serviceHub.networkMapCacheBase.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.
             val (buyer, seller) =
                     if (swap.buyer.second == ourIdentity.owningKey) {
                         Pair(ourIdentity, otherParty)
@@ -50,7 +50,7 @@ object IRSTradeFlow {
 
             val offer = replyToSession.receive<OfferMessage>().unwrap { it }
             // Automatically agree - in reality we'd vet the offer message
-            require(serviceHub.networkMapCache.notaryIdentities.contains(offer.notary))
+            require(serviceHub.networkMapCacheBase.notaryIdentities.contains(offer.notary))
             replyToSession.send(true)
             subFlow(TwoPartyDealFlow.Acceptor(replyToSession))
         }

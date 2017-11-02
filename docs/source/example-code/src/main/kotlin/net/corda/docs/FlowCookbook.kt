@@ -107,12 +107,12 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
                 organisation = "Notary Service",
                 locality = "London",
                 country = "GB")
-        val specificNotary: Party = serviceHub.networkMapCache.getNotary(notaryName)!!
+        val specificNotary: Party = serviceHub.networkMapCacheBase.getNotary(notaryName)!!
         // Alternatively, we can pick an arbitrary notary from the notary
         // list. However, it is always preferable to specify the notary
         // explicitly, as the notary list might change when new notaries are
         // introduced, or old ones decommissioned.
-        val firstNotary: Party = serviceHub.networkMapCache.notaryIdentities.first()
+        val firstNotary: Party = serviceHub.networkMapCacheBase.notaryIdentities.first()
         // DOCEND 01
 
         // We may also need to identify a specific counterparty. We do so

@@ -33,7 +33,7 @@ class DummyServiceFlow : FlowLogic<FlowInitiator>() {
     @Suspendable
     override fun call(): FlowInitiator {
         // We call a subFlow, otehrwise there is no chance to subscribe to the ProgressTracker
-        subFlow(CashIssueFlow(100.DOLLARS, OpaqueBytes.of(1), serviceHub.networkMapCache.notaryIdentities.first()))
+        subFlow(CashIssueFlow(100.DOLLARS, OpaqueBytes.of(1), serviceHub.networkMapCacheBase.notaryIdentities.first()))
         progressTracker.currentStep = TEST_STEP
         return stateMachine.flowInitiator
     }

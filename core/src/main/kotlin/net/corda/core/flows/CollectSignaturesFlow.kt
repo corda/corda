@@ -32,7 +32,7 @@ import java.security.PublicKey
  * - The flow expects that the calling node has signed the provided transaction, if not the flow will fail
  * - The flow will also fail if:
  *   1. The provided transaction is invalid
- *   2. Any of the required signing parties cannot be found in the [ServiceHub.networkMapCache] of the initiator
+ *   2. Any of the required signing parties cannot be found in the [ServiceHub.networkMapCacheBase] of the initiator
  *   3. If the wrong key has been used by a counterparty to sign the transaction
  *   4. The counterparty rejects the provided transaction
  * - The flow will return a [SignedTransaction] with all the counter-party signatures (but not the notary's!)

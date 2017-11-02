@@ -17,7 +17,7 @@ class IsolatedDummyFlow {
             val tx = AnotherDummyContract().generateInitial(
                     serviceHub.myInfo.legalIdentities.first().ref(0),
                     1234,
-                    serviceHub.networkMapCache.notaryIdentities.first()
+                    serviceHub.networkMapCacheBase.notaryIdentities.first()
             )
             val stx = serviceHub.signInitialTransaction(tx)
             subFlow(SendTransactionFlow(initiateFlow(toWhom), stx))

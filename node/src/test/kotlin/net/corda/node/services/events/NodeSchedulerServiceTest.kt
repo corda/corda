@@ -105,7 +105,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doReturn(configuration).whenever(it).configuration
                 doReturn(MonitoringService(MetricRegistry())).whenever(it).monitoringService
                 doReturn(validatedTransactions).whenever(it).validatedTransactions
-                doReturn(MockNetworkMapCache(database, configuration)).whenever(it).networkMapCache
+                doReturn(MockNetworkMapCacheBase(database, configuration)).whenever(it).networkMapCacheBase
                 doCallRealMethod().whenever(it).signInitialTransaction(any(), any<PublicKey>())
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService

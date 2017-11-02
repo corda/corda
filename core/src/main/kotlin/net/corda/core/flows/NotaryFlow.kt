@@ -61,7 +61,7 @@ class NotaryFlow {
 
             val response = try {
                 val session = initiateFlow(notaryParty)
-                if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
+                if (serviceHub.networkMapCacheBase.isValidatingNotary(notaryParty)) {
                     subFlow(SendTransactionWithRetry(session, stx))
                     session.receive<List<TransactionSignature>>()
                 } else {

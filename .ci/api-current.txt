@@ -1526,7 +1526,7 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.ContractUpgradeService getContractUpgradeService()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.KeyManagementService getKeyManagementService()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.NodeInfo getMyInfo()
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.NetworkMapCache getNetworkMapCache()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.NetworkMapCache getNetworkMapCacheBase()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.VaultService getVaultService()

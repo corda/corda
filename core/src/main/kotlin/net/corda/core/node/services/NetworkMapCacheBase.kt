@@ -19,7 +19,7 @@ import java.security.PublicKey
  * with a specified network map service, which it fetches data from and then subscribes to updates of.
  */
 @DoNotImplement
-interface NetworkMapCache {
+interface NetworkMapCacheBase {
     @CordaSerializable
     sealed class MapChange {
         abstract val node: NodeInfo

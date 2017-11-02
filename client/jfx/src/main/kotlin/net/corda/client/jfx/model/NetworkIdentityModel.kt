@@ -11,7 +11,7 @@ import net.corda.client.jfx.utils.map
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.node.services.NetworkMapCacheBase.MapChange
 import net.corda.nodeapi.internal.ServiceType
 import java.security.PublicKey
 

@@ -75,7 +75,7 @@ retrieve our identity, as well as the identity of the notary we'll be using for 
 
 You can see that the notary's identity is being retrieved from the node's ``ServiceHub``. Whenever we need
 information within a flow - whether it's about our own node, its contents, or the rest of the network - we use the
-node's ``ServiceHub``. In particular, ``ServiceHub.networkMapCache`` provides information about the other nodes on the
+node's ``ServiceHub``. In particular, ``ServiceHub.networkMapCacheBase`` provides information about the other nodes on the
 network and the services that they offer.
 
 Building the transaction

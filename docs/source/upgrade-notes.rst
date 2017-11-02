@@ -162,7 +162,7 @@ Node services (ServiceHub)
 
   ``FlowLogic.ourIdentity`` has been introduced as a shortcut for retrieving our identity in a flow
 
-* ``getAnyNotary`` is gone - use ``serviceHub.networkMapCache.notaryIdentities[0]`` instead
+* ``getAnyNotary`` is gone - use ``serviceHub.networkMapCacheBase.notaryIdentities[0]`` instead
 
    Note: ongoing work to support multiple notary identities is still in progress.
 
@@ -182,7 +182,7 @@ RPC Client
     This is in preparation for the planned integration of Intel SGX™, which will encrypt the transactions feed.
     Apps that use this API will not work on encrypted ledgers: you should probably be using the vault query API instead.
 
-  * Accessing the `networkMapCache` via ``services.nodeInfo().legalIdentities`` returns a list of identities.
+  * Accessing the `networkMapCacheBase` via ``services.nodeInfo().legalIdentities`` returns a list of identities.
     The first element in the list is the Party object referring to a node's single identity.
 
     This is in preparation for allowing a node to host multiple separate identities in future.

@@ -43,7 +43,7 @@ public class IOUFlow extends FlowLogic<Void> {
     @Override
     public Void call() throws FlowException {
         // We retrieve the notary identity from the network map.
-        final Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
+        final Party notary = getServiceHub().getNetworkMapCacheBase().getNotaryIdentities().get(0);
 
         // We create a transaction builder.
         final TransactionBuilder txBuilder = new TransactionBuilder();

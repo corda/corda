@@ -16,7 +16,7 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -47,7 +47,7 @@ class NodeMonitorModelTest {
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
-    lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
+    lateinit var networkMapUpdatesBase: Observable<NetworkMapCacheBase.MapChange>
     lateinit var newNode: (CordaX500Name) -> NodeInfo
     private fun setup(runTest: () -> Unit) = driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
         val cashUser = User("user1", "test", permissions = setOf(
@@ -73,7 +73,7 @@ class NodeMonitorModelTest {
         progressTracking = monitor.progressTracking.bufferUntilSubscribed()
         transactions = monitor.transactions.bufferUntilSubscribed()
         vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
-        networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
+        networkMapUpdatesBase = monitor.networkMap.bufferUntilSubscribed()
 
         monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
         rpc = monitor.proxyObservable.value!!
@@ -92,17 +92,17 @@ class NodeMonitorModelTest {
     fun `network map update`() = setup {
         val charlieNode = newNode(CHARLIE.name)
         val nonServiceIdentities = aliceNode.legalIdentitiesAndCerts + bobNode.legalIdentitiesAndCerts + charlieNode.legalIdentitiesAndCerts
-        networkMapUpdates.filter { it.node.legalIdentitiesAndCerts.any { it in nonServiceIdentities } }
+        networkMapUpdatesBase.filter { it.node.legalIdentitiesAndCerts.any { it in nonServiceIdentities } }
                 .expectEvents(isStrict = false) {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
-                            expect { output: NetworkMapCache.MapChange ->
+                            expect { output: NetworkMapCacheBase.MapChange ->
                                 require(output.node.chooseIdentity().name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
-                            expect { output: NetworkMapCache.MapChange ->
+                            expect { output: NetworkMapCacheBase.MapChange ->
                                 require(output.node.chooseIdentity().name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
-                            expect { output: NetworkMapCache.MapChange ->
+                            expect { output: NetworkMapCacheBase.MapChange ->
                                 require(output.node.chooseIdentity().name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             }
                     )
