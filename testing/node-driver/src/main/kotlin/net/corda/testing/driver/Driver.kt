@@ -27,7 +27,6 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
@@ -243,23 +242,12 @@ data class WebserverHandle(
         val process: Process
 )
 
-sealed class PortAllocation {
-    abstract fun nextPort(): Int
+class PortAllocation(startingPort: Int) {
+    private val portCounter = AtomicInteger(startingPort)
+
+    fun nextPort() = portCounter.andIncrement
+
     fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
-
-    class Incremental(startingPort: Int) : PortAllocation() {
-        val portCounter = AtomicInteger(startingPort)
-        override fun nextPort() = portCounter.andIncrement
-    }
-
-    object RandomFree : PortAllocation() {
-        override fun nextPort(): Int {
-            return ServerSocket().use {
-                it.bind(InetSocketAddress(0))
-                it.localPort
-            }
-        }
-    }
 }
 
 /** Helper builder for configuring a [Node] from Java. */
@@ -354,8 +342,8 @@ fun <A> driver(
 }
 
 // We use global port pools by default. This way if a test leaks a port subsequent tests will not clash.
-val globalPortAllocation = PortAllocation.Incremental(10000)
-val globalDebugPortAllocation = PortAllocation.Incremental(5005)
+val globalPortAllocation = PortAllocation(10000)
+val globalDebugPortAllocation = PortAllocation(5005)
 
 /** Helper builder for configuring a [driver] from Java. */
 @Suppress("unused")

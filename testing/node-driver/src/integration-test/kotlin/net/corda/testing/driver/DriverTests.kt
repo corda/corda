@@ -55,15 +55,6 @@ class DriverTests {
     }
 
     @Test
-    fun `random free port allocation`() {
-        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
-            val nodeInfo = startNode(providedName = DUMMY_BANK_A.name)
-            nodeMustBeUp(nodeInfo)
-        }
-        nodeMustBeDown(nodeHandle)
-    }
-
-    @Test
     fun `debug mode enables debug logging level`() {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"

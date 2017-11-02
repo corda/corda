@@ -18,7 +18,7 @@ fun CordformDefinition.clean() {
 fun CordformDefinition.runNodes() = driver(
         isDebug = true,
         driverDirectory = driverDirectory,
-        portAllocation = PortAllocation.Incremental(10001)
+        portAllocation = PortAllocation(10001)
 ) {
     setup(this)
     startNodes(nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } })
