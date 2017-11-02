@@ -205,7 +205,10 @@ internal class CordaRPCOpsImpl(
 
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
         return database.transaction {
-            services.networkMapCache.getNodeByLegalIdentity(party)
+            val wellKnownParty = services.identityService.wellKnownPartyFromAnonymous(party)
+            wellKnownParty?.let {
+               services.networkMapCache.getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+            }
         }
     }
 

@@ -15,7 +15,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -28,8 +27,7 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.CordaPersistence
 
-interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
-interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
+interface NetworkMapCacheIntenal : NetworkMapCache {
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)
 
@@ -55,7 +53,7 @@ interface ServiceHubInternal : ServiceHub {
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
     val monitoringService: MonitoringService
     val schemaService: SchemaService
-    override val networkMapCache: NetworkMapCacheInternal
+    override val networkMapCache: NetworkMapCacheIntenal
     val auditService: AuditService
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService

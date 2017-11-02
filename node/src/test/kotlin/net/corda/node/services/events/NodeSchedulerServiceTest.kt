@@ -24,7 +24,6 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
@@ -106,7 +105,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doReturn(configuration).whenever(it).configuration
                 doReturn(MonitoringService(MetricRegistry())).whenever(it).monitoringService
                 doReturn(validatedTransactions).whenever(it).validatedTransactions
-                doReturn(NetworkMapCacheImpl(MockNetworkMapCache(database, configuration), identityService)).whenever(it).networkMapCache
+                doReturn(MockNetworkMapCache(database, configuration)).whenever(it).networkMapCache
                 doCallRealMethod().whenever(it).signInitialTransaction(any(), any<PublicKey>())
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService

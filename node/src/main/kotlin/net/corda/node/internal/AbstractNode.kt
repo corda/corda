@@ -42,7 +42,10 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.*
+import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.NodeInfoWatcher
+import net.corda.node.services.network.PersistentNetworkMapCache
+import net.corda.node.services.network.registerNetworkMapUpdatesInIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -699,7 +702,11 @@ abstract class AbstractNode(config: NodeConfiguration,
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val networkMapCache by lazy { NetworkMapCacheImpl(PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration), identityService) }
+        override val networkMapCache by lazy {
+            val persistentNetworkMapCache = PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration)
+            registerNetworkMapUpdatesInIdentityService(persistentNetworkMapCache, identityService)
+            persistentNetworkMapCache
+        }
         override val vaultService by lazy { makeVaultService(keyManagementService, stateLoader) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 
