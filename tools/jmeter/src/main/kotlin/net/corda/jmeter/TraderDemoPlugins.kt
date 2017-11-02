@@ -1,18 +1,13 @@
 package net.corda.jmeter
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.jmeter.CordaRPCSampler.FlowInvoke
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext
-import java.util.*
 
 
 abstract class AsbtractTraderDemoPlugin : CordaRPCSampler.Plugin {
@@ -21,12 +16,14 @@ abstract class AsbtractTraderDemoPlugin : CordaRPCSampler.Plugin {
     lateinit var seller: Party
     lateinit var notary: Party
 
+    val bankA = CordaX500Name(organisation = "Bank A", locality = "London", country = "GB")
+    val bankB = CordaX500Name(organisation = "Bank B", locality = "New York", country = "US")
+
     protected fun getIdentities(rpc: CordaRPCOps) {
-        buyer = rpc.wellKnownPartyFromX500Name(DUMMY_BANK_A.name) ?: throw IllegalStateException("Don't know ${DUMMY_BANK_A.name}")
-        seller = rpc.wellKnownPartyFromX500Name(DUMMY_BANK_B.name) ?: throw IllegalStateException("Don't know ${DUMMY_BANK_B.name}")
+        buyer = rpc.wellKnownPartyFromX500Name(bankA) ?: throw IllegalStateException("Don't know $bankA")
+        seller = rpc.wellKnownPartyFromX500Name(bankB) ?: throw IllegalStateException("Don't know $bankB")
         notary = rpc.notaryIdentities().first()
     }
-
 }
 
 class CashIssuerPlugin : AsbtractTraderDemoPlugin() {
