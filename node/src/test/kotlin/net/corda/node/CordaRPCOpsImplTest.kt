@@ -27,8 +27,8 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.nodeapi.User
@@ -91,14 +91,18 @@ class CordaRPCOpsImplTest {
     @Test
     fun `nodeInfoFromParty returns a known party`() {
         val aliceParty = aliceNode.info.legalIdentities.first()
-        assertThat(rpc.nodeInfoFromParty(aliceParty)).isEqualTo(aliceNode.info)
+        withPermissions(invokeRpc(CordaRPCOps::nodeInfoFromParty)) {
+            assertThat(rpc.nodeInfoFromParty(aliceParty)).isEqualTo(aliceNode.info)
+        }
     }
 
     @Test
     fun `nodeInfoFromParty returns null a known party`() {
         val name = CordaX500Name("C", "Org", "S", "GB")
         val party = Party(name, generateKeyPair().public)
-        assertThat(rpc.nodeInfoFromParty(party)).isNull()
+        withPermissions(invokeRpc(CordaRPCOps::nodeInfoFromParty)) {
+            assertThat(rpc.nodeInfoFromParty(party)).isNull()
+        }
     }
 
 

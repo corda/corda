@@ -7,11 +7,15 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
 import java.security.PublicKey
 
+/**
+ * This interface has been kept around just to preserve the fact that it contains [MapChange] and not alter ~20 APIs.
+ */
 interface NetworkMapCache {
     @CordaSerializable
     sealed class MapChange {
@@ -21,7 +25,6 @@ interface NetworkMapCache {
         data class Removed(override val node: NodeInfo) : MapChange()
         data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
-
 }
 
 /**
