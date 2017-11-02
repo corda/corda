@@ -18,20 +18,18 @@ import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.node.DriverBasedTest
 import org.junit.Test
 import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
 
-class DistributedServiceTests : DriverBasedTest() {
+class DistributedServiceTests {
     lateinit var alice: NodeHandle
     lateinit var notaries: List<NodeHandle.OutOfProcess>
     lateinit var aliceProxy: CordaRPCOps
     lateinit var raftNotaryIdentity: Party
     lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
-
-    override fun setup() = driver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
+    private fun setup(runTest: () -> Unit) = driver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
         // Start Alice and 3 notaries in a RAFT cluster
         val clusterSize = 3
         val testUser = User("test", "test", permissions = setOf(
@@ -72,7 +70,7 @@ class DistributedServiceTests : DriverBasedTest() {
     // TODO Use a dummy distributed service rather than a Raft Notary Service as this test is only about Artemis' ability
     // to handle distributed services
     @Test
-    fun `requests are distributed evenly amongst the nodes`() {
+    fun `requests are distributed evenly amongst the nodes`() = setup {
         // Issue 100 pounds, then pay ourselves 50x2 pounds
         issueCash(100.POUNDS)
 
@@ -100,7 +98,7 @@ class DistributedServiceTests : DriverBasedTest() {
 
     // TODO This should be in RaftNotaryServiceTests
     @Test
-    fun `cluster survives if a notary is killed`() {
+    fun `cluster survives if a notary is killed`() = setup {
         // Issue 100 pounds, then pay ourselves 10x5 pounds
         issueCash(100.POUNDS)
 
