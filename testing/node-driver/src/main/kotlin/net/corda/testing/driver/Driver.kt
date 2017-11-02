@@ -353,13 +353,16 @@ fun <A> driver(
     return driver(defaultParameters = parameters, dsl = dsl)
 }
 
+val globalPortAllocation = PortAllocation.Incremental(10000)
+val globalDebugPortAllocation = PortAllocation.Incremental(5005)
+
 /** Helper builder for configuring a [driver] from Java. */
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        val portAllocation: PortAllocation = globalPortAllocation,
+        val debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val initialiseSerialization: Boolean = true,
