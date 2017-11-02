@@ -315,7 +315,7 @@ data class NodeParameters(
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
- * @param extraSystemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
+ * @param systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSLExposedInterface.startNode].
@@ -434,7 +434,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         driverDirectory: Path = defaultParameters.driverDirectory,
         portAllocation: PortAllocation = defaultParameters.portAllocation,
         debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
-        systemProperties: Map<String, String> = defaultParameters.systemProperties,
+        systemProperties: Map<String, String> = defaultParameters.extraSystemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
@@ -448,7 +448,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
             DriverDSL(
                     portAllocation = portAllocation,
                     debugPortAllocation = debugPortAllocation,
-                    systemProperties = systemProperties,
+                    extraSystemProperties = systemProperties,
                     driverDirectory = driverDirectory.toAbsolutePath(),
                     useTestClock = useTestClock,
                     isDebug = isDebug,
@@ -752,7 +752,7 @@ class DriverDSL(
                         "noNetworkMapServiceMode" to true
                 ) + customOverrides
         )
-        return startNodeInternal(name, config, webAddress, startInSameProcess, maximumHeapSize, logLevel)
+        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
     }
 
     override fun startNotaryNode(providedName: CordaX500Name,
@@ -779,7 +779,7 @@ class DriverDSL(
                             "noNetworkMapServiceMode" to true
                     )
             )
-            startNodeInternal(name, config, webAddress, startInSameProcess, maximumHeapSize)
+            startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
         }
     }
 
@@ -925,7 +925,7 @@ class DriverDSL(
             countObservables.remove(nodeConfiguration.myLegalName)
         }
         if (startInProcess ?: startNodesInProcess) {
-            val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, enhancedConfig, cordappPackages)
+            val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config, cordappPackages)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
                         {
@@ -943,7 +943,7 @@ class DriverDSL(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, enhancedConfig, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize, logLevel)
+            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize)
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
                 val processDeathFuture = poll(executorService, "process death") {

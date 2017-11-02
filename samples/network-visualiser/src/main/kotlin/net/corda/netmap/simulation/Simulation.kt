@@ -12,6 +12,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.node.*
+import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -24,7 +25,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.allOf
 import java.util.concurrent.Future
 
-internal val MockNode.place get() = configuration.myLegalName.locality.let { CityDatabase[it] }!!
+internal val MockNetwork.MockNode.place get() = configuration.myLegalName.locality.let { CityDatabase[it] }!!
 
 /**
  * Base class for network simulations that are based on the unit test / mock environment.
@@ -49,11 +50,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     val bankLocations = listOf(Pair("London", "GB"), Pair("Frankfurt", "DE"), Pair("Rome", "IT"))
 
-    object RatesOracleFactory : MockNetwork.Factory<MockNode> {
+    object RatesOracleFactory : MockNetwork.Factory<MockNetwork.MockNode> {
         // TODO: Make a more realistic legal name
         val RATES_SERVICE_NAME = CordaX500Name(organisation = "Rates Service Provider", locality = "Madrid", country = "ES")
 
-        override fun create(args: MockNodeArgs): MockNode {
+        override fun create(args: MockNodeArgs): MockNetwork.MockNode {
             return object : MockNode(args) {
                 override fun start() = super.start().apply {
                     registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)

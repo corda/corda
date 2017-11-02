@@ -566,7 +566,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     open protected fun checkNetworkMapIsInitialized() {
-        if (!services.networkMapCache.loadDBSuccess || configuration.noNetworkMapServiceMode) {
+        if (!services.networkMapCache.loadDBSuccess ) {
             // TODO: There should be a consistent approach to configuration error exceptions.
             throw NetworkMapCacheEmptyException()
         }

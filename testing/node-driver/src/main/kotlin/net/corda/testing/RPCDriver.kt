@@ -225,7 +225,7 @@ fun <A> rpcDriver(
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = globalPortAllocation,
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
-        extraSystemProperties: Map<String, String> = emptyMap(),
+        systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = false,
@@ -236,7 +236,7 @@ fun <A> rpcDriver(
                 DriverDSL(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
-                        extraSystemProperties = extraSystemProperties,
+                        extraSystemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         isDebug = isDebug,

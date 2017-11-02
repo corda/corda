@@ -21,7 +21,7 @@ import kotlin.test.*
 class PartialMerkleTreeTest {
     @Rule
     @JvmField
-    private val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule()
     private val nodes = "abcdef"
     private val hashed = nodes.map { node ->
         withTestSerialization {

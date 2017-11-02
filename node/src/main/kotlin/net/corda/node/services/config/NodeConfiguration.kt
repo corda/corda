@@ -40,6 +40,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
+    val relay: RelayConfiguration?
 }
 
 data class NotaryConfig(val validating: Boolean,
@@ -94,7 +95,7 @@ data class NodeConfigurationImpl(
         override val useHTTPS: Boolean,
         override val p2pAddress: NetworkHostAndPort,
         override val rpcAddress: NetworkHostAndPort?,
-        val relay: RelayConfiguration?,
+        override val relay: RelayConfiguration?,
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         override val messagingServerAddress: NetworkHostAndPort?,

@@ -174,7 +174,7 @@ open class Node(override val configuration: NodeConfiguration,
     private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {
             if (relay != null) {
-                NetworkHostAndPort(relay.relayHost, relay.remoteInboundPort)
+                NetworkHostAndPort(relay!!.relayHost, relay!!.remoteInboundPort)
             } else {
                 val useHost = if (detectPublicIp) {
                     tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host

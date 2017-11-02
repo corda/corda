@@ -79,7 +79,6 @@ class EvolvabilityTests {
         // Original version of the class as it was serialised
         // data class C(val a: Int)
         // File(URI("$localPath/$resource")).writeBytes( SerializationOutput(sf).serialize(C(A))
-        .bytes)
 
         data class C(val a: Int, val b: Int?)
 
