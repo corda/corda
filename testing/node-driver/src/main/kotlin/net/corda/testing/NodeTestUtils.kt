@@ -26,6 +26,8 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import java.nio.file.Path
 
+private val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY)
+
 /**
  * Creates and tests a ledger built by the passed in dsl. The provided services can be customised, otherwise a default
  * of a freshly built [MockServices] is used.
@@ -48,7 +50,11 @@ fun transaction(
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         cordappPackages: List<String> = emptyList(),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(services = MockServices(cordappPackages)) {
+) = ledger(services = MockServices(cordappPackages).apply {
+    MOCK_IDENTITIES.forEach { identity ->
+        identityService.verifyAndRegisterIdentity(identity)
+    }
+}) {
     dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
 }
 
