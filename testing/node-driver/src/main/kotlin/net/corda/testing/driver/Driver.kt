@@ -353,6 +353,7 @@ fun <A> driver(
     return driver(defaultParameters = parameters, dsl = dsl)
 }
 
+// We use global port pools by default. This way if a test leaks a port subsequent tests will not clash.
 val globalPortAllocation = PortAllocation.Incremental(10000)
 val globalDebugPortAllocation = PortAllocation.Incremental(5005)
 
