@@ -15,7 +15,6 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.VersionInfo
-import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.VaultServiceInternal
@@ -49,9 +48,8 @@ import java.util.*
 open class MockServices(
         cordappLoader: CordappLoader,
         override val validatedTransactions: WritableTransactionStorage,
-        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions),
         vararg val keys: KeyPair
-) : ServiceHub, StateLoader by stateLoader {
+) : ServiceHub {
     companion object {
 
         @JvmStatic
@@ -167,7 +165,7 @@ open class MockServices(
     lateinit var hibernatePersister: HibernateObserver
 
     fun makeVaultService(hibernateConfig: HibernateConfiguration): VaultServiceInternal {
-        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, stateLoader, hibernateConfig)
+        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, this, hibernateConfig)
         hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
