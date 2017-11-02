@@ -1,16 +1,13 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
-import com.jcraft.jsch.JSch
-import com.jcraft.jsch.JSchException
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.RelayConfiguration
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -20,7 +17,6 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
 import sun.misc.VMSupport
-import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
@@ -88,11 +84,11 @@ open class NodeStartup(val args: Array<String>) {
         exitProcess(0)
     }
 
-    open protected fun preNetworkRegistration(conf: FullNodeConfiguration) = Unit
+    open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
 
-    open protected fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
+    open protected fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
-    open protected fun startNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
+    open protected fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
@@ -122,14 +118,14 @@ open class NodeStartup(val args: Array<String>) {
         startedNode.internals.run()
     }
 
-    open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: FullNodeConfiguration) {
+    open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
         logger.info("Vendor: ${versionInfo.vendor}")
         logger.info("Release: ${versionInfo.releaseVersion}")
         logger.info("Platform Version: ${versionInfo.platformVersion}")
         logger.info("Revision: ${versionInfo.revision}")
         val info = ManagementFactory.getRuntimeMXBean()
         logger.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
-        logger.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
+        logger.info("Main class: ${NodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
         logger.info("Application Args: ${args.joinToString(" ")}")
         logger.info("bootclasspath: ${info.bootClassPath}")
@@ -144,7 +140,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    open protected fun maybeRegisterWithNetworkAndExit(cmdlineOptions: CmdLineOptions, conf: FullNodeConfiguration) {
+    open protected fun maybeRegisterWithNetworkAndExit(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
         if (!cmdlineOptions.isRegistration) return
         println()
         println("******************************************************************")
@@ -156,7 +152,7 @@ open class NodeStartup(val args: Array<String>) {
         exitProcess(0)
     }
 
-    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): FullNodeConfiguration {
+    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration {
         try {
             return cmdlineOptions.loadConfig()
         } catch (e: ConfigException) {
@@ -165,7 +161,7 @@ open class NodeStartup(val args: Array<String>) {
         }
     }
 
-    open protected fun banJavaSerialisation(conf: FullNodeConfiguration) {
+    open protected fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     }
 

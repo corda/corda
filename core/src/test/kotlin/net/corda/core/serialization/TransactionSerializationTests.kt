@@ -9,6 +9,7 @@ import net.corda.finance.POUNDS
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.security.SignatureException
 import java.util.*
@@ -16,7 +17,10 @@ import kotlin.reflect.jvm.javaField
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class TransactionSerializationTests : TestDependencyInjectionBase() {
+class TransactionSerializationTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val TEST_CASH_PROGRAM_ID = "net.corda.core.serialization.TransactionSerializationTests\$TestCash"
 
     class TestCash : Contract {

@@ -39,17 +39,17 @@ UNRELEASED
   ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` have also been removed and replaced by a single
   ``notary`` config object. See :doc:`corda-configuration-file` for more details.
 
-* Gradle task ``deployNodes`` can have an additional parameter `configFile` with the path to a properties file
+* Gradle task ``deployNodes`` can have an additional parameter ``configFile`` with the path to a properties file
   to be appended to node.conf.
 
-* Cordformation node building DSL can have an additional parameter `configFile` with the path to a properties file
+* Cordformation node building DSL can have an additional parameter ``configFile`` with the path to a properties file
   to be appended to node.conf.
 
 * ``FlowLogic`` now has a static method called ``sleep`` which can be used in certain circumstances to help with resolving
   contention over states in flows.  This should be used in place of any other sleep primitive since these are not compatible
   with flows and their use will be prevented at some point in the future.  Pay attention to the warnings and limitations
   described in the documentation for this method.  This helps resolve a bug in ``Cash`` coin selection.
-  A new static property `currentTopLevel` returns the top most `FlowLogic` instance, or null if not in a flow.
+  A new static property ``currentTopLevel`` returns the top most ``FlowLogic`` instance, or null if not in a flow.
 
 * ``CordaService`` annotated classes should be upgraded to take a constructor parameter of type ``AppServiceHub`` which
   allows services to start flows marked with the ``StartableByService`` annotation. For backwards compatability
@@ -67,7 +67,10 @@ UNRELEASED
 * A new function ``checkCommandVisibility(publicKey: PublicKey)`` has been added to ``FilteredTransaction`` to check
   if every command that a signer should receive (e.g. an Oracle) is indeed visible.
 
-* Change the AMQP serialiser to use the oficially assigned R3 identifier rather than a placeholder.
+* Changed the AMQP serialiser to use the oficially assigned R3 identifier rather than a placeholder.
+
+* The ``ReceiveTransactionFlow`` can now be told to record the transaction at the same time as receiving it. Using this
+  feature, better support for observer/regulator nodes has been added. See :doc:`tutorial-observer-nodes`.
 
 .. _changelog_v1:
 
@@ -372,7 +375,7 @@ Milestone 14
      use to exclude core Corda JARs from being built into Cordapp fat JARs.
 
 * ``database`` field in ``AbstractNode`` class has changed the type from ``org.jetbrains.exposed.sql.Database`` to
-  ‘net.corda.node.utilities.CordaPersistence’ - no change is needed for the typical use
+  ???net.corda.node.utilities.CordaPersistence??? - no change is needed for the typical use
   (i.e. services.database.transaction {  code block } ) however a change is required when Database was explicitly declared
 
 * ``DigitalSignature.LegallyIdentifiable``, previously used to identify a signer (e.g. in Oracles), has been removed.

@@ -5,14 +5,15 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.node.StatesToRecord
 import net.corda.core.utilities.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
@@ -43,10 +44,7 @@ import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
-import org.junit.After
-import org.junit.Assert
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
@@ -54,8 +52,10 @@ import javax.persistence.EntityManager
 import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
 
-class HibernateConfigurationTest : TestDependencyInjectionBase() {
-
+class HibernateConfigurationTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     lateinit var services: MockServices
     lateinit var issuerServices: MockServices
     lateinit var database: CordaPersistence
@@ -82,12 +82,12 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             hibernateConfig = database.hibernateConfig
             services = object : MockServices(cordappPackages, BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService = makeVaultService(database.hibernateConfig)
-                override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
+                override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultService.notifyAll(txs.map { it.tx })
+                    vaultService.notifyAll(statesToRecord, txs.map { it.tx })
                 }
 
                 override fun jdbcSession() = database.createSession()

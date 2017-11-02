@@ -2,11 +2,15 @@ package net.corda.core.serialization
 
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.Cash
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.SerializationEnvironmentRule
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class CommandsSerializationTests : TestDependencyInjectionBase() {
+class CommandsSerializationTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     @Test
     fun `test cash move serialization`() {

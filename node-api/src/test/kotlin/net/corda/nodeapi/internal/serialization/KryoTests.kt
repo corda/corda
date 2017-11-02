@@ -14,7 +14,7 @@ import net.corda.core.utilities.sequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
@@ -28,7 +28,10 @@ import java.time.Instant
 import java.util.Collections
 import kotlin.test.*
 
-class KryoTests : TestDependencyInjectionBase() {
+class KryoTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
 

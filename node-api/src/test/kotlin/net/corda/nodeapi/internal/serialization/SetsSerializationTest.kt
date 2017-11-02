@@ -5,18 +5,23 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.kryoSpecific
+import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.util.*
 
-class SetsSerializationTest : TestDependencyInjectionBase() {
+class SetsSerializationTest {
     private companion object {
         val javaEmptySetClass = Collections.emptySet<Any>().javaClass
     }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     @Test
     fun `check set can be serialized as root of serialization graph`() {

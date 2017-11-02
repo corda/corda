@@ -8,13 +8,14 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
@@ -26,7 +27,10 @@ internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
     return checkpoints
 }
 
-class DBCheckpointStorageTests : TestDependencyInjectionBase() {
+class DBCheckpointStorageTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     lateinit var checkpointStorage: DBCheckpointStorage
     lateinit var database: CordaPersistence
 

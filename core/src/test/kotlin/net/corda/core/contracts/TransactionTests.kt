@@ -10,14 +10,18 @@ import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockAttachment
-import net.corda.testing.node.MockAttachmentStorage
+import org.junit.Rule
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
-class TransactionTests : TestDependencyInjectionBase() {
+class TransactionTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair, notarySig: Boolean = true): SignedTransaction {
         val keySigs = keys.map { it.sign(SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(it.public).schemeNumberID))) }
         val sigs = if (notarySig) {

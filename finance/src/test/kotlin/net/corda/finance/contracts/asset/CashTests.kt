@@ -29,7 +29,7 @@ import java.security.KeyPair
 import java.util.*
 import kotlin.test.*
 
-class CashTests : TestDependencyInjectionBase() {
+class CashTests {
     private val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     private val defaultIssuer = MEGA_CORP.ref(defaultRef)
     private val inState = Cash.State(
@@ -51,7 +51,7 @@ class CashTests : TestDependencyInjectionBase() {
     private lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
 
     @Before
-    fun setUp() {
+    fun setUp() = withTestSerialization {
         LogHelper.setLevel(NodeVaultService::class)
         megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), MEGA_CORP_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = listOf("net.corda.finance.contracts.asset"), keys = listOf(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY))
@@ -72,7 +72,6 @@ class CashTests : TestDependencyInjectionBase() {
         database.transaction {
             vaultStatesUnconsumed = miniCorpServices.vaultService.queryBy<Cash.State>().states
         }
-        resetTestSerialization()
     }
 
     @After
@@ -154,8 +153,7 @@ class CashTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun generateIssueRaw() {
-        initialiseTestSerialization()
+    fun generateIssueRaw() = withTestSerialization {
         // Test generation works.
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
@@ -170,8 +168,7 @@ class CashTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun generateIssueFromAmount() {
-        initialiseTestSerialization()
+    fun generateIssueFromAmount() = withTestSerialization {
         // Test issuance from an issued amount
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
@@ -239,8 +236,7 @@ class CashTests : TestDependencyInjectionBase() {
      * cash inputs.
      */
     @Test(expected = IllegalStateException::class)
-    fun `reject issuance with inputs`() {
-        initialiseTestSerialization()
+    fun `reject issuance with inputs`() = withTestSerialization {
         // Issue some cash
         var ptx = TransactionBuilder(DUMMY_NOTARY)
 
@@ -251,6 +247,7 @@ class CashTests : TestDependencyInjectionBase() {
         ptx = TransactionBuilder(DUMMY_NOTARY)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
+        Unit
     }
 
     @Test
@@ -515,8 +512,7 @@ class CashTests : TestDependencyInjectionBase() {
      * Try exiting an amount which matches a single state.
      */
     @Test
-    fun generateSimpleExit() {
-        initialiseTestSerialization()
+    fun generateSimpleExit() = withTestSerialization {
         val wtx = makeExit(miniCorpServices, 100.DOLLARS, MEGA_CORP, 1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(0, wtx.outputs.size)
@@ -531,8 +527,7 @@ class CashTests : TestDependencyInjectionBase() {
      * Try exiting an amount smaller than the smallest available input state, and confirm change is generated correctly.
      */
     @Test
-    fun generatePartialExit() {
-        initialiseTestSerialization()
+    fun generatePartialExit() = withTestSerialization {
         val wtx = makeExit(miniCorpServices, 50.DOLLARS, MEGA_CORP, 1)
         val actualInput = wtx.inputs.single()
         // Filter the available inputs and confirm exactly one has been used
@@ -549,53 +544,52 @@ class CashTests : TestDependencyInjectionBase() {
      * Try exiting a currency we don't have.
      */
     @Test
-    fun generateAbsentExit() {
-        initialiseTestSerialization()
+    fun generateAbsentExit() = withTestSerialization {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, MEGA_CORP, 1) }
+        Unit
     }
 
     /**
      * Try exiting with a reference mis-match.
      */
     @Test
-    fun generateInvalidReferenceExit() {
-        initialiseTestSerialization()
+    fun generateInvalidReferenceExit() = withTestSerialization {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, MEGA_CORP, 2) }
+        Unit
     }
 
     /**
      * Try exiting an amount greater than the maximum available.
      */
     @Test
-    fun generateInsufficientExit() {
-        initialiseTestSerialization()
+    fun generateInsufficientExit() = withTestSerialization {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 1000.DOLLARS, MEGA_CORP, 1) }
+        Unit
     }
 
     /**
      * Try exiting for an owner with no states
      */
     @Test
-    fun generateOwnerWithNoStatesExit() {
-        initialiseTestSerialization()
+    fun generateOwnerWithNoStatesExit() = withTestSerialization {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, CHARLIE, 1) }
+        Unit
     }
 
     /**
      * Try exiting when vault is empty
      */
     @Test
-    fun generateExitWithEmptyVault() {
-        initialiseTestSerialization()
+    fun generateExitWithEmptyVault() = withTestSerialization {
         assertFailsWith<IllegalArgumentException> {
             val tx = TransactionBuilder(DUMMY_NOTARY)
             Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList(), OUR_IDENTITY_1)
         }
+        Unit
     }
 
     @Test
-    fun generateSimpleDirectSpend() {
-        initialiseTestSerialization()
+    fun generateSimpleDirectSpend() = withTestSerialization {
         val wtx =
                 database.transaction {
                     makeSpend(100.DOLLARS, THEIR_IDENTITY_1)
@@ -609,8 +603,7 @@ class CashTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun generateSimpleSpendWithParties() {
-        initialiseTestSerialization()
+    fun generateSimpleSpendWithParties() = withTestSerialization {
         database.transaction {
 
             val tx = TransactionBuilder(DUMMY_NOTARY)
@@ -621,8 +614,7 @@ class CashTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun generateSimpleSpendWithChange() {
-        initialiseTestSerialization()
+    fun generateSimpleSpendWithChange() = withTestSerialization {
         val wtx =
                 database.transaction {
                     makeSpend(10.DOLLARS, THEIR_IDENTITY_1)
@@ -647,8 +639,7 @@ class CashTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun generateSpendWithTwoInputs() {
-        initialiseTestSerialization()
+    fun generateSpendWithTwoInputs() = withTestSerialization {
         val wtx =
                 database.transaction {
                     makeSpend(500.DOLLARS, THEIR_IDENTITY_1)
@@ -664,8 +655,7 @@ class CashTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun generateSpendMixedDeposits() {
-        initialiseTestSerialization()
+    fun generateSpendMixedDeposits() = withTestSerialization {
         val wtx =
                 database.transaction {
                     val wtx = makeSpend(580.DOLLARS, THEIR_IDENTITY_1)
@@ -686,8 +676,7 @@ class CashTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun generateSpendInsufficientBalance() {
-        initialiseTestSerialization()
+    fun generateSpendInsufficientBalance() = withTestSerialization {
         database.transaction {
 
             val e: InsufficientBalanceException = assertFailsWith("balance") {
@@ -699,6 +688,7 @@ class CashTests : TestDependencyInjectionBase() {
                 makeSpend(81.SWISS_FRANCS, THEIR_IDENTITY_1)
             }
         }
+        Unit
     }
 
     /**
@@ -825,8 +815,7 @@ class CashTests : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun multiSpend() {
-        initialiseTestSerialization()
+    fun multiSpend() = withTestSerialization {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
             val payments = listOf(

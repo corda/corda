@@ -5,6 +5,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
@@ -50,7 +51,10 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toStringShort() },
-                    fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(it.privateKey)) },
+                    fromPersistentEntity = {
+                        Pair(Crypto.decodePublicKey(it.publicKey),
+                                Crypto.decodePrivateKey(it.privateKey))
+                    },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey(key, value)
                     },

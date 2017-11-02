@@ -18,14 +18,18 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class DistributedImmutableMapTests : TestDependencyInjectionBase() {
+class DistributedImmutableMapTests {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     lateinit var cluster: List<Member>
     lateinit var transaction: DatabaseTransaction
     private val databases: MutableList<CordaPersistence> = mutableListOf()

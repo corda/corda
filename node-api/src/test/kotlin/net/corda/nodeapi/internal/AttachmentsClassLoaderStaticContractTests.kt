@@ -11,9 +11,13 @@ import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
-class AttachmentsClassLoaderStaticContractTests : TestDependencyInjectionBase() {
+class AttachmentsClassLoaderStaticContractTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     class AttachmentDummyContract : Contract {
         companion object {

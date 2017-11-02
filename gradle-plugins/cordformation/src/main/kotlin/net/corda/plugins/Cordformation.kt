@@ -18,10 +18,12 @@ class Cordformation : Plugin<Project> {
          * @return A file handle to the file in the JAR.
          */
         fun getPluginFile(project: Project, filePathInJar: String): File {
-            val archive: File? = project.rootProject.buildscript.configurations.single { it.name == "classpath" }.find {
-                it.name.contains("cordformation")
-            }
-            return project.rootProject.resources.text.fromArchiveEntry(archive, filePathInJar).asFile()
+            val archive: File? = project.rootProject.buildscript.configurations
+                    .single { it.name == "classpath" }
+                    .find { it.name.contains("cordformation") }
+            return project.rootProject.resources.text
+                    .fromArchiveEntry(archive, filePathInJar)
+                    .asFile()
         }
 
         val executableFileMode = "0755".toInt(8)

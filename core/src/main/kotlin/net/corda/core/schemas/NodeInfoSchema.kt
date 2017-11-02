@@ -105,7 +105,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
     ) {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
-                : this(partyAndCert.party.name.toString(),
+                : this(partyAndCert.name.toString(),
                        partyAndCert.party.owningKey.toStringShort(),
                        partyAndCert.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes, isMain)
 

@@ -45,10 +45,10 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
         val data = Data.Factory.create()
         data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
             withList {
-                // Our object
                 writeObject(obj, this)
-                // The schema
-                writeSchema(Schema(schemaHistory.toList()), this)
+                val schema = Schema(schemaHistory.toList())
+                writeSchema(schema, this)
+                writeTransformSchema(TransformsSchema.build(schema, serializerFactory), this)
             }
         }
         val bytes = ByteArray(data.encodedSize().toInt() + 8)
@@ -64,6 +64,10 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
 
     open fun writeSchema(schema: Schema, data: Data) {
         data.putObject(schema)
+    }
+
+    open fun writeTransformSchema(transformsSchema: TransformsSchema, data: Data) {
+        data.putObject(transformsSchema)
     }
 
     internal fun writeObjectOrNull(obj: Any?, data: Data, type: Type) {

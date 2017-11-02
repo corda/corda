@@ -12,18 +12,22 @@ import net.corda.finance.USD
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 
-class JacksonSupportTest : TestDependencyInjectionBase() {
+class JacksonSupportTest {
     companion object {
         private val SEED = BigInteger.valueOf(20170922L)
         val mapper = JacksonSupport.createNonRpcMapper()
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private lateinit var services: ServiceHub
     private lateinit var cordappProvider: CordappProvider
 

@@ -28,13 +28,13 @@ fun ledger(
         initialiseSerialization: Boolean = true,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    if (initialiseSerialization) initialiseTestSerialization()
+    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
     try {
         val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
         dsl(ledgerDsl)
         return ledgerDsl
     } finally {
-        if (initialiseSerialization) resetTestSerialization()
+        serializationEnv.resetTestSerialization()
     }
 }
 
@@ -59,7 +59,6 @@ fun testNodeConfiguration(
         myLegalName: CordaX500Name): NodeConfiguration {
     abstract class MockableNodeConfiguration : NodeConfiguration // Otherwise Mockito is defeated by val getters.
     return rigorousMock<MockableNodeConfiguration>().also {
-        doReturn(true).whenever(it).noNetworkMapServiceMode
         doReturn(baseDirectory).whenever(it).baseDirectory
         doReturn(myLegalName).whenever(it).myLegalName
         doReturn(1).whenever(it).minimumPlatformVersion
@@ -77,7 +76,7 @@ fun testNodeConfiguration(
         doReturn(VerifierType.InMemory).whenever(it).verifierType
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(0L).whenever(it).additionalNodeInfoPollingFrequencyMsec
-        doReturn(null).whenever(it).networkMapService
+        doReturn(null).whenever(it).devModeOptions
         doCallRealMethod().whenever(it).certificatesDirectory
         doCallRealMethod().whenever(it).trustStoreFile
         doCallRealMethod().whenever(it).sslKeystore

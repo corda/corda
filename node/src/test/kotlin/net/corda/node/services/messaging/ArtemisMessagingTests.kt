@@ -39,7 +39,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 //TODO This needs to be merged into P2PMessagingTest as that creates a more realistic environment
-class ArtemisMessagingTests : TestDependencyInjectionBase() {
+class ArtemisMessagingTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()

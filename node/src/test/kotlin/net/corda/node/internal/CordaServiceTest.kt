@@ -13,7 +13,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.cordapp.DummyRPCFlow
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -82,7 +81,7 @@ class CordaServiceTest {
     @Before
     fun start() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.node.internal","net.corda.finance"))
-        notaryNode = mockNet.createNotaryNode(legalName = DUMMY_NOTARY.name, validating = true)
+        notaryNode = mockNet.createNotaryNode()
         nodeA = mockNet.createNode()
         mockNet.startNodes()
     }

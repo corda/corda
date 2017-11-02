@@ -8,13 +8,16 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.util.function.Predicate
 import kotlin.test.*
 
-class CompatibleTransactionTests : TestDependencyInjectionBase() {
-
+class CompatibleTransactionTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val dummyOutState = TransactionState(DummyState(0), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
     private val stateRef1 = StateRef(SecureHash.randomSHA256(), 0)
     private val stateRef2 = StateRef(SecureHash.randomSHA256(), 1)

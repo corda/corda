@@ -1,6 +1,5 @@
 package net.corda.client.rpc;
 
-import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.contracts.Amount;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.FlowHandle;
@@ -13,7 +12,7 @@ import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
 import net.corda.nodeapi.User;
 import net.corda.testing.CoreTestUtils;
-import net.corda.testing.node.NodeBasedTest;
+import net.corda.testing.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,8 +50,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     @Before
     public void setUp() throws ExecutionException, InterruptedException {
-        CordaFuture<StartedNode<Node>> nodeFuture = startNotaryNode(getALICE().getName(), singletonList(rpcUser), true);
-        node = nodeFuture.get();
+        node = startNode(getALICE().getName(), 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcAddress()));
     }
 

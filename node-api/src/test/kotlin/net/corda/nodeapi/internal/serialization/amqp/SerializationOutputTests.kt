@@ -164,6 +164,8 @@ class SerializationOutputTests {
             this.register(Choice.DESCRIPTOR, Choice.Companion)
             this.register(RestrictedType.DESCRIPTOR, RestrictedType.Companion)
             this.register(ReferencedObject.DESCRIPTOR, ReferencedObject.Companion)
+            this.register(TransformsSchema.DESCRIPTOR, TransformsSchema.Companion)
+            this.register(TransformTypes.DESCRIPTOR, TransformTypes.Companion)
         }
         EncoderImpl(decoder)
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))
@@ -430,9 +432,7 @@ class SerializationOutputTests {
 
     private fun serdesThrowableWithInternalInfo(t: Throwable, factory: SerializerFactory, factory2: SerializerFactory, expectedEqual: Boolean = true): Throwable = withTestSerialization {
         val newContext = SerializationFactory.defaultFactory.defaultContext.withProperty(CommonPropertyNames.IncludeInternalInfo, true)
-
-        val deserializedObj = SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
-        return deserializedObj
+        SerializationFactory.defaultFactory.asCurrent { withCurrentContext(newContext) { serdes(t, factory, factory2, expectedEqual) } }
     }
 
     @Test

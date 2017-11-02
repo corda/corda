@@ -10,6 +10,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.*
+import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
 import java.util.function.Predicate
@@ -17,14 +18,14 @@ import java.util.stream.IntStream
 import kotlin.streams.toList
 import kotlin.test.*
 
-class PartialMerkleTreeTest : TestDependencyInjectionBase() {
+class PartialMerkleTreeTest {
+    @Rule
+    @JvmField
+    private val testSerialization = SerializationEnvironmentRule()
     private val nodes = "abcdef"
-    private val hashed = nodes.map {
-        initialiseTestSerialization()
-        try {
-            it.serialize().sha256()
-        } finally {
-            resetTestSerialization()
+    private val hashed = nodes.map { node ->
+        withTestSerialization {
+            node.serialize().sha256()
         }
     }
     private val expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
