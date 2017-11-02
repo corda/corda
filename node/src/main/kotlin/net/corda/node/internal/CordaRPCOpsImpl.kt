@@ -13,7 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCacheBase
+import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
@@ -46,7 +46,7 @@ internal class CordaRPCOpsImpl(
         return snapshot
     }
 
-    override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCacheBase.MapChange> {
+    override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
         return database.transaction {
             services.networkMapCacheBase.track()
         }

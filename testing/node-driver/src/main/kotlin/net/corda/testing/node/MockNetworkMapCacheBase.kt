@@ -5,7 +5,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCacheBase
+import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.PersistentNetworkMapCacheBase
@@ -26,7 +26,7 @@ class MockNetworkMapCacheBase(database: CordaPersistence, configuration: NodeCon
         val BANK_D_ADDR = NetworkHostAndPort("bankD", 8080)
     }
 
-    override val changed: Observable<NetworkMapCacheBase.MapChange> = PublishSubject.create<NetworkMapCacheBase.MapChange>()
+    override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
     override val nodeReady: CordaFuture<Void?> get() = doneFuture(null)
 
     init {

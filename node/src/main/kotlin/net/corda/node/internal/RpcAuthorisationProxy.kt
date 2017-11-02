@@ -9,7 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCacheBase
+import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
@@ -48,7 +48,7 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
 
     override fun networkMapSnapshot(): List<NodeInfo> = guard("networkMapSnapshot", implementation::networkMapSnapshot)
 
-    override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCacheBase.MapChange> = guard("networkMapFeed", implementation::networkMapFeed)
+    override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> = guard("networkMapFeed", implementation::networkMapFeed)
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?) = guard("startFlowDynamic", listOf(logicType)) {
         implementation.startFlowDynamic(logicType, *args)

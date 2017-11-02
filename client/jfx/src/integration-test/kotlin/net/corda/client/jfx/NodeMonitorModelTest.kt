@@ -16,7 +16,7 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCacheBase
+import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -47,7 +47,7 @@ class NodeMonitorModelTest {
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
-    lateinit var networkMapUpdatesBase: Observable<NetworkMapCacheBase.MapChange>
+    lateinit var networkMapUpdatesBase: Observable<NetworkMapCache.MapChange>
     lateinit var newNode: (CordaX500Name) -> NodeInfo
     private fun setup(runTest: () -> Unit) = driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
         val cashUser = User("user1", "test", permissions = setOf(
@@ -96,13 +96,13 @@ class NodeMonitorModelTest {
                 .expectEvents(isStrict = false) {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
-                            expect { output: NetworkMapCacheBase.MapChange ->
+                            expect { output: NetworkMapCache.MapChange ->
                                 require(output.node.chooseIdentity().name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
-                            expect { output: NetworkMapCacheBase.MapChange ->
+                            expect { output: NetworkMapCache.MapChange ->
                                 require(output.node.chooseIdentity().name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
-                            expect { output: NetworkMapCacheBase.MapChange ->
+                            expect { output: NetworkMapCache.MapChange ->
                                 require(output.node.chooseIdentity().name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             }
                     )

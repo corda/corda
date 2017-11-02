@@ -10,7 +10,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCacheBase
+import net.corda.core.node.services.NetworkMapCache
 
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
@@ -178,7 +178,7 @@ interface CordaRPCOps : RPCOps {
      * future updates to the network.
      */
     @RPCReturnsObservables
-    fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCacheBase.MapChange>
+    fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
 
     /**
      * Start the given flow with the given arguments. [logicType] must be annotated

@@ -10,8 +10,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.NetworkMapCacheBase
-import net.corda.core.node.services.NetworkMapCacheBase.MapChange
+import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.schemas.NodeInfoSchemaV1
@@ -40,7 +39,7 @@ fun registerNetworkMapUpdatesInIdentityService(networkMapCacheIntenal: NetworkMa
     networkMapCacheIntenal.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
     networkMapCacheIntenal.changed.subscribe { mapChange ->
         // TODO how should we handle network map removal
-        if (mapChange is NetworkMapCacheBase.MapChange.Added) {
+        if (mapChange is MapChange.Added) {
             mapChange.node.legalIdentitiesAndCerts.forEach {
                 identityService.verifyAndRegisterIdentity(it)
             }

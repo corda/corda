@@ -7,7 +7,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.messaging.*
-import net.corda.core.node.services.NetworkMapCacheBase.MapChange
+import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.MAX_PAGE_SIZE
