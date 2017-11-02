@@ -56,6 +56,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                 startFlow<CashIssueFlow>(),
                 startFlow<CashPaymentFlow>(),
                 startFlow<CashExitFlow>(),
+                invokeRpc(CordaRPCOps::notaryIdentities),
                 invokeRpc("vaultTrackBy"),
                 invokeRpc("vaultQueryBy"),
                 invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
