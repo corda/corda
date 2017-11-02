@@ -118,10 +118,6 @@ path to the node's base directory.
 
     Only one of ``raft``, ``bftSMaRt`` or ``custom`` configuration values may be specified.
 
-:minimumPlatformVersion: Used by the node if it's running the network map service to enforce a minimum version requirement
-    on registrations - any node on a Platform Version lower than this value will have their registration rejected.
-    Defaults to 1 if absent.
-
 :useHTTPS: If false the node's web server will be plain HTTP. If true the node will use the same certificate and private
     key from the ``<workspace>/certificates/sslkeystore.jks`` file as the ArtemisMQ port for HTTPS. If HTTPS is enabled
     then unencrypted HTTP traffic to the node's **webAddress** port is not supported.

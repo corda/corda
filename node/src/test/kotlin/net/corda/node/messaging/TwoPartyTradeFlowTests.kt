@@ -615,18 +615,25 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             notaryNode: StartedNode<*>,
             vararg extraSigningNodes: StartedNode<*>): Map<SecureHash, SignedTransaction> {
 
+        val notaryParty = notaryNode.info.legalIdentities[0]
         val signed = wtxToSign.map {
             val id = it.id
             val sigs = mutableListOf<TransactionSignature>()
             val nodeKey = node.info.chooseIdentity().owningKey
-            sigs.add(node.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey))
-            sigs.add(notaryNode.services.keyManagementService.sign(SignableData(id, SignatureMetadata(1,
-                    Crypto.findSignatureScheme(notaryNode.info.legalIdentities[1].owningKey).schemeNumberID)), notaryNode.info.legalIdentities[1].owningKey))
+            sigs += node.services.keyManagementService.sign(
+                    SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(nodeKey).schemeNumberID)),
+                    nodeKey
+            )
+            sigs += notaryNode.services.keyManagementService.sign(
+                    SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(notaryParty.owningKey).schemeNumberID)),
+                    notaryParty.owningKey
+            )
             extraSigningNodes.forEach { currentNode ->
-                sigs.add(currentNode.services.keyManagementService.sign(
-                        SignableData(id, SignatureMetadata(1, Crypto.findSignatureScheme(currentNode.info.chooseIdentity().owningKey).schemeNumberID)),
+                sigs += currentNode.services.keyManagementService.sign(
+                        SignableData(id, SignatureMetadata(
+                                1,
+                                Crypto.findSignatureScheme(currentNode.info.chooseIdentity().owningKey).schemeNumberID)),
                         currentNode.info.chooseIdentity().owningKey)
-                )
             }
             SignedTransaction(it, sigs)
         }

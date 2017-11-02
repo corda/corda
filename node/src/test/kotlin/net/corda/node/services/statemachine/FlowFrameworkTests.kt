@@ -72,18 +72,14 @@ class FlowFrameworkTests {
 
     @Before
     fun start() {
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"))
+        mockNet = MockNetwork(
+                servicePeerAllocationStrategy = RoundRobin(),
+                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"))
+        val notary = mockNet.createNotaryNode()
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
-        mockNet.runNetwork()
-
-        // We intentionally create our own notary and ignore the one provided by the network
-        // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
-        // service addressing.
-        val notary = mockNet.createNotaryNode()
 
         receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
-        mockNet.runNetwork()
 
         // Extract identities
         alice = aliceNode.info.singleIdentity()

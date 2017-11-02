@@ -4,7 +4,6 @@ import com.codahale.metrics.JmxReporter
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
@@ -45,7 +44,7 @@ import kotlin.system.exitProcess
  *
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
  */
-open class Node(override val configuration: NodeConfiguration,
+open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
@@ -131,11 +130,11 @@ open class Node(override val configuration: NodeConfiguration,
 
     private lateinit var userService: RPCUserService
 
-    override fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService {
+    override fun makeMessagingService(): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
-        val advertisedAddress = configuration.messagingServerAddress ?: getAdvertisedAddress()
+        val advertisedAddress = info.addresses.single()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
 
@@ -143,7 +142,7 @@ open class Node(override val configuration: NodeConfiguration,
                 configuration,
                 versionInfo,
                 serverAddress,
-                legalIdentity.owningKey,
+                info.legalIdentities[0].owningKey,
                 serverThread,
                 database,
                 services.monitoringService,
@@ -157,14 +156,18 @@ open class Node(override val configuration: NodeConfiguration,
         }
     }
 
+    override fun myAddresses(): List<NetworkHostAndPort> {
+        return listOf(configuration.messagingServerAddress ?: getAdvertisedAddress())
+    }
+
     private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {
-            val useHost = if (detectPublicIp) {
+            val host = if (detectPublicIp) {
                 tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
             } else {
                 p2pAddress.host
             }
-            NetworkHostAndPort(useHost, p2pAddress.port)
+            NetworkHostAndPort(host, p2pAddress.port)
         }
     }
 
@@ -194,11 +197,6 @@ open class Node(override val configuration: NodeConfiguration,
 
         // Start up the MQ client.
         (network as NodeMessagingClient).start(rpcOps, userService)
-    }
-
-    override fun myAddresses(): List<NetworkHostAndPort> {
-        val address = network.myAddress as ArtemisMessagingComponent.ArtemisPeerAddress
-        return listOf(address.hostAndPort)
     }
 
     /**

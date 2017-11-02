@@ -6,6 +6,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -248,7 +249,7 @@ data class VerifierDriverDSL(
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val processFuture = driverDSL.executorService.fork {
             val verifierName = CordaX500Name(organisation = "Verifier$id", locality = "London", country = "GB")
-            val baseDirectory = driverDSL.driverDirectory / verifierName.organisation
+            val baseDirectory = (driverDSL.driverDirectory / verifierName.organisation).createDirectories()
             val config = createConfiguration(baseDirectory, address)
             val configFilename = "verifier.conf"
             writeConfig(baseDirectory, configFilename, config)

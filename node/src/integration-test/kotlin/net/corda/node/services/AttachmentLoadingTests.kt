@@ -20,10 +20,13 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.nodeapi.User
-import net.corda.testing.*
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.eventually
 import net.corda.testing.node.MockServices
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -54,16 +57,16 @@ class AttachmentLoadingTests {
         val bankAName = CordaX500Name("BankA", "Zurich", "CH")
         val bankBName = CordaX500Name("BankB", "Zurich", "CH")
         val notaryName = CordaX500Name("Notary", "Zurich", "CH")
-        val flowInitiatorClass =
+        val flowInitiatorClass: Class<out FlowLogic<*>> =
                 Class.forName("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator", true, URLClassLoader(arrayOf(isolatedJAR)))
                         .asSubclass(FlowLogic::class.java)
 
-        private fun DriverDSLExposedInterface.createTwoNodesAndNotary(): List<NodeHandle> {
+        private fun DriverDSLExposedInterface.createNotaryAndTwoNodes(): List<NodeHandle> {
             val adminUser = User("admin", "admin", permissions = setOf("ALL"))
             val nodes = listOf(
+                    startNotaryNode(providedName = notaryName, rpcUsers = listOf(adminUser), validating = false),
                     startNode(providedName = bankAName, rpcUsers = listOf(adminUser)),
-                    startNode(providedName = bankBName, rpcUsers = listOf(adminUser)),
-                    startNotaryNode(providedName = notaryName, rpcUsers = listOf(adminUser), validating = false)
+                    startNode(providedName = bankBName, rpcUsers = listOf(adminUser))
             ).transpose().getOrThrow()   // Wait for all nodes to start up.
             nodes.forEach { it.rpc.waitUntilNetworkReady().getOrThrow() }
             return nodes
@@ -119,7 +122,7 @@ class AttachmentLoadingTests {
     fun `test that attachments retrieved over the network are not used for code`() {
         driver(initialiseSerialization = false) {
             installIsolatedCordappTo(bankAName)
-            val (bankA, bankB, _) = createTwoNodesAndNotary()
+            val (_, bankA, bankB) = createNotaryAndTwoNodes()
             eventuallyPassingTest {
                 assertFailsWith<UnexpectedFlowEndException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
                     bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
@@ -133,7 +136,7 @@ class AttachmentLoadingTests {
         driver(initialiseSerialization = false) {
             installIsolatedCordappTo(bankAName)
             installIsolatedCordappTo(bankBName)
-            val (bankA, bankB, _) = createTwoNodesAndNotary()
+            val (_, bankA, bankB) = createNotaryAndTwoNodes()
             eventuallyPassingTest {
                 bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
             }

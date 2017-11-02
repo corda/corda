@@ -18,7 +18,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
     // TODO: Remove this so we don't accidentally use this identity in the code?
     val myLegalName: CordaX500Name
-    val minimumPlatformVersion: Int
     val emailAddress: String
     val exportJMXto: String
     val dataSourceProperties: Properties
@@ -52,15 +51,17 @@ data class NotaryConfig(val validating: Boolean,
             "raft, bftSMaRt, and custom configs cannot be specified together"
         }
     }
+    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
 }
 
 data class RaftConfig(val nodeAddress: NetworkHostAndPort, val clusterAddresses: List<NetworkHostAndPort>)
 
 /** @param exposeRaces for testing only, so its default is not in reference.conf but here. */
-data class BFTSMaRtConfiguration constructor(val replicaId: Int,
-                                             val clusterAddresses: List<NetworkHostAndPort>,
-                                             val debug: Boolean = false,
-                                             val exposeRaces: Boolean = false
+data class BFTSMaRtConfiguration(
+        val replicaId: Int,
+        val clusterAddresses: List<NetworkHostAndPort>,
+        val debug: Boolean = false,
+        val exposeRaces: Boolean = false
 ) {
     init {
         require(replicaId >= 0) { "replicaId cannot be negative" }
@@ -85,7 +86,6 @@ data class NodeConfigurationImpl(
         override val dataSourceProperties: Properties,
         override val database: Properties?,
         override val certificateSigningService: URL,
-        override val minimumPlatformVersion: Int = 1,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
@@ -113,8 +113,6 @@ data class NodeConfigurationImpl(
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
-        require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
-        require(minimumPlatformVersion >= 1) { "minimumPlatformVersion cannot be less than 1" }
     }
 }
 

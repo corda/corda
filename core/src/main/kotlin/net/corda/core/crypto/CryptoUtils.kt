@@ -33,7 +33,9 @@ fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
 @Throws(InvalidKeyException::class, SignatureException::class)
-fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey) = DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
+fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+    return DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
+}
 
 /**
  * Helper function to sign with a key pair.
@@ -44,11 +46,11 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey) = DigitalSigna
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
 @Throws(InvalidKeyException::class, SignatureException::class)
-fun KeyPair.sign(bytesToSign: ByteArray) = private.sign(bytesToSign, public)
+fun KeyPair.sign(bytesToSign: ByteArray): DigitalSignature.WithKey = private.sign(bytesToSign, public)
 
 /** Helper function to sign the bytes of [bytesToSign] with a key pair. */
 @Throws(InvalidKeyException::class, SignatureException::class)
-fun KeyPair.sign(bytesToSign: OpaqueBytes) = sign(bytesToSign.bytes)
+fun KeyPair.sign(bytesToSign: OpaqueBytes): DigitalSignature.WithKey = sign(bytesToSign.bytes)
 
 /**
  * Helper function for signing a [SignableData] object.

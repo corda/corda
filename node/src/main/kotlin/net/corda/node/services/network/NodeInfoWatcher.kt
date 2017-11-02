@@ -2,9 +2,9 @@ package net.corda.node.services.network
 
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sign
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
@@ -15,6 +15,7 @@ import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.io.IOException
 import java.nio.file.Path
+import java.security.KeyPair
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
 
@@ -48,13 +49,13 @@ class NodeInfoWatcher(private val nodePath: Path,
          *
          * @param path the path where to write the file, if non-existent it will be created.
          * @param nodeInfo the NodeInfo to serialize.
-         * @param keyManager a KeyManagementService used to sign the NodeInfo data.
+         * @param signingKey used to sign the NodeInfo data.
          */
-        fun saveToFile(path: Path, nodeInfo: NodeInfo, keyManager: KeyManagementService) {
+        fun saveToFile(path: Path, nodeInfo: NodeInfo, signingKey: KeyPair) {
             try {
                 path.createDirectories()
                 val serializedBytes = nodeInfo.serialize()
-                val regSig = keyManager.sign(serializedBytes.bytes, nodeInfo.legalIdentities.first().owningKey)
+                val regSig = signingKey.sign(serializedBytes.bytes)
                 val signedData = SignedData(serializedBytes, regSig)
                 signedData.serialize().open().copyTo(
                         path / "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${serializedBytes.hash}")

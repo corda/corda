@@ -39,10 +39,10 @@ class IntegrationTestingTutorial {
                     invokeRpc("vaultTrackBy"),
                     invokeRpc(CordaRPCOps::networkMapFeed)
             ))
-            val (alice, bob) = listOf(
+            val (_, alice, bob) = listOf(
+                    startNotaryNode(DUMMY_NOTARY.name),
                     startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
-                    startNode(providedName = BOB.name, rpcUsers = listOf(bobUser)),
-                    startNotaryNode(DUMMY_NOTARY.name)
+                    startNode(providedName = BOB.name, rpcUsers = listOf(bobUser))
             ).transpose().getOrThrow()
             // END 1
 

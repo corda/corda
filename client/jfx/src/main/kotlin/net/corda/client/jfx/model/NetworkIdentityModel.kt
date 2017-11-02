@@ -5,6 +5,7 @@ import com.google.common.cache.CacheLoader
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
+import net.corda.client.jfx.utils.ChosenList
 import net.corda.client.jfx.utils.filterNotNull
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
@@ -12,7 +13,6 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.nodeapi.internal.ServiceType
 import java.security.PublicKey
 
 class NetworkIdentityModel {
@@ -36,16 +36,10 @@ class NetworkIdentityModel {
             .build<PublicKey, ObservableValue<NodeInfo?>>(CacheLoader.from { publicKey ->
                 publicKey?.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
             })
-
-    val notaries: ObservableList<Party> = networkIdentities.map {
-        it.legalIdentitiesAndCerts.find { it.name.commonName?.let { ServiceType.parse(it).isNotary() } == true }
-    }.map { it?.party }.filterNotNull()
-
+    val notaries = ChosenList(rpcProxy.map { FXCollections.observableList(it?.notaryIdentities() ?: emptyList()) })
     val notaryNodes: ObservableList<NodeInfo> = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
     val parties: ObservableList<NodeInfo> = networkIdentities
             .filtered { it.legalIdentities.all { it !in notaries } }
-            // TODO: REMOVE THIS HACK WHEN NETWORK MAP REDESIGN WORK IS COMPLETED.
-            .filtered { it.legalIdentities.all { it.name.organisation != "Network Map Service" } }
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }
 
     fun partyFromPublicKey(publicKey: PublicKey): ObservableValue<NodeInfo?> = identityCache[publicKey]
