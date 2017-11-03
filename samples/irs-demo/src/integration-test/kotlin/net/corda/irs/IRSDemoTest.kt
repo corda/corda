@@ -31,8 +31,7 @@ import rx.Observable
 import java.time.Duration
 import java.time.LocalDate
 
-class IRSDemoTest : IntegrationTestCategory {
-
+class IRSDemoTest {
     companion object {
         val log = loggerFor<IRSDemoTest>()
     }
