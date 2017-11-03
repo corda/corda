@@ -62,10 +62,10 @@ object RPCApi {
     private val RPC_ID_TIMESTAMP_FIELD_NAME = "rpc-id-timestamp"
     private val RPC_SESSION_ID_FIELD_NAME = "rpc-session-id"
     private val RPC_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-session-id-timestamp"
-    private val RPC_EXTERNAL_ID_FIELD_NAME = "rpc-id"
-    private val RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME = "rpc-id-timestamp"
-    private val RPC_EXTERNAL_SESSION_ID_FIELD_NAME = "rpc-session-id"
-    private val RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-session-id-timestamp"
+    private val RPC_EXTERNAL_ID_FIELD_NAME = "rpc-external-id"
+    private val RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME = "rpc-external-id-timestamp"
+    private val RPC_EXTERNAL_SESSION_ID_FIELD_NAME = "rpc-external-session-id"
+    private val RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-external-session-id-timestamp"
     private val OBSERVABLE_ID_FIELD_NAME = "observable-id"
     private val OBSERVABLE_ID_TIMESTAMP_FIELD_NAME = "observable-id-timestamp"
     private val METHOD_NAME_FIELD_NAME = "method-name"
@@ -268,12 +268,10 @@ object RPCApi {
 
     private fun <ID : Id<*>> ClientMessage.id(valueProperty: String, timestampProperty: String, construct: (value: String, timestamp: Instant) -> ID): ID? {
 
-        val idRaw = this.getStringProperty(valueProperty)
+        // returning null because getLongProperty throws trying to convert null to long
+        val idRaw = this.getStringProperty(valueProperty) ?: return null
         val timestampRaw = this.getLongProperty(timestampProperty)
-        return when {
-            idRaw == null || timestampRaw == null -> null
-            else -> construct(idRaw, Instant.ofEpochMilli(timestampRaw))
-        }
+        return construct(idRaw, Instant.ofEpochMilli(timestampRaw))
     }
 
     private fun ClientMessage.trace(): Trace {

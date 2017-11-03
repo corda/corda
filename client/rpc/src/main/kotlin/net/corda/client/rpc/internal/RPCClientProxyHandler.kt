@@ -14,7 +14,6 @@ import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.LazyPool
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
@@ -454,7 +453,7 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
     }
 
     private fun getRpcCallSite(kryo: Kryo, observableContext: ObservableContext): Throwable? {
-        val rpcRequestOrObservableId = InvocationId(kryo.context[RPCApi.RpcRequestOrObservableIdKey] as String)
+        val rpcRequestOrObservableId = kryo.context[RPCApi.RpcRequestOrObservableIdKey] as InvocationId
         return observableContext.callSiteMap?.get(rpcRequestOrObservableId)
     }
 }
