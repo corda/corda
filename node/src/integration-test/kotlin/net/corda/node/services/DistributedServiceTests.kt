@@ -38,12 +38,12 @@ class DistributedServiceTests {
                 invokeRpc(CordaRPCOps::nodeInfo),
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
-        val aliceFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser))
         val notariesFuture = startNotaryCluster(
                 DUMMY_NOTARY.name.copy(commonName = RaftValidatingNotaryService.id),
                 rpcUsers = listOf(testUser),
                 clusterSize = clusterSize
         )
+        val aliceFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser))
 
         alice = aliceFuture.get()
         val (notaryIdentity, notaryNodes) = notariesFuture.get()

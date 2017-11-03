@@ -15,7 +15,7 @@ import net.corda.testing.driver.DriverDSLExposedInterface
 /**
  * A simple wrapper for objects provided by the integration test driver DSL. The fields are lazy so
  * node construction won't start until you access the members. You can get one of these from the
- * [alice], [bob] and [aliceBobAndNotary] functions.
+ * [alice], [bob] and [notaryAliceAndBob] functions.
  */
 class PredefinedTestNode internal constructor(party: Party, driver: DriverDSLExposedInterface, ifNotaryIsValidating: Boolean?) {
     val rpcUsers = listOf(User("admin", "admin", setOf("ALL")))  // TODO: Randomize?
@@ -56,10 +56,10 @@ fun DriverDSLExposedInterface.notary(): PredefinedTestNode = PredefinedTestNode(
  * Returns plain, entirely stock nodes pre-configured with the [ALICE], [BOB] and [DUMMY_NOTARY] X.500 names in that
  * order. They have been started up in parallel and are now ready to use.
  */
-fun DriverDSLExposedInterface.aliceBobAndNotary(): List<PredefinedTestNode> {
+fun DriverDSLExposedInterface.notaryAliceAndBob(): List<PredefinedTestNode> {
+    val notary = notary()
     val alice = alice()
     val bob = bob()
-    val notary = notary()
-    listOf(alice.nodeFuture, bob.nodeFuture, notary.nodeFuture).transpose().get()
+    listOf(notary.nodeFuture, alice.nodeFuture, bob.nodeFuture).transpose().get()
     return listOf(alice, bob, notary)
 }

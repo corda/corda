@@ -5,10 +5,10 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.cert
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import java.nio.file.Files
 import java.nio.file.Path
 
 object ServiceIdentityGenerator {
@@ -20,13 +20,12 @@ object ServiceIdentityGenerator {
      * This method should be called *before* any of the nodes are started.
      *
      * @param dirs List of node directories to place the generated identity and key pairs in.
-     * @param serviceId The service id of the distributed service.
-     * @param serviceName The legal name of the distributed service, with service id as CN.
+     * @param serviceName The legal name of the distributed service.
      * @param threshold The threshold for the generated group [CompositeKey].
      */
-    // TODO: This needs to write out to the key store, not just files on disk
     fun generateToDisk(dirs: List<Path>,
                        serviceName: CordaX500Name,
+                       serviceId: String,
                        threshold: Int = 1): Party {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
@@ -39,9 +38,8 @@ object ServiceIdentityGenerator {
         keyPairs.zip(dirs) { keyPair, dir ->
             val serviceKeyCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuer.certificate, issuer.keyPair, serviceName, keyPair.public)
             val compositeKeyCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)
-            val certPath = Files.createDirectories(dir / "certificates") / "distributedService.jks"
+            val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
             val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
-            val serviceId = serviceName.commonName
             keystore.setCertificateEntry("$serviceId-composite-key", compositeKeyCert.cert)
             keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
             keystore.save(certPath, "cordacadevpass")

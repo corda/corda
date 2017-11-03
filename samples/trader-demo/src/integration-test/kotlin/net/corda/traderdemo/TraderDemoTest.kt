@@ -30,12 +30,12 @@ class TraderDemoTest {
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
         driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
-            val (nodeA, nodeB, bankNode) = listOf(
+            val (_, nodeA, nodeB, bankNode) = listOf(
+                    startNotaryNode(DUMMY_NOTARY.name, validating = false),
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)),
-                    startNode(providedName = BOC.name, rpcUsers = listOf(bankUser)),
-                    startNotaryNode(DUMMY_NOTARY.name, validating = false))
-                    .map { (it.getOrThrow() as NodeHandle.InProcess).node }
+                    startNode(providedName = BOC.name, rpcUsers = listOf(bankUser))
+            ).map { (it.getOrThrow() as NodeHandle.InProcess).node }
 
             nodeA.internals.registerInitiatedFlow(BuyerFlow::class.java)
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {

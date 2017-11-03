@@ -55,22 +55,22 @@ class CordaRPCOpsImplTest {
         val testJar = "net/corda/node/testing/test.jar"
     }
 
-    lateinit var mockNet: MockNetwork
-    lateinit var aliceNode: StartedNode<MockNode>
-    lateinit var notaryNode: StartedNode<MockNode>
-    lateinit var notary: Party
-    lateinit var rpc: CordaRPCOps
-    lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
-    lateinit var transactions: Observable<SignedTransaction>
-    lateinit var vaultTrackCash: Observable<Vault.Update<Cash.State>>
+    private lateinit var mockNet: MockNetwork
+    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var notaryNode: StartedNode<MockNode>
+    private lateinit var notary: Party
+    private lateinit var rpc: CordaRPCOps
+    private lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
+    private lateinit var transactions: Observable<SignedTransaction>
+    private lateinit var vaultTrackCash: Observable<Vault.Update<Cash.State>>
 
     private val user = User("user", "pwd", permissions = emptySet())
 
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
-        aliceNode = mockNet.createNode()
         notaryNode = mockNet.createNotaryNode(validating = false)
+        aliceNode = mockNet.createNode()
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
         CURRENT_RPC_CONTEXT.set(RpcContext(user))
 

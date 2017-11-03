@@ -57,7 +57,7 @@ private class BankOfCordaDriver {
         try {
             when (role) {
                 Role.ISSUER -> {
-                    driver(dsl = {
+                    driver(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
                         startNotaryNode(providedName = DUMMY_NOTARY.name, validating = true)
                         val bankUser = User(
                                 BANK_USERNAME,
@@ -79,7 +79,7 @@ private class BankOfCordaDriver {
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()
-                    }, isDebug = true, extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset"))
+                    }
                 }
                 else -> {
                     val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,

@@ -26,10 +26,10 @@ class AttachmentDemoTest {
                     invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                     invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed)
             )))
-            val (nodeA, nodeB) = listOf(
+            val (_, nodeA, nodeB) = listOf(
+                    startNotaryNode(DUMMY_NOTARY.name, validating = false),
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
-                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
-                    startNotaryNode(DUMMY_NOTARY.name, validating = false))
+                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g"))
                     .map { it.getOrThrow() }
             startWebserver(nodeB).getOrThrow()
 
