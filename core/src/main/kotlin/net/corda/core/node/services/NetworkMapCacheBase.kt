@@ -16,7 +16,7 @@ import java.security.PublicKey
 /**
  * This interface has been kept around just to preserve the fact that it contains [MapChange] and not alter ~20 APIs.
  */
-interface NetworkMapCache {
+interface NetworkMapCache: NetworkMapCacheBase {
     @CordaSerializable
     sealed class MapChange {
         abstract val node: NodeInfo
