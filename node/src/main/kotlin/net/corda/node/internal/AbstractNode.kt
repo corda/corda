@@ -563,8 +563,6 @@ abstract class AbstractNode(config: NodeConfiguration,
         return PersistentKeyManagementService(identityService, partyKeys)
     }
 
-    abstract protected fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService
-
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig): NotaryService {
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return if (notaryConfig.validating) {

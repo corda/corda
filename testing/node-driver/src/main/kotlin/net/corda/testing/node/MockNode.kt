@@ -23,15 +23,12 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.InMemoryNetworkMapService
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -211,10 +208,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         override fun startMessagingService(rpcOps: RPCOps) {
             // Nothing to do
-        }
-
-        override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-            return InMemoryNetworkMapService()
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine

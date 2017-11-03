@@ -19,14 +19,11 @@ import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
-import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.TestClock
@@ -35,10 +32,6 @@ import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
-import org.apache.activemq.artemis.api.core.RoutingType
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Clock
@@ -206,10 +199,6 @@ open class Node(override val configuration: NodeConfiguration,
     override fun myAddresses(): List<NetworkHostAndPort> {
         val address = network.myAddress as ArtemisMessagingComponent.ArtemisPeerAddress
         return listOf(address.hostAndPort)
-    }
-
-    override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-        return PersistentNetworkMapService()
     }
 
     /**
