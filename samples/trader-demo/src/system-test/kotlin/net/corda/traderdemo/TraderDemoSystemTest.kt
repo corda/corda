@@ -231,11 +231,11 @@ private abstract class JarType(private val nodeDirectory: Path, private val jarN
     protected fun configFile(): Path = nodeDirectory.resolve("node.conf")
 }
 
-private class CordaJarType(private val nodeDirectory: Path) : JarType(nodeDirectory, "corda.jar") {
+private class CordaJarType(nodeDirectory: Path) : JarType(nodeDirectory, "corda.jar") {
     override fun validateFilesOrThrow() = validateFilesExistOrThrow()
 }
 
-private class WebserverJarType(private val nodeDirectory: Path) : JarType(nodeDirectory, "corda-webserver.jar") {
+private class WebserverJarType(nodeDirectory: Path) : JarType(nodeDirectory, "corda-webserver.jar") {
     override fun validateFilesOrThrow() {
         validateFilesExistOrThrow()
         validateConfigOrThrow()
