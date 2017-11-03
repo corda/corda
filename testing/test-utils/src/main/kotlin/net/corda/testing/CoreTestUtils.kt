@@ -179,7 +179,7 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  */
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
 /** Returns the identity of the first notary found on the network */
-fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
+fun ServiceHub.getDefaultNotary(): Party = networkMapCacheBase.notaryIdentities.first()
 
 /**
  * A method on a mock was called, but no behaviour was previously specified for that method.

@@ -146,7 +146,7 @@ class StateMachineManagerImpl(
         checkQuasarJavaAgentPresence()
         restoreFibersFromCheckpoints()
         listenToLedgerTransactions()
-        serviceHub.networkMapCache.nodeReady.then { executor.execute(this::resumeRestoredFibers) }
+        serviceHub.networkMapCacheBase.nodeReady.then { executor.execute(this::resumeRestoredFibers) }
     }
 
     private fun checkQuasarJavaAgentPresence() {
@@ -267,7 +267,7 @@ class StateMachineManagerImpl(
             logger.error("Received corrupt SessionMessage data from ${message.peer}")
             return
         }
-        val sender = serviceHub.networkMapCache.getPeerByLegalName(message.peer)
+        val sender = serviceHub.networkMapCacheBase.getPeerByLegalName(message.peer)
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender)
@@ -599,7 +599,7 @@ class StateMachineManagerImpl(
     }
 
     private fun sendSessionMessage(party: Party, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null, retryId: Long? = null) {
-        val partyInfo = serviceHub.networkMapCache.getPartyInfo(party)
+        val partyInfo = serviceHub.networkMapCacheBase.getPartyInfo(party)
                 ?: throw IllegalArgumentException("Don't know about party $party")
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val logger = fiber?.logger ?: logger

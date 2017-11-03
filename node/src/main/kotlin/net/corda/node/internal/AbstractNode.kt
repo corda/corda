@@ -42,7 +42,10 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.*
+import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.NodeInfoWatcher
+import net.corda.node.services.network.PersistentNetworkMapCacheBase
+import net.corda.node.services.network.registerNetworkMapUpdatesInIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -218,8 +221,8 @@ abstract class AbstractNode(config: NodeConfiguration,
             StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, schedulerService)
         }
         // If we successfully  loaded network data from database, we set this future to Unit.
-        services.networkMapCache.addNode(info)
-        _nodeReadyFuture.captureLater(services.networkMapCache.nodeReady.map { Unit })
+        services.networkMapCacheBase.addNode(info)
+        _nodeReadyFuture.captureLater(services.networkMapCacheBase.nodeReady.map { Unit })
 
         return startedImpl.apply {
             database.transaction {
@@ -471,7 +474,7 @@ abstract class AbstractNode(config: NodeConfiguration,
         network = makeMessagingService(legalIdentity)
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
         info = NodeInfo(addresses, allIdentities, versionInfo.platformVersion, platformClock.instant().toEpochMilli())
-        val networkMapCache = services.networkMapCache
+        val networkMapCache = services.networkMapCacheBase
         val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
                 services.auditService, services.monitoringService, networkMapCache, services.schemaService,
@@ -553,7 +556,7 @@ abstract class AbstractNode(config: NodeConfiguration,
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     open protected fun checkNetworkMapIsInitialized() {
-        if (!services.networkMapCache.loadDBSuccess) {
+        if (!services.networkMapCacheBase.loadDBSuccess) {
             // TODO: There should be a consistent approach to configuration error exceptions.
             throw NetworkMapCacheEmptyException()
         }
@@ -699,7 +702,11 @@ abstract class AbstractNode(config: NodeConfiguration,
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
         override val auditService = DummyAuditService()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val networkMapCache by lazy { NetworkMapCacheImpl(PersistentNetworkMapCache(this@AbstractNode.database, this@AbstractNode.configuration), identityService) }
+        override val networkMapCacheBase by lazy {
+            val persistentNetworkMapCache = PersistentNetworkMapCacheBase(this@AbstractNode.database, this@AbstractNode.configuration)
+            registerNetworkMapUpdatesInIdentityService(persistentNetworkMapCache, identityService)
+            persistentNetworkMapCache
+        }
         override val vaultService by lazy { makeVaultService(keyManagementService, stateLoader) }
         override val contractUpgradeService by lazy { ContractUpgradeServiceImpl() }
 

@@ -358,7 +358,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private fun ensureAllNetworkMapCachesHaveAllNodeInfos() {
         val infos = nodes.mapNotNull { it.started?.info }
         nodes.filter { it.hasDBConnection() }
-                .mapNotNull { it.started?.services?.networkMapCache }
+                .mapNotNull { it.started?.services?.networkMapCacheBase }
                 .forEach {
                     for (nodeInfo in infos) {
                         it.addNode(nodeInfo)

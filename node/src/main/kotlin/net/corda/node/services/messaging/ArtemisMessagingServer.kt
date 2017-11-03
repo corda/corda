@@ -9,8 +9,8 @@ import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -89,7 +89,7 @@ import javax.security.cert.CertificateException
 class ArtemisMessagingServer(override val config: NodeConfiguration,
                              val p2pPort: Int,
                              val rpcPort: Int?,
-                             val networkMapCache: NetworkMapCache,
+                             val networkMapCacheBase: NetworkMapCacheBase,
                              val userService: RPCUserService) : ArtemisMessagingComponent() {
     companion object {
         private val log = loggerFor<ArtemisMessagingServer>()
@@ -122,7 +122,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
-            networkChangeHandle = networkMapCache.changed.subscribe { updateBridgesOnNetworkChange(it) }
+            networkChangeHandle = networkMapCacheBase.changed.subscribe { updateBridgesOnNetworkChange(it) }
             running = true
         }
     }
@@ -287,7 +287,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         if (queueName.startsWith(PEERS_PREFIX)) {
             try {
                 val identity = parsePublicKeyBase58(queueName.substring(PEERS_PREFIX.length))
-                val nodeInfos = networkMapCache.getNodesByLegalIdentityKey(identity)
+                val nodeInfos = networkMapCacheBase.getNodesByLegalIdentityKey(identity)
                 if (nodeInfos.isNotEmpty()) {
                     nodeInfos.forEach { deployBridgeToPeer(it) }
                 } else {

@@ -15,7 +15,7 @@ import java.security.cert.*
  *
  * Well known identities in Corda are the public identity of a party, registered with the network map directory,
  * whereas confidential identities are distributed only on a need to know basis (typically between parties in
- * a transaction being built). See [NetworkMapCache] for retrieving well known identities from the network map.
+ * a transaction being built). See [NetworkMapCacheBase] for retrieving well known identities from the network map.
  */
 @DoNotImplement
 interface IdentityService {
@@ -67,7 +67,7 @@ interface IdentityService {
 
     /**
      * Resolves a party name to the well known identity [Party] instance for this name. Where possible well known identity
-     * lookup from name should be done from the network map (via [NetworkMapCache]) instead, as it is the authoritative
+     * lookup from name should be done from the network map (via [NetworkMapCacheBase]) instead, as it is the authoritative
      * source of well known identities.
      *
      * @param name The [CordaX500Name] to determine well known identity for.

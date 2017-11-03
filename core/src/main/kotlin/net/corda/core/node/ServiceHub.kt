@@ -121,7 +121,7 @@ interface ServiceHub : ServicesForResolution {
      * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
      * with a specified network map service, which it fetches data from and then subscribes to updates of.
      */
-    val networkMapCache: NetworkMapCache
+    val networkMapCacheBase: NetworkMapCacheBase
 
     /**
      * INTERNAL. DO NOT USE.

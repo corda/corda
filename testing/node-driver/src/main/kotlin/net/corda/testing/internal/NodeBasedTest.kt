@@ -109,7 +109,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         val runningNodesInfo = runningNodes.map { it.info }
         for (node in runningNodes)
             for (nodeInfo in runningNodesInfo) {
-                node.services.networkMapCache.addNode(nodeInfo)
+                node.services.networkMapCacheBase.addNode(nodeInfo)
             }
     }
 }

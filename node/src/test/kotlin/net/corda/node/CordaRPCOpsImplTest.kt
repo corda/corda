@@ -5,11 +5,13 @@ import net.corda.client.rpc.PermissionException
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
@@ -25,8 +27,8 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.nodeapi.User
@@ -37,6 +39,7 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.sequence
 import org.apache.commons.io.IOUtils
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -84,6 +87,24 @@ class CordaRPCOpsImplTest {
     fun cleanUp() {
         mockNet.stopNodes()
     }
+
+    @Test
+    fun `nodeInfoFromParty returns a known party`() {
+        val aliceParty = aliceNode.info.legalIdentities.first()
+        withPermissions(invokeRpc(CordaRPCOps::nodeInfoFromParty)) {
+            assertThat(rpc.nodeInfoFromParty(aliceParty)).isEqualTo(aliceNode.info)
+        }
+    }
+
+    @Test
+    fun `nodeInfoFromParty returns null a known party`() {
+        val name = CordaX500Name("C", "Org", "S", "GB")
+        val party = Party(name, generateKeyPair().public)
+        withPermissions(invokeRpc(CordaRPCOps::nodeInfoFromParty)) {
+            assertThat(rpc.nodeInfoFromParty(party)).isNull()
+        }
+    }
+
 
     @Test
     fun `cash issue accepted`() {

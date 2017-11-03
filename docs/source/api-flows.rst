@@ -206,7 +206,7 @@ covered in :doc:`api-vault-query`.
 Retrieving information about other nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 We can retrieve information about other nodes on the network and the services they offer using
-``ServiceHub.networkMapCache``.
+``ServiceHub.networkMapCacheBase``.
 
 Notaries
 ~~~~~~~~

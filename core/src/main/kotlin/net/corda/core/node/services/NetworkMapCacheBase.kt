@@ -2,24 +2,21 @@ package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
 import java.security.PublicKey
 
 /**
- * A network map contains lists of nodes on the network along with information about their identity keys, services
- * they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
- * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
- * with a specified network map service, which it fetches data from and then subscribes to updates of.
+ * This interface has been kept around just to preserve the fact that it contains [MapChange] and not alter ~20 APIs.
  */
-interface NetworkMapCache : NetworkMapCacheBase {
+interface NetworkMapCache {
     @CordaSerializable
     sealed class MapChange {
         abstract val node: NodeInfo
@@ -28,24 +25,18 @@ interface NetworkMapCache : NetworkMapCacheBase {
         data class Removed(override val node: NodeInfo) : MapChange()
         data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
-
-    /**
-     * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable; if the party
-     * is anonymised and the well known party cannot be resolved, it is impossible ot identify the node and therefore this
-     * returns null.
-     * Notice that when there are more than one node for a given party (in case of distributed services) first service node
-     * found will be returned. See also: [NetworkMapCache.getNodesByLegalIdentityKey].
-     *
-     * @param party party to retrieve node information for.
-     * @return the node for the identity, or null if the node could not be found. This does not necessarily mean there is
-     * no node for the party, only that this cache is unaware of it.
-     */
-    fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 }
 
-/** Subset of [NetworkMapCache] that doesn't depend on an [IdentityService]. */
+/**
+ * A network map contains lists of nodes on the network along with information about their identity keys, services
+ * they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
+ * from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
+ * with a specified network map service, which it fetches data from and then subscribes to updates of.
+ */
 @DoNotImplement
 interface NetworkMapCacheBase {
+
+
     // DOCSTART 1
     /**
      * A list of notary services available on the network.

@@ -154,7 +154,7 @@ open class MockServices(
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
-    override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
+    override val networkMapCacheBase: NetworkMapCacheBase get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo
         get() {

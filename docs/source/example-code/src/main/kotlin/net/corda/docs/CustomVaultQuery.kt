@@ -129,8 +129,8 @@ object TopupIssuerFlow {
                                 issueTo: Party,
                                 issuerPartyRef: OpaqueBytes): AbstractCashFlow.Result {
             // TODO: pass notary in as request parameter
-            val notaryParty = serviceHub.networkMapCache.notaryIdentities.firstOrNull()
-                    ?: throw IllegalArgumentException("Couldn't find any notary in NetworkMapCache")
+            val notaryParty = serviceHub.networkMapCacheBase.notaryIdentities.firstOrNull()
+                    ?: throw IllegalArgumentException("Couldn't find any notary in NetworkMapCacheBase")
             // invoke Cash subflow to issue Asset
             progressTracker.currentStep = ISSUING
             val issueCashFlow = CashIssueFlow(amount, issuerPartyRef, notaryParty)

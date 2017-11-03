@@ -863,14 +863,14 @@ class DriverDSL(
 
     /**
      * @param initial number of nodes currently in the network map of a running node.
-     * @param networkMapCacheChangeObservable an observable returning the updates to the node network map.
+     * @param networkMapCacheBaseChangeObservable an observable returning the updates to the node network map.
      * @return a [ConnectableObservable] which emits a new [Int] every time the number of registered nodes changes
      *   the initial value emitted is always [initial]
      */
-    private fun nodeCountObservable(initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>):
+    private fun nodeCountObservable(initial: Int, networkMapCacheBaseChangeObservable: Observable<NetworkMapCache.MapChange>):
             ConnectableObservable<Int> {
         val count = AtomicInteger(initial)
-        return networkMapCacheChangeObservable.map { it ->
+        return networkMapCacheBaseChangeObservable.map { it ->
             when (it) {
                 is NetworkMapCache.MapChange.Added -> count.incrementAndGet()
                 is NetworkMapCache.MapChange.Removed -> count.decrementAndGet()

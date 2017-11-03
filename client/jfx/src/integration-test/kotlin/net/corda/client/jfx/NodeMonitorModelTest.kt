@@ -47,7 +47,7 @@ class NodeMonitorModelTest {
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
-    lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
+    lateinit var networkMapUpdatesBase: Observable<NetworkMapCache.MapChange>
     lateinit var newNode: (CordaX500Name) -> NodeInfo
     private fun setup(runTest: () -> Unit) = driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
         val cashUser = User("user1", "test", permissions = setOf(
@@ -73,7 +73,7 @@ class NodeMonitorModelTest {
         progressTracking = monitor.progressTracking.bufferUntilSubscribed()
         transactions = monitor.transactions.bufferUntilSubscribed()
         vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
-        networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
+        networkMapUpdatesBase = monitor.networkMap.bufferUntilSubscribed()
 
         monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
         rpc = monitor.proxyObservable.value!!
@@ -92,7 +92,7 @@ class NodeMonitorModelTest {
     fun `network map update`() = setup {
         val charlieNode = newNode(CHARLIE.name)
         val nonServiceIdentities = aliceNode.legalIdentitiesAndCerts + bobNode.legalIdentitiesAndCerts + charlieNode.legalIdentitiesAndCerts
-        networkMapUpdates.filter { it.node.legalIdentitiesAndCerts.any { it in nonServiceIdentities } }
+        networkMapUpdatesBase.filter { it.node.legalIdentitiesAndCerts.any { it in nonServiceIdentities } }
                 .expectEvents(isStrict = false) {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.

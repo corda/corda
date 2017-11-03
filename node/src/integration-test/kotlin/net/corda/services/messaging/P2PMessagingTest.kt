@@ -46,7 +46,7 @@ class P2PMessagingTest {
         driver(startNodesInProcess = true) {
             val distributedServiceNodes = startDistributedService()
             val alice = startAlice()
-            val serviceAddress = alice.services.networkMapCache.run {
+            val serviceAddress = alice.services.networkMapCacheBase.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
                 alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
             }
@@ -80,7 +80,7 @@ class P2PMessagingTest {
         driver(startNodesInProcess = true) {
             val distributedServiceNodes = startDistributedService()
             val alice = startAlice()
-            val serviceAddress = alice.services.networkMapCache.run {
+            val serviceAddress = alice.services.networkMapCacheBase.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
                 alice.network.getAddressOfParty(getPartyInfo(notaryParty)!!)
             }
@@ -175,7 +175,7 @@ class P2PMessagingTest {
         participatingServiceNodes.forEach { node ->
             node.respondWith(node.info)
         }
-        val serviceAddress = originatingNode.services.networkMapCache.run {
+        val serviceAddress = originatingNode.services.networkMapCacheBase.run {
             originatingNode.network.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
         }
         val participatingNodes = HashSet<Any>()

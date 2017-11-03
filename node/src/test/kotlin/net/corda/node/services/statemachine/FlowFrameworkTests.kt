@@ -183,7 +183,7 @@ class FlowFrameworkTests {
         bobNode.dispose()
         bobNode.database.transaction {
             assertEquals(1, bobNode.checkpointStorage.checkpoints().size) // confirm checkpoint
-            bobNode.services.networkMapCache.clearNetworkMapCache()
+            bobNode.services.networkMapCacheBase.clearNetworkMapCache()
         }
         val node2b = mockNet.createNode(MockNodeParameters(bobNode.internals.id))
         bobNode.internals.manuallyCloseDB()
