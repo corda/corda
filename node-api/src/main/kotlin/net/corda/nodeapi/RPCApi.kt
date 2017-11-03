@@ -87,9 +87,6 @@ object RPCApi {
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_ADDED.name}' AND " +
                     "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
 
-    data class RpcRequestId(val toLong: Long)
-    data class ObservableId(val toLong: Long)
-
     object RpcRequestOrObservableIdKey
 
     private fun ClientMessage.getBodyAsByteArray(): ByteArray {
