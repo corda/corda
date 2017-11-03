@@ -3,11 +3,7 @@ package net.corda.node.services.schema
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.LinearState
-import net.corda.core.schemas.CommonSchemaV1
-import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.NodeInfoSchemaV1
-import net.corda.core.schemas.PersistentState
-import net.corda.core.schemas.QueryableState
+import net.corda.core.schemas.*
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
@@ -15,7 +11,6 @@ import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -48,8 +43,6 @@ class NodeSchemaService(cordappLoader: CordappLoader?) : SchemaService, Singleto
                     PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
-                    PersistentNetworkMapService.NetworkNode::class.java,
-                    PersistentNetworkMapService.NetworkSubscriber::class.java,
                     NodeMessagingClient.ProcessedMessage::class.java,
                     NodeMessagingClient.RetryMessage::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
