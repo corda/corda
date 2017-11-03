@@ -7,6 +7,52 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda core'
 
+evaluationDependsOn(':node:capsule')
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+
+    smokeTestCompile.extendsFrom compile
+    smokeTestRuntime.extendsFrom runtime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+    }
+    smokeTest {
+        kotlin {
+            // We must NOT have any Node code on the classpath, so do NOT
+            // include the test or integrationTest dependencies here.
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/java')
+        }
+    }
+}
+
+processSmokeTestResources {
+    // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
+        rename 'corda-(.*)', 'corda.jar'
+    }
+}
+
 buildscript {
     repositories {
         mavenCentral()
@@ -14,7 +60,6 @@ buildscript {
 }
 
 dependencies {
-
     testCompile "junit:junit:$junit_version"
     testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
 
@@ -47,6 +92,11 @@ dependencies {
 
     // Guava: Google utilities library.
     testCompile "com.google.guava:guava:$guava_version"
+
+    // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestCompile project(':smoke-test-utils')
+    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
+    smokeTestCompile "junit:junit:$junit_version"
 
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"
@@ -85,6 +135,22 @@ configurations {
 task testJar(type: Jar) {
     classifier "tests"
     from sourceSets.test.output
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task smokeTestJar(type: Jar) {
+    classifier 'smokeTests'
+    from sourceSets.smokeTest.output
+}
+
+task smokeTest(type: Test) {
+    dependsOn smokeTestJar
+    testClassesDirs = sourceSets.smokeTest.output.classesDirs
+    classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
 artifacts {

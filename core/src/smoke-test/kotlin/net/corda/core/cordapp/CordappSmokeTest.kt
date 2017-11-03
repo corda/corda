@@ -1,4 +1,4 @@
-package net.corda.node
+package net.corda.core.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
@@ -11,7 +11,6 @@ import net.corda.core.internal.list
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
@@ -23,6 +22,7 @@ import kotlin.streams.toList
 
 class CordappSmokeTest {
     private companion object {
+        private const val CORDAPPS_DIR_NAME = "cordapps"
         val user = User("user1", "test", permissions = setOf("ALL"))
         val port = AtomicInteger(15100)
     }
@@ -38,9 +38,10 @@ class CordappSmokeTest {
             users = listOf(user)
     )
 
+
     @Test
     fun `FlowContent appName returns the filename of the CorDapp jar`() {
-        val cordappsDir = (factory.baseDirectory(aliceConfig) / CordappLoader.CORDAPPS_DIR_NAME).createDirectories()
+        val cordappsDir = (factory.baseDirectory(aliceConfig) / CORDAPPS_DIR_NAME).createDirectories()
         // Find the jar file for the smoke tests of this module
         val selfCordapp = Paths.get("build", "libs").list {
             it.filter { "-smokeTests" in it.toString() }.toList().single()
@@ -61,7 +62,7 @@ class CordappSmokeTest {
 
     @Test
     fun `empty cordapps directory`() {
-        (factory.baseDirectory(aliceConfig) / CordappLoader.CORDAPPS_DIR_NAME).createDirectories()
+        (factory.baseDirectory(aliceConfig) / CORDAPPS_DIR_NAME).createDirectories()
         factory.create(aliceConfig).close()
     }
 

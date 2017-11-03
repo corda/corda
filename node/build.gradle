@@ -19,9 +19,6 @@ configurations {
 
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
-
-    smokeTestCompile.extendsFrom compile
-    smokeTestRuntime.extendsFrom runtime
 }
 
 sourceSets {
@@ -40,33 +37,12 @@ sourceSets {
             srcDir file('src/integration-test/resources')
         }
     }
-    smokeTest {
-        kotlin {
-            // We must NOT have any Node code on the classpath, so do NOT
-            // include the test or integrationTest dependencies here.
-            compileClasspath += main.output
-            runtimeClasspath += main.output
-            srcDir file('src/smoke-test/kotlin')
-        }
-        java {
-            compileClasspath += main.output
-            runtimeClasspath += main.output
-            srcDir file('src/smoke-test/java')
-        }
-    }
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
 // This prevents problems in IntelliJ with regard to duplicate source roots.
 processResources {
     from file("$rootDir/config/dev/log4j2.xml")
-}
-
-processSmokeTestResources {
-    // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
-    from(project(':node:capsule').tasks.buildCordaJAR) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -181,11 +157,6 @@ dependencies {
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
 
-    // Smoke tests do NOT have any Node code on the classpath!
-    smokeTestCompile project(':smoke-test-utils')
-    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
-    smokeTestCompile "junit:junit:$junit_version"
-
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets
     testCompile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
@@ -201,17 +172,6 @@ dependencies {
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-task smokeTestJar(type: Jar) {
-    classifier 'smokeTests'
-    from sourceSets.smokeTest.output
-}
-
-task smokeTest(type: Test) {
-    dependsOn smokeTestJar
-    testClassesDirs = sourceSets.smokeTest.output.classesDirs
-    classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
 jar {

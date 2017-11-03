@@ -15,15 +15,13 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 
 class NodeProcess(
-        val config: NodeConfig,
-        val nodeDir: Path,
+        private val config: NodeConfig,
+        private val nodeDir: Path,
         private val node: Process,
         private val client: CordaRPCClient
 ) : AutoCloseable {
     private companion object {
         val log = loggerFor<NodeProcess>()
-        val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
-        val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
     }
 
     fun connect(): CordaRPCConnection {
@@ -43,13 +41,24 @@ class NodeProcess(
         (nodeDir / "artemis").toFile().deleteRecursively()
     }
 
-    class Factory(val buildDirectory: Path = Paths.get("build"),
-                  val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())) {
-        val nodesDirectory = buildDirectory / formatter.format(Instant.now())
-
-        init {
-            nodesDirectory.createDirectories()
+    class Factory(
+            private val buildDirectory: Path = Paths.get("build"),
+            private val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())
+    ) {
+        companion object {
+            val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
+            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
+            init {
+                try {
+                    Class.forName("net.corda.node.Corda")
+                    throw Error("Smoke test has the node in its classpath. Please remove the offending dependency.")
+                } catch (e: ClassNotFoundException) {
+                    // If the class can't be found then we're good!
+                }
+            }
         }
+
+        private val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).createDirectories()
 
         fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
 

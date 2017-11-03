@@ -1,3 +1,4 @@
+// This class is used by the smoke tests as a check that the node module isn't on their classpath
 @file:JvmName("Corda")
 
 package net.corda.node
