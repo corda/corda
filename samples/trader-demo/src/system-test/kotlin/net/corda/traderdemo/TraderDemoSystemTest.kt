@@ -42,9 +42,9 @@ class TraderDemoSystemTest {
     }
 }
 
-private object cordaMatchers {
+private object CordaMatchers {
     fun logoMatcher(): Matcher<MultiResult> {
-        return cordaLogoMatcher
+        return CordaLogoMatcher
     }
 
     fun logsLocationMatcher(path: String): Matcher<Result> {
@@ -126,7 +126,7 @@ private object cordaMatchers {
     }
 }
 
-private object cordaLogoMatcher : Matcher<MultiResult> {
+private object CordaLogoMatcher : Matcher<MultiResult> {
     override fun matches(input: String, isEof: Boolean): MultiResult {
         return logoMatcher.matches(input, isEof)
     }
@@ -299,7 +299,7 @@ private class JarCommandBuilder(private val jarType: JarType) {
     }
 
     private fun debugPort(): String {
-        val portNumber = debugPortNumberGenerator.next()
+        val portNumber = DebugPortNumberGenerator.next()
         return "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$portNumber"
     }
 
@@ -412,7 +412,7 @@ private val os: OS by lazy {
         throw UnsupportedOperationException("OS not supported.")
 }
 
-private object debugPortNumberGenerator {
+private object DebugPortNumberGenerator {
     private var portNumber: Int = 5005
     fun next(): Int = portNumber++
 }
