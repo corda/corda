@@ -8,8 +8,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -20,7 +20,6 @@ class BankOfCordaRPCClientTest {
     fun `issuer flow via RPC`() {
         val commonPermissions = setOf(
                 invokeRpc("vaultTrackByCriteria"),
-                invokeRpc(CordaRPCOps::waitUntilNetworkReady),
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities)
         )
@@ -40,8 +39,6 @@ class BankOfCordaRPCClientTest {
             // Big Corporation RPC Client
             val bigCorpClient = nodeBigCorporation.rpcClientToNode()
             val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
-            bocProxy.waitUntilNetworkReady().getOrThrow()
-            bigCorpProxy.waitUntilNetworkReady().getOrThrow()
 
             // Register for Bank of Corda Vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)

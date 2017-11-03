@@ -963,7 +963,7 @@ class DriverDSL(
                     if (process.isAlive) null else process
                 }
                 establishRpc(configuration, processDeathFuture).flatMap { rpc ->
-                    // Call waitUntilNetworkReady in background in case RPC is failing over:
+                    // Check for all nodes to have all other nodes in background in case RPC is failing over:
                     val forked = executorService.fork {
                         allNodesConnected(rpc)
                     }
