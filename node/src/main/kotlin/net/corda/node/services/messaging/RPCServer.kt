@@ -469,6 +469,6 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     private fun Output.writeInvocationId(id: InvocationId) {
 
         writeString(id.value)
-        writeLong(id.timestamp.toEpochMilli(), true)
+        writeLong(id.timestamp.toEpochMilli())
     }
 }

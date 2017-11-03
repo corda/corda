@@ -38,6 +38,7 @@ import rx.Observable
 import rx.subjects.UnicastSubject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -430,7 +431,7 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<Observable<*>>): Observable<Any> {
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
-        val observableId = InvocationId(input.readString())
+        val observableId = input.readInvocationId() ?: throw IllegalStateException("Unable to read invocationId from Input.")
         val observable = UnicastSubject.create<Notification<*>>()
         require(observableContext.observableMap.getIfPresent(observableId) == null) {
             "Multiple Observables arrived with the same ID $observableId"
@@ -446,6 +447,13 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
             // The unsubscribe is due to [ObservableToFuture]'s use of first().
             observableContext.observableMap.invalidate(observableId)
         }.dematerialize()
+    }
+
+    private fun Input.readInvocationId() : InvocationId? {
+
+        val value = readString() ?: return null
+        val timestamp = readLong()
+        return InvocationId(value, Instant.ofEpochMilli(timestamp))
     }
 
     override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
