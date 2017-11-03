@@ -1,15 +1,21 @@
 package net.corda.nodeapi
 
+import net.corda.core.context.Trace
+import net.corda.core.context.Trace.InvocationId
+import net.corda.core.context.Trace.SessionId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.Id
 import net.corda.core.utilities.Try
+import org.apache.activemq.artemis.api.core.ActiveMQBuffer
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import org.apache.activemq.artemis.reader.MessageUtil
 import rx.Notification
+import java.time.Instant
 import java.util.*
 
 // The RPC protocol:
@@ -53,7 +59,15 @@ import java.util.*
 object RPCApi {
     private val TAG_FIELD_NAME = "tag"
     private val RPC_ID_FIELD_NAME = "rpc-id"
+    private val RPC_ID_TIMESTAMP_FIELD_NAME = "rpc-id-timestamp"
+    private val RPC_SESSION_ID_FIELD_NAME = "rpc-session-id"
+    private val RPC_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-session-id-timestamp"
+    private val RPC_EXTERNAL_ID_FIELD_NAME = "rpc-id"
+    private val RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME = "rpc-id-timestamp"
+    private val RPC_EXTERNAL_SESSION_ID_FIELD_NAME = "rpc-session-id"
+    private val RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-session-id-timestamp"
     private val OBSERVABLE_ID_FIELD_NAME = "observable-id"
+    private val OBSERVABLE_ID_TIMESTAMP_FIELD_NAME = "observable-id-timestamp"
     private val METHOD_NAME_FIELD_NAME = "method-name"
 
     /** Name of the Artemis queue on which the server receives RPC requests (as [ClientToServer.RpcRequest]). */
@@ -101,28 +115,30 @@ object RPCApi {
          */
         data class RpcRequest(
                 val clientAddress: SimpleString,
-                val id: RpcRequestId,
                 val methodName: String,
-                val serialisedArguments: ByteArray
+                val serialisedArguments: ByteArray,
+                val trace: Trace,
+                val externalTrace: Trace? = null
         ) : ClientToServer() {
             fun writeToClientMessage(message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REQUEST.ordinal)
-                message.putLongProperty(RPC_ID_FIELD_NAME, id.toLong)
+
+                trace.mapTo(message)
+                externalTrace?.mapToExternal(message)
+
                 message.putStringProperty(METHOD_NAME_FIELD_NAME, methodName)
                 message.bodyBuffer.writeBytes(serialisedArguments)
             }
         }
 
-        data class ObservablesClosed(
-                val ids: List<ObservableId>
-        ) : ClientToServer() {
+        data class ObservablesClosed(val ids: List<InvocationId>) : ClientToServer() {
             fun writeToClientMessage(message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.OBSERVABLES_CLOSED.ordinal)
                 val buffer = message.bodyBuffer
                 buffer.writeInt(ids.size)
                 ids.forEach {
-                    buffer.writeLong(it.toLong)
+                    buffer.writeInvocationId(it)
                 }
             }
         }
@@ -133,16 +149,17 @@ object RPCApi {
                 return when (tag) {
                     RPCApi.ClientToServer.Tag.RPC_REQUEST -> RpcRequest(
                             clientAddress = MessageUtil.getJMSReplyTo(message),
-                            id = RpcRequestId(message.getLongProperty(RPC_ID_FIELD_NAME)),
                             methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
-                            serialisedArguments = message.getBodyAsByteArray()
+                            serialisedArguments = message.getBodyAsByteArray(),
+                            trace = message.trace(),
+                            externalTrace = message.externalTrace()
                     )
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
-                        val ids = ArrayList<ObservableId>()
+                        val ids = ArrayList<InvocationId>()
                         val buffer = message.bodyBuffer
                         val numberOfIds = buffer.readInt()
                         for (i in 1..numberOfIds) {
-                            ids.add(ObservableId(buffer.readLong()))
+                            ids.add(buffer.readInvocationId())
                         }
                         ObservablesClosed(ids)
                     }
@@ -164,23 +181,23 @@ object RPCApi {
 
         /** Reply in response to an [ClientToServer.RpcRequest]. */
         data class RpcReply(
-                val id: RpcRequestId,
+                val id: InvocationId,
                 val result: Try<Any?>
         ) : ServerToClient() {
             override fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REPLY.ordinal)
-                message.putLongProperty(RPC_ID_FIELD_NAME, id.toLong)
+                id.mapTo(message, RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME)
                 message.bodyBuffer.writeBytes(result.safeSerialize(context) { Try.Failure<Any>(it) }.bytes)
             }
         }
 
         data class Observation(
-                val id: ObservableId,
+                val id: InvocationId,
                 val content: Notification<*>
         ) : ServerToClient() {
             override fun writeToClientMessage(context: SerializationContext, message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.OBSERVATION.ordinal)
-                message.putLongProperty(OBSERVABLE_ID_FIELD_NAME, id.toLong)
+                id.mapTo(message, OBSERVABLE_ID_FIELD_NAME, OBSERVABLE_ID_TIMESTAMP_FIELD_NAME)
                 message.bodyBuffer.writeBytes(content.safeSerialize(context) { Notification.createOnError<Void?>(it) }.bytes)
             }
         }
@@ -196,23 +213,88 @@ object RPCApi {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
                     RPCApi.ServerToClient.Tag.RPC_REPLY -> {
-                        val id = RpcRequestId(message.getLongProperty(RPC_ID_FIELD_NAME))
-                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id.toLong)
-                        RpcReply(
-                                id = id,
-                                result = message.getBodyAsByteArray().deserialize(context = poolWithIdContext)
-                        )
+                        val id = message.invocationId(RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot parse invocation id from client message.")
+                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id)
+                        RpcReply(id, message.getBodyAsByteArray().deserialize(context = poolWithIdContext))
                     }
                     RPCApi.ServerToClient.Tag.OBSERVATION -> {
-                        val id = ObservableId(message.getLongProperty(OBSERVABLE_ID_FIELD_NAME))
-                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id.toLong)
-                        Observation(
-                                id = id,
-                                content = message.getBodyAsByteArray().deserialize(context = poolWithIdContext)
-                        )
+                        val id = message.invocationId(OBSERVABLE_ID_FIELD_NAME, OBSERVABLE_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot parse invocation id from client message.")
+                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id)
+                        Observation(id, message.getBodyAsByteArray().deserialize(context = poolWithIdContext))
                     }
                 }
             }
+        }
+    }
+
+    private fun InvocationId.mapTo(message: ClientMessage, valueProperty: String, timestampProperty: String) {
+
+        message.putStringProperty(valueProperty, value)
+        message.putLongProperty(timestampProperty, timestamp.toEpochMilli())
+    }
+
+    private fun ActiveMQBuffer.writeInvocationId(invocationId: InvocationId) {
+
+        this.writeString(invocationId.value)
+        this.writeLong(invocationId.timestamp.toEpochMilli())
+    }
+
+    private fun ActiveMQBuffer.readInvocationId() : InvocationId {
+
+        val value = this.readString()
+        val timestamp = this.readLong()
+        return InvocationId(value, Instant.ofEpochMilli(timestamp))
+    }
+
+    private fun Trace.mapTo(message: ClientMessage) = mapTo(message, RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME, RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+    private fun Trace.mapToExternal(message: ClientMessage) = mapTo(message, RPC_EXTERNAL_ID_FIELD_NAME, RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+    private fun Trace.mapTo(message: ClientMessage, valueProperty: String, timestampProperty: String, sessionValueProperty: String, sessionTimestampProperty: String) = apply {
+
+        invocationId.apply {
+            message.putStringProperty(valueProperty, value)
+            message.putLongProperty(timestampProperty, timestamp.toEpochMilli())
+        }
+        sessionId.apply {
+            message.putStringProperty(sessionValueProperty, value)
+            message.putLongProperty(sessionTimestampProperty, timestamp.toEpochMilli())
+        }
+    }
+
+    private fun ClientMessage.invocationId(valueProperty: String, timestampProperty: String): InvocationId? = id(valueProperty, timestampProperty, ::InvocationId)
+
+    private fun ClientMessage.sessionId(valueProperty: String, timestampProperty: String): SessionId? = id(valueProperty, timestampProperty, ::SessionId)
+
+    private fun <ID : Id<*>> ClientMessage.id(valueProperty: String, timestampProperty: String, construct: (value: String, timestamp: Instant) -> ID): ID? {
+
+        val idRaw = this.getStringProperty(valueProperty)
+        val timestampRaw = this.getLongProperty(timestampProperty)
+        return when {
+            idRaw == null || timestampRaw == null -> null
+            else -> construct(idRaw, Instant.ofEpochMilli(timestampRaw))
+        }
+    }
+
+    private fun ClientMessage.trace(): Trace {
+
+        val invocationId = invocationId(RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME)
+        val sessionId = sessionId(RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+        if (invocationId == null || sessionId == null) {
+            throw IllegalStateException("Cannot extract trace from client message.")
+        }
+        return Trace(invocationId, sessionId)
+    }
+
+    private fun ClientMessage.externalTrace(): Trace? {
+
+        val invocationId = invocationId(RPC_EXTERNAL_ID_FIELD_NAME, RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME)
+        val sessionId = sessionId(RPC_EXTERNAL_SESSION_ID_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+        return when {
+            invocationId == null || sessionId == null -> null
+            else -> Trace(invocationId, sessionId)
         }
     }
 }

@@ -5,6 +5,7 @@ import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
@@ -230,6 +231,7 @@ fun <A> rpcDriver(
         initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
+        externalTrace: Trace? = null,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -242,7 +244,7 @@ fun <A> rpcDriver(
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
                         extraCordappPackagesToScan = extraCordappPackagesToScan
-                )
+                ), externalTrace
         ),
         coerce = { it },
         dsl = dsl,
@@ -270,7 +272,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
 }
 
 data class RPCDriverDSL(
-        val driverDSL: DriverDSL
+        private val driverDSL: DriverDSL, private val externalTrace: Trace?
 ) : DriverDSLInternalInterface by driverDSL, RPCDriverInternalDSLInterface {
     private companion object {
         val notificationAddress = "notifications"
@@ -350,7 +352,7 @@ data class RPCDriverDSL(
     override fun <I : RPCOps> startInVmRpcClient(rpcOpsClass: Class<I>, username: String, password: String, configuration: RPCClientConfiguration): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(inVmClientTransportConfiguration, configuration)
-            val connection = client.start(rpcOpsClass, username, password)
+            val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
             }
@@ -394,7 +396,7 @@ data class RPCDriverDSL(
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)
-            val connection = client.start(rpcOpsClass, username, password)
+            val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
             }

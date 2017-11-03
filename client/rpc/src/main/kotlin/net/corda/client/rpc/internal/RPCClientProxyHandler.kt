@@ -12,6 +12,8 @@ import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
+import net.corda.core.context.Trace
+import net.corda.core.context.Trace.InvocationId
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.LazyPool
 import net.corda.core.internal.LazyStickyPool
@@ -24,7 +26,9 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.*
+import net.corda.nodeapi.ArtemisConsumer
+import net.corda.nodeapi.ArtemisProducer
+import net.corda.nodeapi.RPCApi
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -70,7 +74,8 @@ class RPCClientProxyHandler(
         private val serverLocator: ServerLocator,
         private val clientAddress: SimpleString,
         private val rpcOpsClass: Class<out RPCOps>,
-        serializationContext: SerializationContext
+        serializationContext: SerializationContext,
+        private val externalTrace: Trace?
 ) : InvocationHandler {
 
     private enum class State {
@@ -127,14 +132,14 @@ class RPCClientProxyHandler(
 
     // Stores the Observable IDs that are already removed from the map but are not yet sent to the server.
     private val observablesToReap = ThreadBox(object {
-        var observables = ArrayList<RPCApi.ObservableId>()
+        var observables = ArrayList<InvocationId>()
     })
     private val serializationContextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
-        val onObservableRemove = RemovalListener<RPCApi.ObservableId, UnicastSubject<Notification<*>>> {
+        val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> {
             val observableId = it.key!!
-            val rpcCallSite = callSiteMap?.remove(observableId.toLong)
+            val rpcCallSite = callSiteMap?.remove(observableId)
             if (it.cause == RemovalCause.COLLECTED) {
                 log.warn(listOf(
                         "A hot observable returned from an RPC was never subscribed to.",
@@ -207,11 +212,11 @@ class RPCClientProxyHandler(
         if (sessionAndConsumer!!.session.isClosed) {
             throw RPCException("RPC Proxy is closed")
         }
-        val rpcId = RPCApi.RpcRequestId(random63BitValue())
-        callSiteMap?.set(rpcId.toLong, Throwable("<Call site of root RPC '${method.name}'>"))
+        val trace = Trace()
+        callSiteMap?.set(trace.invocationId, Throwable("<Call site of root RPC '${method.name}'>"))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
-            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, rpcId, method.name, serialisedArguments.bytes)
+            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments.bytes, trace, externalTrace)
             val replyFuture = SettableFuture.create<Any>()
             sessionAndProducerPool.run {
                 val message = it.session.createMessage(false)
@@ -219,11 +224,11 @@ class RPCClientProxyHandler(
 
                 log.debug {
                     val argumentsString = arguments?.joinToString() ?: ""
-                    "-> RPC($rpcId) -> ${method.name}($argumentsString): ${method.returnType}"
+                    "-> RPC(${trace.invocationId.value}) -> ${method.name}($argumentsString): ${method.returnType}"
                 }
 
-                require(rpcReplyMap.put(rpcId, replyFuture) == null) {
-                    "Generated several RPC requests with same ID $rpcId"
+                require(rpcReplyMap.put(trace.invocationId, replyFuture) == null) {
+                    "Generated several RPC requests with same ID ${trace.invocationId}"
                 }
                 it.producer.send(message)
                 it.session.commit()
@@ -236,7 +241,7 @@ class RPCClientProxyHandler(
             // This must be a checked exception, so wrap it
             throw RPCException(e.message ?: "", e)
         } finally {
-            callSiteMap?.remove(rpcId.toLong)
+            callSiteMap?.remove(trace.invocationId)
         }
     }
 
@@ -254,7 +259,7 @@ class RPCClientProxyHandler(
                     when (result) {
                         is Try.Success -> replyFuture.set(result.value)
                         is Try.Failure -> {
-                            val rpcCallSite = callSiteMap?.get(serverToClient.id.toLong)
+                            val rpcCallSite = callSiteMap?.get(serverToClient.id)
                             if (rpcCallSite != null) addRpcCallSiteToThrowable(result.exception, rpcCallSite)
                             replyFuture.setException(result.exception)
                         }
@@ -277,7 +282,7 @@ class RPCClientProxyHandler(
                             }
                             // Add call site information on error
                             if (content.isOnError) {
-                                val rpcCallSite = callSiteMap?.get(serverToClient.id.toLong)
+                                val rpcCallSite = callSiteMap?.get(serverToClient.id)
                                 if (rpcCallSite != null) addRpcCallSiteToThrowable(content.throwable, rpcCallSite)
                             }
                             observable.onNext(content)
@@ -385,9 +390,9 @@ class RPCClientProxyHandler(
     }
 }
 
-private typealias RpcObservableMap = Cache<RPCApi.ObservableId, UnicastSubject<Notification<*>>>
-private typealias RpcReplyMap = ConcurrentHashMap<RPCApi.RpcRequestId, SettableFuture<Any?>>
-private typealias CallSiteMap = ConcurrentHashMap<Long, Throwable?>
+private typealias RpcObservableMap = Cache<InvocationId, UnicastSubject<Notification<*>>>
+private typealias RpcReplyMap = ConcurrentHashMap<InvocationId, SettableFuture<Any?>>
+private typealias CallSiteMap = ConcurrentHashMap<InvocationId, Throwable?>
 
 /**
  * Holds a context available during Kryo deserialisation of messages that are expected to contain Observables.
@@ -426,14 +431,14 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<Observable<*>>): Observable<Any> {
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
-        val observableId = RPCApi.ObservableId(input.readLong(true))
+        val observableId = InvocationId(input.readString())
         val observable = UnicastSubject.create<Notification<*>>()
         require(observableContext.observableMap.getIfPresent(observableId) == null) {
             "Multiple Observables arrived with the same ID $observableId"
         }
         val rpcCallSite = getRpcCallSite(kryo, observableContext)
         observableContext.observableMap.put(observableId, observable)
-        observableContext.callSiteMap?.put(observableId.toLong, rpcCallSite)
+        observableContext.callSiteMap?.put(observableId, rpcCallSite)
         // We pin all Observables into a hard reference store (rooted in the RPC proxy) on subscription so that users
         // don't need to store a reference to the Observables themselves.
         return pinInSubscriptions(observable, observableContext.hardReferenceStore).doOnUnsubscribe {
@@ -449,7 +454,7 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
     }
 
     private fun getRpcCallSite(kryo: Kryo, observableContext: ObservableContext): Throwable? {
-        val rpcRequestOrObservableId = kryo.context[RPCApi.RpcRequestOrObservableIdKey] as Long
+        val rpcRequestOrObservableId = InvocationId(kryo.context[RPCApi.RpcRequestOrObservableIdKey] as String)
         return observableContext.callSiteMap?.get(rpcRequestOrObservableId)
     }
 }

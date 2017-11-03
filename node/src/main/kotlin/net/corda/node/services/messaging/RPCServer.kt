@@ -12,7 +12,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.RPCException
-import net.corda.core.crypto.random63BitValue
+import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
@@ -106,7 +106,7 @@ class RPCServer(
     /** The observable subscription mapping. */
     private val observableMap = createObservableSubscriptionMap()
     /** A mapping from client addresses to IDs of associated Observables */
-    private val clientAddressToObservables = Multimaps.synchronizedSetMultimap(HashMultimap.create<SimpleString, RPCApi.ObservableId>())
+    private val clientAddressToObservables = Multimaps.synchronizedSetMultimap(HashMultimap.create<SimpleString, InvocationId>())
     /** The scheduled reaper handle. */
     private var reaperScheduledFuture: ScheduledFuture<*>? = null
 
@@ -138,7 +138,7 @@ class RPCServer(
     }
 
     private fun createObservableSubscriptionMap(): ObservableSubscriptionMap {
-        val onObservableRemove = RemovalListener<RPCApi.ObservableId, ObservableSubscription> {
+        val onObservableRemove = RemovalListener<InvocationId, ObservableSubscription> {
             log.debug { "Unsubscribing from Observable with id ${it.key} because of ${it.cause}" }
             it.value.subscription.unsubscribe()
         }
@@ -274,13 +274,13 @@ class RPCServer(
                         val rpcContext = RpcContext(currentUser = getUser(artemisMessage))
                         rpcExecutor!!.submit {
                             val result = invokeRpc(rpcContext, clientToServer.methodName, arguments.value)
-                            sendReply(clientToServer.id, clientToServer.clientAddress, result)
+                            sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, result)
                         }
                     }
                     is Try.Failure -> {
                         // We failed to deserialise the arguments, route back the error
                         log.warn("Inbound RPC failed", arguments.exception)
-                        sendReply(clientToServer.id, clientToServer.clientAddress, arguments)
+                        sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, arguments)
                     }
                 }
             }
@@ -307,10 +307,10 @@ class RPCServer(
         }
     }
 
-    private fun sendReply(requestId: RPCApi.RpcRequestId, clientAddress: SimpleString, result: Try<Any>) {
-        val reply = RPCApi.ServerToClient.RpcReply(requestId, result)
+    private fun sendReply(invocationId: InvocationId, clientAddress: SimpleString, result: Try<Any>) {
+        val reply = RPCApi.ServerToClient.RpcReply(invocationId, result)
         val observableContext = ObservableContext(
-                requestId,
+                invocationId,
                 observableMap,
                 clientAddressToObservables,
                 clientAddress,
@@ -387,16 +387,16 @@ class ObservableSubscription(
         val subscription: Subscription
 )
 
-typealias ObservableSubscriptionMap = Cache<RPCApi.ObservableId, ObservableSubscription>
+typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
 
 // We construct an observable context on each RPC request. If subsequently a nested Observable is
 // encountered this same context is propagated by the instrumented KryoPool. This way all
 // observations rooted in a single RPC will be muxed correctly. Note that the context construction
 // itself is quite cheap.
 class ObservableContext(
-        val rpcRequestId: RPCApi.RpcRequestId,
+        val invocationId: InvocationId,
         val observableMap: ObservableSubscriptionMap,
-        val clientAddressToObservables: SetMultimap<SimpleString, RPCApi.ObservableId>,
+        val clientAddressToObservables: SetMultimap<SimpleString, InvocationId>,
         val clientAddress: SimpleString,
         val serverControl: ActiveMQServerControl,
         val sessionAndProducerPool: LazyStickyPool<ArtemisProducer>,
@@ -410,7 +410,7 @@ class ObservableContext(
 
     fun sendMessage(serverToClient: RPCApi.ServerToClient) {
         try {
-            sessionAndProducerPool.run(rpcRequestId) {
+            sessionAndProducerPool.run(invocationId) {
                 val artemisMessage = it.session.createMessage(false)
                 serverToClient.writeToClientMessage(serializationContextWithObservableContext, artemisMessage)
                 it.producer.send(clientAddress, artemisMessage)
@@ -437,9 +437,9 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     }
 
     override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
-        val observableId = RPCApi.ObservableId(random63BitValue())
+        val observableId = InvocationId()
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
-        output.writeLong(observableId.toLong, true)
+        output.writeInvocationId(observableId)
         val observableWithSubscription = ObservableSubscription(
                 // We capture [observableContext] in the subscriber. Note that all synchronisation/kryo borrowing
                 // must be done again within the subscriber
@@ -464,5 +464,11 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
         )
         observableContext.clientAddressToObservables.put(observableContext.clientAddress, observableId)
         observableContext.observableMap.put(observableId, observableWithSubscription)
+    }
+
+    private fun Output.writeInvocationId(id: InvocationId) {
+
+        writeString(id.value)
+        writeLong(id.timestamp.toEpochMilli(), true)
     }
 }
