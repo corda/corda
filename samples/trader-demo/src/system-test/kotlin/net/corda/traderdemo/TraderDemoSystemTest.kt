@@ -368,7 +368,7 @@ private class ShellCommandBuilder(private val command: List<String>, private val
 
     private fun buildWindows(): List<String> {
         return mutableListOf<String>().apply {
-            TODO() // TODO test this and also apply working directory
+            TODO("Apply working directory and test this.") // TODO test this and also apply working directory
             add("cmd")
             add("/C")
             add("start ${commandString()}")
@@ -385,7 +385,7 @@ private class ShellCommandBuilder(private val command: List<String>, private val
 
     private fun buildLinux(): List<String> {
         return mutableListOf<String>().apply {
-            TODO() // TODO Implement this
+            TODO("This needs implementing") // TODO Implement this
         }
     }
 
