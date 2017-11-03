@@ -68,7 +68,6 @@ class AttachmentLoadingTests {
                     startNode(providedName = bankAName, rpcUsers = listOf(adminUser)),
                     startNode(providedName = bankBName, rpcUsers = listOf(adminUser))
             ).transpose().getOrThrow()   // Wait for all nodes to start up.
-            nodes.forEach { it.rpc.waitUntilNetworkReady().getOrThrow() }
             return nodes
         }
 

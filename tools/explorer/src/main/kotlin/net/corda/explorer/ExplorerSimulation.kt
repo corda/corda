@@ -127,10 +127,6 @@ class ExplorerSimulation(val options: OptionSet) {
                 bobNode.nodeInfo.legalIdentities.first() to bobRPC,
                 issuerNodeGBP.nodeInfo.legalIdentities.first() to issuerRPCGBP,
                 issuerNodeUSD.nodeInfo.legalIdentities.first() to issuerRPCUSD))
-
-        listOf(aliceRPC, bobRPC, issuerRPCGBP, issuerRPCUSD).map {
-            it.waitUntilNetworkReady().getOrThrow()
-        }
     }
 
     private fun startSimulation(eventGenerator: EventGenerator, maxIterations: Int) {

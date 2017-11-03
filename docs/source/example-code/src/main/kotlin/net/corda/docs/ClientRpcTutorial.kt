@@ -8,14 +8,13 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
@@ -56,7 +55,6 @@ fun main(args: Array<String>) {
         // START 2
         val client = node.rpcClientToNode()
         val proxy = client.start("user", "password").proxy
-        proxy.waitUntilNetworkReady().getOrThrow()
 
         thread {
             generateTransactions(proxy)
