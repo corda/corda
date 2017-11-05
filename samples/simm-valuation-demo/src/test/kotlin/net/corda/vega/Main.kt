@@ -4,7 +4,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_BANK_C
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
 
 /**
@@ -13,17 +12,17 @@ import net.corda.testing.driver.driver
  * via the web api.
  */
 fun main(args: Array<String>) {
-    driver(dsl = {
-        val notaryFuture = startNotaryNode(DUMMY_NOTARY.name, validating = false)
-        val nodeAFuture = startNode(providedName = DUMMY_BANK_A.name)
-        val nodeBFuture = startNode(providedName = DUMMY_BANK_B.name)
-        val nodeCFuture = startNode(providedName = DUMMY_BANK_C.name)
-        val (nodeA, nodeB, nodeC) = listOf(nodeAFuture, nodeBFuture, nodeCFuture, notaryFuture).map { it.getOrThrow() }
+    driver(isDebug = true) {
+        val (nodeA, nodeB, nodeC) = listOf(
+                startNode(providedName = DUMMY_BANK_A.name),
+                startNode(providedName = DUMMY_BANK_B.name),
+                startNode(providedName = DUMMY_BANK_C.name)
+        ).map { it.getOrThrow() }
 
         startWebserver(nodeA)
         startWebserver(nodeB)
         startWebserver(nodeC)
 
         waitForAllNodesToFinish()
-    }, isDebug = true)
+    }
 }

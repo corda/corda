@@ -11,7 +11,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
@@ -50,44 +49,44 @@ class NodeMonitorModelTest {
     private lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
     private lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
-    private fun setup(runTest: () -> Unit) = driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
-        val cashUser = User("user1", "test", permissions = setOf(
-                startFlow<CashIssueFlow>(),
-                startFlow<CashPaymentFlow>(),
-                startFlow<CashExitFlow>(),
-                invokeRpc(CordaRPCOps::notaryIdentities),
-                invokeRpc("vaultTrackBy"),
-                invokeRpc("vaultQueryBy"),
-                invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
-                invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
-                invokeRpc(CordaRPCOps::stateMachinesFeed),
-                invokeRpc(CordaRPCOps::networkMapFeed))
-        )
-        val (notaryHandle, aliceNodeHandle) = listOf(
-                startNotaryNode(DUMMY_NOTARY.name, validating = false),
-                startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser))
-        ).transpose().getOrThrow()
-        aliceNode = aliceNodeHandle.nodeInfo
-        newNode = { nodeName -> startNode(providedName = nodeName).getOrThrow().nodeInfo }
-        val monitor = NodeMonitorModel()
-        stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
-        stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
-        progressTracking = monitor.progressTracking.bufferUntilSubscribed()
-        transactions = monitor.transactions.bufferUntilSubscribed()
-        vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
-        networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-        monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
-        rpc = monitor.proxyObservable.value!!
-        notaryParty = notaryHandle.nodeInfo.legalIdentities[0]
+    private fun setup(runTest: () -> Unit) {
+        driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
+            val cashUser = User("user1", "test", permissions = setOf(
+                    startFlow<CashIssueFlow>(),
+                    startFlow<CashPaymentFlow>(),
+                    startFlow<CashExitFlow>(),
+                    invokeRpc(CordaRPCOps::notaryIdentities),
+                    invokeRpc("vaultTrackBy"),
+                    invokeRpc("vaultQueryBy"),
+                    invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
+                    invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
+                    invokeRpc(CordaRPCOps::stateMachinesFeed),
+                    invokeRpc(CordaRPCOps::networkMapFeed))
+            )
+            val aliceNodeHandle = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser)).getOrThrow()
+            aliceNode = aliceNodeHandle.nodeInfo
+            newNode = { nodeName -> startNode(providedName = nodeName).getOrThrow().nodeInfo }
+            val monitor = NodeMonitorModel()
+            stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
+            stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
+            progressTracking = monitor.progressTracking.bufferUntilSubscribed()
+            transactions = monitor.transactions.bufferUntilSubscribed()
+            vaultUpdates = monitor.vaultUpdates.bufferUntilSubscribed()
+            networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
-        val bobNodeHandle = startNode(providedName = BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
-        bobNode = bobNodeHandle.nodeInfo
-        val monitorBob = NodeMonitorModel()
-        stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
-        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
-        rpcBob = monitorBob.proxyObservable.value!!
-        runTest()
+            monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+            rpc = monitor.proxyObservable.value!!
+            notaryParty = defaultNotaryIdentity
+
+            val bobNodeHandle = startNode(providedName = BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
+            bobNode = bobNodeHandle.nodeInfo
+            val monitorBob = NodeMonitorModel()
+            stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
+            monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+            rpcBob = monitorBob.proxyObservable.value!!
+            runTest()
+        }
     }
 
     @Test

@@ -23,12 +23,12 @@ class BankOfCordaRPCClientTest {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities)
         )
-        driver(extraCordappPackagesToScan = listOf("net.corda.finance"), dsl = {
+        driver(extraCordappPackagesToScan = listOf("net.corda.finance"), isDebug = true) {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlow<CashIssueAndPaymentFlow>()) + commonPermissions)
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet<String>() + commonPermissions)
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(
-                    startNotaryNode(BOC.name, rpcUsers = listOf(bocManager), validating = false),
+                    startNode(providedName = BOC.name, rpcUsers = listOf(bocManager)),
                     startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
             ).map { it.getOrThrow() }
 
@@ -51,12 +51,11 @@ class BankOfCordaRPCClientTest {
 
             // Kick-off actual Issuer Flow
             val anonymous = true
-            val notary = bocProxy.notaryIdentities().first()
             bocProxy.startFlow(::CashIssueAndPaymentFlow,
                     1000.DOLLARS, BIG_CORP_PARTY_REF,
                     bigCorporation,
                     anonymous,
-                    notary).returnValue.getOrThrow()
+                    defaultNotaryIdentity).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {
@@ -84,6 +83,6 @@ class BankOfCordaRPCClientTest {
                         }
                 )
             }
-        }, isDebug = true)
+        }
     }
 }

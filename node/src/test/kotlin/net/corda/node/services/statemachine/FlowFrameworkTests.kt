@@ -74,8 +74,8 @@ class FlowFrameworkTests {
     fun start() {
         mockNet = MockNetwork(
                 servicePeerAllocationStrategy = RoundRobin(),
-                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"))
-        val notary = mockNet.createNotaryNode()
+                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts")
+        )
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
 
@@ -84,7 +84,7 @@ class FlowFrameworkTests {
         // Extract identities
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
-        notaryIdentity = notary.services.getDefaultNotary()
+        notaryIdentity = aliceNode.services.getDefaultNotary()
     }
 
     @After

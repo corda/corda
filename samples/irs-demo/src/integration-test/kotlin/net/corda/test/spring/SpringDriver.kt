@@ -6,6 +6,7 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.*
+import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.ConnectException
@@ -41,6 +42,7 @@ fun <A> springDriver(
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
+        notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: SpringDriverExposedDSLInterface.() -> A
 ) = genericDriver(
@@ -54,9 +56,9 @@ fun <A> springDriver(
         initialiseSerialization = initialiseSerialization,
         startNodesInProcess = startNodesInProcess,
         extraCordappPackagesToScan = extraCordappPackagesToScan,
+        notarySpecs = notarySpecs,
         driverDslWrapper = { driverDSL:DriverDSL -> SpringBootDriverDSL(driverDSL) },
-        coerce = { it },
-        dsl = dsl
+        coerce = { it }, dsl = dsl
 )
 
 data class SpringBootDriverDSL(

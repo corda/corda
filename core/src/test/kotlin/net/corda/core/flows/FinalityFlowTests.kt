@@ -26,7 +26,6 @@ class FinalityFlowTests {
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         mockNet.runNetwork()
@@ -34,7 +33,7 @@ class FinalityFlowTests {
         bobServices = bobNode.services
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
-        notary = notaryNode.services.getDefaultNotary()
+        notary = aliceServices.getDefaultNotary()
     }
 
     @After

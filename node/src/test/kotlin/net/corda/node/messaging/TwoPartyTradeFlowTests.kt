@@ -63,7 +63,7 @@ import kotlin.test.assertTrue
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
 @RunWith(Parameterized::class)
-class TwoPartyTradeFlowTests(val anonymous: Boolean) {
+class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
         private val cordappPackages = listOf("net.corda.finance.contracts")
         @JvmStatic
@@ -93,7 +93,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
         // allow interruption half way through.
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
-            val notaryNode = mockNet.createNotaryNode()
+            val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
             val bankNode = mockNet.createPartyNode(BOC_NAME)
@@ -143,7 +143,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     fun `trade cash for commercial paper fails using soft locking`() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
-            val notaryNode = mockNet.createNotaryNode()
+            val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
             val bankNode = mockNet.createPartyNode(BOC_NAME)
@@ -199,7 +199,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     fun `shutdown and restore`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
         ledger(MockServices(cordappPackages), initialiseSerialization = false) {
-            val notaryNode = mockNet.createNotaryNode()
+            val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             var bobNode = mockNet.createPartyNode(BOB_NAME)
             val bankNode = mockNet.createPartyNode(BOC_NAME)
@@ -292,7 +292,8 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
 
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
-    private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<MockNetwork.MockNode> {
+    private fun makeNodeWithTracking(
+            name: CordaX500Name): StartedNode<MockNetwork.MockNode> {
         // Create a node in the mock network ...
         return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = { args ->
             object : MockNetwork.MockNode(args) {
@@ -307,7 +308,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     @Test
     fun `check dependencies of sale asset are resolved`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
-        val notaryNode = mockNet.createNotaryNode()
+        val notaryNode = mockNet.defaultNotaryNode
         val aliceNode = makeNodeWithTracking(ALICE_NAME)
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
@@ -413,7 +414,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
     @Test
     fun `track works`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
-        val notaryNode = mockNet.createNotaryNode()
+        val notaryNode = mockNet.defaultNotaryNode
         val aliceNode = makeNodeWithTracking(ALICE_NAME)
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
@@ -568,7 +569,7 @@ class TwoPartyTradeFlowTests(val anonymous: Boolean) {
             aliceError: Boolean,
             expectedMessageSubstring: String
     ) {
-        val notaryNode = mockNet.createNotaryNode()
+        val notaryNode = mockNet.defaultNotaryNode
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val bankNode = mockNet.createPartyNode(BOC_NAME)
