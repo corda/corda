@@ -10,7 +10,7 @@ import net.corda.testing.driver.driver
  * Do not use in a production environment.
  */
 fun main(args: Array<String>) {
-    driver(useTestClock = true, isDebug = true) {
+    driver(useTestClock = true, isDebug = true, waitForAllNodesToFinish = true) {
         val (nodeA, nodeB) = listOf(
                 startNode(providedName = DUMMY_BANK_A.name),
                 startNode(providedName = DUMMY_BANK_B.name)
@@ -20,7 +20,5 @@ fun main(args: Array<String>) {
         startWebserver(controller)
         startWebserver(nodeA)
         startWebserver(nodeB)
-
-        waitForAllNodesToFinish()
     }
 }

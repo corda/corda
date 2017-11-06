@@ -83,6 +83,8 @@ UNRELEASED
 * Replaced node configuration parameter ``certificateSigningService`` with ``compatibilityZoneURL``, which is Corda
   compatibility zone network management service's address.
 
+* ``waitForAllNodesToFinish()`` method in ``DriverDSLExposedInterface`` has instead become a parameter on driver creation.
+
 .. _changelog_v1:
 
 Release 1.0

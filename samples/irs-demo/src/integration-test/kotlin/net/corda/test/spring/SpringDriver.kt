@@ -1,8 +1,6 @@
 package net.corda.test.spring
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.*
@@ -14,7 +12,6 @@ import java.net.ConnectException
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 
 interface SpringDriverExposedDSLInterface : DriverDSLExposedInterface {
@@ -62,17 +59,17 @@ fun <A> springDriver(
         coerce = { it }, dsl = dsl
 )
 
-data class SpringBootDriverDSL(
-        val driverDSL: DriverDSL
-) : DriverDSLInternalInterface by driverDSL, SpringDriverInternalDSLInterface {
-
-    val log = loggerFor<SpringBootDriverDSL>()
+data class SpringBootDriverDSL(private val driverDSL: DriverDSL) : DriverDSLInternalInterface by driverDSL, SpringDriverInternalDSLInterface {
+    companion object {
+        val log = loggerFor<SpringBootDriverDSL>()
+    }
 
     override fun startSpringBootWebapp(clazz: Class<*>, handle: NodeHandle, checkUrl: String): CordaFuture<WebserverHandle> {
         val debugPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
-        val processFuture = startApplication(driverDSL.executorService, handle, debugPort, clazz)
-        driverDSL.registerProcess(processFuture)
-        return processFuture.map { queryWebserver(handle, it, checkUrl) }
+        val process = startApplication(handle, debugPort, clazz)
+        driverDSL.shutdownManager.registerProcessShutdown(process)
+        val webReadyFuture = addressMustBeBoundFuture(driverDSL.executorService, handle.webAddress, process)
+        return webReadyFuture.map { queryWebserver(handle, process, checkUrl) }
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process, checkUrl: String): WebserverHandle {
@@ -99,29 +96,27 @@ data class SpringBootDriverDSL(
         throw IllegalStateException("Webserver at ${handle.webAddress} has died or was not reachable at URL ${url}")
     }
 
-    private fun startApplication(executorService: ExecutorService, handle: NodeHandle, debugPort: Int?, clazz: Class<*>): CordaFuture<Process> {
-        return executorService.fork {
-            val className = clazz.canonicalName
-            ProcessUtilities.startJavaProcessImpl(
-                    className = className, // cannot directly get class for this, so just use string
-                    jdwpPort = debugPort,
-                    extraJvmArguments = listOf(
-                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
-                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}"
-                            // Inherit from parent process
-                    ),
-                    classpath = ProcessUtilities.defaultClassPath,
-                    workingDirectory = handle.configuration.baseDirectory,
-                    errorLogPath = Paths.get("error.$className.log"),
-                    arguments = listOf(
-                            "--base-directory", handle.configuration.baseDirectory.toString(),
-                            "--server.port=${handle.webAddress.port}",
-                            "--corda.host=${handle.configuration.rpcAddress}",
-                            "--corda.user=${handle.configuration.rpcUsers.first().username}",
-                            "--corda.password=${handle.configuration.rpcUsers.first().password}"
-                            ),
-                    maximumHeapSize = null
-            )
-        }.flatMap { process -> addressMustBeBoundFuture(driverDSL.executorService, handle.webAddress, process).map { process } }
+    private fun startApplication(handle: NodeHandle, debugPort: Int?, clazz: Class<*>): Process {
+        val className = clazz.canonicalName
+        return ProcessUtilities.startJavaProcessImpl(
+                className = className, // cannot directly get class for this, so just use string
+                jdwpPort = debugPort,
+                extraJvmArguments = listOf(
+                        "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                        "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}"
+                        // Inherit from parent process
+                ),
+                classpath = ProcessUtilities.defaultClassPath,
+                workingDirectory = handle.configuration.baseDirectory,
+                errorLogPath = Paths.get("error.$className.log"),
+                arguments = listOf(
+                        "--base-directory", handle.configuration.baseDirectory.toString(),
+                        "--server.port=${handle.webAddress.port}",
+                        "--corda.host=${handle.configuration.rpcAddress}",
+                        "--corda.user=${handle.configuration.rpcUsers.first().username}",
+                        "--corda.password=${handle.configuration.rpcUsers.first().password}"
+                ),
+                maximumHeapSize = null
+        )
     }
 }
