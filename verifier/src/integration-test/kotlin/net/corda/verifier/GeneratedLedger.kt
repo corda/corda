@@ -37,7 +37,7 @@ data class GeneratedLedger(
 
     companion object {
         val empty = GeneratedLedger(emptyList(), emptyMap(), emptySet(), emptySet())
-        val contractAttachment = ContractAttachment(SecureHash.zeroHash, { ByteArray(0) }, DummyContract.PROGRAM_ID)
+        val contractAttachment = ContractAttachment(GeneratedAttachment(ByteArray(0) { 0 }), DummyContract.PROGRAM_ID)
     }
 
     fun resolveWireTransaction(transaction: WireTransaction): LedgerTransaction {

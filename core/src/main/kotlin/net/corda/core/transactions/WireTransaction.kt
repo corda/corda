@@ -243,12 +243,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val contractAttachments = (outputs + resolvedInputs.map { it.state }).map { Pair(it, resolveContractAttachment(it)) }
         val missingAttachments = contractAttachments.filter { it.second == null }
         return if (missingAttachments.isEmpty()) {
-            contractAttachments.map { (state, attachmentHash) ->
-                ContractAttachment(attachmentHash as SecureHash, {
-                    val attachment = resolveAttachment(attachmentHash) ?: throw AttachmentResolutionException(attachmentHash)
-                    attachment.open().readBytes()
-                }, state.contract)
-            }
+            contractAttachments.map { ContractAttachment(resolveAttachment(it.second!!) ?: throw AttachmentResolutionException(it.second!!), it.first.contract) }
         } else {
             throw MissingContractAttachments(missingAttachments.map { it.first })
         }
