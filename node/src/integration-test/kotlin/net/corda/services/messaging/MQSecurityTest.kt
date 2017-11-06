@@ -28,8 +28,8 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity
 import net.corda.testing.configureTestSSL
+import net.corda.testing.internal.NodeBasedTest
 import net.corda.testing.messaging.SimpleMQClient
-import net.corda.testing.node.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -52,7 +52,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Before
     fun start() {
-        alice = startNode(ALICE.name, rpcUsers = extraRPCUsers + rpcUser).getOrThrow()
+        alice = startNode(ALICE.name, rpcUsers = extraRPCUsers + rpcUser)
         attacker = createAttacker()
         startAttacker(attacker)
     }
@@ -87,7 +87,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Test
     fun `create queue for peer which has not been communicated with`() {
-        val bob = startNode(BOB.name).getOrThrow()
+        val bob = startNode(BOB.name)
         assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.chooseIdentity().owningKey.toBase58String()}")
     }
 
@@ -219,7 +219,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     private fun startBobAndCommunicateWithAlice(): Party {
-        val bob = startNode(BOB.name).getOrThrow()
+        val bob = startNode(BOB.name)
         bob.internals.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.chooseIdentity()
         // Perform a protocol exchange to force the peer queue to be created

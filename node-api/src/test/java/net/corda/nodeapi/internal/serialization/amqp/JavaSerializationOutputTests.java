@@ -186,6 +186,8 @@ public class JavaSerializationOutputTests {
         decoder.register(CompositeType.Companion.getDESCRIPTOR(), CompositeType.Companion);
         decoder.register(Choice.Companion.getDESCRIPTOR(), Choice.Companion);
         decoder.register(RestrictedType.Companion.getDESCRIPTOR(), RestrictedType.Companion);
+        decoder.register(Transform.Companion.getDESCRIPTOR(), Transform.Companion);
+        decoder.register(TransformsSchema.Companion.getDESCRIPTOR(), TransformsSchema.Companion);
 
         new EncoderImpl(decoder);
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.getBytes(), 8, bytes.getSize() - 8));

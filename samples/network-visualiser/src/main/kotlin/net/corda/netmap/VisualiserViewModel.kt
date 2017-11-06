@@ -11,6 +11,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.utils.ScreenCoordinate
 import net.corda.netmap.simulation.IRSSimulation
+import net.corda.netmap.simulation.place
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import java.util.*

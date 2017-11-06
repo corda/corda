@@ -19,7 +19,6 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.MockServices
-import org.junit.After
 import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -62,11 +61,6 @@ class ObligationTests {
             output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Bob", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, BOB))
             output(Obligation.PROGRAM_ID, "Alice's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy ALICE)
         }
-    }
-
-    @After
-    fun reset() {
-        resetTestSerialization()
     }
 
     @Test
@@ -139,25 +133,23 @@ class ObligationTests {
             command(MINI_CORP_PUBKEY) { Obligation.Commands.Issue() }
             this.verifies()
         }
-
-        initialiseTestSerialization()
-        // Test generation works.
-        val tx = TransactionBuilder(notary = null).apply {
-            Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
-                    beneficiary = CHARLIE, notary = DUMMY_NOTARY)
-        }.toWireTransaction(miniCorpServices)
-        assertTrue(tx.inputs.isEmpty())
-        val expected = Obligation.State(
-                obligor = MINI_CORP,
-                quantity = 100.DOLLARS.quantity,
-                beneficiary = CHARLIE,
-                template = megaCorpDollarSettlement
-        )
-        assertEquals(tx.getOutput(0), expected)
-        assertTrue(tx.commands[0].value is Obligation.Commands.Issue)
-        assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
-        resetTestSerialization()
-
+        withTestSerialization {
+            // Test generation works.
+            val tx = TransactionBuilder(notary = null).apply {
+                Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
+                        beneficiary = CHARLIE, notary = DUMMY_NOTARY)
+            }.toWireTransaction(miniCorpServices)
+            assertTrue(tx.inputs.isEmpty())
+            val expected = Obligation.State(
+                    obligor = MINI_CORP,
+                    quantity = 100.DOLLARS.quantity,
+                    beneficiary = CHARLIE,
+                    template = megaCorpDollarSettlement
+            )
+            assertEquals(tx.getOutput(0), expected)
+            assertTrue(tx.commands[0].value is Obligation.Commands.Issue)
+            assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
+        }
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
             attachments(Obligation.PROGRAM_ID)
@@ -214,8 +206,7 @@ class ObligationTests {
      * cash inputs.
      */
     @Test(expected = IllegalStateException::class)
-    fun `reject issuance with inputs`() {
-        initialiseTestSerialization()
+    fun `reject issuance with inputs`() = withTestSerialization {
         // Issue some obligation
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
@@ -228,12 +219,12 @@ class ObligationTests {
         ptx.addInputState(tx.outRef<Obligation.State<Currency>>(0))
         Obligation<Currency>().generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
                 beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
+        Unit
     }
 
     /** Test generating a transaction to net two obligations of the same size, and therefore there are no outputs. */
     @Test
-    fun `generate close-out net transaction`() {
-        initialiseTestSerialization()
+    fun `generate close-out net transaction`() = withTestSerialization {
         val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB), Obligation.PROGRAM_ID)
         val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE), Obligation.PROGRAM_ID)
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -244,8 +235,7 @@ class ObligationTests {
 
     /** Test generating a transaction to net two obligations of the different sizes, and confirm the balance is correct. */
     @Test
-    fun `generate close-out net transaction with remainder`() {
-        initialiseTestSerialization()
+    fun `generate close-out net transaction with remainder`() = withTestSerialization {
         val obligationAliceToBob = getStateAndRef((2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(ALICE, BOB), Obligation.PROGRAM_ID)
         val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE), Obligation.PROGRAM_ID)
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -259,8 +249,7 @@ class ObligationTests {
 
     /** Test generating a transaction to net two obligations of the same size, and therefore there are no outputs. */
     @Test
-    fun `generate payment net transaction`() {
-        initialiseTestSerialization()
+    fun `generate payment net transaction`() = withTestSerialization {
         val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB), Obligation.PROGRAM_ID)
         val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE), Obligation.PROGRAM_ID)
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -271,8 +260,7 @@ class ObligationTests {
 
     /** Test generating a transaction to two obligations, where one is bigger than the other and therefore there is a remainder. */
     @Test
-    fun `generate payment net transaction with remainder`() {
-        initialiseTestSerialization()
+    fun `generate payment net transaction with remainder`() = withTestSerialization {
         val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB), Obligation.PROGRAM_ID)
         val obligationAliceToBobState = obligationAliceToBob.state.data
         val obligationBobToAlice = getStateAndRef((2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(BOB, ALICE), Obligation.PROGRAM_ID)
@@ -294,8 +282,7 @@ class ObligationTests {
 
     /** Test generating a transaction to mark outputs as having defaulted. */
     @Test
-    fun `generate set lifecycle`() {
-        initialiseTestSerialization()
+    fun `generate set lifecycle`() = withTestSerialization {
         // We don't actually verify the states, this is just here to make things look sensible
         val dueBefore = TEST_TX_TIME - 7.days
 
@@ -333,8 +320,7 @@ class ObligationTests {
 
     /** Test generating a transaction to settle an obligation. */
     @Test
-    fun `generate settlement transaction`() {
-        initialiseTestSerialization()
+    fun `generate settlement transaction`() = withTestSerialization {
         val cashTx = TransactionBuilder(null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` defaultIssuer, MINI_CORP, DUMMY_NOTARY)
         }.toWireTransaction(miniCorpServices)
@@ -926,8 +912,7 @@ class ObligationTests {
     }
 
     @Test
-    fun `summing balances due between parties`() {
-        initialiseTestSerialization()
+    fun `summing balances due between parties`() = withTestSerialization {
         val simple: Map<Pair<AbstractParty, AbstractParty>, Amount<Currency>> = mapOf(Pair(Pair(ALICE, BOB), Amount(100000000, GBP)))
         val expected: Map<AbstractParty, Long> = mapOf(Pair(ALICE, -100000000L), Pair(BOB, 100000000L))
         val actual = sumAmountsDue(simple)

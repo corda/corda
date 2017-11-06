@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
-import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.SerializationEnvironmentRule
+import org.junit.Rule
 import org.junit.Test
 import java.security.SignatureException
 import kotlin.test.assertTrue
@@ -8,8 +9,10 @@ import kotlin.test.assertTrue
 /**
  * Digital signature MetaData tests.
  */
-class TransactionSignatureTest : TestDependencyInjectionBase() {
-
+class TransactionSignatureTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val testBytes = "12345678901234567890123456789012".toByteArray()
 
     /** Valid sign and verify. */

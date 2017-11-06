@@ -1,0 +1,79 @@
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlin_version}")
+	}
+}
+
+plugins {
+	id 'com.craigburke.client-dependencies' version '1.4.0'
+}
+
+clientDependencies {
+	registry 'realBower', type:'bower', url:'https://registry.bower.io'
+	realBower {
+		"angular"("1.5.8")
+		"jquery"("^3.0.0")
+		"angular-route"("1.5.8")
+		"lodash"("^4.13.1")
+		"angular-fcsa-number"("^1.5.3")
+		"jquery.maskedinput"("^1.4.1")
+		"requirejs"("^2.2.0")
+		"semantic-ui"("^2.2.2", into: "semantic")
+	}
+
+	// put the JS dependencies into src directory so it can easily be referenced
+	// from HTML files in webapp frontend, useful for testing/development
+	// Note that this dir is added to .gitignore
+	installDir = 'src/main/resources/static/js/bower_components'
+}
+
+// Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
+// causing the problems in runtime. Those can be changed by manipulating above properties
+// See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
+ext['artemis.version'] = "$artemis_version"
+ext['hibernate.version'] = "$hibernate_version"
+
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-spring'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'project-report'
+apply plugin: 'application'
+
+dependencies {
+	compile('org.springframework.boot:spring-boot-starter-web') {
+		exclude module: "spring-boot-starter-logging"
+		exclude module: "logback-classic"
+	}
+	compile("com.fasterxml.jackson.module:jackson-module-kotlin:2.8.9")
+	compile project(":client:rpc")
+	compile project(":client:jackson")
+	compile project(":test-utils")
+	compile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
+	testCompile('org.springframework.boot:spring-boot-starter-test') {
+		exclude module: "spring-boot-starter-logging"
+		exclude module: "logback-classic"
+	}
+}
+
+jar {
+	from sourceSets.test.output
+	dependsOn clientInstall
+}
+
+task deployWebapps(type: Copy, dependsOn: ['jar', 'bootRepackage']) {
+	ext.webappDir = file("build/webapps")
+
+	from(jar.outputs)
+	from("src/test/resources/scripts/") {
+		filter { it
+				.replace('#JAR_PATH#', jar.archiveName)
+				.replace('#DIR#', ext.webappDir.getAbsolutePath())
+		}
+	}
+	into ext.webappDir
+}

@@ -12,6 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -41,6 +42,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Paths
 import java.security.PublicKey
@@ -56,6 +58,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         private val myInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val realClock: Clock = Clock.systemUTC()
     private val stoppedClock: Clock = Clock.fixed(realClock.instant(), realClock.zone)
     private val testClock = TestClock(stoppedClock)
@@ -85,7 +90,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Before
     fun setup() {
-        initialiseTestSerialization()
         countDown = CountDownLatch(1)
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
@@ -107,11 +111,12 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
                 doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
-                doCallRealMethod().whenever(it).recordTransactions(any<SignedTransaction>())
-                doCallRealMethod().whenever(it).recordTransactions(any<Boolean>(), any<SignedTransaction>())
-                doCallRealMethod().whenever(it).recordTransactions(any(), any<Iterable<SignedTransaction>>())
+                doCallRealMethod().whenever(it).recordTransactions(any<StatesToRecord>(), any())
+                doCallRealMethod().whenever(it).recordTransactions(any<Iterable<SignedTransaction>>())
+                doCallRealMethod().whenever(it).recordTransactions(any<SignedTransaction>(), anyVararg())
                 doReturn(NodeVaultService(testClock, kms, stateLoader, database.hibernateConfig)).whenever(it).vaultService
                 doReturn(this@NodeSchedulerServiceTest).whenever(it).testReference
+
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database)
@@ -135,11 +140,11 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
         database.close()
-        resetTestSerialization()
     }
 
     // Ignore IntelliJ when it says these properties can be private, if they are we cannot serialise them
     // in AMQP.
+    @Suppress("MemberVisibilityCanPrivate")
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant, val myIdentity: Party) : LinearState, SchedulableState {
         override val participants: List<AbstractParty>
             get() = listOf(myIdentity)

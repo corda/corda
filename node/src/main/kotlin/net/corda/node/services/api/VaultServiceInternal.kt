@@ -1,5 +1,6 @@
 package net.corda.node.services.api
 
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
@@ -12,8 +13,8 @@ interface VaultServiceInternal : VaultService {
      * indicate whether an update consists entirely of regular or notary change transactions, which may require
      * different processing logic.
      */
-    fun notifyAll(txns: Iterable<CoreTransaction>)
+    fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>)
 
     /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
+    fun notify(statesToRecord: StatesToRecord, tx: CoreTransaction) = notifyAll(statesToRecord, listOf(tx))
 }

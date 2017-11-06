@@ -26,6 +26,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -34,11 +35,14 @@ import kotlin.test.assertEquals
 
 // TODO: Move this to the cash contract tests once mock services are further split up.
 
-class VaultWithCashTest : TestDependencyInjectionBase() {
+class VaultWithCashTest {
     companion object {
         private val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
     }
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     lateinit var services: MockServices
     lateinit var issuerServices: MockServices
     val vaultService: VaultService get() = services.vaultService

@@ -4,10 +4,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.UpgradeCommand
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.node.MockServices
+import net.corda.testing.SerializationEnvironmentRule
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -15,7 +16,11 @@ import kotlin.test.assertTrue
 /**
  * Tests for the version 2 dummy contract, to cover ensuring upgrade transactions are built correctly.
  */
-class DummyContractV2Tests : TestDependencyInjectionBase() {
+class DummyContractV2Tests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     @Test
     fun `upgrade from v1`() {
         val services = MockServices()

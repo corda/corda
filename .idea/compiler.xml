@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <bytecodeTargetLevel target="1.8">
-      <module name="api-scanner_main" target="1.8" />
-      <module name="api-scanner_test" target="1.8" />
+    <bytecodeTargetLevel>
       <module name="attachment-demo_integrationTest" target="1.8" />
       <module name="attachment-demo_main" target="1.8" />
       <module name="attachment-demo_test" target="1.8" />
@@ -18,16 +16,11 @@
       <module name="confidential-identities_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
-      <module name="corda-webserver_integrationTest" target="1.8" />
-      <module name="corda-webserver_main" target="1.8" />
-      <module name="corda-webserver_test" target="1.8" />
+      <module name="cordapp_integrationTest" target="1.8" />
       <module name="cordapp_main" target="1.8" />
       <module name="cordapp_test" target="1.8" />
       <module name="cordform-common_main" target="1.8" />
       <module name="cordform-common_test" target="1.8" />
-      <module name="cordformation_main" target="1.8" />
-      <module name="cordformation_runnodes" target="1.8" />
-      <module name="cordformation_test" target="1.8" />
       <module name="core_main" target="1.8" />
       <module name="core_test" target="1.8" />
       <module name="demobench_main" target="1.8" />
@@ -37,9 +30,6 @@
       <module name="docs_source_example-code_main" target="1.8" />
       <module name="docs_source_example-code_test" target="1.8" />
       <module name="docs_test" target="1.8" />
-      <module name="doorman_integrationTest" target="1.8" />
-      <module name="doorman_main" target="1.8" />
-      <module name="doorman_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
       <module name="experimental_test" target="1.8" />
       <module name="explorer-capsule_main" target="1.6" />
@@ -49,8 +39,6 @@
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
-      <module name="gradle-plugins-cordform-common_main" target="1.8" />
-      <module name="gradle-plugins-cordform-common_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
       <module name="intellij-plugin_main" target="1.8" />
@@ -91,12 +79,8 @@
       <module name="notary-demo_test" target="1.8" />
       <module name="perftestcordapp_main" target="1.8" />
       <module name="perftestcordapp_test" target="1.8" />
-      <module name="publish-utils_main" target="1.8" />
-      <module name="publish-utils_test" target="1.8" />
       <module name="quasar-hook_main" target="1.8" />
       <module name="quasar-hook_test" target="1.8" />
-      <module name="quasar-utils_main" target="1.8" />
-      <module name="quasar-utils_test" target="1.8" />
       <module name="rpc_integrationTest" target="1.8" />
       <module name="rpc_main" target="1.8" />
       <module name="rpc_smokeTest" target="1.8" />
@@ -107,15 +91,6 @@
       <module name="sandbox_test" target="1.8" />
       <module name="sgx-jvm_hsm-tool_main" target="1.8" />
       <module name="sgx-jvm_hsm-tool_test" target="1.8" />
-      <module name="sgx-jvm_main" target="1.8" />
-      <module name="sgx-jvm_sgx-signtool_main" target="1.8" />
-      <module name="sgx-jvm_sgx-signtool_test" target="1.8" />
-      <module name="sgx-jvm_test" target="1.8" />
-      <module name="sgx-signtool_main" target="1.8" />
-      <module name="sgx-signtool_test" target="1.8" />
-      <module name="signing-server_integrationTest" target="1.8" />
-      <module name="signing-server_main" target="1.8" />
-      <module name="signing-server_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
@@ -123,18 +98,8 @@
       <module name="smoke-test-utils_test" target="1.8" />
       <module name="test-common_main" target="1.8" />
       <module name="test-common_test" target="1.8" />
-      <module name="test-utils_integrationTest" target="1.8" />
       <module name="test-utils_main" target="1.8" />
       <module name="test-utils_test" target="1.8" />
-      <module name="testing-node-driver_integrationTest" target="1.8" />
-      <module name="testing-node-driver_main" target="1.8" />
-      <module name="testing-node-driver_test" target="1.8" />
-      <module name="testing-smoke-test-utils_main" target="1.8" />
-      <module name="testing-smoke-test-utils_test" target="1.8" />
-      <module name="testing-test-common_main" target="1.8" />
-      <module name="testing-test-common_test" target="1.8" />
-      <module name="testing-test-utils_main" target="1.8" />
-      <module name="testing-test-utils_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />
@@ -146,16 +111,13 @@
       <module name="verify-enclave_integrationTest" target="1.8" />
       <module name="verify-enclave_main" target="1.8" />
       <module name="verify-enclave_test" target="1.8" />
+      <module name="web_main" target="1.8" />
+      <module name="web_test" target="1.8" />
       <module name="webcapsule_main" target="1.6" />
       <module name="webcapsule_test" target="1.6" />
-      <module name="webserver-webcapsule_main" target="1.6" />
-      <module name="webserver-webcapsule_test" target="1.6" />
       <module name="webserver_integrationTest" target="1.8" />
       <module name="webserver_main" target="1.8" />
       <module name="webserver_test" target="1.8" />
     </bytecodeTargetLevel>
-  </component>
-  <component name="JavacSettings">
-    <option name="ADDITIONAL_OPTIONS_STRING" value="-parameters" />
   </component>
 </project>

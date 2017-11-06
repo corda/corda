@@ -31,7 +31,6 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
-import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
@@ -199,13 +198,13 @@ sealed class NodeHandle {
      * will be added and that will be used.
      */
     abstract val rpc: CordaRPCOps
-    abstract val configuration: FullNodeConfiguration
+    abstract val configuration: NodeConfiguration
     abstract val webAddress: NetworkHostAndPort
 
     data class OutOfProcess(
             override val nodeInfo: NodeInfo,
             override val rpc: CordaRPCOps,
-            override val configuration: FullNodeConfiguration,
+            override val configuration: NodeConfiguration,
             override val webAddress: NetworkHostAndPort,
             val debugPort: Int?,
             val process: Process,
@@ -224,7 +223,7 @@ sealed class NodeHandle {
     data class InProcess(
             override val nodeInfo: NodeInfo,
             override val rpc: CordaRPCOps,
-            override val configuration: FullNodeConfiguration,
+            override val configuration: NodeConfiguration,
             override val webAddress: NetworkHostAndPort,
             val node: StartedNode<Node>,
             val nodeThread: Thread,
@@ -316,7 +315,7 @@ data class NodeParameters(
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
- * @param extraSystemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
+ * @param systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSLExposedInterface.startNode].
@@ -406,7 +405,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    if (initialiseSerialization) initialiseTestSerialization()
+    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -417,7 +416,57 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        if (initialiseSerialization) resetTestSerialization()
+        serializationEnv.resetTestSerialization()
+    }
+}
+
+/**
+ * This is a helper method to allow extending of the DSL, along the lines of
+ *   interface SomeOtherExposedDSLInterface : DriverDSLExposedInterface
+ *   interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface
+ *   class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by driverDSL, SomeOtherInternalDSLInterface
+ *
+ * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause.
+ */
+fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
+        defaultParameters: DriverParameters = DriverParameters(),
+        isDebug: Boolean = defaultParameters.isDebug,
+        driverDirectory: Path = defaultParameters.driverDirectory,
+        portAllocation: PortAllocation = defaultParameters.portAllocation,
+        debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
+        systemProperties: Map<String, String> = defaultParameters.extraSystemProperties,
+        useTestClock: Boolean = defaultParameters.useTestClock,
+        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+        startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
+        extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        driverDslWrapper: (DriverDSL) -> D,
+        coerce: (D) -> DI,
+        dsl: DI.() -> A
+): A {
+    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
+    val driverDsl = driverDslWrapper(
+            DriverDSL(
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    extraSystemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    isDebug = isDebug,
+                    startNodesInProcess = startNodesInProcess,
+                    extraCordappPackagesToScan = extraCordappPackagesToScan
+            )
+    )
+    val shutdownHook = addShutdownHook(driverDsl::shutdown)
+    try {
+        driverDsl.start()
+        return dsl(coerce(driverDsl))
+    } catch (exception: Throwable) {
+        log.error("Driver shutting down because of exception", exception)
+        throw exception
+    } finally {
+        driverDsl.shutdown()
+        shutdownHook.cancel()
+        serializationEnv.resetTestSerialization()
     }
 }
 
@@ -652,7 +701,7 @@ class DriverDSL(
         _executorService?.shutdownNow()
     }
 
-    private fun establishRpc(config: FullNodeConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
+    private fun establishRpc(config: NodeConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.rpcAddress!!
         val client = CordaRPCClient(rpcAddress)
         val connectionFuture = poll(executorService, "RPC connection") {
@@ -703,7 +752,7 @@ class DriverDSL(
                         "noNetworkMapServiceMode" to true
                 ) + customOverrides
         )
-        return startNodeInternal(name, config, webAddress, startInSameProcess, maximumHeapSize, logLevel)
+        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
     }
 
     override fun startNotaryNode(providedName: CordaX500Name,
@@ -730,7 +779,7 @@ class DriverDSL(
                             "noNetworkMapServiceMode" to true
                     )
             )
-            startNodeInternal(name, config, webAddress, startInSameProcess, maximumHeapSize)
+            startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
         }
     }
 
@@ -868,23 +917,15 @@ class DriverDSL(
         return future
     }
 
-    private fun startNodeInternal(name: CordaX500Name,config: Config, webAddress: NetworkHostAndPort, startInProcess: Boolean?, maximumHeapSize: String, logLevel: String? = null): CordaFuture<NodeHandle> {
-        val globalDataSourceProperties = mutableMapOf<String, Any?>()
-        val overriddenDatasourceUrl = systemProperties["dataSourceProperties.dataSource.url"]
-
-        overriddenDatasourceUrl?.let {
-            val connectionString = overriddenDatasourceUrl + "/" + databaseNamesByNode.computeIfAbsent(name, { UUID.randomUUID().toString() })
-            globalDataSourceProperties["dataSourceProperties.dataSource.url"] = connectionString
-        }
-        val enhancedConfig = config+ globalDataSourceProperties
-        val nodeConfiguration = (enhancedConfig).parseAs<FullNodeConfiguration>()
+    private fun startNodeInternal(config: Config, webAddress: NetworkHostAndPort, startInProcess: Boolean?, maximumHeapSize: String): CordaFuture<NodeHandle> {
+        val nodeConfiguration = config.parseAsNodeConfiguration()
         nodeInfoFilesCopier.addConfig(nodeConfiguration.baseDirectory)
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier.removeConfig(nodeConfiguration.baseDirectory)
             countObservables.remove(nodeConfiguration.myLegalName)
         }
         if (startInProcess ?: startNodesInProcess) {
-            val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, enhancedConfig, cordappPackages)
+            val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config, cordappPackages)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
                         {
@@ -902,7 +943,7 @@ class DriverDSL(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, enhancedConfig, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize, logLevel)
+            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize)
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
                 val processDeathFuture = poll(executorService, "process death") {
@@ -947,7 +988,7 @@ class DriverDSL(
 
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
-                nodeConf: FullNodeConfiguration,
+                nodeConf: NodeConfiguration,
                 config: Config,
                 cordappPackages: List<String>
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
@@ -966,7 +1007,7 @@ class DriverDSL(
 
         private fun startOutOfProcessNode(
                 executorService: ScheduledExecutorService,
-                nodeConf: FullNodeConfiguration,
+                nodeConf: NodeConfiguration,
                 config: Config,
                 quasarJarPath: String,
                 debugPort: Int?,
@@ -989,7 +1030,7 @@ class DriverDSL(
                 )
                 // See experimental/quasar-hook/README.md for how to generate.
                 val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
-                val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
+                val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath=$excludePattern"
                 val loggingLevel = logLevel ?: if (debugPort == null) "INFO" else "DEBUG"
 
@@ -1041,6 +1082,14 @@ class DriverDSL(
                     .first { it.fileName != "Driver.kt" }
                     .let { Class.forName(it.className).`package`?.name }
                     ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
+        }
+
+        /**
+         * We have an alternative way of specifying classpath for spawned process: by using "-cp" option. So duplicating the setting of this
+         * rather long string is un-necessary and can be harmful on Windows.
+         */
+        private fun Map<String, Any>.removeResolvedClasspath(): Map<String, Any> {
+            return filterNot { it.key == "java.class.path" }
         }
     }
 }

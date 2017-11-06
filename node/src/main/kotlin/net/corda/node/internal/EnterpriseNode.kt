@@ -5,21 +5,21 @@ import com.jcraft.jsch.JSchException
 import net.corda.core.internal.Emoji
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
-import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
 import net.corda.nodeapi.internal.ServiceInfo
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
 
-class EnterpriseNode(configuration: FullNodeConfiguration,
+class EnterpriseNode(configuration: NodeConfiguration,
                      versionInfo: VersionInfo) : Node(configuration, versionInfo) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
     }
 
     class Startup(args: Array<String>) : NodeStartup(args) {
-        override fun preNetworkRegistration(conf: FullNodeConfiguration) {
+        override fun preNetworkRegistration(conf: NodeConfiguration) {
             super.preNetworkRegistration(conf)
             conf.relay?.let { connectToRelay(it, conf.p2pAddress.port) }
         }
@@ -66,7 +66,7 @@ D""".trimStart()
             return tips[(Math.random() * tips.size).toInt()]
         }
 
-        override fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo) = EnterpriseNode(conf, versionInfo)
+        override fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo) = EnterpriseNode(conf, versionInfo)
 
         private fun connectToRelay(config: RelayConfiguration, localBrokerPort: Int) {
             with(config) {

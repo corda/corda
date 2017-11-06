@@ -4,8 +4,7 @@ import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
 import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.nodeapi.config.parseAs
+import net.corda.node.services.config.parseAsNodeConfiguration
 import org.slf4j.event.Level
 import java.io.PrintStream
 import java.nio.file.Path
@@ -71,6 +70,5 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean) {
     fun loadConfig() = ConfigHelper
-            .loadConfig(baseDirectory, configFile)
-            .parseAs<FullNodeConfiguration>()
+            .loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
 }

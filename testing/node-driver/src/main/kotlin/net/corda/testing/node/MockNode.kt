@@ -8,7 +8,6 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
@@ -17,12 +16,10 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.finance.utils.WorldMapLocation
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
@@ -32,7 +29,7 @@ import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.node.services.messaging.*
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -45,7 +42,6 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.resetTestSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -54,9 +50,9 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
-import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import net.corda.testing.testNodeConfiguration
 
 fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
     return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
@@ -125,11 +121,10 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val threadPerNode: Boolean = defaultParameters.threadPerNode,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                   private val defaultFactory: Factory<*> = defaultParameters.defaultFactory,
-                  private val initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                  initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                   private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
-
     var nextNodeId = 0
         private set
     private val filesystem = Jimfs.newFileSystem(unix())
@@ -140,9 +135,9 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private val _nodes = mutableListOf<MockNode>()
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
+    private val serializationEnv = initialiseTestSerialization(initialiseSerialization)
 
     init {
-        if (initialiseSerialization) initialiseTestSerialization()
         filesystem.getPath("/nodes").createDirectory()
     }
 
@@ -185,7 +180,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch) {
         val mockNet = args.network
-        override val networkMapAddress = null
         val id = args.id
         internal val notaryIdentity = args.notaryIdentity
         val entropyRoot = args.entropyRoot
@@ -238,11 +232,11 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             return entropyToKeyPair(counter)
         }
 
-        // It's OK to not have a network map service in the mock network.
-        override fun noNetworkMapConfigured() = doneFuture(Unit)
-
-        // There is no need to slow down the unit tests by initialising CityDatabase
-        open fun findMyLocation(): WorldMapLocation? = null // It's left only for NetworkVisualiserSimulation
+        /**
+         * MockNetwork will ensure nodes are connected to each other. The nodes themselves
+         * won't be able to tell if that happened already or not.
+         */
+        override fun checkNetworkMapIsInitialized() = Unit
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
@@ -253,13 +247,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         val testSerializationWhitelists by lazy { super.serializationWhitelists.toMutableList() }
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = testSerializationWhitelists
-
-        // This does not indirect through the NodeInfo object so it can be called before the node is started.
-        // It is used from the network visualiser tool.
-        @Suppress("unused")
-        val place: WorldMapLocation
-            get() = findMyLocation()!!
-
         private var dbCloser: (() -> Any?)? = null
         override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T) = super.initialiseDatabasePersistence(schemaService) {
             dbCloser = database::close
@@ -354,10 +341,8 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     }
 
     @JvmOverloads
-    fun createNotaryNode(legalName: CordaX500Name = DUMMY_NOTARY.name, validating: Boolean = true): StartedNode<MockNode> {
-        return createNode(MockNodeParameters(legalName = legalName, configOverrides = {
-            doReturn(NotaryConfig(validating)).whenever(it).notary
-        }))
+    fun createNotaryNode(parameters: MockNodeParameters = MockNodeParameters(legalName = DUMMY_NOTARY.name), validating: Boolean = true): StartedNode<MockNode> {
+        return createNotaryNode(parameters, validating, defaultFactory)
     }
 
     fun <N : MockNode> createNotaryNode(parameters: MockNodeParameters = MockNodeParameters(legalName = DUMMY_NOTARY.name),
@@ -406,7 +391,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
-        if (initialiseSerialization) resetTestSerialization()
+        serializationEnv.resetTestSerialization()
     }
 
     // Test method to block until all scheduled activity, active flows
