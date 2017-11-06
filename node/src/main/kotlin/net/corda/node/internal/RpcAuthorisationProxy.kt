@@ -15,7 +15,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.InvocationContext
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.ArtemisMessagingComponent
 import java.io.InputStream

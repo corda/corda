@@ -10,9 +10,9 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.context.Actor
-import net.corda.core.internal.context.InvocationContext
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.Actor
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow

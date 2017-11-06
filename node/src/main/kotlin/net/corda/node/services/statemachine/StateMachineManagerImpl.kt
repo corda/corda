@@ -17,8 +17,8 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.context.InvocationContext
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
@@ -83,7 +83,7 @@ class StateMachineManagerImpl(
         val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
         fun notifyChangeObservers(change: StateMachineManager.Change) {
-            changesPublisher.bufferUntilDatabaseCommit().onNext(change)
+             changesPublisher.bufferUntilDatabaseCommit().onNext(change)
         }
     }
 

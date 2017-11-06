@@ -57,14 +57,16 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
 
     inner class TestOpsImpl : TestOps {
         override val protocolVersion = 1
-        override fun barf() = throw IllegalArgumentException("Barf!")
+        // do not remove Unit
+        override fun barf(): Unit = throw IllegalArgumentException("Barf!")
         override fun void() {}
         override fun someCalculation(str: String, num: Int) = "$str $num"
         override fun makeObservable(): Observable<Int> = Observable.just(1, 2, 3, 4)
         override fun makeListenableFuture() = doneFuture(1)
         override fun makeComplicatedObservable() = complicatedObservable
         override fun makeComplicatedListenableFuture() = complicatedListenableFuturee
-        override fun addedLater() = throw IllegalStateException()
+        // do not remove Unit
+        override fun addedLater(): Unit = throw IllegalStateException()
         override fun captureUser(): String = context().actor.id.value
     }
 

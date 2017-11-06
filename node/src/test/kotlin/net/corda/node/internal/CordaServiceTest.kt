@@ -3,8 +3,8 @@ package net.corda.node.internal
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
-import net.corda.core.internal.context.InvocationContext
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService

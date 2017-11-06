@@ -26,7 +26,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.InvocationContext
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal

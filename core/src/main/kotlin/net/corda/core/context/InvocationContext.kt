@@ -1,11 +1,11 @@
-package net.corda.core.internal.context
+package net.corda.core.context
 
-import net.corda.core.context.Trace
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import java.security.Principal
 
+// TODO sollecitom docs
 @CordaSerializable
 data class InvocationContext(val actor: Actor, val origin: Origin, val trace: Trace = Trace(), val externalTrace: Trace? = null) {
 
@@ -21,15 +21,14 @@ data class InvocationContext(val actor: Actor, val origin: Origin, val trace: Tr
         fun shell(actor: Actor, trace: Trace = Trace(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Shell, trace, externalTrace)
     }
 
-    val principal: Principal by lazy {
-
-        origin.principal(actor)
-    }
+    val principal: Principal
+        get() = origin.principal(actor)
 
     val owningLegalIdentity: CordaX500Name
         get() = actor.owningLegalIdentity
 }
 
+// TODO sollecitom docs
 // TODO sollecitom: consider creating a Permissions / Permission type until we can.
 @CordaSerializable
 data class Actor(val id: Id, val storeId: StoreId, val owningLegalIdentity: CordaX500Name, val permissions: Set<String>) {
@@ -47,6 +46,7 @@ data class Actor(val id: Id, val storeId: StoreId, val owningLegalIdentity: Cord
     // in case we need different user types in corda (to provide polymorphic behaviour) we can an extra field here
 }
 
+// TODO sollecitom docs
 @CordaSerializable
 sealed class Origin {
 

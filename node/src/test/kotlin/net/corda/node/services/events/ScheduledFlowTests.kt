@@ -8,7 +8,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.Origin
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM

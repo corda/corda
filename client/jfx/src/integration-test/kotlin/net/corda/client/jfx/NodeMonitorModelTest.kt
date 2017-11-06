@@ -6,12 +6,11 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.Origin
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate

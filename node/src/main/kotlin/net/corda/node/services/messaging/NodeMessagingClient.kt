@@ -6,9 +6,9 @@ import net.corda.core.context.Trace.SessionId
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.context.Actor
-import net.corda.core.internal.context.InvocationContext
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.Actor
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps

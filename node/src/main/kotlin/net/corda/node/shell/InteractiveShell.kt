@@ -16,7 +16,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.context.Actor
+import net.corda.core.context.Actor
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineUpdate
@@ -129,7 +129,7 @@ object InteractiveShell {
         thread(name = "Command line shell processor", isDaemon = true) {
             // Give whoever has local shell access administrator access to the node.
             // TODO remove this after Shell switches to RPC
-            val context = net.corda.core.internal.context.InvocationContext.shell(Actor(Actor.Id(ArtemisMessagingComponent.NODE_USER), Actor.StoreId("NODE_USER"), node.info.legalIdentities[0].name, setOf()))
+            val context = net.corda.core.context.InvocationContext.shell(Actor(Actor.Id(ArtemisMessagingComponent.NODE_USER), Actor.StoreId("NODE_USER"), node.info.legalIdentities[0].name, setOf()))
             CURRENT_RPC_CONTEXT.set(context)
             Emoji.renderIfSupported {
                 jlineProcessor.run()
@@ -235,7 +235,7 @@ object InteractiveShell {
         val clazz: Class<FlowLogic<*>> = uncheckedCast(matches.single())
         try {
             // TODO Flow invocation should use startFlowDynamic.
-            val context = net.corda.core.internal.context.InvocationContext.shell(Actor(Actor.Id(ArtemisMessagingComponent.NODE_USER), Actor.StoreId("NODE_USER"), node.info.legalIdentities[0].name, setOf()))
+            val context = net.corda.core.context.InvocationContext.shell(Actor(Actor.Id(ArtemisMessagingComponent.NODE_USER), Actor.StoreId("NODE_USER"), node.info.legalIdentities[0].name, setOf()))
             val fsm = runFlowFromString({ node.services.startFlow(it, context).getOrThrow() }, inputData, clazz)
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.

@@ -6,7 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.InvocationContext
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData

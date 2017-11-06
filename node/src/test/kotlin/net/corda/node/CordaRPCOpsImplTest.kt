@@ -11,8 +11,8 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.context.InvocationContext
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy

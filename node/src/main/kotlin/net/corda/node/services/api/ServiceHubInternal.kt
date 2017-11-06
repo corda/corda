@@ -5,7 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.InvocationContext
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping

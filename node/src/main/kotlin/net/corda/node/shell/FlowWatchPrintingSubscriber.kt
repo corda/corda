@@ -2,7 +2,7 @@ package net.corda.node.shell
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.InvocationContext
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.StateMachineUpdate.Added
 import net.corda.core.messaging.StateMachineUpdate.Removed

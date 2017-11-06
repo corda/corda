@@ -2,9 +2,8 @@ package net.corda.node.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.InvocationContext
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient

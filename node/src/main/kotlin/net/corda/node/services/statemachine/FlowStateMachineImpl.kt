@@ -15,7 +15,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.InvocationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction

@@ -24,9 +24,9 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.core.internal.context.Actor
-import net.corda.core.internal.context.Actor.*
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.Actor
+import net.corda.core.context.Actor.*
+import net.corda.core.context.InvocationContext
 import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER

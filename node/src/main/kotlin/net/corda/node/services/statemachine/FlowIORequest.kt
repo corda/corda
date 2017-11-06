@@ -2,7 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.context.InvocationContext
+import net.corda.core.context.InvocationContext
 import java.time.Instant
 
 interface FlowIORequest {

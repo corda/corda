@@ -11,7 +11,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.Origin
 import net.corda.core.internal.until
 import net.corda.core.node.StateLoader
 import net.corda.core.schemas.PersistentStateRef

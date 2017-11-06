@@ -2,8 +2,8 @@ package net.corda.client.rpc
 
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.context.InvocationContext
-import net.corda.core.internal.context.Origin
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.*
 import net.corda.core.utilities.OpaqueBytes
@@ -147,7 +147,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
             }
         }
         val nodeIdentity = node.info.chooseIdentity()
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), InvocationContext.shell(testActor)).flatMap { it.resultFuture }.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), InvocationContext.shell(testActor.copy(owningLegalIdentity = nodeIdentity.name))).flatMap { it.resultFuture }.getOrThrow()
         proxy.startFlow(::CashIssueFlow,
                 123.DOLLARS,
                 OpaqueBytes.of(0),
