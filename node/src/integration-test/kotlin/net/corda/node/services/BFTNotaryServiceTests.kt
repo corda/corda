@@ -31,6 +31,7 @@ import net.corda.testing.dummyCommand
 import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Paths

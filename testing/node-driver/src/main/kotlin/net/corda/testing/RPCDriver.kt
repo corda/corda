@@ -482,6 +482,7 @@ data class RPCDriverDSL(
         val userService = object : RPCUserService {
             override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
             override val users: List<User> get() = listOf(rpcUser)
+            override val id: RPCUserService.Id = RPCUserService.Id("RPC_DRIVER")
         }
         val rpcServer = RPCServer(
                 ops,

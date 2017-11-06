@@ -3,12 +3,12 @@ package net.corda.core.messaging
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.context.InvocationContext
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
@@ -29,7 +29,7 @@ import java.time.Instant
 data class StateMachineInfo(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
-        val initiator: FlowInitiator,
+        val context: InvocationContext,
         val progressTrackerStepAndUpdates: DataFeed<String, String>?
 ) {
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"

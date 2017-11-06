@@ -85,7 +85,7 @@ class CordappSmokeTest {
     class SendBackInitiatorFlowContext(private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            // An initiated flow calling getFlowContext on its initiator will get the context from the session-init
+            // An initiated flow calling getFlowContext on its context will get the context from the session-init
             val sessionInitContext = otherPartySession.getCounterpartyFlowInfo()
             otherPartySession.send(sessionInitContext)
         }

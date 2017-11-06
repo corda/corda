@@ -19,6 +19,8 @@ import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MessagingServiceSpy
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.setMessagingServiceSpy
+import net.corda.testing.startFlow
+import net.corda.testing.testContext
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -92,7 +94,7 @@ class TutorialMockNetwork {
 
                 if (messageData is SessionData && messageData.payload.deserialize() == 1) {
                     val alteredMessageData = SessionData(messageData.recipientSessionId, 99.serialize()).serialize().bytes
-                    messagingService.send(InMemoryMessagingNetwork.InMemoryMessage(message.topicSession, alteredMessageData, message.uniqueMessageId), target, retryId)
+                    messagingService.send(InMemoryMessagingNetwork.InMemoryMessage(message.topicSession, alteredMessageData, message.uniqueMessageId, testContext()), target, retryId)
                 } else {
                     messagingService.send(message, target, retryId)
                 }

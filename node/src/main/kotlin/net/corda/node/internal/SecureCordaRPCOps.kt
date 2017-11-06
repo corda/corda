@@ -3,7 +3,7 @@ package net.corda.node.internal
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.messaging.rpcContext
+import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
 
@@ -14,7 +14,7 @@ class SecureCordaRPCOps(services: ServiceHubInternal,
                         smm: StateMachineManager,
                         database: CordaPersistence,
                         flowStarter: FlowStarter,
-                        val unsafe: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter)) : CordaRPCOps by RpcAuthorisationProxy(unsafe, ::rpcContext, DefaultCordaRpcPermissions::permissionsAllowing) {
+                        val unsafe: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter)) : CordaRPCOps by RpcAuthorisationProxy(unsafe, ::context, DefaultCordaRpcPermissions::permissionsAllowing) {
 
     /**
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed

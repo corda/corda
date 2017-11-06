@@ -1,8 +1,9 @@
 package net.corda.client.rpc
 
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.context.InvocationContext
+import net.corda.core.internal.context.Origin
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.*
 import net.corda.core.utilities.OpaqueBytes
@@ -23,6 +24,7 @@ import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.internal.NodeBasedTest
+import net.corda.testing.testActor
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -137,15 +139,15 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
         var countShellFlows = 0
         proxy.stateMachinesFeed().updates.subscribe {
             if (it is StateMachineUpdate.Added) {
-                val initiator = it.stateMachineInfo.initiator
-                if (initiator is FlowInitiator.RPC)
-                    countRpcFlows++
-                if (initiator is FlowInitiator.Shell)
-                    countShellFlows++
+                val context = it.stateMachineInfo.context
+                when {
+                    context.origin is Origin.RPC -> countRpcFlows++
+                    context.origin is Origin.Shell -> countShellFlows++
+                }
             }
         }
         val nodeIdentity = node.info.chooseIdentity()
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), FlowInitiator.Shell).flatMap { it.resultFuture }.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), InvocationContext.shell(testActor)).flatMap { it.resultFuture }.getOrThrow()
         proxy.startFlow(::CashIssueFlow,
                 123.DOLLARS,
                 OpaqueBytes.of(0),

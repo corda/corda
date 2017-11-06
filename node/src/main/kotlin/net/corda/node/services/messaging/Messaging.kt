@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.context.InvocationContext
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -250,14 +251,14 @@ interface Message {
     val data: ByteArray
     val debugTimestamp: Instant
     val uniqueMessageId: UUID
+    /** The invocation context of the sender. */
+    val context: InvocationContext
 }
 
 // TODO Have ReceivedMessage point to the TLS certificate of the peer, and [peer] would simply be the subject DN of that.
 // The certificate would need to be serialised into the message header or just its fingerprint and then download it via RPC,
 // or something like that.
 interface ReceivedMessage : Message {
-    /** The authenticated sender. */
-    val peer: CordaX500Name
     /** Platform version of the sender's node. */
     val platformVersion: Int
 }

@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import net.corda.client.rpc.PermissionException
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -14,13 +15,14 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
-import net.corda.node.services.messaging.RpcContext
-import net.corda.node.services.messaging.requireEitherPermission
+import net.corda.core.internal.context.InvocationContext
+import net.corda.node.services.Permissions
+import net.corda.nodeapi.ArtemisMessagingComponent
 import java.io.InputStream
 import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
-class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcContext, private val permissionsAllowing: (methodName: String, args: List<Any?>) -> Set<String>) : CordaRPCOps {
+class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> InvocationContext, private val permissionsAllowing: (methodName: String, args: List<Any?>) -> Set<String>) : CordaRPCOps {
 
     override fun stateMachinesSnapshot() = guard("stateMachinesSnapshot") {
         implementation.stateMachinesSnapshot()
@@ -152,7 +154,18 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
     private inline fun <RESULT> guard(methodName: String, args: List<Any?>, action: () -> RESULT): RESULT {
 
-        context.invoke().requireEitherPermission(permissionsAllowing.invoke(methodName, args))
-        return action.invoke()
+        context().requireEitherPermission(permissionsAllowing.invoke(methodName, args))
+        return action()
     }
+}
+
+fun InvocationContext.requirePermission(permission: String) = requireEitherPermission(setOf(permission))
+
+fun InvocationContext.requireEitherPermission(permissions: Set<String>): InvocationContext {
+
+    // TODO remove the NODE_USER condition once webserver and shell won't need it anymore
+    if (actor.id.value != ArtemisMessagingComponent.NODE_USER && actor.permissions.intersect(permissions + Permissions.all()).isEmpty()) {
+        throw PermissionException("User not permissioned with any of $permissions, permissions are ${actor.permissions}.")
+    }
+    return this
 }

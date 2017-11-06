@@ -18,6 +18,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.dummyCommand
+import net.corda.testing.startFlow
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals

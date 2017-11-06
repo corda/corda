@@ -10,6 +10,7 @@ import java.security.Principal
  * communication started by peer node [FlowInitiator.Peer], scheduled flows [FlowInitiator.Scheduled]
  * or via the Corda Shell [FlowInitiator.Shell].
  */
+// TODO sollecitom: remove
 @CordaSerializable
 sealed class FlowInitiator : Principal {
     /** Started using [net.corda.core.messaging.CordaRPCOps.startFlowDynamic]. */

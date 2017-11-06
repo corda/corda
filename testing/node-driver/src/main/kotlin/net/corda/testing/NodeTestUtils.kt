@@ -5,9 +5,18 @@ package net.corda.testing
 import com.nhaarman.mockito_kotlin.doCallRealMethod
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.flows.FlowInitiator
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.context.Actor
+import net.corda.core.internal.context.InvocationContext
+import net.corda.core.internal.context.Origin
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
@@ -83,3 +92,13 @@ fun testNodeConfiguration(
         doCallRealMethod().whenever(it).nodeKeystore
     }
 }
+
+val testActor = Actor(Actor.Id("Only For Testing"), Actor.StoreId("TEST"), CordaX500Name("Test Company Inc.", "London", "GB"), setOf("ALL"))
+
+fun testContext() = InvocationContext(testActor, Origin.RPC)
+/**
+ * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
+ * defaults to [FlowInitiator.RPC] with username "Only For Testing".
+ */
+@VisibleForTesting
+fun <T> FlowStarter.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, testContext()).getOrThrow()

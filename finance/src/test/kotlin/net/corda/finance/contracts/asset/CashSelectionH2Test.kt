@@ -9,6 +9,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 

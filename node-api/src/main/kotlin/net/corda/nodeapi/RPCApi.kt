@@ -57,18 +57,6 @@ import java.util.*
  * Constants and data types used by the RPC API.
  */
 object RPCApi {
-    private val TAG_FIELD_NAME = "tag"
-    private val RPC_ID_FIELD_NAME = "rpc-id"
-    private val RPC_ID_TIMESTAMP_FIELD_NAME = "rpc-id-timestamp"
-    private val RPC_SESSION_ID_FIELD_NAME = "rpc-session-id"
-    private val RPC_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-session-id-timestamp"
-    private val RPC_EXTERNAL_ID_FIELD_NAME = "rpc-external-id"
-    private val RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME = "rpc-external-id-timestamp"
-    private val RPC_EXTERNAL_SESSION_ID_FIELD_NAME = "rpc-external-session-id"
-    private val RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-external-session-id-timestamp"
-    private val OBSERVABLE_ID_FIELD_NAME = "observable-id"
-    private val OBSERVABLE_ID_TIMESTAMP_FIELD_NAME = "observable-id-timestamp"
-    private val METHOD_NAME_FIELD_NAME = "method-name"
 
     /** Name of the Artemis queue on which the server receives RPC requests (as [ClientToServer.RpcRequest]). */
     const val RPC_SERVER_QUEUE_NAME = "rpc.server"
@@ -79,6 +67,7 @@ object RPCApi {
     const val RPC_CLIENT_QUEUE_NAME_PREFIX = "rpc.client"
     const val RPC_CLIENT_BINDING_REMOVALS = "rpc.clientqueueremovals"
     const val RPC_CLIENT_BINDING_ADDITIONS = "rpc.clientqueueadditions"
+    const val RPC_TARGET_LEGAL_IDENTITY = "rpc-target-legal-identity"
 
     val RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_REMOVED.name}' AND " +
@@ -223,75 +212,6 @@ object RPCApi {
             }
         }
     }
-
-    private fun InvocationId.mapTo(message: ClientMessage, valueProperty: String, timestampProperty: String) {
-
-        message.putStringProperty(valueProperty, value)
-        message.putLongProperty(timestampProperty, timestamp.toEpochMilli())
-    }
-
-    private fun ActiveMQBuffer.writeInvocationId(invocationId: InvocationId) {
-
-        this.writeString(invocationId.value)
-        this.writeLong(invocationId.timestamp.toEpochMilli())
-    }
-
-    private fun ActiveMQBuffer.readInvocationId() : InvocationId {
-
-        val value = this.readString()
-        val timestamp = this.readLong()
-        return InvocationId(value, Instant.ofEpochMilli(timestamp))
-    }
-
-    private fun Trace.mapTo(message: ClientMessage) = mapTo(message, RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME, RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME)
-
-    private fun Trace.mapToExternal(message: ClientMessage) = mapTo(message, RPC_EXTERNAL_ID_FIELD_NAME, RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME)
-
-    private fun Trace.mapTo(message: ClientMessage, valueProperty: String, timestampProperty: String, sessionValueProperty: String, sessionTimestampProperty: String) = apply {
-
-        invocationId.apply {
-            message.putStringProperty(valueProperty, value)
-            message.putLongProperty(timestampProperty, timestamp.toEpochMilli())
-        }
-        sessionId.apply {
-            message.putStringProperty(sessionValueProperty, value)
-            message.putLongProperty(sessionTimestampProperty, timestamp.toEpochMilli())
-        }
-    }
-
-    private fun ClientMessage.invocationId(valueProperty: String, timestampProperty: String): InvocationId? = id(valueProperty, timestampProperty, ::InvocationId)
-
-    private fun ClientMessage.sessionId(valueProperty: String, timestampProperty: String): SessionId? = id(valueProperty, timestampProperty, ::SessionId)
-
-    private fun <ID : Id<*>> ClientMessage.id(valueProperty: String, timestampProperty: String, construct: (value: String, timestamp: Instant) -> ID): ID? {
-
-        // returning null because getLongProperty throws trying to convert null to long
-        val idRaw = this.getStringProperty(valueProperty) ?: return null
-        val timestampRaw = this.getLongProperty(timestampProperty)
-        return construct(idRaw, Instant.ofEpochMilli(timestampRaw))
-    }
-
-    private fun ClientMessage.trace(): Trace {
-
-        val invocationId = invocationId(RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME)
-        val sessionId = sessionId(RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME)
-
-        if (invocationId == null || sessionId == null) {
-            throw IllegalStateException("Cannot extract trace from client message.")
-        }
-        return Trace(invocationId, sessionId)
-    }
-
-    private fun ClientMessage.externalTrace(): Trace? {
-
-        val invocationId = invocationId(RPC_EXTERNAL_ID_FIELD_NAME, RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME)
-        val sessionId = sessionId(RPC_EXTERNAL_SESSION_ID_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME)
-
-        return when {
-            invocationId == null || sessionId == null -> null
-            else -> Trace(invocationId, sessionId)
-        }
-    }
 }
 
 data class ArtemisProducer(
@@ -305,3 +225,85 @@ data class ArtemisConsumer(
         val session: ClientSession,
         val consumer: ClientConsumer
 )
+
+private val TAG_FIELD_NAME = "tag"
+private val RPC_ID_FIELD_NAME = "rpc-id"
+private val RPC_ID_TIMESTAMP_FIELD_NAME = "rpc-id-timestamp"
+private val RPC_SESSION_ID_FIELD_NAME = "rpc-session-id"
+private val RPC_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-session-id-timestamp"
+private val RPC_EXTERNAL_ID_FIELD_NAME = "rpc-external-id"
+private val RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME = "rpc-external-id-timestamp"
+private val RPC_EXTERNAL_SESSION_ID_FIELD_NAME = "rpc-external-session-id"
+private val RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-external-session-id-timestamp"
+private val OBSERVABLE_ID_FIELD_NAME = "observable-id"
+private val OBSERVABLE_ID_TIMESTAMP_FIELD_NAME = "observable-id-timestamp"
+private val METHOD_NAME_FIELD_NAME = "method-name"
+
+fun ClientMessage.trace(): Trace {
+
+    val invocationId = invocationId(RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME)
+    val sessionId = sessionId(RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+    if (invocationId == null || sessionId == null) {
+        throw IllegalStateException("Cannot extract trace from client message.")
+    }
+    return Trace(invocationId, sessionId)
+}
+
+fun ClientMessage.externalTrace(): Trace? {
+
+    val invocationId = invocationId(RPC_EXTERNAL_ID_FIELD_NAME, RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME)
+    val sessionId = sessionId(RPC_EXTERNAL_SESSION_ID_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+    return when {
+        invocationId == null || sessionId == null -> null
+        else -> Trace(invocationId, sessionId)
+    }
+}
+
+private fun InvocationId.mapTo(message: ClientMessage, valueProperty: String, timestampProperty: String) {
+
+    message.putStringProperty(valueProperty, value)
+    message.putLongProperty(timestampProperty, timestamp.toEpochMilli())
+}
+
+private fun ActiveMQBuffer.writeInvocationId(invocationId: InvocationId) {
+
+    this.writeString(invocationId.value)
+    this.writeLong(invocationId.timestamp.toEpochMilli())
+}
+
+private fun ActiveMQBuffer.readInvocationId() : InvocationId {
+
+    val value = this.readString()
+    val timestamp = this.readLong()
+    return InvocationId(value, Instant.ofEpochMilli(timestamp))
+}
+
+private fun Trace.mapTo(message: ClientMessage) = mapTo(message, RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME, RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+private fun Trace.mapToExternal(message: ClientMessage) = mapTo(message, RPC_EXTERNAL_ID_FIELD_NAME, RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+private fun Trace.mapTo(message: ClientMessage, valueProperty: String, timestampProperty: String, sessionValueProperty: String, sessionTimestampProperty: String) = apply {
+
+    invocationId.apply {
+        message.putStringProperty(valueProperty, value)
+        message.putLongProperty(timestampProperty, timestamp.toEpochMilli())
+    }
+    sessionId.apply {
+        message.putStringProperty(sessionValueProperty, value)
+        message.putLongProperty(sessionTimestampProperty, timestamp.toEpochMilli())
+    }
+}
+
+private fun ClientMessage.invocationId(valueProperty: String, timestampProperty: String): InvocationId? = id(valueProperty, timestampProperty, ::InvocationId)
+
+private fun ClientMessage.sessionId(valueProperty: String, timestampProperty: String): SessionId? = id(valueProperty, timestampProperty, ::SessionId)
+
+private fun <ID : Id<*>> ClientMessage.id(valueProperty: String, timestampProperty: String, construct: (value: String, timestamp: Instant) -> ID): ID? {
+
+    // returning null because getLongProperty throws trying to convert null to long
+    val idRaw = this.getStringProperty(valueProperty) ?: return null
+    val timestampRaw = this.getLongProperty(timestampProperty)
+    return construct(idRaw, Instant.ofEpochMilli(timestampRaw))
+}
