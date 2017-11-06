@@ -1,4 +1,4 @@
-package net.corda.testing.driver
+package net.corda.testing.internal
 
 import net.corda.core.internal.div
 import net.corda.core.internal.exists

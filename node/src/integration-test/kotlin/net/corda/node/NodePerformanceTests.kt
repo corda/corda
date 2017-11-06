@@ -18,10 +18,10 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.performance.div
-import net.corda.testing.performance.startPublishingFixedRateInjector
-import net.corda.testing.performance.startReporter
-import net.corda.testing.performance.startTightLoopInjector
+import net.corda.testing.internal.performance.div
+import net.corda.testing.internal.performance.startPublishingFixedRateInjector
+import net.corda.testing.internal.performance.startReporter
+import net.corda.testing.internal.performance.startTightLoopInjector
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
