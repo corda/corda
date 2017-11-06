@@ -9,7 +9,6 @@ import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -28,7 +27,7 @@ class FxTransactionBuildTutorialTest {
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeB.internals.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
-        notary = nodeA.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After

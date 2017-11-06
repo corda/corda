@@ -84,7 +84,7 @@ class FlowFrameworkTests {
         // Extract identities
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
-        notaryIdentity = aliceNode.services.getDefaultNotary()
+        notaryIdentity = mockNet.defaultNotaryIdentity
     }
 
     @After

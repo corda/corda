@@ -19,7 +19,6 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert.*
@@ -34,9 +33,10 @@ class ScheduledFlowTests {
         val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
     }
 
-    lateinit var mockNet: MockNetwork
-    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
-    lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: MockNetwork
+    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var notary: Party
 
     data class ScheduledState(val creationTime: Instant,
                               val source: Party,
@@ -55,11 +55,10 @@ class ScheduledFlowTests {
         override val participants: List<Party> get() = listOf(source, destination)
     }
 
-    class InsertInitialStateFlow(private val destination: Party) : FlowLogic<Unit>() {
+    class InsertInitialStateFlow(private val destination: Party, private val notary: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val scheduledState = ScheduledState(serviceHub.clock.instant(), ourIdentity, destination)
-            val notary = serviceHub.getDefaultNotary()
             val builder = TransactionBuilder(notary)
                     .addOutputState(scheduledState, DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
@@ -93,12 +92,9 @@ class ScheduledFlowTests {
     @Before
     fun setup() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
-        val a = mockNet.createUnstartedNode()
-        val b = mockNet.createUnstartedNode()
-
-        mockNet.startNodes()
-        nodeA = a.started!!
-        nodeB = b.started!!
+        nodeA = mockNet.createNode()
+        nodeB = mockNet.createNode()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After
@@ -116,7 +112,7 @@ class ScheduledFlowTests {
                     countScheduledFlows++
             }
         }
-        nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity()))
+        nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity(), notary))
         mockNet.waitQuiescent()
         val stateFromA = nodeA.database.transaction {
             nodeA.services.vaultService.queryBy<ScheduledState>().states.single()
@@ -134,8 +130,8 @@ class ScheduledFlowTests {
         val N = 100
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {
-            futures.add(nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity())).resultFuture)
-            futures.add(nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.chooseIdentity())).resultFuture)
+            futures.add(nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity(), notary)).resultFuture)
+            futures.add(nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.chooseIdentity(), notary)).resultFuture)
         }
         mockNet.waitQuiescent()
 
