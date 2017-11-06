@@ -15,7 +15,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.SchemaService
@@ -25,7 +24,7 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.TestClock
+import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
@@ -67,7 +66,7 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private fun createClock(configuration: NodeConfiguration): Clock {
-            return if (configuration.useTestClock) TestClock() else NodeClock()
+            return (if (configuration.useTestClock) ::DemoClock else ::SimpleClock)(Clock.systemUTC())
         }
 
         private val sameVmNodeCounter = AtomicInteger()

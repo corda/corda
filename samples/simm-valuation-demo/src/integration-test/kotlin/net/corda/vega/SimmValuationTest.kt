@@ -17,7 +17,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
 
-class SimmValuationTest : IntegrationTestCategory {
+class SimmValuationTest {
     private companion object {
         // SIMM demo can only currently handle one valuation date due to a lack of market data or a market data source.
         val valuationDate: LocalDate = LocalDate.parse("2016-06-06")
