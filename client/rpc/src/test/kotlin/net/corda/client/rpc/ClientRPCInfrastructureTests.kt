@@ -7,9 +7,9 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.rpcContext
-import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.rpcDriver
-import net.corda.testing.rpcTestUser
+import net.corda.testing.internal.RPCDriverDSLInternalInterface
+import net.corda.testing.internal.rpcDriver
+import net.corda.testing.internal.rpcTestUser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 class ClientRPCInfrastructureTests : AbstractRPCTest() {
     // TODO: Test that timeouts work
 
-    private fun RPCDriverExposedDSLInterface.testProxy(): TestOps {
+    private fun RPCDriverDSLInternalInterface.testProxy(): TestOps {
         return testProxy<TestOps>(TestOpsImpl()).ops
     }
 

@@ -7,8 +7,8 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.rpcDriver
+import net.corda.testing.internal.RPCDriverDSLInternalInterface
+import net.corda.testing.internal.rpcDriver
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -82,7 +82,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
     }
 
     private lateinit var testOpsImpl: TestOpsImpl
-    private fun RPCDriverExposedDSLInterface.testProxy(): TestProxy<TestOps> {
+    private fun RPCDriverDSLInternalInterface.testProxy(): TestProxy<TestOps> {
         testOpsImpl = TestOpsImpl()
         return testProxy<TestOps>(
                 testOpsImpl,

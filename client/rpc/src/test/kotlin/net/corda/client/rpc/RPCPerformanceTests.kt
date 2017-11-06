@@ -5,14 +5,14 @@ import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
-import net.corda.testing.performance.div
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.testing.RPCDriverExposedDSLInterface
+import net.corda.testing.internal.RPCDriverDSLInternalInterface
+import net.corda.testing.internal.rpcDriver
 import net.corda.testing.measure
+import net.corda.testing.performance.div
 import net.corda.testing.performance.startPublishingFixedRateInjector
 import net.corda.testing.performance.startReporter
 import net.corda.testing.performance.startTightLoopInjector
-import net.corda.testing.rpcDriver
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,7 +42,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
         }
     }
 
-    private fun RPCDriverExposedDSLInterface.testProxy(
+    private fun RPCDriverDSLInternalInterface.testProxy(
             clientConfiguration: RPCClientConfiguration,
             serverConfiguration: RPCServerConfiguration
     ): TestProxy<TestOps> {

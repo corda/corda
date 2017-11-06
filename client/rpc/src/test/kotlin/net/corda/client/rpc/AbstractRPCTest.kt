@@ -6,10 +6,10 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.User
-import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.rpcTestUser
-import net.corda.testing.startInVmRpcClient
-import net.corda.testing.startRpcClient
+import net.corda.testing.internal.RPCDriverDSLInternalInterface
+import net.corda.testing.internal.rpcTestUser
+import net.corda.testing.internal.startInVmRpcClient
+import net.corda.testing.internal.startRpcClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.junit.runners.Parameterized
 
@@ -35,7 +35,7 @@ open class AbstractRPCTest {
             val createSession: () -> ClientSession
     )
 
-    inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.testProxy(
+    inline fun <reified I : RPCOps> RPCDriverDSLInternalInterface.testProxy(
             ops: I,
             rpcUser: User = rpcTestUser,
             clientConfiguration: RPCClientConfiguration = RPCClientConfiguration.default,

@@ -11,8 +11,8 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.testing.*
 import net.corda.testing.driver.poll
+import net.corda.testing.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -335,7 +335,7 @@ class RPCStabilityTests {
 
 }
 
-fun RPCDriverExposedDSLInterface.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {
+fun RPCDriverDSLInternalInterface.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {
     pollUntilTrue("number of RPC clients to become $expected") {
         val clientAddresses = server.broker.serverControl.addressNames.filter { it.startsWith(RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX) }
         clientAddresses.size == expected
