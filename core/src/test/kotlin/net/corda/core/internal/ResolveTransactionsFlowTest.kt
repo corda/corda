@@ -44,7 +44,6 @@ class ResolveTransactionsFlowTest {
         miniCorpNode = mockNet.createPartyNode(MINI_CORP.name)
         megaCorpNode.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         miniCorpNode.internals.registerInitiatedFlow(TestResponseFlow::class.java)
-        mockNet.runNetwork()
         notary = notaryNode.services.getDefaultNotary()
         megaCorp = megaCorpNode.info.chooseIdentity()
         miniCorp = miniCorpNode.info.chooseIdentity()

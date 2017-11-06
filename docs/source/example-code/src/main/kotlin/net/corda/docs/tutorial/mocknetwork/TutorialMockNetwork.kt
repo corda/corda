@@ -67,10 +67,7 @@ class TutorialMockNetwork {
         mockNet = MockNetwork()
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
-
         nodeB.registerInitiatedFlow(FlowB::class.java)
-
-        mockNet.runNetwork()
     }
 
     @After

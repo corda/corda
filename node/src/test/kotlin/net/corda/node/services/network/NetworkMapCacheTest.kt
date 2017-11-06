@@ -13,7 +13,7 @@ import java.math.BigInteger
 import kotlin.test.assertEquals
 
 class NetworkMapCacheTest {
-    val mockNet: MockNetwork = MockNetwork()
+    private val mockNet = MockNetwork()
 
     @After
     fun teardown() {
@@ -24,7 +24,6 @@ class NetworkMapCacheTest {
     fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE.name, entropyRoot = entropy))
-        mockNet.runNetwork()
 
         // Node A currently knows only about itself, so this returns node A
         assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(aliceNode.info.chooseIdentity().owningKey).singleOrNull(), aliceNode.info)
@@ -43,7 +42,6 @@ class NetworkMapCacheTest {
         val bobCache: NetworkMapCache = bobNode.services.networkMapCache
         val expected = aliceNode.info
 
-        mockNet.runNetwork()
         val actual = bobNode.database.transaction { bobCache.getNodeByLegalIdentity(aliceNode.info.chooseIdentity()) }
         assertEquals(expected, actual)
 
@@ -57,7 +55,6 @@ class NetworkMapCacheTest {
         val bobCache: NetworkMapCache = bobNode.services.networkMapCache
         val expected = aliceNode.info.legalIdentities.single()
 
-        mockNet.runNetwork()
         val actual = bobNode.database.transaction { bobCache.getPeerByLegalName(ALICE.name) }
         assertEquals(expected, actual)
     }
@@ -69,7 +66,6 @@ class NetworkMapCacheTest {
         val bobLegalIdentity = bobNode.info.chooseIdentity()
         val alice = aliceNode.info.chooseIdentity()
         val bobCache = bobNode.services.networkMapCache
-        mockNet.runNetwork()
         bobNode.database.transaction {
             assertThat(bobCache.getNodeByLegalIdentity(alice) != null)
             bobCache.removeNode(aliceNode.info)

@@ -28,7 +28,6 @@ class FinalityFlowTests {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
-        mockNet.runNetwork()
         aliceServices = aliceNode.services
         bobServices = bobNode.services
         alice = aliceNode.info.singleIdentity()
