@@ -11,6 +11,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.atomic.AtomicLong
+import javax.annotation.concurrent.ThreadSafe
 
 /** A [Clock] that tokenizes itself when serialized, and delegates to an underlying [Clock] implementation. */
 abstract class CordaClock : Clock(), SerializeAsToken {
@@ -22,6 +23,9 @@ abstract class CordaClock : Clock(), SerializeAsToken {
     @Deprecated("Do not use this. Instead seek to use ZonedDateTime methods.", level = DeprecationLevel.ERROR)
     override fun withZone(zone: ZoneId) = throw UnsupportedOperationException("Tokenized clock does not support withZone()")
 }
+
+@ThreadSafe
+class SimpleClock(override val delegateClock: Clock) : CordaClock()
 
 /**
  * An abstract class with helper methods for a type of Clock that might have it's concept of "now" adjusted externally.
@@ -36,13 +40,13 @@ abstract class MutableClock(private var _delegateClock: Clock) : CordaClock() {
     private val _version = AtomicLong(0L)
     /** This is an observer on the mutation count of this [Clock], which reflects the occurence of mutations. */
     val mutations: Observable<Long> by lazy {
-        Observable.create({ subscriber: Subscriber<in Long> ->
+        Observable.create { subscriber: Subscriber<in Long> ->
             if (!subscriber.isUnsubscribed) {
                 mutationObservers.add(subscriber)
                 // This is not very intuitive, but subscribing to a subscriber observes unsubscribes.
                 subscriber.add(Subscriptions.create { mutationObservers.remove(subscriber) })
             }
-        })
+        }
     }
     private val mutationObservers = CopyOnWriteArraySet<Subscriber<in Long>>()
     /** Must be called by subclasses when they mutate (but not just with the passage of time as per the "wall clock"). */

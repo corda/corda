@@ -38,12 +38,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
-import javax.annotation.concurrent.ThreadSafe
 import javax.management.ObjectName
 import kotlin.system.exitProcess
-
-@ThreadSafe
-private class SimpleClock(override val delegateClock: Clock) : CordaClock()
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
