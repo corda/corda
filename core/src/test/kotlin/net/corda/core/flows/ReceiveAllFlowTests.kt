@@ -13,7 +13,7 @@ import org.junit.Test
 class ReceiveMultipleFlowTests {
     @Test
     fun `receive all messages in parallel using map style`() {
-        network(3) { nodes, _ ->
+        network(3) { nodes ->
             val doubleValue = 5.0
             nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
             val stringValue = "Thriller"
@@ -30,7 +30,7 @@ class ReceiveMultipleFlowTests {
 
     @Test
     fun `receive all messages in parallel using list style`() {
-        network(3) { nodes, _ ->
+        network(3) { nodes ->
             val value1 = 5.0
             nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
             val value2 = 6.0

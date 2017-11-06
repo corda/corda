@@ -8,7 +8,6 @@ import net.corda.nodeapi.User
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -27,7 +26,6 @@ fun main(args: Array<String>) {
         val user = User("user1", "test", permissions = setOf(startFlow<CashIssueFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 startFlow<SellerFlow>()))
-        startNotaryNode(DUMMY_NOTARY.name, validating = false)
         startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser)
         startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser)
         startNode(providedName = BOC.name, rpcUsers = listOf(user))

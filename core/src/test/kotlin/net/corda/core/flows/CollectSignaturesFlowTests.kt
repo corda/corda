@@ -27,19 +27,18 @@ class CollectSignaturesFlowTests {
         private val cordappPackages = listOf("net.corda.testing.contracts")
     }
 
-    lateinit var mockNet: MockNetwork
-    lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
-    lateinit var bobNode: StartedNode<MockNetwork.MockNode>
-    lateinit var charlieNode: StartedNode<MockNetwork.MockNode>
-    lateinit var alice: Party
-    lateinit var bob: Party
-    lateinit var charlie: Party
-    lateinit var notary: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var charlieNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var alice: Party
+    private lateinit var bob: Party
+    private lateinit var charlie: Party
+    private lateinit var notary: Party
 
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
-        val notaryNode = mockNet.createNotaryNode()
         aliceNode = mockNet.createPartyNode(ALICE.name)
         bobNode = mockNet.createPartyNode(BOB.name)
         charlieNode = mockNet.createPartyNode(CHARLIE.name)
@@ -47,7 +46,7 @@ class CollectSignaturesFlowTests {
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
         charlie = charlieNode.info.singleIdentity()
-        notary = notaryNode.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After

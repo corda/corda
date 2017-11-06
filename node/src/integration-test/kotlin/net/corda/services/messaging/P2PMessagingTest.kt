@@ -21,6 +21,8 @@ import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.node.ClusterSpec
+import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.*
@@ -35,16 +37,14 @@ class P2PMessagingTest {
 
     @Test
     fun `communicating with a distributed service which we're part of`() {
-        driver(startNodesInProcess = true) {
-            val distributedService = startDistributedService()
+        startDriverWithDistributedService { distributedService ->
             assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, distributedService[0])
         }
     }
 
     @Test
     fun `distributed service requests are retried if one of the nodes in the cluster goes down without sending a response`() {
-        driver(startNodesInProcess = true) {
-            val distributedServiceNodes = startDistributedService()
+        startDriverWithDistributedService { distributedServiceNodes ->
             val alice = startAlice()
             val serviceAddress = alice.services.networkMapCache.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
@@ -77,8 +77,7 @@ class P2PMessagingTest {
 
     @Test
     fun `distributed service request retries are persisted across client node restarts`() {
-        driver(startNodesInProcess = true) {
-            val distributedServiceNodes = startDistributedService()
+        startDriverWithDistributedService { distributedServiceNodes ->
             val alice = startAlice()
             val serviceAddress = alice.services.networkMapCache.run {
                 val notaryParty = notaryIdentities.randomOrNull()!!
@@ -117,11 +116,10 @@ class P2PMessagingTest {
         }
     }
 
-    private fun DriverDSLExposedInterface.startDistributedService(): List<StartedNode<Node>> {
-        return startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2)
-                .getOrThrow()
-                .second
-                .map { (it as NodeHandle.InProcess).node }
+    private fun startDriverWithDistributedService(dsl: DriverDSLExposedInterface.(List<StartedNode<Node>>) -> Unit) {
+        driver(startNodesInProcess = true, notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))) {
+            dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as NodeHandle.InProcess).node })
+        }
     }
 
     private fun DriverDSLExposedInterface.startAlice(): StartedNode<Node> {

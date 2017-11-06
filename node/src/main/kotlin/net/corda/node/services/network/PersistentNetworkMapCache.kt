@@ -31,6 +31,7 @@ import java.security.PublicKey
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashMap
+import kotlin.collections.HashSet
 
 class NetworkMapCacheImpl(
         networkMapCacheBase: NetworkMapCacheBaseInternal,
@@ -85,7 +86,7 @@ open class PersistentNetworkMapCache(
     override val loadDBSuccess get() = _loadDBSuccess
 
     override val notaryIdentities: List<Party> = notaries.map { it.identity }
-    private val validatingNotaries = notaries.mapNotNull { if (it.validating) it.identity else null }
+    private val validatingNotaries = notaries.mapNotNullTo(HashSet()) { if (it.validating) it.identity else null }
 
     private val nodeInfoSerializer = NodeInfoWatcher(configuration.baseDirectory,
             configuration.additionalNodeInfoPollingFrequencyMsec)

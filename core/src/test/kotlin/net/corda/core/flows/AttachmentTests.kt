@@ -110,11 +110,11 @@ class AttachmentTests {
     @Test
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val aliceNode = mockNet.createNotaryNode(MockNodeParameters(legalName = ALICE.name), nodeFactory = { args ->
+        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE.name), nodeFactory = { args ->
             object : MockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
             }
-        }, validating = false)
+        })
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name))
         mockNet.runNetwork()
         val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)

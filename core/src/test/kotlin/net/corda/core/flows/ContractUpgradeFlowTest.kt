@@ -41,14 +41,13 @@ class ContractUpgradeFlowTest {
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
-        val notaryNode = mockNet.createNotaryNode()
         aliceNode = mockNet.createPartyNode(ALICE.name)
         bobNode = mockNet.createPartyNode(BOB.name)
 
         // Process registration
         mockNet.runNetwork()
 
-        notary = notaryNode.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After

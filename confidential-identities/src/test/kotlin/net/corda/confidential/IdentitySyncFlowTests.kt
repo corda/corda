@@ -14,8 +14,11 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.CHARLIE_NAME
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -24,12 +27,16 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class IdentitySyncFlowTests {
-    lateinit var mockNet: MockNetwork
+    private lateinit var mockNet: MockNetwork
 
     @Before
     fun before() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = MockNetwork(networkSendManuallyPumped = false, threadPerNode = true, cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        mockNet = MockNetwork(
+                networkSendManuallyPumped = false,
+                threadPerNode = true,
+                cordappPackages = listOf("net.corda.finance.contracts.asset")
+        )
     }
 
     @After
@@ -40,12 +47,11 @@ class IdentitySyncFlowTests {
     @Test
     fun `sync confidential identities`() {
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val alice: Party = aliceNode.info.singleIdentity()
         val bob: Party = bobNode.info.singleIdentity()
-        val notary = notaryNode.services.getDefaultNotary()
+        val notary = mockNet.defaultNotaryIdentity
         bobNode.internals.registerInitiatedFlow(Receive::class.java)
 
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
@@ -70,14 +76,13 @@ class IdentitySyncFlowTests {
     @Test
     fun `don't offer other's identities confidential identities`() {
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
         val alice: Party = aliceNode.info.singleIdentity()
         val bob: Party = bobNode.info.singleIdentity()
         val charlie: Party = charlieNode.info.singleIdentity()
-        val notary = notaryNode.services.getDefaultNotary()
+        val notary = mockNet.defaultNotaryIdentity
         bobNode.internals.registerInitiatedFlow(Receive::class.java)
 
         // Charlie issues then pays some cash to a new confidential identity
@@ -105,7 +110,7 @@ class IdentitySyncFlowTests {
      * Very lightweight wrapping flow to trigger the counterparty flow that receives the identities.
      */
     @InitiatingFlow
-    class Initiator(val otherSide: Party, val tx: WireTransaction): FlowLogic<Boolean>() {
+    class Initiator(private val otherSide: Party, private val tx: WireTransaction): FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
             val session = initiateFlow(otherSide)
@@ -116,7 +121,7 @@ class IdentitySyncFlowTests {
     }
 
     @InitiatedBy(IdentitySyncFlowTests.Initiator::class)
-    class Receive(val otherSideSession: FlowSession): FlowLogic<Unit>() {
+    class Receive(private val otherSideSession: FlowSession): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             subFlow(IdentitySyncFlow.Receive(otherSideSession))

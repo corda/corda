@@ -120,7 +120,7 @@ interface NetworkMapCacheBase {
 
     /**
      * Returns true if and only if the given [Party] is validating notary. For every party that is a validating notary,
-     * [isNotary] is only true.
+     * [isNotary] is also true.
      * @see isNotary
      */
     fun isValidatingNotary(party: Party): Boolean
