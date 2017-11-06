@@ -6,7 +6,6 @@ import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
-import org.bouncycastle.asn1.x500.X500Name
 
 sealed class ConnectionDirection {
     data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
@@ -20,17 +19,18 @@ class ArtemisTcpTransport {
     companion object {
         const val VERIFY_PEER_LEGAL_NAME = "corda.verifyPeerCommonName"
 
-        // Restrict enabled Cipher Suites to AES and GCM as minimum for the bulk cipher.
-        // Our self-generated certificates all use ECDSA for handshakes, but we allow classical RSA certificates to work
-        // in case we need to use keytool certificates in some demos
+        // Restrict enabled TLS cipher suites to:
+        // AES128 using Galois/Counter Mode (GCM) for the block cipher being used to encrypt the message stream.
+        // SHA256 as message authentication algorithm.
+        // ECDHE as key exchange algorithm. DHE is also supported if one wants to completely avoid the use of ECC for TLS.
+        // ECDSA and RSA for digital signatures. Our self-generated certificates all use ECDSA for handshakes,
+        // but we allow classical RSA certificates to work in case:
+        // a) we need to use keytool certificates in some demos,
+        // b) we use cloud providers or HSMs that do not support ECC.
         private val CIPHER_SUITES = listOf(
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256"
+                "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
         )
 
         fun tcpTransport(
@@ -40,14 +40,14 @@ class ArtemisTcpTransport {
                 enableSSL: Boolean = true
         ): TransportConfiguration {
             val options = mutableMapOf<String, Any?>(
-                    // Basic TCP target details
+                    // Basic TCP target details.
                     TransportConstants.HOST_PROP_NAME to hostAndPort.host,
                     TransportConstants.PORT_PROP_NAME to hostAndPort.port,
 
                     // Turn on AMQP support, which needs the protocol jar on the classpath.
-                    // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop
-                    // It does not use AMQP messages for its own messages e.g. topology and heartbeats
-                    // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications
+                    // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop.
+                    // It does not use AMQP messages for its own messages e.g. topology and heartbeats.
+                    // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications.
                     TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP"
             )
 
@@ -56,11 +56,11 @@ class ArtemisTcpTransport {
                 config.trustStoreFile.requireOnDefaultFileSystem()
                 val tlsOptions = mapOf(
                         // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
-                        // and AES encryption
+                        // and AES encryption.
                         TransportConstants.SSL_ENABLED_PROP_NAME to true,
                         TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
                         TransportConstants.KEYSTORE_PATH_PROP_NAME to config.sslKeystore,
-                        TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
+                        TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password.
                         TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
                         TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStoreFile,
                         TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
