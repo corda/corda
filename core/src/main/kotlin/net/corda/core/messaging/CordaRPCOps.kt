@@ -196,6 +196,10 @@ interface CordaRPCOps : RPCOps {
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
 
+    /** Returns and [Observable] object with future states of the node. */
+    @RPCReturnsObservables
+    fun nodeStateObservable(): Observable<String>
+
     /**
      * Returns network's notary identities, assuming this will not change while the node is running.
      *

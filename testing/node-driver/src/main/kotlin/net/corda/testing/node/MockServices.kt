@@ -161,6 +161,8 @@ open class MockServices(
             val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
             return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
         }
+    override val myNodeStateObservable: Observable<String>
+        get() = PublishSubject.create<String>()
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     val mockCordappProvider = MockCordappProvider(cordappLoader, attachments)
     override val cordappProvider: CordappProvider get() = mockCordappProvider
