@@ -7,9 +7,8 @@ import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.`issued by`
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
-import net.corda.testing.chooseIdentity
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.BOC
+import net.corda.testing.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -20,19 +19,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashIssueFlowTests {
-    private lateinit var mockNet : MockNetwork
+    private lateinit var mockNet: MockNetwork
     private lateinit var bankOfCordaNode: StartedNode<MockNode>
     private lateinit var bankOfCorda: Party
-    private lateinit var notaryNode: StartedNode<MockNode>
     private lateinit var notary: Party
 
     @Before
     fun start() {
         mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
-        notaryNode = mockNet.createNotaryNode()
         bankOfCordaNode = mockNet.createPartyNode(BOC.name)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
-        notary = notaryNode.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
         mockNet.runNetwork()
     }
 
