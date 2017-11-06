@@ -10,6 +10,7 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
@@ -104,13 +105,16 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
     override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }
 
+    /** Same as notifyAll but with a single transaction. */
+    fun notify(statesToRecord: StatesToRecord, tx: CoreTransaction) = notifyAll(statesToRecord, listOf(tx))
+
     /**
      * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
      * This is required because the batches get aggregated into single updates, and we want to be able to
      * indicate whether an update consists entirely of regular or notary change transactions, which may require
      * different processing logic.
      */
-    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
+    fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
         if (statesToRecord == StatesToRecord.NONE)
             return
 
@@ -140,9 +144,6 @@ class NodeVaultService(private val services: ServiceHub, private val hibernateCo
         if (regularTxns.isNotEmpty()) notifyRegular(regularTxns.toList(), statesToRecord)
         if (notaryChangeTxns.isNotEmpty()) notifyNotaryChange(notaryChangeTxns.toList(), statesToRecord)
     }
-
-    /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: CoreTransaction) = notifyAll(listOf(tx))
 
     private fun notifyRegular(txns: Iterable<WireTransaction>, statesToRecord: StatesToRecord) {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {

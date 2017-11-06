@@ -6,7 +6,6 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.PageSpecification
@@ -29,6 +28,7 @@ import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -590,7 +590,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
         txb.addCommand(Cash.Commands.Move(), MEGA_CORP_PUBKEY)
         val wtx = txb.toWireTransaction(services)
         database.transaction {
-            vaultService.notify(StatesToRecord.ONLY_RELEVANT, wtx)
+            (vaultService as NodeVaultService).notify(StatesToRecord.ONLY_RELEVANT, wtx)
         }
 
         // Check that it was ignored as irrelevant.
@@ -598,7 +598,7 @@ class NodeVaultServiceTest : TestDependencyInjectionBase() {
 
         // Now try again and check it was accepted.
         database.transaction {
-            vaultService.notify(StatesToRecord.ALL_VISIBLE, wtx)
+            (vaultService as NodeVaultService).notify(StatesToRecord.ALL_VISIBLE, wtx)
         }
         assertEquals(currentCashStates + 1, countCash())
     }
