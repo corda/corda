@@ -51,6 +51,7 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -216,7 +217,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     open class MockNode(args: MockNodeArgs) : AbstractNode(
             args.config,
-            TestClock(),
+            TestClock(Clock.systemUTC()),
             MOCK_VERSION_INFO,
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch
