@@ -41,7 +41,7 @@ The syntax for adding an RPC user is:
             ...
         ]
 
-Currently, users need special permissions to start flows via RPC. These permissions are added as follows:
+Users need permissions to invoke any RPC call. By default, nothing is allowed. These permissions are specified as follows:
 
 .. container:: codeset
 
@@ -61,6 +61,15 @@ Currently, users need special permissions to start flows via RPC. These permissi
 
 .. note:: Currently, the node's web server has super-user access, meaning that it can run any RPC operation without
    logging in. This will be changed in a future release.
+
+Permissions Syntax
+^^^^^^^^^^^^^^^^^^
+
+Fine grained permissions allow a user to invoke a specific RPC operation, or to start a specific flow. The syntax is:
+
+- to start a specific flow: ``StartFlow.<fully qualified flow name>`` e.g., ``StartFlow.net.corda.flows.ExampleFlow1``.
+- to invoke a RPC operation: ``InvokeRpc.<rpc method name>`` e.g., ``InvokeRpc.nodeInfo``.
+.. note:: Permission ``InvokeRpc.startFlow`` allows a user to initiate all flows.
 
 Observables
 -----------

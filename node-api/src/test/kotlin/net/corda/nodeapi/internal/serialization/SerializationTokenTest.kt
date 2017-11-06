@@ -5,6 +5,10 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
+import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.rigorousMock
 import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat

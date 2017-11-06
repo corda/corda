@@ -10,7 +10,8 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -18,11 +19,11 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class WorkflowTransactionBuildTutorialTest {
-    lateinit var mockNet: MockNetwork
-    lateinit var aliceServices: StartedNodeServices
-    lateinit var bobServices: StartedNodeServices
-    lateinit var alice: Party
-    lateinit var bob: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var aliceServices: StartedNodeServices
+    private lateinit var bobServices: StartedNodeServices
+    private lateinit var alice: Party
+    private lateinit var bob: Party
 
     // Helper method to locate the latest Vault version of a LinearState
     private inline fun <reified T : LinearState> ServiceHub.latest(ref: UniqueIdentifier): StateAndRef<T> {
@@ -33,8 +34,6 @@ class WorkflowTransactionBuildTutorialTest {
     @Before
     fun setup() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.docs"))
-        // While we don't use the notary, we need there to be one on the network
-        mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         aliceNode.internals.registerInitiatedFlow(RecordCompletionFlow::class.java)

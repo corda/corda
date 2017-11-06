@@ -17,7 +17,6 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.utilities.currentDBSession
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNodeArgs
 import net.corda.testing.node.MockNodeParameters
 import org.junit.After
 import org.junit.Before
@@ -156,11 +155,9 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
-        client = mockNet.createNode(MockNodeParameters(client.internals.id), object : MockNetwork.Factory<MockNetwork.MockNode> {
-            override fun create(args: MockNodeArgs): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(args) {
-                    override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
-                }
+        client = mockNet.createNode(MockNodeParameters(client.internals.id), { args ->
+            object : MockNetwork.MockNode(args) {
+                override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
             }
         })
         return (client.smm.allStateMachines[0].stateMachine.resultFuture.apply { mockNet.runNetwork() }.getOrThrow() as ClientResult).attachmentContent

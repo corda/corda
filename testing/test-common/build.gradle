@@ -1,6 +1,10 @@
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
+dependencies {
+    compile project(':core')
+}
+
 jar {
     baseName 'corda-test-common'
 }

@@ -31,7 +31,6 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.allOf
 
-
 /**
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
@@ -133,14 +132,12 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResourceAsStream("net/corda/irs/web/simulation/trade.json")
                 .reader()
                 .readText()
-                .replace("oracleXXX", RatesOracleFactory.RATES_SERVICE_NAME.toString()))
+                .replace("oracleXXX", RatesOracleNode.RATES_SERVICE_NAME.toString()))
         irs.fixedLeg.fixedRatePayer = node1.info.chooseIdentity()
         irs.floatingLeg.floatingRatePayer = node2.info.chooseIdentity()
 
         node1.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
         node2.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
-
-        val notaryId = node1.rpcOps.notaryIdentities().first()
 
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
@@ -166,7 +163,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val instigator = StartDealFlow(
                 node2.info.chooseIdentity(),
-                AutoOffer(notaryId, irs)) // TODO Pass notary as parameter to Simulation.
+                AutoOffer(mockNet.defaultNotaryIdentity, irs)) // TODO Pass notary as parameter to Simulation.
         val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
         return allOf(instigatorTxFuture.toCompletableFuture(), acceptorTxFuture).thenCompose { instigatorTxFuture.toCompletableFuture() }

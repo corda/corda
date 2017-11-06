@@ -5,6 +5,11 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.nodeapi.internal.serialization.kryo.RPCKryo
 import java.util.concurrent.atomic.AtomicBoolean
 
 class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {

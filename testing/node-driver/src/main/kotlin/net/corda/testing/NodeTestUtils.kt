@@ -61,7 +61,6 @@ fun testNodeConfiguration(
     return rigorousMock<MockableNodeConfiguration>().also {
         doReturn(baseDirectory).whenever(it).baseDirectory
         doReturn(myLegalName).whenever(it).myLegalName
-        doReturn(1).whenever(it).minimumPlatformVersion
         doReturn("cordacadevpass").whenever(it).keyStorePassword
         doReturn("trustpass").whenever(it).trustStorePassword
         doReturn(emptyList<User>()).whenever(it).rpcUsers

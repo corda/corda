@@ -18,7 +18,6 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Test
 import java.nio.file.Files
 

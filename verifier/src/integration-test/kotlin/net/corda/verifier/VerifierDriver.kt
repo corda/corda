@@ -6,6 +6,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -18,6 +19,7 @@ import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.driver.*
+import net.corda.testing.node.NotarySpec
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -76,6 +78,7 @@ fun <A> verifierDriver(
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
+        notarySpecs: List<NotarySpec> = emptyList(),
         dsl: VerifierExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -87,7 +90,8 @@ fun <A> verifierDriver(
                         useTestClock = useTestClock,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
-                        extraCordappPackagesToScan = extraCordappPackagesToScan
+                        extraCordappPackagesToScan = extraCordappPackagesToScan,
+                        notarySpecs = notarySpecs
                 )
         ),
         coerce = { it },
@@ -248,7 +252,7 @@ data class VerifierDriverDSL(
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val processFuture = driverDSL.executorService.fork {
             val verifierName = CordaX500Name(organisation = "Verifier$id", locality = "London", country = "GB")
-            val baseDirectory = driverDSL.driverDirectory / verifierName.organisation
+            val baseDirectory = (driverDSL.driverDirectory / verifierName.organisation).createDirectories()
             val config = createConfiguration(baseDirectory, address)
             val configFilename = "verifier.conf"
             writeConfig(baseDirectory, configFilename, config)

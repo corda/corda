@@ -2,10 +2,14 @@ package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.testing.common.internal.NetworkParametersCopier
+import net.corda.testing.common.internal.testNetworkParameters
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -15,15 +19,13 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 
 class NodeProcess(
-        val config: NodeConfig,
-        val nodeDir: Path,
+        private val config: NodeConfig,
+        private val nodeDir: Path,
         private val node: Process,
         private val client: CordaRPCClient
 ) : AutoCloseable {
     private companion object {
         val log = loggerFor<NodeProcess>()
-        val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
-        val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
     }
 
     fun connect(): CordaRPCConnection {
@@ -43,13 +45,32 @@ class NodeProcess(
         (nodeDir / "artemis").toFile().deleteRecursively()
     }
 
-    class Factory(val buildDirectory: Path = Paths.get("build"),
-                  val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())) {
-        val nodesDirectory = buildDirectory / formatter.format(Instant.now())
+    class Factory(
+            private val buildDirectory: Path = Paths.get("build"),
+            private val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())
+    ) {
+        private companion object {
+            val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
+            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
+            val defaultNetworkParameters = run {
+                // TODO withTestSerialization is in test-utils, which we don't have access to
+                KryoClientSerializationScheme.initialiseSerialization()
+                // There are no notaries in the network parameters for smoke test nodes. If this is required then we would
+                // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
+                NetworkParametersCopier(testNetworkParameters(emptyList()))
+            }
 
-        init {
-            nodesDirectory.createDirectories()
+            init {
+                try {
+                    Class.forName("net.corda.node.Corda")
+                    throw Error("Smoke test has the node in its classpath. Please remove the offending dependency.")
+                } catch (e: ClassNotFoundException) {
+                    // If the class can't be found then we're good!
+                }
+            }
         }
+
+        private val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).createDirectories()
 
         fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
 
@@ -57,8 +78,8 @@ class NodeProcess(
             val nodeDir = baseDirectory(config).createDirectories()
             log.info("Node directory: {}", nodeDir)
 
-            val confFile = nodeDir.resolve("node.conf").toFile()
-            confFile.writeText(config.toText())
+            config.toText().byteInputStream().copyTo(nodeDir / "node.conf")
+            defaultNetworkParameters.install(nodeDir)
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))

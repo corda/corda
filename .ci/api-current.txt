@@ -2344,66 +2344,6 @@ public class net.corda.core.schemas.MappedSchema extends java.lang.Object
   public final int getVersion()
   @org.jetbrains.annotations.NotNull public String toString()
 ##
-public final class net.corda.core.schemas.NodeInfoSchema extends java.lang.Object
-  public static final net.corda.core.schemas.NodeInfoSchema INSTANCE
-##
-public final class net.corda.core.schemas.NodeInfoSchemaV1 extends net.corda.core.schemas.MappedSchema
-  public static final net.corda.core.schemas.NodeInfoSchemaV1 INSTANCE
-##
-@javax.persistence.Entity public static final class net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort extends java.lang.Object
-  public <init>()
-  public <init>(net.corda.core.schemas.NodeInfoSchemaV1$PKHostAndPort)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort copy(net.corda.core.schemas.NodeInfoSchemaV1$PKHostAndPort)
-  public boolean equals(Object)
-  public int hashCode()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.NetworkHostAndPort toHostAndPort()
-  public String toString()
-  public static final net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort$Companion Companion
-##
-public static final class net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$DBHostAndPort fromHostAndPort(net.corda.core.utilities.NetworkHostAndPort)
-##
-@javax.persistence.Entity @javax.persistence.Table public static final class net.corda.core.schemas.NodeInfoSchemaV1$DBPartyAndCertificate extends java.lang.Object
-  public <init>()
-  public <init>(String, String, byte[], boolean, Set)
-  public <init>(net.corda.core.identity.PartyAndCertificate, boolean)
-  @org.jetbrains.annotations.NotNull public final String component1()
-  @org.jetbrains.annotations.NotNull public final String component2()
-  @org.jetbrains.annotations.NotNull public final byte[] component3()
-  public final boolean component4()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$DBPartyAndCertificate copy(String, String, byte[], boolean, Set)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final String getName()
-  @org.jetbrains.annotations.NotNull public final String getOwningKeyHash()
-  @org.jetbrains.annotations.NotNull public final byte[] getPartyCertBinary()
-  public int hashCode()
-  public final boolean isMain()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.PartyAndCertificate toLegalIdentityAndCert()
-  public String toString()
-##
-@javax.persistence.Embeddable public static final class net.corda.core.schemas.NodeInfoSchemaV1$PKHostAndPort extends java.lang.Object implements java.io.Serializable
-  public <init>()
-  public <init>(String, Integer)
-  @org.jetbrains.annotations.Nullable public final String component1()
-  @org.jetbrains.annotations.Nullable public final Integer component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.NodeInfoSchemaV1$PKHostAndPort copy(String, Integer)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.Nullable public final String getHost()
-  @org.jetbrains.annotations.Nullable public final Integer getPort()
-  public int hashCode()
-  public String toString()
-##
-@javax.persistence.Entity @javax.persistence.Table public static final class net.corda.core.schemas.NodeInfoSchemaV1$PersistentNodeInfo extends java.lang.Object
-  public <init>()
-  public <init>(int, List, List, int, long)
-  @org.jetbrains.annotations.NotNull public final List getAddresses()
-  public final int getId()
-  @org.jetbrains.annotations.NotNull public final List getLegalIdentitiesAndCerts()
-  public final int getPlatformVersion()
-  public final long getSerial()
-  public final void setId(int)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NodeInfo toNodeInfo()
-##
 @javax.persistence.MappedSuperclass @net.corda.core.serialization.CordaSerializable public class net.corda.core.schemas.PersistentState extends java.lang.Object implements net.corda.core.schemas.StatePersistable
   public <init>()
   public <init>(net.corda.core.schemas.PersistentStateRef)

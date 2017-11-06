@@ -25,10 +25,6 @@ class InstallFactory : Controller() {
 
         val tempDir = Files.createTempDirectory(baseDir, ".node")
 
-        if (nodeConfig.isNetworkMap) {
-            log.info("Node '${nodeConfig.myLegalName}' is the network map")
-        }
-
         return InstallConfig(tempDir, NodeConfigWrapper(tempDir, nodeConfig))
     }
 }

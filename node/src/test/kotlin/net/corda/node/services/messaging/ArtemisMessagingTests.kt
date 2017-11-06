@@ -14,7 +14,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
@@ -40,29 +39,33 @@ import kotlin.test.assertNull
 
 //TODO This needs to be merged into P2PMessagingTest as that creates a more realistic environment
 class ArtemisMessagingTests {
+    companion object {
+        const val TOPIC = "platform.self"
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    val serverPort = freePort()
-    val rpcPort = freePort()
-    val topic = "platform.self"
-    val identity = generateKeyPair()
+    private val serverPort = freePort()
+    private val rpcPort = freePort()
+    private val identity = generateKeyPair()
 
-    lateinit var config: NodeConfiguration
-    lateinit var database: CordaPersistence
-    lateinit var userService: RPCUserService
-    lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
+    private lateinit var config: NodeConfiguration
+    private lateinit var database: CordaPersistence
+    private lateinit var userService: RPCUserService
+    private lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
 
-    var messagingClient: NodeMessagingClient? = null
-    var messagingServer: ArtemisMessagingServer? = null
+    private var messagingClient: NodeMessagingClient? = null
+    private var messagingServer: ArtemisMessagingServer? = null
 
-    lateinit var networkMapCache: NetworkMapCacheImpl
+    private lateinit var networkMapCache: NetworkMapCacheImpl
 
-    val rpcOps = object : RPCOps {
+    private val rpcOps = object : RPCOps {
         override val protocolVersion: Int get() = throw UnsupportedOperationException()
     }
 
@@ -76,7 +79,7 @@ class ArtemisMessagingTests {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
-        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config), rigorousMock())
+        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config, emptyList()), rigorousMock())
     }
 
     @After
@@ -130,7 +133,7 @@ class ArtemisMessagingTests {
         val receivedMessages = LinkedBlockingQueue<Message>()
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
-        val message = messagingClient.createMessage(topic, data = "first msg".toByteArray())
+        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -146,15 +149,9 @@ class ArtemisMessagingTests {
         val receivedMessages = LinkedBlockingQueue<Message>()
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
-        val message = messagingClient.createMessage(topic, data = "first msg".toByteArray())
+        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, data = "second msg".toByteArray())
-        messagingClient.send(networkMapMessage, messagingClient.myAddress)
-
-        val actual: Message = receivedMessages.take()
-        assertEquals("second msg", String(actual.data))
-        assertNull(receivedMessages.poll(200, MILLISECONDS))
         settableFuture.set(Unit)
         val firstActual: Message = receivedMessages.take()
         assertEquals("first msg", String(firstActual.data))
@@ -171,16 +168,9 @@ class ArtemisMessagingTests {
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
         for (iter in 1..iterations) {
-            val message = messagingClient.createMessage(topic, data = "first msg $iter".toByteArray())
+            val message = messagingClient.createMessage(TOPIC, data = "first msg $iter".toByteArray())
             messagingClient.send(message, messagingClient.myAddress)
         }
-
-        val networkMapMessage = messagingClient.createMessage(NetworkMapService.FETCH_TOPIC, data = "second msg".toByteArray())
-        messagingClient.send(networkMapMessage, messagingClient.myAddress)
-
-        val actual: Message = receivedMessages.take()
-        assertEquals("second msg", String(actual.data))
-        assertNull(receivedMessages.poll(200, MILLISECONDS))
 
         // Stop client and server and create afresh.
         messagingClient.stop()
@@ -205,10 +195,7 @@ class ArtemisMessagingTests {
 
         val messagingClient = createMessagingClient()
         startNodeMessagingClient()
-        messagingClient.addMessageHandler(topic) { message, _ ->
-            receivedMessages.add(message)
-        }
-        messagingClient.addMessageHandler(NetworkMapService.FETCH_TOPIC) { message, _ ->
+        messagingClient.addMessageHandler(TOPIC) { message, _ ->
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
@@ -225,7 +212,6 @@ class ArtemisMessagingTests {
                     identity.public,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
-                    networkMapRegistrationFuture,
                     MonitoringService(MetricRegistry())).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this

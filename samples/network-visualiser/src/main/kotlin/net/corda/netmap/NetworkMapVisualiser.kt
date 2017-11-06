@@ -15,7 +15,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.netmap.simulation.IRSSimulation
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.SessionConfirm
 import net.corda.node.services.statemachine.SessionEnd
 import net.corda.node.services.statemachine.SessionInit
@@ -343,8 +342,6 @@ class NetworkMapVisualiser : Application() {
     private fun transferIsInteresting(transfer: InMemoryMessagingNetwork.MessageTransfer): Boolean {
         // Loopback messages are boring.
         if (transfer.sender == transfer.recipients) return false
-        // Network map push acknowledgements are boring.
-        if (NetworkMapService.PUSH_ACK_TOPIC in transfer.message.topicSession.topic) return false
         val message = transfer.message.data.deserialize<Any>()
         return when (message) {
             is SessionEnd -> false

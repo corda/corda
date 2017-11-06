@@ -36,7 +36,6 @@ import net.corda.explorer.model.CordaView
 import net.corda.finance.utils.CityDatabase
 import net.corda.finance.utils.ScreenCoordinate
 import net.corda.finance.utils.WorldMapLocation
-import net.corda.nodeapi.internal.ServiceType
 import tornadofx.*
 
 class Network : CordaView() {
@@ -45,6 +44,7 @@ class Network : CordaView() {
     // Inject data.
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
     private val notaries by observableList(NetworkIdentityModel::notaryNodes)
+    private val notaryIdentities by observableList(NetworkIdentityModel::notaries)
     private val peers by observableList(NetworkIdentityModel::parties)
     private val transactions by observableList(TransactionDataModel::partiallyResolvedTransactions)
     var centralPeer: String? = null
@@ -103,7 +103,7 @@ class Network : CordaView() {
                     hgap = 5.0
                     vgap = 5.0
                     for (identity in identities) {
-                        val isNotary = identity.name.commonName?.let { ServiceType.parse(it).isNotary() } == true
+                        val isNotary = identity.party in notaryIdentities
                         row("${if (isNotary) "Notary " else ""}Public Key :") {
                             copyableLabel(SimpleObjectProperty(identity.owningKey.toBase58String()))
                         }

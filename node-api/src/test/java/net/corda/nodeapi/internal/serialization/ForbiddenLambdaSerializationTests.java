@@ -5,6 +5,8 @@ import net.corda.core.serialization.SerializationContext;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.nodeapi.internal.serialization.kryo.CordaClosureBlacklistSerializer;
+import net.corda.nodeapi.internal.serialization.kryo.KryoSerializationSchemeKt;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -31,7 +33,7 @@ public final class ForbiddenLambdaSerializationTests {
         EnumSet<SerializationContext.UseCase> contexts = EnumSet.complementOf(EnumSet.of(SerializationContext.UseCase.Checkpoint));
 
         contexts.forEach(ctx -> {
-            SerializationContext context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx);
+            SerializationContext context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx);
 
             String value = "Hey";
             Callable<String> target = (Callable<String> & Serializable) () -> value;
@@ -54,7 +56,7 @@ public final class ForbiddenLambdaSerializationTests {
         EnumSet<SerializationContext.UseCase> contexts = EnumSet.complementOf(EnumSet.of(SerializationContext.UseCase.Checkpoint));
 
         contexts.forEach(ctx -> {
-            SerializationContext context = new SerializationContextImpl(SerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx);
+            SerializationContext context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx);
 
             String value = "Hey";
             Callable<String> target = () -> value;

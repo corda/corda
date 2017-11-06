@@ -35,7 +35,6 @@ class ScheduledFlowTests {
     }
 
     lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
     lateinit var nodeA: StartedNode<MockNetwork.MockNode>
     lateinit var nodeB: StartedNode<MockNetwork.MockNode>
 
@@ -94,7 +93,6 @@ class ScheduledFlowTests {
     @Before
     fun setup() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
-        notaryNode = mockNet.createNotaryNode()
         val a = mockNet.createUnstartedNode()
         val b = mockNet.createUnstartedNode()
 

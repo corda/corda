@@ -7,6 +7,7 @@ import net.corda.node.services.statemachine.SessionData
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.Envelope
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.amqpSpecific
 import net.corda.testing.kryoSpecific
 import net.corda.testing.SerializationEnvironmentRule

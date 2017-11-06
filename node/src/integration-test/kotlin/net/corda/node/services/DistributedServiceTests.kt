@@ -11,65 +11,70 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
-import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.node.DriverBasedTest
+import net.corda.testing.node.ClusterSpec
+import net.corda.testing.node.NotarySpec
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import rx.Observable
 import java.util.*
-import kotlin.test.assertEquals
 
-class DistributedServiceTests : DriverBasedTest() {
-    lateinit var alice: NodeHandle
-    lateinit var notaries: List<NodeHandle.OutOfProcess>
-    lateinit var aliceProxy: CordaRPCOps
-    lateinit var raftNotaryIdentity: Party
-    lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
+class DistributedServiceTests {
+    private lateinit var alice: NodeHandle
+    private lateinit var notaryNodes: List<NodeHandle.OutOfProcess>
+    private lateinit var aliceProxy: CordaRPCOps
+    private lateinit var raftNotaryIdentity: Party
+    private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
 
-    override fun setup() = driver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
-        // Start Alice and 3 notaries in a RAFT cluster
-        val clusterSize = 3
+    private fun setup(testBlock: () -> Unit) {
         val testUser = User("test", "test", permissions = setOf(
-                startFlowPermission<CashIssueFlow>(),
-                startFlowPermission<CashPaymentFlow>())
-        )
-        val aliceFuture = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser))
-        val notariesFuture = startNotaryCluster(
-                DUMMY_NOTARY.name.copy(commonName = RaftValidatingNotaryService.id),
-                rpcUsers = listOf(testUser),
-                clusterSize = clusterSize
+                startFlow<CashIssueFlow>(),
+                startFlow<CashPaymentFlow>(),
+                invokeRpc(CordaRPCOps::nodeInfo),
+                invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
 
-        alice = aliceFuture.get()
-        val (notaryIdentity, notaryNodes) = notariesFuture.get()
-        raftNotaryIdentity = notaryIdentity
-        notaries = notaryNodes.map { it as NodeHandle.OutOfProcess }
+        driver(
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
+        {
+            alice = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser)).getOrThrow()
+            raftNotaryIdentity = defaultNotaryIdentity
+            notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as NodeHandle.OutOfProcess }
 
-        assertEquals(notaries.size, clusterSize)
-        // Check that each notary has different identity as a node.
-        assertEquals(notaries.size, notaries.map { it.nodeInfo.chooseIdentity() }.toSet().size)
-        // Connect to Alice and the notaries
-        fun connectRpc(node: NodeHandle): CordaRPCOps {
-            val client = node.rpcClientToNode()
-            return client.start("test", "test").proxy
+            assertThat(notaryNodes).hasSize(3)
+
+            for (notaryNode in notaryNodes) {
+                assertThat(notaryNode.nodeInfo.legalIdentities).contains(raftNotaryIdentity)
+            }
+
+            // Check that each notary has different identity as a node.
+            assertThat(notaryNodes.flatMap { it.nodeInfo.legalIdentities - raftNotaryIdentity }.toSet()).hasSameSizeAs(notaryNodes)
+
+            // Connect to Alice and the notaries
+            fun connectRpc(node: NodeHandle): CordaRPCOps {
+                val client = node.rpcClientToNode()
+                return client.start("test", "test").proxy
+            }
+            aliceProxy = connectRpc(alice)
+            val rpcClientsToNotaries = notaryNodes.map(::connectRpc)
+            notaryStateMachines = Observable.from(rpcClientsToNotaries.map { proxy ->
+                proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeInfo().chooseIdentity(), it) }
+            }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
+
+            testBlock()
         }
-        aliceProxy = connectRpc(alice)
-        val rpcClientsToNotaries = notaries.map(::connectRpc)
-        notaryStateMachines = Observable.from(rpcClientsToNotaries.map { proxy ->
-            proxy.stateMachinesFeed().updates.map { Pair(proxy.nodeInfo().chooseIdentity(), it) }
-        }).flatMap { it.onErrorResumeNext(Observable.empty()) }.bufferUntilSubscribed()
-
-        runTest()
     }
 
     // TODO Use a dummy distributed service rather than a Raft Notary Service as this test is only about Artemis' ability
     // to handle distributed services
     @Test
-    fun `requests are distributed evenly amongst the nodes`() {
+    fun `requests are distributed evenly amongst the nodes`() = setup {
         // Issue 100 pounds, then pay ourselves 50x2 pounds
         issueCash(100.POUNDS)
 
@@ -97,7 +102,7 @@ class DistributedServiceTests : DriverBasedTest() {
 
     // TODO This should be in RaftNotaryServiceTests
     @Test
-    fun `cluster survives if a notary is killed`() {
+    fun `cluster survives if a notary is killed`() = setup {
         // Issue 100 pounds, then pay ourselves 10x5 pounds
         issueCash(100.POUNDS)
 
@@ -105,8 +110,8 @@ class DistributedServiceTests : DriverBasedTest() {
             paySelf(5.POUNDS)
         }
 
-        // Now kill a notary
-        with(notaries[0].process) {
+        // Now kill a notary node
+        with(notaryNodes[0].process) {
             destroy()
             waitFor()
         }

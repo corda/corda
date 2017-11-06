@@ -22,7 +22,6 @@ data class NodeConfig(
         /** This is not used by the node but by the webserver which looks at node.conf. */
         val webAddress: NetworkHostAndPort,
         val notary: NotaryService?,
-        val networkMapService: NetworkMapConfig?,
         val h2port: Int,
         val rpcUsers: List<User> = listOf(defaultUser),
         /** This is an extra config used by the Cash app. */
@@ -39,15 +38,8 @@ data class NodeConfig(
     @Suppress("unused")
     private val useTestClock = true
 
-    val isNetworkMap: Boolean get() = networkMapService == null
-
     fun toText(): String = toConfig().root().render(renderOptions)
 }
-
-/**
- * This is a mirror of NetworkMapInfo.
- */
-data class NetworkMapConfig(val legalName: CordaX500Name, val address: NetworkHostAndPort)
 
 /**
  * This is a subset of NotaryConfig. It implements [ExtraService] to avoid unnecessary copying.

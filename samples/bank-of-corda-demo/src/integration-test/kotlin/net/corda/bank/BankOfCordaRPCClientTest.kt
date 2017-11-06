@@ -1,5 +1,6 @@
 package net.corda.bank
 
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
@@ -7,7 +8,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -16,13 +18,19 @@ import org.junit.Test
 class BankOfCordaRPCClientTest {
     @Test
     fun `issuer flow via RPC`() {
-        driver(extraCordappPackagesToScan = listOf("net.corda.finance"), dsl = {
+        val commonPermissions = setOf(
+                invokeRpc("vaultTrackByCriteria"),
+                invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
+                invokeRpc(CordaRPCOps::notaryIdentities)
+        )
+        driver(extraCordappPackagesToScan = listOf("net.corda.finance"), isDebug = true) {
             val bocManager = User("bocManager", "password1", permissions = setOf(
-                    startFlowPermission<CashIssueAndPaymentFlow>()))
-            val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
-            val nodeBankOfCordaFuture = startNotaryNode(BOC.name, rpcUsers = listOf(bocManager), validating = false)
-            val nodeBigCorporationFuture = startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
-            val (nodeBankOfCorda, nodeBigCorporation) = listOf(nodeBankOfCordaFuture, nodeBigCorporationFuture).map { it.getOrThrow() }
+                    startFlow<CashIssueAndPaymentFlow>()) + commonPermissions)
+            val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet<String>() + commonPermissions)
+            val (nodeBankOfCorda, nodeBigCorporation) = listOf(
+                    startNode(providedName = BOC.name, rpcUsers = listOf(bocManager)),
+                    startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
+            ).map { it.getOrThrow() }
 
             // Bank of Corda RPC Client
             val bocClient = nodeBankOfCorda.rpcClientToNode()
@@ -31,8 +39,6 @@ class BankOfCordaRPCClientTest {
             // Big Corporation RPC Client
             val bigCorpClient = nodeBigCorporation.rpcClientToNode()
             val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
-            bocProxy.waitUntilNetworkReady().getOrThrow()
-            bigCorpProxy.waitUntilNetworkReady().getOrThrow()
 
             // Register for Bank of Corda Vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
@@ -45,12 +51,11 @@ class BankOfCordaRPCClientTest {
 
             // Kick-off actual Issuer Flow
             val anonymous = true
-            val notary = bocProxy.notaryIdentities().first()
             bocProxy.startFlow(::CashIssueAndPaymentFlow,
                     1000.DOLLARS, BIG_CORP_PARTY_REF,
                     bigCorporation,
                     anonymous,
-                    notary).returnValue.getOrThrow()
+                    defaultNotaryIdentity).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {
@@ -78,6 +83,6 @@ class BankOfCordaRPCClientTest {
                         }
                 )
             }
-        }, isDebug = true)
+        }
     }
 }

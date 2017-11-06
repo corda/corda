@@ -3,7 +3,6 @@ package net.corda.demobench.model
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.User
-import net.corda.testing.DUMMY_NOTARY
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -22,6 +21,22 @@ class NodeControllerTest {
         data.legalName.value = node1Name
         assertNotNull(controller.validate(data))
         assertNull(controller.validate(data))
+    }
+
+    @Test
+    fun `register notary`() {
+        assertFalse(controller.hasNotary())
+        val config = createConfig(organisation = "Name", notary = NotaryService(false))
+        controller.register(config)
+        assertTrue(controller.hasNotary())
+    }
+
+    @Test
+    fun `register non notary`() {
+        assertFalse(controller.hasNotary())
+        val config = createConfig(organisation = "Name")
+        controller.register(config)
+        assertFalse(controller.hasNotary())
     }
 
     @Test
@@ -49,27 +64,15 @@ class NodeControllerTest {
     }
 
     @Test
-    fun `test first validated node becomes network map`() {
-        val data = NodeData()
-        data.legalName.value = node1Name
-        data.p2pPort.value = 10000
-
-        assertFalse(controller.hasNetworkMap())
-        controller.validate(data)
-        assertTrue(controller.hasNetworkMap())
-    }
-
-    @Test
     fun `test register unique nodes`() {
-        val config = createConfig(commonName = organisation2Name)
+        val config = createConfig(organisation = organisation2Name)
         assertTrue(controller.register(config))
         assertFalse(controller.register(config))
     }
 
     @Test
     fun `test unique key after register`() {
-        val config = createConfig(commonName = organisation2Name)
-
+        val config = createConfig(organisation = organisation2Name)
         assertFalse(controller.keyExists("organisation2"))
         controller.register(config)
         assertTrue(controller.keyExists("organisation2"))
@@ -77,8 +80,7 @@ class NodeControllerTest {
 
     @Test
     fun `test matching name after register`() {
-        val config = createConfig(commonName = organisation2Name)
-
+        val config = createConfig(organisation = organisation2Name)
         assertFalse(controller.nameExists("Organisation 2"))
         assertFalse(controller.nameExists("Organisation2"))
         assertFalse(controller.nameExists("organisation 2"))
@@ -86,28 +88,6 @@ class NodeControllerTest {
         assertTrue(controller.nameExists("Organisation 2"))
         assertTrue(controller.nameExists("Organisation2"))
         assertTrue(controller.nameExists("organisation 2"))
-    }
-
-    @Test
-    fun `test register network map node`() {
-        val config = createConfig(commonName = "Organisation is Network Map")
-        assertTrue(config.nodeConfig.isNetworkMap)
-
-        assertFalse(controller.hasNetworkMap())
-        controller.register(config)
-        assertTrue(controller.hasNetworkMap())
-    }
-
-    @Test
-    fun `test register non-network-map node`() {
-        val config = createConfig(
-                commonName = "Organisation is not Network Map",
-                networkMap = NetworkMapConfig(DUMMY_NOTARY.name, localPort(10000)))
-        assertFalse(config.nodeConfig.isNetworkMap)
-
-        assertFalse(controller.hasNetworkMap())
-        controller.register(config)
-        assertFalse(controller.hasNetworkMap())
     }
 
     @Test
@@ -156,7 +136,7 @@ class NodeControllerTest {
 
     @Test
     fun `dispose node`() {
-        val config = createConfig(commonName = "MyName")
+        val config = createConfig(organisation = "MyName")
         controller.register(config)
 
         assertEquals(NodeState.STARTING, config.state)
@@ -167,18 +147,17 @@ class NodeControllerTest {
     }
 
     private fun createConfig(
-            commonName: String = "Unknown",
+            organisation: String = "Unknown",
             p2pPort: Int = 0,
             rpcPort: Int = 0,
             webPort: Int = 0,
             h2port: Int = 0,
             notary: NotaryService? = null,
-            networkMap: NetworkMapConfig? = null,
             users: List<User> = listOf(user("guest"))
     ): NodeConfigWrapper {
         val nodeConfig = NodeConfig(
                 myLegalName = CordaX500Name(
-                        organisation = commonName,
+                        organisation = organisation,
                         locality = "New York",
                         country = "US"
                 ),
@@ -187,7 +166,6 @@ class NodeControllerTest {
                 webAddress = localPort(webPort),
                 h2port = h2port,
                 notary = notary,
-                networkMapService = networkMap,
                 rpcUsers = users
         )
         return NodeConfigWrapper(baseDir, nodeConfig)

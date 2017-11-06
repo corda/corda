@@ -114,7 +114,7 @@ class NodeTabView : Fragment() {
 
                 fieldset("Additional configuration") {
                     styleClass.addAll("services-panel")
-                    val extraServices = if (nodeController.hasNetworkMap()) {
+                    val extraServices = if (nodeController.hasNotary()) {
                         listOf(USD, GBP, CHF, EUR).map { CurrencyIssuer(it) }
                     } else {
                         listOf(NotaryService(true), NotaryService(false))
@@ -123,7 +123,7 @@ class NodeTabView : Fragment() {
                     val servicesList = CheckListView(extraServices.observable()).apply {
                         vboxConstraints { vGrow = Priority.ALWAYS }
                         model.item.extraServices.set(checkModel.checkedItems)
-                        if (!nodeController.hasNetworkMap()) {
+                        if (!nodeController.hasNotary()) {
                             checkModel.check(0)
                             checkModel.checkedItems.addListener(ListChangeListener { change ->
                                 while (change.next()) {

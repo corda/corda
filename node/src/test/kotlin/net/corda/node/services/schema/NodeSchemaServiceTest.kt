@@ -43,9 +43,7 @@ class NodeSchemaServiceTest {
     @Test
     fun `auto scanning of custom schemas for testing with Driver`() {
         driver(startNodesInProcess = true) {
-            val node = startNode()
-            val nodeHandle = node.getOrThrow()
-            val result = nodeHandle.rpc.startFlow(::MappedSchemasFlow)
+            val result = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
             val mappedSchemas = result.returnValue.getOrThrow()
             assertTrue(mappedSchemas.contains(TestSchema.name))
         }
@@ -54,11 +52,12 @@ class NodeSchemaServiceTest {
     @Test
     fun `custom schemas are loaded eagerly`() {
         val expected = setOf("PARENTS", "CHILDREN")
-        assertEquals<Set<*>>(expected, driver {
-            (startNode(startInSameProcess = true).getOrThrow() as NodeHandle.InProcess).node.database.transaction {
+        val tables = driver(startNodesInProcess = true) {
+            (defaultNotaryNode.getOrThrow() as NodeHandle.InProcess).node.database.transaction {
                 session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
             }
-        }.toMutableSet().apply { retainAll(expected) })
+        }
+        assertEquals<Set<*>>(expected, tables.toMutableSet().apply { retainAll(expected) })
     }
 
     @StartableByRPC
