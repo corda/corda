@@ -6,8 +6,8 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.messaging.rpcContext
 import net.corda.node.services.messaging.requirePermission
 import net.corda.nodeapi.User
-import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.rpcDriver
+import net.corda.testing.internal.RPCDriverDSLInternalInterface
+import net.corda.testing.internal.rpcDriver
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -38,7 +38,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
     /**
      * Create an RPC proxy for the given user.
      */
-    private fun RPCDriverExposedDSLInterface.testProxyFor(rpcUser: User) = testProxy<TestOps>(TestOpsImpl(), rpcUser).ops
+    private fun RPCDriverDSLInternalInterface.testProxyFor(rpcUser: User) = testProxy<TestOps>(TestOpsImpl(), rpcUser).ops
 
     private fun userOf(name: String, permissions: Set<String>) = User(name, "password", permissions)
 

@@ -135,10 +135,8 @@ data class VerificationRequestorHandle(
 }
 
 
-data class VerifierDriverDSL(
-        val driverDSL: DriverDSL
-) : DriverDSLInternalInterface by driverDSL, VerifierInternalDSLInterface {
-    val verifierCount = AtomicInteger(0)
+data class VerifierDriverDSL(private val driverDSL: DriverDSL) : DriverDSLInternalInterface by driverDSL, VerifierInternalDSLInterface {
+    private val verifierCount = AtomicInteger(0)
 
     companion object {
         private val log = loggerFor<VerifierDriverDSL>()

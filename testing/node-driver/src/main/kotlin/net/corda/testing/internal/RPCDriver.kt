@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.testing.internal
 
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
@@ -50,7 +50,7 @@ import java.nio.file.Paths
 import java.util.*
 import javax.security.cert.X509Certificate
 
-interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
+interface RPCDriverDSLInternalInterface : DriverDSLInternalInterface {
     /**
      * Starts an In-VM RPC server. Note that only a single one may be started.
      *
@@ -182,26 +182,24 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
     ): RpcServerHandle
 }
 
-inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startInVmRpcClient(
+inline fun <reified I : RPCOps> RPCDriverDSLInternalInterface.startInVmRpcClient(
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
         configuration: RPCClientConfiguration = RPCClientConfiguration.default
 ) = startInVmRpcClient(I::class.java, username, password, configuration)
 
-inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRandomRpcClient(
+inline fun <reified I : RPCOps> RPCDriverDSLInternalInterface.startRandomRpcClient(
         hostAndPort: NetworkHostAndPort,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password
 ) = startRandomRpcClient(I::class.java, hostAndPort, username, password)
 
-inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRpcClient(
+inline fun <reified I : RPCOps> RPCDriverDSLInternalInterface.startRpcClient(
         rpcAddress: NetworkHostAndPort,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
         configuration: RPCClientConfiguration = RPCClientConfiguration.default
 ) = startRpcClient(I::class.java, rpcAddress, username, password, configuration)
-
-interface RPCDriverInternalDSLInterface : DriverDSLInternalInterface, RPCDriverExposedDSLInterface
 
 data class RpcBrokerHandle(
         val hostAndPort: NetworkHostAndPort?,
@@ -232,8 +230,8 @@ fun <A> rpcDriver(
         startNodesInProcess: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
-        dsl: RPCDriverExposedDSLInterface.() -> A
-) = genericDriver(
+        dsl: RPCDriverDSLInternalInterface.() -> A
+): A = genericDriver(
         driverDsl = RPCDriverDSL(
                 DriverDSL(
                         portAllocation = portAllocation,
@@ -272,9 +270,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
     }
 }
 
-data class RPCDriverDSL(
-        val driverDSL: DriverDSL
-) : DriverDSLInternalInterface by driverDSL, RPCDriverInternalDSLInterface {
+data class RPCDriverDSL(private val driverDSL: DriverDSL) : DriverDSLInternalInterface by driverDSL, RPCDriverDSLInternalInterface {
     private companion object {
         val notificationAddress = "notifications"
 

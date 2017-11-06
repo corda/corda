@@ -15,6 +15,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.driver.DriverDSLInternalInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
@@ -89,6 +90,7 @@ class NodePerformanceTests {
     @Test
     fun `empty flow rate`() {
         driver(startNodesInProcess = true) {
+            this as DriverDSLInternalInterface
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
             a as NodeHandle.InProcess
             val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
@@ -108,6 +110,7 @@ class NodePerformanceTests {
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance")
         ) {
+            this as DriverDSLInternalInterface
             val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
             val metricRegistry = startReporter(shutdownManager, notary.node.services.monitoringService.metrics)
             notary.rpcClientToNode().use("A", "A") { connection ->
