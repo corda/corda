@@ -76,6 +76,7 @@ dependencies {
     compile "commons-beanutils:commons-beanutils:${beanutils_version}"
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
+    compile "org.apache.shiro:shiro-core:${shiro_version}"
     runtime ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'

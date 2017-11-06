@@ -22,6 +22,7 @@ import java.security.PublicKey
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
 class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcContext, private val permissionsAllowing: (methodName: String, args: List<Any?>) -> Set<String>) : CordaRPCOps {
 
+
     override fun stateMachinesSnapshot() = guard("stateMachinesSnapshot") {
         implementation.stateMachinesSnapshot()
     }
@@ -152,7 +153,7 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
     private inline fun <RESULT> guard(methodName: String, args: List<Any?>, action: () -> RESULT): RESULT {
 
-        context.invoke().requireEitherPermission(permissionsAllowing.invoke(methodName, args))
-        return action.invoke()
+        context().requireEitherPermission(permissionsAllowing(methodName, args))
+        return action()
     }
 }
