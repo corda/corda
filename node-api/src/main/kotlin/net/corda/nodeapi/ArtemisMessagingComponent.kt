@@ -23,13 +23,10 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         // case is a forward slash
         const val NODE_USER = "SystemUsers/Node"
         const val PEER_USER = "SystemUsers/Peer"
-
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers." //TODO Come up with better name for common peers/services queue
-        const val IP_REQUEST_PREFIX = "ip."
         const val P2P_QUEUE = "p2p.inbound"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
-        const val NETWORK_MAP_QUEUE = "${INTERNAL_PREFIX}networkmap"
     }
 
     interface ArtemisAddress : MessageRecipients {
