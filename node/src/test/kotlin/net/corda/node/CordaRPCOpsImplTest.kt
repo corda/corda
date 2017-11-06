@@ -50,14 +50,12 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CordaRPCOpsImplTest {
-
     private companion object {
         val testJar = "net/corda/node/testing/test.jar"
     }
 
     private lateinit var mockNet: MockNetwork
     private lateinit var aliceNode: StartedNode<MockNode>
-    private lateinit var notaryNode: StartedNode<MockNode>
     private lateinit var notary: Party
     private lateinit var rpc: CordaRPCOps
     private lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
@@ -69,7 +67,6 @@ class CordaRPCOpsImplTest {
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
-        notaryNode = mockNet.createNotaryNode(validating = false)
         aliceNode = mockNet.createNode()
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
         CURRENT_RPC_CONTEXT.set(RpcContext(user))

@@ -15,6 +15,7 @@ import net.corda.node.services.config.VerifierType
 import net.corda.testing.ALICE
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.node.NotarySpec
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -128,15 +129,15 @@ class VerifierTests {
 
     @Test
     fun `single verifier works with a node`() {
-        verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
-            val (notaryNode, aliceNode) = listOf(
-                    startNotaryNode(DUMMY_NOTARY.name, verifierType = VerifierType.OutOfProcess),
-                    startNode(providedName = ALICE.name)
-            ).transpose().getOrThrow()
+        verifierDriver(
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, verifierType = VerifierType.OutOfProcess))
+        ) {
+            val aliceNode = startNode(providedName = ALICE.name).getOrThrow()
+            val notaryNode = defaultNotaryNode.getOrThrow()
             val alice = aliceNode.rpc.wellKnownPartyFromX500Name(ALICE_NAME)!!
-            val notary = notaryNode.rpc.notaryPartyFromX500Name(DUMMY_NOTARY.name)!!
             startVerifier(notaryNode)
-            aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notary).returnValue.get()
+            aliceNode.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
             notaryNode.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
                 val cashFlowResult = aliceNode.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice).returnValue.get()

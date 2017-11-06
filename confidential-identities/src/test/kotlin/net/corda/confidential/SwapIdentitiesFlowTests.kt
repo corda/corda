@@ -6,17 +6,22 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.*
 
 class SwapIdentitiesFlowTests {
+    private lateinit var mockNet: MockNetwork
+
+    @Before
+    fun setup() {
+        // We run this in parallel threads to help catch any race conditions that may exist.
+        mockNet = MockNetwork(networkSendManuallyPumped = false, threadPerNode = true)
+    }
+
     @Test
     fun `issue key`() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(threadPerNode = true)
-
         // Set up values we'll need
-        mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
         val alice = aliceNode.info.singleIdentity()
@@ -52,19 +57,16 @@ class SwapIdentitiesFlowTests {
      */
     @Test
     fun `verifies identity name`() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(threadPerNode = true)
-
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
+        val charlieNode = mockNet.createPartyNode(CHARLIE.name)
         val bob: Party = bobNode.services.myInfo.singleIdentity()
-        val notBob = notaryNode.database.transaction {
-            notaryNode.services.keyManagementService.freshKeyAndCert(notaryNode.services.myInfo.chooseIdentityAndCert(), false)
+        val notBob = charlieNode.database.transaction {
+            charlieNode.services.keyManagementService.freshKeyAndCert(charlieNode.services.myInfo.chooseIdentityAndCert(), false)
         }
         val sigData = SwapIdentitiesFlow.buildDataToSign(notBob)
-        val signature = notaryNode.services.keyManagementService.sign(sigData, notBob.owningKey)
+        val signature = charlieNode.services.keyManagementService.sign(sigData, notBob.owningKey)
         assertFailsWith<SwapIdentitiesException>("Certificate subject must match counterparty's well known identity.") {
             SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBob, signature.withoutKey())
         }
@@ -77,11 +79,8 @@ class SwapIdentitiesFlowTests {
      */
     @Test
     fun `verifies signature`() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
-        val mockNet = MockNetwork(threadPerNode = true)
-
         // Set up values we'll need
-        val notaryNode = mockNet.createNotaryNode()
+        val notaryNode = mockNet.defaultNotaryNode
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
         val bob: Party = bobNode.services.myInfo.singleIdentity()

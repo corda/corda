@@ -9,7 +9,6 @@ import net.corda.finance.utils.CityDatabase
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.node.*
 import net.corda.testing.node.MockNetwork.MockNode
@@ -71,14 +70,13 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             networkSendManuallyPumped = networkSendManuallyPumped,
             threadPerNode = runAsync,
             cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract", "net.corda.irs"))
-    val notary = mockNet.createNotaryNode(defaultParams.copy(legalName = DUMMY_NOTARY.name), false)
     // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
     //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
     //       But that's fine for visualisation purposes.
     val regulators = listOf(mockNet.createUnstartedNode(defaultParams.copy(legalName = DUMMY_REGULATOR.name)))
     val ratesOracle = mockNet.createUnstartedNode(defaultParams.copy(legalName = RatesOracleNode.RATES_SERVICE_NAME), ::RatesOracleNode)
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
-    val serviceProviders: List<MockNode> = listOf(notary.internals, ratesOracle)
+    val serviceProviders: List<MockNode> = listOf(mockNet.defaultNotaryNode.internals, ratesOracle)
     val banks: List<MockNode> = bankLocations.mapIndexed { i, (city, country) ->
         val legalName = CordaX500Name(organisation = "Bank ${'A' + i}", locality = city, country = country)
         // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
