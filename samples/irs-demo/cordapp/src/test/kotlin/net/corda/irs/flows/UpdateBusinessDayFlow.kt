@@ -7,11 +7,10 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.flows.*
-import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import net.corda.node.utilities.TestClock
+import net.corda.node.utilities.DemoClock
 import java.time.LocalDate
 
 /**
@@ -27,7 +26,7 @@ object UpdateBusinessDayFlow {
         @Suspendable
         override fun call() {
             val message = otherPartySession.receive<UpdateBusinessDayMessage>().unwrap { it }
-            (serviceHub.clock as TestClock).updateDate(message.date)
+            (serviceHub.clock as DemoClock).updateDate(message.date)
         }
     }
 
