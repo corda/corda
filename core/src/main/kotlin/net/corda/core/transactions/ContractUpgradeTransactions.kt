@@ -6,6 +6,8 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.serializedHash
 import net.corda.core.identity.Party
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.StateLoader
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
@@ -42,13 +44,15 @@ data class ContractUpgradeWireTransaction(
     override val id: SecureHash by lazy { serializedHash(inputs + notary).hashConcat(hiddenComponentHash) }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
-    fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
+    fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>) = resolve(services, services.attachments, sigs)
+
+    fun resolve(stateLoader: StateLoader, attachments: AttachmentStorage, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
         val resolvedInputs = inputs.map { ref ->
-            services.loadState(ref).let { StateAndRef(it, ref) }
+            stateLoader.loadState(ref).let { StateAndRef(it, ref) }
         }
         val legacyContractClassName = resolvedInputs.first().state.contract
-        val legacyContractAttachment = services.attachments.openAttachment(legacyContractAttachmentId) ?: throw AttachmentResolutionException(legacyContractAttachmentId)
-        val upgradedContractAttachment = services.attachments.openAttachment(upgradedContractAttachmentId) ?: throw AttachmentResolutionException(upgradedContractAttachmentId)
+        val legacyContractAttachment = attachments.openAttachment(legacyContractAttachmentId) ?: throw AttachmentResolutionException(legacyContractAttachmentId)
+        val upgradedContractAttachment = attachments.openAttachment(upgradedContractAttachmentId) ?: throw AttachmentResolutionException(upgradedContractAttachmentId)
 
         return ContractUpgradeLedgerTransaction(
                 resolvedInputs,

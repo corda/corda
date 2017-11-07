@@ -6,12 +6,9 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.StateLoader
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
@@ -57,7 +54,8 @@ private fun CriteriaBuilder.executeUpdate(session: Session, configure: Root<*>.(
 class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
-        private val services: ServicesForResolution,
+        private val stateLoader: StateLoader,
+        private val attachments: AttachmentStorage,
         hibernateConfig: HibernateConfiguration
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
@@ -163,8 +161,8 @@ class NodeVaultService(
             // We also can't do filtering beforehand, since for notary change transactions output encumbrance pointers
             // get recalculated based on input positions.
             val ltx: FullTransaction = when (tx) {
-                is NotaryChangeWireTransaction -> tx.resolve(services, emptyList())
-                is ContractUpgradeWireTransaction -> tx.resolve(services, emptyList())
+                is NotaryChangeWireTransaction -> tx.resolve(stateLoader, emptyList())
+                is ContractUpgradeWireTransaction -> tx.resolve(stateLoader, attachments, emptyList())
                 else -> throw IllegalArgumentException("Unsupported transaction type: ${tx.javaClass.name}")
             }
             val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })

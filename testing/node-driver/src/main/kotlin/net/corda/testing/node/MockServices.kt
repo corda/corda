@@ -15,6 +15,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.VersionInfo
+import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.VaultServiceInternal
@@ -45,11 +46,13 @@ import java.util.*
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(
+open class MockServices private constructor(
         cordappLoader: CordappLoader,
         override val validatedTransactions: WritableTransactionStorage,
+        final override val attachments: MockAttachmentStorage,
+        protected val stateLoader: StateLoaderImpl,
         vararg val keys: KeyPair
-) : ServiceHub {
+) : ServiceHub, StateLoader by stateLoader {
     companion object {
 
         @JvmStatic
@@ -129,7 +132,8 @@ open class MockServices(
         }
     }
 
-    private constructor(cordappLoader: CordappLoader, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), keys = *keys)
+    private constructor(cordappLoader: CordappLoader, validatedTransactions: WritableTransactionStorage, attachments: MockAttachmentStorage, vararg keys: KeyPair) : this(cordappLoader, validatedTransactions, attachments, StateLoaderImpl(validatedTransactions, attachments), *keys)
+    private constructor(cordappLoader: CordappLoader, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), MockAttachmentStorage(), *keys)
     constructor(cordappPackages: List<String>, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), keys = *keys)
     constructor(vararg keys: KeyPair) : this(emptyList(), *keys)
     constructor() : this(generateKeyPair())
@@ -145,7 +149,6 @@ open class MockServices(
         }
     }
 
-    final override val attachments = MockAttachmentStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
     override val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
@@ -165,7 +168,7 @@ open class MockServices(
     lateinit var hibernatePersister: HibernateObserver
 
     fun makeVaultService(hibernateConfig: HibernateConfiguration): VaultServiceInternal {
-        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, this, hibernateConfig)
+        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, stateLoader, attachments, hibernateConfig)
         hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }

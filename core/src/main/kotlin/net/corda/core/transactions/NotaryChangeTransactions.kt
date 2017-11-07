@@ -5,7 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.serializedHash
 import net.corda.core.identity.Party
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.StateLoader
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
@@ -40,9 +40,9 @@ data class NotaryChangeWireTransaction(
      */
     override val id: SecureHash by lazy { serializedHash(inputs + notary + newNotary) }
 
-    fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
+    fun resolve(stateLoader: StateLoader, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = inputs.map { ref ->
-            services.loadState(ref).let { StateAndRef(it, ref) }
+            stateLoader.loadState(ref).let { StateAndRef(it, ref) }
         }
         return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs)
     }

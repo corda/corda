@@ -12,13 +12,13 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
 import net.corda.node.internal.FlowStarterImpl
+import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.MonitoringService
@@ -100,11 +100,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         kms = MockKeyManagementService(identityService, ALICE_KEY)
         val configuration = testNodeConfiguration(Paths.get("."), CordaX500Name("Alice", "London", "GB"))
         val validatedTransactions = MockTransactionStorage()
-        val servicesForResolution = rigorousMock<ServicesForResolution>().also {
-            doReturn(validatedTransactions).whenever(it).validatedTransactions
-            doReturn(identityService).whenever(it).identityService
-            doReturn(validatedTransactions).whenever(it).validatedTransactions
-        }
+        val attachments = MockAttachmentStorage()
+        val stateLoader = StateLoaderImpl(validatedTransactions, attachments)
         database.transaction {
             services = rigorousMock<Services>().also {
                 doReturn(configuration).whenever(it).configuration
@@ -114,17 +111,17 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doCallRealMethod().whenever(it).signInitialTransaction(any(), any<PublicKey>())
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
-                doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
+                doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), attachments)).whenever(it).cordappProvider
                 doCallRealMethod().whenever(it).recordTransactions(any<StatesToRecord>(), any())
                 doCallRealMethod().whenever(it).recordTransactions(any<Iterable<SignedTransaction>>())
                 doCallRealMethod().whenever(it).recordTransactions(any<SignedTransaction>(), anyVararg())
-                doCallRealMethod().whenever(it).loadState(any())
-                doReturn(NodeVaultService(testClock, kms, servicesForResolution, database.hibernateConfig)).whenever(it).vaultService
+                doReturn(NodeVaultService(testClock, kms, stateLoader, attachments, database.hibernateConfig)).whenever(it).vaultService
                 doReturn(this@NodeSchedulerServiceTest).whenever(it).testReference
+
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database)
-            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), services, schedulerGatedExecutor, serverThread = smmExecutor)
+            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), stateLoader, schedulerGatedExecutor, serverThread = smmExecutor)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllFlows.countDown()

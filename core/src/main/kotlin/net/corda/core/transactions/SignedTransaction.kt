@@ -8,6 +8,8 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.StateLoader
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -184,10 +186,12 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * Resolves the underlying base transaction and then returns it, handling any special case transactions such as
      * [NotaryChangeWireTransaction].
      */
-    fun resolveBaseTransaction(services: ServicesForResolution): BaseTransaction {
+    fun resolveBaseTransaction(services: ServicesForResolution) = resolveBaseTransaction(services, services.attachments)
+
+    fun resolveBaseTransaction(stateLoader: StateLoader, attachments: AttachmentStorage): BaseTransaction {
         return when (coreTransaction) {
-            is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(services)
-            is ContractUpgradeWireTransaction -> resolveContractUpgradeTransaction(services)
+            is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(stateLoader)
+            is ContractUpgradeWireTransaction -> resolveContractUpgradeTransaction(stateLoader, attachments)
             is WireTransaction -> this.tx
             is FilteredTransaction -> throw IllegalStateException("Persistence of filtered transactions is not supported.")
             else -> throw IllegalStateException("Unknown transaction type ${coreTransaction::class.qualifiedName}")
@@ -212,20 +216,22 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * If [coreTransaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
      * [NotaryChangeLedgerTransaction] so the signatures can be verified.
      */
-    fun resolveNotaryChangeTransaction(services: ServicesForResolution): NotaryChangeLedgerTransaction {
+    fun resolveNotaryChangeTransaction(stateLoader: StateLoader): NotaryChangeLedgerTransaction {
         val ntx = coreTransaction as? NotaryChangeWireTransaction
                 ?: throw IllegalStateException("Expected a ${NotaryChangeWireTransaction::class.simpleName} but found ${coreTransaction::class.simpleName}")
-        return ntx.resolve(services, sigs)
+        return ntx.resolve(stateLoader, sigs)
     }
 
     /**
      * If [coreTransaction] is a [ContractUpgradeWireTransaction], loads the input states and resolves it to a
      * [ContractUpgradeLedgerTransaction] so the signatures can be verified.
      */
-    fun resolveContractUpgradeTransaction(services: ServicesForResolution): ContractUpgradeLedgerTransaction {
+    fun resolveContractUpgradeTransaction(services: ServicesForResolution) = resolveContractUpgradeTransaction(services, services.attachments)
+
+    fun resolveContractUpgradeTransaction(stateLoader: StateLoader, attachments: AttachmentStorage): ContractUpgradeLedgerTransaction {
         val ctx = coreTransaction as? ContractUpgradeWireTransaction
                 ?: throw IllegalStateException("Expected a ${ContractUpgradeWireTransaction::class.simpleName} but found ${coreTransaction::class.simpleName}")
-        return ctx.resolve(services, sigs)
+        return ctx.resolve(stateLoader, attachments, sigs)
     }
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
