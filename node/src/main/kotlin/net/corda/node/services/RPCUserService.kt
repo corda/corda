@@ -1,6 +1,5 @@
 package net.corda.node.services
 
-import net.corda.core.flows.FlowLogic
 import net.corda.nodeapi.User
 
 /**
@@ -25,37 +24,4 @@ class RPCUserServiceImpl(override val users: List<User>) : RPCUserService {
     }
 
     override fun getUser(username: String): User? = users.find { it.username == username }
-}
-
-/**
- * Helper class for creating flow class permissions.
- */
-class FlowPermissions {
-    companion object {
-
-        /**
-         * Creates the flow permission string of the format "StartFlow.{ClassName}".
-         *
-         * @param className a flow class name for which permission is created.
-         */
-        @JvmStatic
-        fun startFlowPermission(className: String) = "StartFlow.$className"
-
-        /**
-         * An overload for the [startFlowPermission]
-         *
-         * @param clazz a class for which permission is created.
-         *
-         */
-        @JvmStatic
-        fun <P : FlowLogic<*>> startFlowPermission(clazz: Class<P>) = startFlowPermission(clazz.name)
-
-        /**
-         * An overload for the [startFlowPermission].
-         *
-         * @param P a class for which permission is created.
-         */
-        @JvmStatic
-        inline fun <reified P : FlowLogic<*>> startFlowPermission(): String = startFlowPermission(P::class.java)
-    }
 }

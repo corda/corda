@@ -1,7 +1,7 @@
 Trader demo
 -----------
 
-This demo brings up four nodes: Bank A, Bank B, Bank Of Corda, and a notary/network map node that they all use. Bank A 
+This demo brings up four nodes: Bank A, Bank B, Bank Of Corda, and a notary node that they all use. Bank A
 will be the buyer, and requests some cash from the Bank of Corda in order to acquire commercial paper from Bank B, the 
 seller.
 

@@ -18,6 +18,8 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.dummyCommand
+import net.corda.testing.node.ClusterSpec
+import net.corda.testing.node.NotarySpec
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -28,13 +30,16 @@ class RaftNotaryServiceTests {
 
     @Test
     fun `detect double spend`() {
-        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.testing.contracts")) {
-            val (notaryParty) = startNotaryCluster(notaryName, 3).getOrThrow()
+        driver(
+                startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
+                notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3))))
+        {
             val bankA = startNode(providedName = DUMMY_BANK_A.name).map { (it as NodeHandle.InProcess).node }.getOrThrow()
 
-            val inputState = issueState(bankA, notaryParty)
+            val inputState = issueState(bankA, defaultNotaryIdentity)
 
-            val firstTxBuilder = TransactionBuilder(notaryParty)
+            val firstTxBuilder = TransactionBuilder(defaultNotaryIdentity)
                     .addInputState(inputState)
                     .addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))
             val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
@@ -42,7 +47,7 @@ class RaftNotaryServiceTests {
             val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
             firstSpend.resultFuture.getOrThrow()
 
-            val secondSpendBuilder = TransactionBuilder(notaryParty).withItems(inputState).run {
+            val secondSpendBuilder = TransactionBuilder(defaultNotaryIdentity).withItems(inputState).run {
                 val dummyState = DummyContract.SingleOwnerState(0, bankA.info.chooseIdentity())
                 addOutputState(dummyState, DummyContract.PROGRAM_ID)
                 addCommand(dummyCommand(bankA.services.myInfo.chooseIdentity().owningKey))

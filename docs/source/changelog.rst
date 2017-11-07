@@ -8,6 +8,8 @@ UNRELEASED
 ----------
 * ``ConfigUtilities`` now read system properties for a node. This allow to specify data source properties at runtime.
 
+* ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
+
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
 
@@ -71,6 +73,9 @@ UNRELEASED
 
 * The ``ReceiveTransactionFlow`` can now be told to record the transaction at the same time as receiving it. Using this
   feature, better support for observer/regulator nodes has been added. See :doc:`tutorial-observer-nodes`.
+
+* Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This is
+  needed to allow new ``node_info_hash`` column to be added for the network map redesign work.
 
 .. _changelog_v1:
 

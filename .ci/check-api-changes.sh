@@ -52,6 +52,10 @@ if [ $abstractCount -gt 0 ]; then
 fi
 
 badChanges=$(($removalCount + $abstractCount))
+if [ $badChanges -gt 255 ]; then
+    echo "OVERFLOW! Number of bad API changes: $badChanges"
+    badChanges=255
+fi
 
 echo "Exiting with exit code" $badChanges
 exit $badChanges

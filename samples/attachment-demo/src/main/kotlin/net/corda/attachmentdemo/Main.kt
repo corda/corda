@@ -4,7 +4,6 @@ import net.corda.core.internal.div
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
 
 /**
@@ -14,7 +13,6 @@ import net.corda.testing.driver.driver
 fun main(args: Array<String>) {
     val demoUser = listOf(User("demo", "demo", setOf("StartFlow.net.corda.flows.FinalityFlow")))
     driver(isDebug = true, driverDirectory = "build" / "attachment-demo-nodes") {
-        startNotaryNode(DUMMY_NOTARY.name, validating = false)
         startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser)
         startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser)
         waitForAllNodesToFinish()

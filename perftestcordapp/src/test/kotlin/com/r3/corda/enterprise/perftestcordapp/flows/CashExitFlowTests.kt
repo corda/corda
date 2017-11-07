@@ -20,20 +20,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashExitFlowTests {
-    private lateinit var mockNet : MockNetwork
+    private lateinit var mockNet: MockNetwork
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
     private lateinit var bankOfCordaNode: StartedNode<MockNode>
     private lateinit var bankOfCorda: Party
-    private lateinit var notaryNode: StartedNode<MockNode>
     private lateinit var notary: Party
 
     @Before
     fun start() {
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
-        notaryNode = mockNet.createNotaryNode()
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(),
+			    cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"))
         bankOfCordaNode = mockNet.createPartyNode(BOC.name)
-        notary = notaryNode.services.getDefaultNotary()
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         mockNet.runNetwork()

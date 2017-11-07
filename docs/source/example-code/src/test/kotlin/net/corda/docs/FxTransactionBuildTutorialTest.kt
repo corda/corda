@@ -10,7 +10,8 @@ import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.StartedNode
-import net.corda.testing.*
+import net.corda.testing.chooseIdentity
+import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -18,15 +19,14 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class FxTransactionBuildTutorialTest {
-    lateinit var mockNet: MockNetwork
-    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
-    lateinit var nodeB: StartedNode<MockNetwork.MockNode>
-    lateinit var notary: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    private lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var notary: Party
 
     @Before
     fun setup() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName))
-        mockNet.createNotaryNode()
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeB.internals.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)

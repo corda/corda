@@ -65,11 +65,6 @@ for maintenance and other minor purposes.
    corresponding bridge is used to forward the message to an advertising peer's p2p queue. Once a peer is picked the
    session continues on as normal.
 
-:``internal.networkmap``:
-   This is another private queue just for the node which functions in a similar manner to the ``internal.peers.*`` queues
-   except this is used to form a connection to the network map node. The node running the network map service is treated
-   differently as it provides information about the rest of the network.
-
 :``rpc.requests``:
    RPC clients send their requests here, and it's only open for sending by clients authenticated as RPC users.
 

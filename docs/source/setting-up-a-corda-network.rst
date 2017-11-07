@@ -3,8 +3,7 @@
 Creating a Corda network
 ========================
 
-A Corda network consists of a number of machines running nodes, including a single node operating as the network map
-service. These nodes communicate using persistent protocols in order to create and validate transactions.
+A Corda network consists of a number of machines running nodes. These nodes communicate using persistent protocols in order to create and validate transactions.
 
 There are four broader categories of functionality one such node may have. These pieces of functionality are provided as
 services, and one node may run several of them.

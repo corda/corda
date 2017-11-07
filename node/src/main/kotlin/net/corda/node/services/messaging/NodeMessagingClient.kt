@@ -1,11 +1,8 @@
 package net.corda.node.services.messaging
 
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.andForget
-import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -16,7 +13,10 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.sequence
+import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MonitoringService
@@ -65,8 +65,7 @@ import javax.persistence.Lob
  * CordaRPCClient class.
  *
  * @param serverAddress The address of the broker instance to connect to (might be running in the same process).
- * @param myIdentity Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
- * that this is a NetworkMapService node which will be bound globally to the name "networkmap".
+ * @param myIdentity The public key to be used as the ArtemisMQ address and queue name for the node.
  * @param nodeExecutor An executor to run received message tasks upon.
  * @param advertisedAddress The node address for inbound connections, advertised to the network map service and peers.
  * If not provided, will default to [serverAddress].
@@ -78,7 +77,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                           private val myIdentity: PublicKey,
                           private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: CordaPersistence,
-                          private val networkMapRegistrationFuture: CordaFuture<Unit>,
                           val monitoringService: MonitoringService,
                           advertisedAddress: NetworkHostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {
@@ -234,18 +232,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             this.producer = producer
 
             // Create a queue, consumer and producer for handling P2P network messages.
-            p2pConsumer = makeP2PConsumer(session, true)
-            networkMapRegistrationFuture.thenMatch({
-                state.locked {
-                    log.info("Network map is complete, so removing filter from P2P consumer.")
-                    try {
-                        p2pConsumer!!.close()
-                    } catch (e: ActiveMQObjectClosedException) {
-                        // Ignore it: this can happen if the server has gone away before we do.
-                    }
-                    p2pConsumer = makeP2PConsumer(session, false)
-                }
-            }, {})
+            p2pConsumer = session.createConsumer(P2P_QUEUE)
 
             val myCert = loadKeyStore(config.sslKeystore, config.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_TLS)
             rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, CordaX500Name.build(myCert.subjectX500Principal))
@@ -265,20 +252,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
 
         resumeMessageRedelivery()
-    }
-
-    /**
-     * We make the consumer twice, once to filter for just network map messages, and then once that is complete, we close
-     * the original and make another without a filter.  We do this so that there is a network map in place for all other
-     * message handlers.
-     */
-    private fun makeP2PConsumer(session: ClientSession, networkMapOnly: Boolean): ClientConsumer {
-        return if (networkMapOnly) {
-            // Filter for just the network map messages.
-            val messageFilter = "hyphenated_props:$topicProperty like 'platform.network_map.%'"
-            session.createConsumer(P2P_QUEUE, messageFilter)
-        } else
-            session.createConsumer(P2P_QUEUE)
     }
 
     private fun resumeMessageRedelivery() {
@@ -325,46 +298,22 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         return true
     }
 
-    private fun runPreNetworkMap(serverControl: ActiveMQServerControl) {
-        val consumer = state.locked {
-            check(started) { "start must be called first" }
-            check(!running) { "run can't be called twice" }
-            running = true
-            rpcServer!!.start(serverControl)
-            (verifierService as? OutOfProcessTransactionVerifierService)?.start(verificationResponseConsumer!!)
-            p2pConsumer!!
-        }
-
-        while (!networkMapRegistrationFuture.isDone && processMessage(consumer)) {
-        }
-        with(networkMapRegistrationFuture) {
-            if (isDone) getOrThrow() else andForget(log) // Trigger node shutdown here to avoid deadlock in shutdown hooks.
-        }
-    }
-
-    private fun runPostNetworkMap() {
-        val consumer = state.locked {
-            // If it's null, it means we already called stop, so return immediately.
-            p2pConsumer ?: return
-        }
-
-        while (processMessage(consumer)) {
-        }
-    }
-
     /**
      * Starts the p2p event loop: this method only returns once [stop] has been called.
-     *
-     * This actually runs as two sequential loops. The first subscribes for and receives only network map messages until
-     * we get our network map fetch response.  At that point the filtering consumer is closed and we proceed to the second loop and
-     * consume all messages via a new consumer without a filter applied.
      */
     fun run(serverControl: ActiveMQServerControl) {
         try {
-            // Build the network map.
-            runPreNetworkMap(serverControl)
-            // Process everything else once we have the network map.
-            runPostNetworkMap()
+            val consumer = state.locked {
+                check(started) { "start must be called first" }
+                check(!running) { "run can't be called twice" }
+                running = true
+                rpcServer!!.start(serverControl)
+                (verifierService as? OutOfProcessTransactionVerifierService)?.start(verificationResponseConsumer!!)
+                // If it's null, it means we already called stop, so return immediately.
+                p2pConsumer ?: return
+            }
+
+            while (processMessage(consumer)) { }
         } finally {
             shutdownLatch.countDown()
         }

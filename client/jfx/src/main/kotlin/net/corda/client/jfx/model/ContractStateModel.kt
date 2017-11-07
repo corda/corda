@@ -40,7 +40,7 @@ class ContractStateModel {
             return this.map { stateAndRef ->
                 if (stateAndRef.state.data is Cash.State) {
                     // Kotlin doesn't unify here for some reason
-                    uncheckedCast(stateAndRef)
+                    uncheckedCast<StateAndRef<ContractState>, StateAndRef<Cash.State>>(stateAndRef)
                 } else {
                     null
                 }

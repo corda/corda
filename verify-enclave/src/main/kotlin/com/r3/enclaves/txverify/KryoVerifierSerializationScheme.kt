@@ -3,10 +3,10 @@ package com.r3.enclaves.txverify
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.ByteSequence
-import net.corda.nodeapi.internal.serialization.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 
 @Suppress("UNUSED")
 private class KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {

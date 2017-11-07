@@ -6,6 +6,11 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+
+object QuasarWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = true
+}
 
 /*
  * Serialisation contexts for the server.
@@ -16,18 +21,28 @@ import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
  * CANNOT always be instantiated outside of the server and so
  * MUST be kept separate!
  */
+
 val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
         SerializationContext.UseCase.RPCServer)
+
 val KRYO_STORAGE_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
         emptyMap(),
         true,
         SerializationContext.UseCase.Storage)
+
+val KRYO_P2P_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
+        SerializationDefaults.javaClass.classLoader,
+        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
+        emptyMap(),
+        true,
+        SerializationContext.UseCase.P2P)
+
 val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         SerializationDefaults.javaClass.classLoader,
         QuasarWhitelist,
@@ -35,9 +50,6 @@ val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         true,
         SerializationContext.UseCase.Checkpoint)
 
-object QuasarWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = true
-}
 
 val AMQP_STORAGE_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
         SerializationDefaults.javaClass.classLoader,
@@ -45,3 +57,18 @@ val AMQP_STORAGE_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
         emptyMap(),
         true,
         SerializationContext.UseCase.Storage)
+
+val AMQP_P2P_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
+        SerializationDefaults.javaClass.classLoader,
+        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
+        emptyMap(),
+        true,
+        SerializationContext.UseCase.P2P)
+
+val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
+        SerializationDefaults.javaClass.classLoader,
+        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
+        emptyMap(),
+        true,
+        SerializationContext.UseCase.RPCServer)
+

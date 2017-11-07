@@ -41,11 +41,12 @@ notary node:
             cordapps = []
             rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
         }
+        // Example of explicit addresses being used.
         node {
             name "CN=NodeC,O=NodeC,L=Paris,C=FR"
-            p2pPort 10011
-            rpcPort 10012
-            webPort 10013
+            p2pAddress "localhost:10011"
+            rpcAddress "localhost:10012"
+            webAddress "localhost:10013"
             cordapps = []
             rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
         }

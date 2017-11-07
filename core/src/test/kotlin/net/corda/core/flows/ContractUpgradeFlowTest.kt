@@ -16,9 +16,9 @@ import net.corda.finance.USD
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.CordaRPCOpsImpl
+import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.FlowPermissions.Companion.startFlowPermission
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
@@ -41,14 +41,13 @@ class ContractUpgradeFlowTest {
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
-        val notaryNode = mockNet.createNotaryNode()
         aliceNode = mockNet.createPartyNode(ALICE.name)
         bobNode = mockNet.createPartyNode(BOB.name)
 
         // Process registration
         mockNet.runNetwork()
 
-        notary = notaryNode.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After
@@ -118,7 +117,7 @@ class ContractUpgradeFlowTest {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = CordaRPCOpsImpl(node.services, node.smm, node.database, node.services)
+                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services)
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password
@@ -134,10 +133,10 @@ class ContractUpgradeFlowTest {
             val stx = bobNode.services.addSignature(signedByA)
 
             val user = rpcTestUser.copy(permissions = setOf(
-                    startFlowPermission<FinalityInvoker>(),
-                    startFlowPermission<ContractUpgradeFlow.Initiate<*, *>>(),
-                    startFlowPermission<ContractUpgradeFlow.Authorise>(),
-                    startFlowPermission<ContractUpgradeFlow.Deauthorise>()
+                    startFlow<FinalityInvoker>(),
+                    startFlow<ContractUpgradeFlow.Initiate<*, *>>(),
+                    startFlow<ContractUpgradeFlow.Authorise>(),
+                    startFlow<ContractUpgradeFlow.Deauthorise>()
             ))
             val rpcA = startProxy(aliceNode, user)
             val rpcB = startProxy(bobNode, user)

@@ -8,11 +8,12 @@ import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DatabaseTransaction
 import net.corda.node.utilities.configureDatabase
-import net.corda.testing.*
+import net.corda.testing.LogHelper
+import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
@@ -37,14 +38,12 @@ class DistributedImmutableMapTests {
     @Before
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
-        LogHelper.setLevel(NetworkMapService::class)
         cluster = setUpCluster()
     }
 
     @After
     fun tearDown() {
         LogHelper.reset("org.apache.activemq")
-        LogHelper.reset(NetworkMapService::class)
         cluster.forEach {
             it.client.close()
             it.server.shutdown()
