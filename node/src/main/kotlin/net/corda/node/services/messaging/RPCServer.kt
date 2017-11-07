@@ -12,6 +12,9 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.RPCException
+import net.corda.core.context.Actor
+import net.corda.core.context.Actor.Id
+import net.corda.core.context.InvocationContext
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
@@ -24,9 +27,6 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.core.context.Actor
-import net.corda.core.context.Actor.*
-import net.corda.core.context.InvocationContext
 import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
@@ -272,12 +272,9 @@ class RPCServer(
                 val arguments = Try.on {
                     clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                 }
+                val context = artemisMessage.context()
                 when (arguments) {
                     is Try.Success -> {
-                        val trace = artemisMessage.trace()
-                        val externalTrace = artemisMessage.externalTrace()
-                        // TODO sollecitom change this not to include username and password, but id, store id and legal identity.
-                        val context = InvocationContext.rpc(actorFrom(artemisMessage), trace, externalTrace)
                         rpcExecutor!!.submit {
                             val result = invokeRpc(context, clientToServer.methodName, arguments.value)
                             sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, result)
@@ -298,7 +295,7 @@ class RPCServer(
         artemisMessage.acknowledge()
     }
 
-    private fun invokeRpc(context: InvocationContext, methodName: String, arguments: List<Any?>): Try<Any> {
+    private fun invokeRpc(context: RpcAuthContext, methodName: String, arguments: List<Any?>): Try<Any> {
         return Try.on {
             try {
                 CURRENT_RPC_CONTEXT.set(context)
@@ -359,34 +356,49 @@ class RPCServer(
     // TODO remove this User once webserver doesn't need it
     private val nodeUser = User(NODE_USER, NODE_USER, setOf())
 
-    private fun actorFrom(message: ClientMessage): Actor {
+    private fun ClientMessage.context(): RpcAuthContext {
+
+        val trace = trace()
+        val externalTrace = externalTrace()
+        val rpcActor = actorFrom(this)
+        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace), rpcActor.second)
+    }
+
+    private fun actorFrom(message: ClientMessage): Pair<Actor, RpcPermissions> {
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
-        // TODO sollecitom check nodeLegalName
         val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
-        // TODO change userService based on targetLegalIdentity
-        // TODO sollecitom where do we check the password here? Is this because we're in the session?
+        // TODO switch userService based on targetLegalIdentity
         val rpcUser = userService.getUser(validatedUser)
         return if (rpcUser != null) {
-            Actor(Id(rpcUser.username), StoreId(userService.id.value), targetLegalIdentity, rpcUser.permissions)
+            Actor(Id(rpcUser.username), userService.id, targetLegalIdentity) to RpcPermissions(rpcUser.permissions)
         } else if (CordaX500Name.parse(validatedUser) == nodeLegalName) {
-            // TODO sollecitom see what you can do about this nodeUser...
-            Actor(Id(nodeUser.username), StoreId(userService.id.value), targetLegalIdentity, nodeUser.permissions)
+            // TODO remove this after Shell and WebServer will no longer need it
+            Actor(Id(nodeUser.username), userService.id, targetLegalIdentity) to RpcPermissions(nodeUser.permissions)
         } else {
             throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")
         }
     }
 }
 
-// TODO sollecitom try and replace this by creating a new CordaRPCImpl for each request, passing the context
+// TODO replace this by creating a new CordaRPCImpl for each request, passing the context, after we fix Shell and WebServer
 @JvmField
-internal val CURRENT_RPC_CONTEXT: ThreadLocal<InvocationContext> = ThreadLocal()
+internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcAuthContext> = ThreadLocal()
 
 /**
  * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
  * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
  * around explicitly.
+ * The [InvocationContext] does not include permissions.
  */
-fun context(): InvocationContext = CURRENT_RPC_CONTEXT.get()
+internal fun context(): InvocationContext = rpcContext().invocation
+
+/**
+ * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
+ * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
+ * around explicitly.
+ * The [RpcAuthContext] includes permissions.
+ */
+fun rpcContext(): RpcAuthContext = CURRENT_RPC_CONTEXT.get()
 
 class ObservableSubscription(
         val subscription: Subscription

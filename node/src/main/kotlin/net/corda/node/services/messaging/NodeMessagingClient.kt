@@ -1,14 +1,11 @@
 package net.corda.node.services.messaging
 
-import net.corda.core.context.Trace
+import net.corda.core.context.*
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.context.Trace.SessionId
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
-import net.corda.core.context.Actor
-import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -373,17 +370,15 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             Trace(InvocationId(it, Instant.ofEpochMilli(externalInvocationIdTimestamp)), SessionId(externalSessionId, Instant.ofEpochMilli(externalSessionIdTimestamp)))
         }
 
-        // TODO sollecitom check that permissions are not needed
-        val actor = Actor(Actor.Id(actorId), Actor.StoreId(storeId), CordaX500Name.parse(owningLegalIdentity), emptySet())
+        val actor = Actor(Actor.Id(actorId), AuthServiceId(storeId), CordaX500Name.parse(owningLegalIdentity))
         val trace = Trace(InvocationId(invocationId, Instant.ofEpochMilli(invocationIdTimestamp)), SessionId(sessionId, Instant.ofEpochMilli(sessionIdTimestamp)))
         return InvocationContext(actor, Origin.Peer(sender), trace, externalTrace)
     }
 
     private fun InvocationContext.mapTo(message: ClientMessage) {
 
-        // TODO sollecitom check toString()
         message.putStringProperty(CONTEXT_ACTOR_ID.toString(), actor.id.value)
-        message.putStringProperty(CONTEXT_ACTOR_STORE_ID.toString(), actor.storeId.value)
+        message.putStringProperty(CONTEXT_ACTOR_STORE_ID.toString(), actor.serviceId.value)
         message.putStringProperty(CONTEXT_OWNING_LEGAL_IDENTITY.toString(), actor.owningLegalIdentity.toString())
 
         message.putStringProperty(CONTEXT_INVOCATION_ID.toString(), trace.invocationId.value)

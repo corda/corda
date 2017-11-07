@@ -5,6 +5,7 @@ import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.AuthServiceId
 import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
@@ -482,7 +483,7 @@ data class RPCDriverDSL(
         val userService = object : RPCUserService {
             override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
             override val users: List<User> get() = listOf(rpcUser)
-            override val id: RPCUserService.Id = RPCUserService.Id("RPC_DRIVER")
+            override val id: AuthServiceId = AuthServiceId("RPC_DRIVER")
         }
         val rpcServer = RPCServer(
                 ops,

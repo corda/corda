@@ -5,10 +5,15 @@ import net.corda.core.utilities.Id
 import net.corda.core.utilities.UuidGenerator
 import java.time.Instant
 
-// TODO sollecitom docs
+/**
+ * Contextual tracing information, including invocation and session id.
+ */
 @CordaSerializable
 data class Trace(val invocationId: InvocationId = InvocationId(), val sessionId: SessionId = SessionId(invocationId.value, invocationId.timestamp)) {
 
+    /**
+     * Represents id and timestamp of an invocation.
+     */
     @CordaSerializable
     class InvocationId(value: String = UuidGenerator.next().toString(), timestamp: Instant = Instant.now()) : Id<String>(value, TYPE, timestamp) {
 
@@ -17,6 +22,9 @@ data class Trace(val invocationId: InvocationId = InvocationId(), val sessionId:
         }
     }
 
+    /**
+     * Represents id and timestamp of a session.
+     */
     @CordaSerializable
     class SessionId(value: String = UuidGenerator.next().toString(), timestamp: Instant = Instant.now()) : Id<String>(value, TYPE, timestamp) {
 
@@ -24,8 +32,4 @@ data class Trace(val invocationId: InvocationId = InvocationId(), val sessionId:
             private val TYPE = "Session"
         }
     }
-
-    // TODO sollecitom perhaps add IntervalTreeClock
-
-    // TODO sollecitom perhaps add latency deriving extensions to this
 }

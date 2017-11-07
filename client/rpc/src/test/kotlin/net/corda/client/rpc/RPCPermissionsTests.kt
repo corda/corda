@@ -2,9 +2,8 @@ package net.corda.client.rpc
 
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
-import net.corda.node.internal.requirePermission
 import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.messaging.context
+import net.corda.node.services.messaging.rpcContext
 import net.corda.nodeapi.User
 import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.rpcDriver
@@ -32,7 +31,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
 
     class TestOpsImpl : TestOps {
         override val protocolVersion = 1
-        override fun validatePermission(str: String) { context().requirePermission(str) }
+        override fun validatePermission(str: String) { rpcContext().requirePermission(str) }
     }
 
     /**

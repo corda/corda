@@ -14,6 +14,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.context.Origin
+import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.until
 import net.corda.core.node.StateLoader
@@ -64,7 +65,7 @@ class NodeSchedulerService(private val clock: Clock,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
                            private val serverThread: AffinityExecutor,
-                           private val ourIdentity: CordaX500Name)
+                           ourIdentity: CordaX500Name)
     : SchedulerService, SingletonSerializeAsToken() {
 
     companion object {
@@ -168,7 +169,7 @@ class NodeSchedulerService(private val clock: Clock,
 
     private val mutex = ThreadBox(InnerState())
 
-    private val actor = Actor(Actor.Id("CORDA_SCHEDULER"), Actor.StoreId("CORDA"), ourIdentity, emptySet())
+    private val actor = Actor(Actor.Id("CORDA_SCHEDULER"), AuthServiceId("CORDA"), ourIdentity)
 
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {

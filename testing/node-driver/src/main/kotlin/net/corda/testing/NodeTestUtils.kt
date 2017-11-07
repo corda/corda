@@ -8,7 +8,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.Actor
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.Origin
-import net.corda.core.flows.FlowInitiator
+import net.corda.core.context.AuthServiceId
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
@@ -92,13 +92,13 @@ fun testNodeConfiguration(
     }
 }
 
-fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = Actor(Actor.Id("Only For Testing"), Actor.StoreId("TEST"), owningLegalIdentity, setOf("ALL"))
+fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = Actor(Actor.Id("Only For Testing"), AuthServiceId("TEST"), owningLegalIdentity)
 
 fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = InvocationContext(testActor(owningLegalIdentity), Origin.RPC)
 
 /**
- * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
- * defaults to [FlowInitiator.RPC] with username "Only For Testing".
+ * Starts an already constructed flow. Note that you must be on the server thread to call this method. [InvocationContext]
+ * has origin [Origin.RPC] and actor with id "Only For Testing".
  */
 fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, newContext()).getOrThrow()
 

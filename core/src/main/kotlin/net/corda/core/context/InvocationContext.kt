@@ -5,7 +5,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import java.security.Principal
 
-// TODO sollecitom docs
+/**
+ * Models the information needed to trace an invocation in Corda.
+ * Includes initiating actor, origin, trace information, and optional external trace information to correlate clients' IDs.
+ */
 @CordaSerializable
 data class InvocationContext(val actor: Actor, val origin: Origin, val trace: Trace = Trace(), val externalTrace: Trace? = null) {
 
@@ -14,7 +17,7 @@ data class InvocationContext(val actor: Actor, val origin: Origin, val trace: Tr
 
         fun peer(actor: Actor, party: CordaX500Name, trace: Trace = Trace(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Peer(party), trace, externalTrace)
 
-        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, permissions: Set<String>, trace: Trace = Trace(), externalTrace: Trace? = null): InvocationContext = InvocationContext(Actor.service(serviceClassName, owningLegalIdentity, permissions), Origin.Service(serviceClassName), trace, externalTrace)
+        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace(), externalTrace: Trace? = null): InvocationContext = InvocationContext(Actor.service(serviceClassName, owningLegalIdentity), Origin.Service(serviceClassName), trace, externalTrace)
 
         fun scheduled(actor: Actor, scheduledState: ScheduledStateRef, trace: Trace = Trace(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Scheduled(scheduledState), trace, externalTrace)
 
@@ -28,52 +31,71 @@ data class InvocationContext(val actor: Actor, val origin: Origin, val trace: Tr
         get() = actor.owningLegalIdentity
 }
 
-// TODO sollecitom docs
-// TODO sollecitom: consider creating a Permissions / Permission type until we can.
+/**
+ * Models an initiator in Corda, can be a user, a service, etc.
+ */
 @CordaSerializable
-data class Actor(val id: Id, val storeId: StoreId, val owningLegalIdentity: CordaX500Name, val permissions: Set<String>) {
+data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdentity: CordaX500Name) {
 
     companion object {
-        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, permissions: Set<String>): Actor = Actor(Id(serviceClassName), StoreId("SERVICE"), owningLegalIdentity, permissions)
+        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name): Actor = Actor(Id(serviceClassName), AuthServiceId("SERVICE"), owningLegalIdentity)
     }
 
+    /**
+     * Actor id.
+     */
     @CordaSerializable
     data class Id(val value: String)
 
-    // TODO add val legalIdentity: CordaX500Name here (can't do it yet, for this would break the client API)
-    @CordaSerializable
-    data class StoreId(val value: String)
-    // in case we need different user types in corda (to provide polymorphic behaviour) we can an extra field here
 }
 
-// TODO sollecitom docs
+/**
+ * Invocation origin for tracing purposes.
+ */
 @CordaSerializable
 sealed class Origin {
 
+    /**
+     * Returns the [Principal] for a given [Actor].
+     */
     abstract fun principal(actor: Actor): Principal
 
+    /**
+     * Origin was an RPC call.
+     */
     object RPC : Origin() {
 
         override fun principal(actor: Actor) = Principal { actor.id.value }
     }
 
+    /**
+     * Origin was a message sent by a [Peer].
+     */
     data class Peer(val party: CordaX500Name) : Origin() {
 
         override fun principal(actor: Actor) = Principal { party.toString() }
     }
 
+    /**
+     * Origin was a Corda Service.
+     */
     data class Service(val serviceClassName: String) : Origin() {
 
         override fun principal(actor: Actor) = Principal { serviceClassName }
     }
 
-    // TODO sollecitom this should use original actor's principal
+    /**
+     * Origin was a scheduled activity.
+     */
     data class Scheduled(val scheduledState: ScheduledStateRef) : Origin() {
 
         override fun principal(actor: Actor) = Principal { "Scheduler" }
     }
 
     // TODO When proper ssh access enabled, add username/use RPC?
+    /**
+     * Origin was the Shell.
+     */
     object Shell : Origin() {
 
         override fun principal(actor: Actor) = Principal { "Shell User" }

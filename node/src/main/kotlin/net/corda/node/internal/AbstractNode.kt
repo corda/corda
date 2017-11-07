@@ -7,6 +7,7 @@ import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -26,7 +27,6 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
-import net.corda.core.context.InvocationContext
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal
@@ -43,7 +43,10 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.*
+import net.corda.node.services.network.NetworkMapCacheImpl
+import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.NodeInfoWatcher
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -306,7 +309,7 @@ abstract class AbstractNode(config: NodeConfiguration,
             val logicType = flow.javaClass
             require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
             // TODO check service permissions
-            val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name, emptySet())
+            val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name)
             return flowStarter.startFlow(flow, context).getOrThrow()
         }
 

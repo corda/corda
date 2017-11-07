@@ -2,6 +2,8 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
@@ -11,8 +13,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
 import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
@@ -30,6 +30,8 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
+import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.node.services.messaging.RpcPermissions
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -67,7 +69,7 @@ class CordaRPCOpsImplTest {
         aliceNode = mockNet.createNode()
         notaryNode = mockNet.createNotaryNode(validating = false)
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
-        CURRENT_RPC_CONTEXT.set(InvocationContext(testActor().copy(permissions = emptySet()), Origin.RPC))
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext(testActor(), Origin.RPC), RpcPermissions.NONE))
 
         mockNet.runNetwork()
         withPermissions(invokeRpc(CordaRPCOps::notaryIdentities)) {
@@ -288,7 +290,7 @@ class CordaRPCOpsImplTest {
 
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
-            CURRENT_RPC_CONTEXT.set(previous.copy(actor = previous.actor.copy(permissions = permissions.toSet())))
+            CURRENT_RPC_CONTEXT.set(previous.copy(grantedPermissions = RpcPermissions(permissions.toSet())))
             action.invoke()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)
