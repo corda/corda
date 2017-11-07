@@ -75,6 +75,8 @@ UNRELEASED
 * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This is
   needed to allow new ``node_info_hash`` column to be added for the network map redesign work.
 
+* Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey``s.
+
 .. _changelog_v1:
 
 Release 1.0
