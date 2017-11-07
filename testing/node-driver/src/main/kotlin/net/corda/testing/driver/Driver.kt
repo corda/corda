@@ -34,6 +34,10 @@ import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.*
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -45,6 +49,7 @@ import okhttp3.Request
 import org.slf4j.Logger
 import rx.Observable
 import rx.observables.ConnectableObservable
+import java.io.File
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -261,23 +266,20 @@ data class WebserverHandle(
         val process: Process
 )
 
-sealed class PortAllocation {
-    abstract fun nextPort(): Int
-    fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
-
-    class Incremental(startingPort: Int) : PortAllocation() {
-        val portCounter = AtomicInteger(startingPort)
-        override fun nextPort() = portCounter.andIncrement
+class PortAllocation(startingPort: Int) {
+    companion object {
+        private val directory = projectRootDir?.let { (it / "build" / "PortAllocation").toFile().apply { mkdir() } }
     }
 
-    object RandomFree : PortAllocation() {
-        override fun nextPort(): Int {
-            return ServerSocket().use {
-                it.bind(InetSocketAddress(0))
-                it.localPort
-            }
+    private val portCounter = AtomicInteger(startingPort)
+    fun nextPort(): Int {
+        while (true) {
+            val candidate = portCounter.andIncrement
+            if (directory == null || File(directory, candidate.toString()).mkdir()) return candidate
         }
     }
+
+    fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
 }
 
 /** Helper builder for configuring a [Node] from Java. */
@@ -374,13 +376,17 @@ fun <A> driver(
     return driver(defaultParameters = parameters, dsl = dsl)
 }
 
+// We use global port pools by default. This way if a test leaks a port subsequent tests will not clash.
+val globalPortAllocation = PortAllocation(10000)
+val globalDebugPortAllocation = PortAllocation(5005)
+
 /** Helper builder for configuring a [driver] from Java. */
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        val portAllocation: PortAllocation = globalPortAllocation,
+        val debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val initialiseSerialization: Boolean = true,
