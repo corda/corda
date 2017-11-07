@@ -26,9 +26,6 @@ public class FlowsInJavaTest {
     public void setUp() throws Exception {
         aliceNode = mockNet.createPartyNode(TestConstants.getALICE().getName());
         bobNode = mockNet.createPartyNode(TestConstants.getBOB().getName());
-        mockNet.runNetwork();
-        // Ensure registration was successful
-        aliceNode.getInternals().getNodeReadyFuture().get();
     }
 
     @After

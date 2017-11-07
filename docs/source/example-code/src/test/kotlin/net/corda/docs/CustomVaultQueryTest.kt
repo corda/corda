@@ -2,13 +2,11 @@ package net.corda.docs
 
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
-import net.corda.core.internal.packageName
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
 import net.corda.testing.getDefaultNotary
@@ -27,13 +25,7 @@ class CustomVaultQueryTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true,
-                cordappPackages = listOf(
-                        "net.corda.finance.contracts.asset",
-                        CashSchemaV1::class.packageName,
-                        "net.corda.docs"
-                )
-        )
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", "net.corda.docs"))
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)

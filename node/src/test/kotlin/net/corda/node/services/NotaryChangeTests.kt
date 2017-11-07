@@ -44,7 +44,6 @@ class NotaryChangeTests {
         clientNodeA = mockNet.createNode()
         clientNodeB = mockNet.createNode()
         oldNotaryNode = mockNet.notaryNodes[1]
-        mockNet.runNetwork() // Clear network map registration messages
         newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY.name)!!
         oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(oldNotaryName)!!
     }

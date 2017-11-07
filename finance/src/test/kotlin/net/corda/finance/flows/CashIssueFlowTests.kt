@@ -30,7 +30,6 @@ class CashIssueFlowTests {
         bankOfCordaNode = mockNet.createPartyNode(BOC.name)
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
         notary = mockNet.defaultNotaryIdentity
-        mockNet.runNetwork()
     }
 
     @After
