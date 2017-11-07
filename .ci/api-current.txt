@@ -1176,8 +1176,8 @@ public final class net.corda.core.flows.ReceiveStateAndRefFlow extends net.corda
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public List call()
 ##
 public final class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.flows.FlowLogic
-  public <init>(net.corda.core.flows.FlowSession)
-  public <init>(net.corda.core.flows.FlowSession, boolean)
+  @kotlin.jvm.JvmOverloads public <init>(net.corda.core.flows.FlowSession)
+  @kotlin.jvm.JvmOverloads public <init>(net.corda.core.flows.FlowSession, boolean)
   @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public net.corda.core.transactions.SignedTransaction call()
 ##
 public @interface net.corda.core.flows.SchedulableFlow
