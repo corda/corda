@@ -67,6 +67,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
      * is not necessary.
      */
+    // TODO sollecitom wrap the Logger here
     override val logger: Logger = LoggerFactory.getLogger("net.corda.flow.$id")
     @Transient private var resultFutureTransient: OpenFuture<R>? = openFuture()
     private val _resultFuture get() = resultFutureTransient ?: openFuture<R>().also { resultFutureTransient = it }
