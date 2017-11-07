@@ -2,6 +2,8 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.context.Actor
+import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
@@ -12,6 +14,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.context.Origin
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.until
 import net.corda.core.node.StateLoader
 import net.corda.core.schemas.PersistentStateRef
@@ -60,7 +63,8 @@ class NodeSchedulerService(private val clock: Clock,
                            private val stateLoader: StateLoader,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
-                           private val serverThread: AffinityExecutor)
+                           private val serverThread: AffinityExecutor,
+                           private val ourIdentity: CordaX500Name)
     : SchedulerService, SingletonSerializeAsToken() {
 
     companion object {
@@ -164,6 +168,8 @@ class NodeSchedulerService(private val clock: Clock,
 
     private val mutex = ThreadBox(InnerState())
 
+    private val actor = Actor(Actor.Id("CORDA_SCHEDULER"), Actor.StoreId("CORDA"), ourIdentity, emptySet())
+
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
@@ -246,7 +252,8 @@ class NodeSchedulerService(private val clock: Clock,
                     val scheduledFlow = getScheduledFlow(scheduledState)
                     if (scheduledFlow != null) {
                         flowName = scheduledFlow.javaClass.name
-                        val context = scheduledFlow.stateMachine.context.copy(origin = Origin.Scheduled(scheduledState))
+                        // TODO refactor the scheduler to propagate the original invocation context
+                        val context = InvocationContext(actor, Origin.Scheduled(scheduledState))
                         val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
                         future.then {
                             unfinishedSchedules.countDown()

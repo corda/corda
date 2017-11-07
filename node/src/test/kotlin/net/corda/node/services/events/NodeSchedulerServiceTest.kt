@@ -77,6 +77,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     private lateinit var smmHasRemovedAllFlows: CountDownLatch
     private lateinit var kms: MockKeyManagementService
     private lateinit var mockSMM: StateMachineManager
+    private val ourIdentity = ALICE_NAME
     var calls: Int = 0
 
     /**
@@ -120,7 +121,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database)
-            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), stateLoader, schedulerGatedExecutor, serverThread = smmExecutor)
+            scheduler = NodeSchedulerService(testClock, database, FlowStarterImpl(smmExecutor, mockSMM), stateLoader, schedulerGatedExecutor, serverThread = smmExecutor, ourIdentity = ourIdentity)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllFlows.countDown()

@@ -196,7 +196,7 @@ abstract class AbstractNode(config: NodeConfiguration,
             saveOwnNodeInfo()
             smm = makeStateMachineManager()
             val flowStarter = FlowStarterImpl(serverThread, smm)
-            val schedulerService = NodeSchedulerService(platformClock, this@AbstractNode.database, flowStarter, stateLoader, unfinishedSchedules = busyNodeLatch, serverThread = serverThread)
+            val schedulerService = NodeSchedulerService(platformClock, this@AbstractNode.database, flowStarter, stateLoader, unfinishedSchedules = busyNodeLatch, serverThread = serverThread, ourIdentity = info.legalIdentities[0].name)
             if (serverThread is ExecutorService) {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
