@@ -502,8 +502,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     putIntProperty(platformVersionProperty, versionInfo.platformVersion)
                     putStringProperty(topicProperty, SimpleString(message.topicSession.topic))
                     putLongProperty(sessionIdProperty, message.topicSession.sessionID)
-                    // TODO sollecitom check
-                    net.corda.node.services.messaging.context().mapTo(this)
+                    message.context.mapTo(this)
                     writeBodyBufferBytes(message.data)
                     // Use the magic deduplication property built into Artemis as our message identity too
                     putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
