@@ -17,7 +17,6 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
@@ -95,16 +94,6 @@ abstract class MQSecurityTest : NodeBasedTest() {
     fun `create queue for unknown peer`() {
         val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toBase58String()}"
         assertAllQueueCreationAttacksFail(invalidPeerQueue)
-    }
-
-    @Test
-    fun `consume message from network map queue`() {
-        assertConsumeAttackFails(NETWORK_MAP_QUEUE)
-    }
-
-    @Test
-    fun `send message to network map address`() {
-        assertSendAttackFails(NETWORK_MAP_QUEUE)
     }
 
     @Test
