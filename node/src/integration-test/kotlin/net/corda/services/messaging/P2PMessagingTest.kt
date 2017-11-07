@@ -1,6 +1,7 @@
 package net.corda.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.map
@@ -21,6 +22,7 @@ import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.testContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.*
@@ -58,9 +60,9 @@ class P2PMessagingTest {
 
             // Send a single request with retry
             val responseFuture = with(alice.network) {
-                val request = TestRequest(replyTo = myAddress)
+                val request = TestRequest(replyTo = myAddress, context = testContext(alice.info.chooseIdentity().name))
                 val responseFuture = onNext<Any>(dummyTopic, request.sessionID)
-                val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
+                val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes, context = request.context)
                 send(msg, serviceAddress, retryId = request.sessionID)
                 responseFuture
             }
@@ -94,8 +96,8 @@ class P2PMessagingTest {
 
             // Send a single request with retry
             with(alice.network) {
-                val request = TestRequest(sessionId, myAddress)
-                val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
+                val request = TestRequest(sessionId, myAddress, testContext(alice.info.chooseIdentity().name))
+                val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes, context = request.context)
                 send(msg, serviceAddress, retryId = request.sessionID)
             }
 
@@ -162,7 +164,7 @@ class P2PMessagingTest {
                 } else {
                     println("sending response")
                     val request = netMessage.data.deserialize<TestRequest>()
-                    val response = it.network.createMessage(dummyTopic, request.sessionID, responseMessage.serialize().bytes)
+                    val response = it.network.createMessage(dummyTopic, request.sessionID, responseMessage.serialize().bytes, context = request.context)
                     it.network.send(response, request.replyTo)
                 }
             }
@@ -194,17 +196,18 @@ class P2PMessagingTest {
     private fun StartedNode<*>.respondWith(message: Any) {
         network.addMessageHandler(javaClass.name) { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
-            val response = network.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
+            val response = network.createMessage(javaClass.name, request.sessionID, message.serialize().bytes, context = request.context)
             network.send(response, request.replyTo)
         }
     }
 
     private fun StartedNode<*>.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
-        val request = TestRequest(replyTo = network.myAddress)
+        val request = TestRequest(replyTo = network.myAddress, context = testContext(this.info.chooseIdentity().name))
         return network.sendRequest(javaClass.name, request, target)
     }
 
     @CordaSerializable
     private data class TestRequest(override val sessionID: Long = random63BitValue(),
-                                   override val replyTo: SingleMessageRecipient) : ServiceRequestMessage
+                                   override val replyTo: SingleMessageRecipient,
+                                   override val context: InvocationContext) : ServiceRequestMessage
 }

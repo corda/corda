@@ -147,7 +147,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
             }
         }
         val nodeIdentity = node.info.chooseIdentity()
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), InvocationContext.shell(testActor.copy(owningLegalIdentity = nodeIdentity.name))).flatMap { it.resultFuture }.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), InvocationContext.shell(testActor(nodeIdentity.name))).flatMap { it.resultFuture }.getOrThrow()
         proxy.startFlow(::CashIssueFlow,
                 123.DOLLARS,
                 OpaqueBytes.of(0),

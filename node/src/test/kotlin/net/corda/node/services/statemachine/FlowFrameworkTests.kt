@@ -607,7 +607,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `unknown class in session init`() {
-        aliceNode.sendSessionMessage(SessionInit(random63BitValue(), "not.a.real.Class", 1, "version", null), bob)
+        aliceNode.sendSessionMessage(SessionInit(random63BitValue(), "not.a.real.Class", 1, "version", testContext(), null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
         val reject = receivedSessionMessages.last().message as SessionReject
@@ -616,7 +616,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `non-flow class in session init`() {
-        aliceNode.sendSessionMessage(SessionInit(random63BitValue(), String::class.java.name, 1, "version", null), bob)
+        aliceNode.sendSessionMessage(SessionInit(random63BitValue(), String::class.java.name, 1, "version", testContext(), null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
         val reject = receivedSessionMessages.last().message as SessionReject
@@ -687,18 +687,18 @@ class FlowFrameworkTests {
     }
 
     private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
-        return SessionInit(0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
+        return SessionInit(0, clientFlowClass.java.name, flowVersion, "", testContext(), payload?.serialize())
     }
 
-    private fun sessionConfirm(flowVersion: Int = 1) = SessionConfirm(0, 0, flowVersion, "")
-    private fun sessionData(payload: Any) = SessionData(0, payload.serialize())
-    private val normalEnd = NormalSessionEnd(0)
-    private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, errorResponse)
+    private fun sessionConfirm(flowVersion: Int = 1) = SessionConfirm(0, 0, flowVersion, "", testContext())
+    private fun sessionData(payload: Any) = SessionData(0, payload.serialize(), testContext())
+    private val normalEnd = NormalSessionEnd(0, testContext())
+    private fun erroredEnd(errorResponse: FlowException? = null) = ErrorSessionEnd(0, testContext(), errorResponse)
 
     private fun StartedNode<*>.sendSessionMessage(message: SessionMessage, destination: Party) {
         services.networkService.apply {
             val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
-            send(createMessage(StateMachineManagerImpl.sessionTopic, message.serialize().bytes), address)
+            send(createMessage(StateMachineManagerImpl.sessionTopic, message.serialize().bytes, message.context), address)
         }
     }
 

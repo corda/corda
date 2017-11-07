@@ -67,7 +67,7 @@ class CordaRPCOpsImplTest {
         aliceNode = mockNet.createNode()
         notaryNode = mockNet.createNotaryNode(validating = false)
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
-        CURRENT_RPC_CONTEXT.set(InvocationContext(testActor.copy(permissions = emptySet()), Origin.RPC))
+        CURRENT_RPC_CONTEXT.set(InvocationContext(testActor().copy(permissions = emptySet()), Origin.RPC))
 
         mockNet.runNetwork()
         withPermissions(invokeRpc(CordaRPCOps::notaryIdentities)) {

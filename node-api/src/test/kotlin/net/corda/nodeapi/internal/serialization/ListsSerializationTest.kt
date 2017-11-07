@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.amqpSpecific
 import net.corda.testing.kryoSpecific
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.testContext
 import org.assertj.core.api.Assertions
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -46,18 +47,20 @@ class ListsSerializationTest {
 
     @Test
     fun `check list can be serialized as part of SessionData`() {
+
+        val context = testContext()
         run {
-            val sessionData = SessionData(123, listOf(1).serialize())
+            val sessionData = SessionData(123, listOf(1).serialize(), context)
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(listOf(1), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, listOf(1, 2).serialize())
+            val sessionData = SessionData(123, listOf(1, 2).serialize(), context)
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(listOf(1, 2), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, emptyList<Int>().serialize())
+            val sessionData = SessionData(123, emptyList<Int>().serialize(), context)
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(emptyList<Int>(), sessionData.payload.deserialize())
         }

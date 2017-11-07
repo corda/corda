@@ -293,6 +293,7 @@ class InMemoryMessagingNetwork(
                                                override val platformVersion: Int,
                                                override val uniqueMessageId: UUID,
                                                override val debugTimestamp: Instant,
+                                               override val peer: CordaX500Name,
                                                override val context: InvocationContext) : ReceivedMessage
 
     /**
@@ -393,9 +394,8 @@ class InMemoryMessagingNetwork(
         override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
-            // TODO sollecitom context() will probably not work here
-            return InMemoryMessage(topicSession, data, uuid, context())
+        override fun createMessage(topicSession: TopicSession, data: ByteArray, context: InvocationContext, uuid: UUID): Message {
+            return InMemoryMessage(topicSession, data, uuid, context)
         }
 
         /**
@@ -477,13 +477,13 @@ class InMemoryMessagingNetwork(
             return transfer
         }
 
-        // TODO sollecitom context() will probably not work here
         private fun MessageTransfer.toReceivedMessage(): ReceivedMessage = InMemoryReceivedMessage(
                 message.topicSession,
                 message.data.copyOf(), // Kryo messes with the buffer so give each client a unique copy
                 1,
                 message.uniqueMessageId,
                 message.debugTimestamp,
-                context())
+                sender.description,
+                message.context)
     }
 }

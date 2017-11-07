@@ -41,6 +41,7 @@ class FlowPermissionException(message: String) : FlowException(message)
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
+                              val ourIdentity: Party,
                               override val context: InvocationContext) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
 
     companion object {
@@ -328,7 +329,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             is FlowSessionState.Initiated -> sessionState.peerSessionId
             else -> throw IllegalStateException("We've somehow held onto a non-initiated session: $session")
         }
-        return SessionData(peerSessionId, payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
+        return SessionData(peerSessionId, payload.serialize(context = SerializationDefaults.P2P_CONTEXT), context)
     }
 
     @Suspendable
@@ -391,7 +392,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         session.retryable = retryable
         val (version, initiatingFlowClass) = session.flow.javaClass.flowVersionAndInitiatingClass
         val payloadBytes = firstPayload?.serialize(context = SerializationDefaults.P2P_CONTEXT)
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, payloadBytes)
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, context, payloadBytes)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()

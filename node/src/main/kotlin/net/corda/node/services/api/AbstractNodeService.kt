@@ -30,7 +30,7 @@ abstract class AbstractNodeService(val network: MessagingService) : SingletonSer
                 val response = handler(request)
                 // If the return type R is Unit, then do not send a response
                 if (response.javaClass != Unit.javaClass) {
-                    val msg = network.createMessage(topic, request.sessionID, response.serialize().bytes)
+                    val msg = network.createMessage(topic, request.sessionID, response.serialize().bytes, request.context)
                     network.send(msg, request.replyTo)
                 }
             } catch (e: Exception) {

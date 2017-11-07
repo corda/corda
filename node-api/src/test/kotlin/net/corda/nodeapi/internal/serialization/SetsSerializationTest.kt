@@ -8,6 +8,7 @@ import net.corda.node.services.statemachine.SessionData
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.kryoSpecific
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.testContext
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -33,18 +34,19 @@ class SetsSerializationTest {
 
     @Test
     fun `check set can be serialized as part of SessionData`() {
+        val context = testContext()
         run {
-            val sessionData = SessionData(123, setOf(1).serialize())
+            val sessionData = SessionData(123, setOf(1).serialize(), context)
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(setOf(1), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, setOf(1, 2).serialize())
+            val sessionData = SessionData(123, setOf(1, 2).serialize(), context)
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(setOf(1, 2), sessionData.payload.deserialize())
         }
         run {
-            val sessionData = SessionData(123, emptySet<Int>().serialize())
+            val sessionData = SessionData(123, emptySet<Int>().serialize(), context)
             assertEqualAfterRoundTripSerialization(sessionData)
             assertEquals(emptySet<Int>(), sessionData.payload.deserialize())
         }

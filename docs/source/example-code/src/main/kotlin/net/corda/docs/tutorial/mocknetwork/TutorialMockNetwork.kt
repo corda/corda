@@ -93,7 +93,7 @@ class TutorialMockNetwork {
                 val messageData = message.data.deserialize<Any>()
 
                 if (messageData is SessionData && messageData.payload.deserialize() == 1) {
-                    val alteredMessageData = SessionData(messageData.recipientSessionId, 99.serialize()).serialize().bytes
+                    val alteredMessageData = SessionData(messageData.recipientSessionId, 99.serialize(), message.context).serialize().bytes
                     messagingService.send(InMemoryMessagingNetwork.InMemoryMessage(message.topicSession, alteredMessageData, message.uniqueMessageId, testContext()), target, retryId)
                 } else {
                     messagingService.send(message, target, retryId)

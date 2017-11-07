@@ -17,6 +17,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
@@ -93,12 +94,13 @@ fun testNodeConfiguration(
     }
 }
 
-val testActor = Actor(Actor.Id("Only For Testing"), Actor.StoreId("TEST"), CordaX500Name("Test Company Inc.", "London", "GB"), setOf("ALL"))
+fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = Actor(Actor.Id("Only For Testing"), Actor.StoreId("TEST"), owningLegalIdentity, setOf("ALL"))
 
-fun testContext() = InvocationContext(testActor, Origin.RPC)
+fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = InvocationContext(testActor(owningLegalIdentity), Origin.RPC)
+
 /**
  * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
  * defaults to [FlowInitiator.RPC] with username "Only For Testing".
  */
 @VisibleForTesting
-fun <T> FlowStarter.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, testContext()).getOrThrow()
+fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, testContext(myInfo.chooseIdentity().name)).getOrThrow()

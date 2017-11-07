@@ -336,7 +336,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             log.trace { "Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid" }
 
             val context = message.context(CordaX500Name.parse(user))
-            return ArtemisReceivedMessage(TopicSession(topic, sessionID), context, platformVersion, uuid, message)
+            return ArtemisReceivedMessage(TopicSession(topic, sessionID), CordaX500Name.parse(user), context, platformVersion, uuid, message)
         } catch (e: Exception) {
             log.error("Unable to process message, ignoring it: $message", e)
             return null
@@ -405,6 +405,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private class ArtemisReceivedMessage(override val topicSession: TopicSession,
+                                         override val peer: CordaX500Name,
                                          override val context: InvocationContext,
                                          override val platformVersion: Int,
                                          override val uniqueMessageId: UUID,
@@ -616,10 +617,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         handlers.remove(registration)
     }
 
-    override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
+    override fun createMessage(topicSession: TopicSession, data: ByteArray, context: InvocationContext, uuid: UUID): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
-        // TODO sollecitom check context()
-        return NodeClientMessage(topicSession, data, uuid, context())
+        return NodeClientMessage(topicSession, data, uuid, context)
     }
 
     private fun createOutOfProcessVerifierService(): TransactionVerifierService {

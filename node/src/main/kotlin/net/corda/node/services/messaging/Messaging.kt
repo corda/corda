@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -126,7 +127,7 @@ interface MessagingService {
      *
      * @param topicSession identifier for the topic and session the message is sent to.
      */
-    fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID = UUID.randomUUID()): Message
+    fun createMessage(topicSession: TopicSession, data: ByteArray, context: InvocationContext, uuid: UUID = UUID.randomUUID()): Message
 
     /** Given information about either a specific node or a service returns its corresponding address */
     fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
@@ -151,8 +152,8 @@ interface MessagingService {
  * @param sessionID identifier for the session the message is part of. For messages sent to services before the
  * construction of a session, use [DEFAULT_SESSION_ID].
  */
-fun MessagingService.createMessage(topic: String, sessionID: Long = MessagingService.DEFAULT_SESSION_ID, data: ByteArray): Message
-        = createMessage(TopicSession(topic, sessionID), data)
+fun MessagingService.createMessage(topic: String, sessionID: Long = MessagingService.DEFAULT_SESSION_ID, data: ByteArray, context: InvocationContext): Message
+        = createMessage(TopicSession(topic, sessionID), data, context)
 
 /**
  * Registers a handler for the given topic and session ID that runs the given callback with the message and then removes
@@ -199,11 +200,11 @@ fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): CordaFutu
     return messageFuture
 }
 
-fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
-        = send(TopicSession(topic, sessionID), payload, to, uuid)
+fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, context: InvocationContext, uuid: UUID = UUID.randomUUID())
+        = send(TopicSession(topic, sessionID), payload, to, context, uuid)
 
-fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID(), retryId: Long? = null)
-        = send(createMessage(topicSession, payload.serialize().bytes, uuid), to, retryId)
+fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, context: InvocationContext, uuid: UUID = UUID.randomUUID(), retryId: Long? = null)
+        = send(createMessage(topicSession, payload.serialize().bytes, context, uuid), to, retryId)
 
 /**
  * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods
@@ -258,6 +259,8 @@ interface Message {
 // The certificate would need to be serialised into the message header or just its fingerprint and then download it via RPC,
 // or something like that.
 interface ReceivedMessage : Message {
+    /** The authenticated sender. */
+    val peer: CordaX500Name
     /** Platform version of the sender's node. */
     val platformVersion: Int
 }
