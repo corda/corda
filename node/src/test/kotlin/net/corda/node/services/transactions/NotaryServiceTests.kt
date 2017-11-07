@@ -41,7 +41,6 @@ class NotaryServiceTests {
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         aliceServices = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME)).services
-        mockNet.runNetwork() // Clear network map registration messages
         notaryServices = mockNet.defaultNotaryNode.services //TODO get rid of that
         notary = aliceServices.getDefaultNotary()
         alice = aliceServices.myInfo.singleIdentity()

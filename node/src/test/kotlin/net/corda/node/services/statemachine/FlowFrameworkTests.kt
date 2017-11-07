@@ -209,7 +209,6 @@ class FlowFrameworkTests {
     @Test
     fun `sending to multiple parties`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
         bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         charlieNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
@@ -242,7 +241,6 @@ class FlowFrameworkTests {
     @Test
     fun `receiving from multiple parties`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
         val bobPayload = "Test 1"
         val charliePayload = "Test 2"
@@ -396,7 +394,6 @@ class FlowFrameworkTests {
     @Test
     fun `FlowException propagated in invocation chain`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
         charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
@@ -411,7 +408,6 @@ class FlowFrameworkTests {
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
         // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
@@ -662,7 +658,7 @@ class FlowFrameworkTests {
         val newNode = mockNet.createNode(MockNodeParameters(id))
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
-        mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
+        mockNet.runNetwork()
         newNode.getSingleFlow<P>().first
     }
 

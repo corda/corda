@@ -68,9 +68,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         private val cordappPackages = listOf("net.corda.finance.contracts")
         @JvmStatic
         @Parameterized.Parameters(name = "Anonymous = {0}")
-        fun data(): Collection<Boolean> {
-            return listOf(true, false)
-        }
+        fun data(): Collection<Boolean> = listOf(true, false)
     }
 
     private lateinit var mockNet: MockNetwork
@@ -419,7 +417,6 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
 
-        mockNet.runNetwork()
         val notary = aliceNode.services.getDefaultNotary()
         val alice: Party = aliceNode.info.singleIdentity()
         val bank: Party = bankNode.info.singleIdentity()
@@ -449,8 +446,6 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
 
             insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, bankNode)
-
-            mockNet.runNetwork() // Clear network map registration messages
 
             val aliceTxStream = aliceNode.services.validatedTransactions.track().updates
             val aliceTxMappings = with(aliceNode) {
@@ -574,7 +569,6 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val bankNode = mockNet.createPartyNode(BOC_NAME)
 
-        mockNet.runNetwork()
         val notary = aliceNode.services.getDefaultNotary()
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()
@@ -590,8 +584,6 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
         insertFakeTransactions(bobsBadCash, bobNode, notaryNode, bankNode)
         insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, bankNode)
-
-        mockNet.runNetwork() // Clear network map registration messages
 
         val (bobStateMachine, aliceResult) = runBuyerAndSeller(notary, aliceNode, bobNode, "alice's paper".outputStateAndRef())
 

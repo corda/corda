@@ -28,7 +28,6 @@ class NodeSchemaServiceTest {
     fun `registering custom schemas for testing with MockNode`() {
         val mockNet = MockNetwork(cordappPackages = listOf(DummyLinearStateSchemaV1::class.packageName))
         val mockNode = mockNet.createNode()
-        mockNet.runNetwork()
         val schemaService = mockNode.services.schemaService
         assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))
 
