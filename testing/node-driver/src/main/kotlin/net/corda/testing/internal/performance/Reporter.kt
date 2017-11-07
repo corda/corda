@@ -1,4 +1,4 @@
-package net.corda.testing.performance
+package net.corda.testing.internal.performance
 
 import com.codahale.metrics.ConsoleReporter
 import com.codahale.metrics.JmxReporter

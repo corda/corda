@@ -569,7 +569,7 @@ class ObligationTests {
         // Try defaulting an obligation due in the future
         val pastTestTime = TEST_TX_TIME - 7.days
         val futureTestTime = TEST_TX_TIME + 7.days
-        transaction("Settlement") {
+        transaction {
             attachments(Obligation.PROGRAM_ID)
             input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime)
             output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
@@ -580,7 +580,7 @@ class ObligationTests {
 
         // Try defaulting an obligation that is now in the past
         ledger {
-            transaction("Settlement") {
+            transaction {
                 attachments(Obligation.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime)
                 output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
