@@ -608,7 +608,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             notaryNode: StartedNode<*>,
             vararg extraSigningNodes: StartedNode<*>): Map<SecureHash, SignedTransaction> {
 
-        val notaryParty = notaryNode.info.legalIdentities[0]
+        val notaryParty = node.services.getDefaultNotary()
         val signed = wtxToSign.map {
             val id = it.id
             val sigs = mutableListOf<TransactionSignature>()
