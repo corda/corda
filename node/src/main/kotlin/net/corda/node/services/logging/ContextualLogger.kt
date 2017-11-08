@@ -4,8 +4,8 @@ import net.corda.core.context.InvocationContext
 import org.slf4j.Logger
 import org.slf4j.Marker
 
-// TODO sollecitom I wish we would support something leaner as a logging interface. And shame that the MDC is at thread level!
-data class ContextualLogger(private val delegate: Logger, private val context: InvocationContext, private val contextualise: (message: String?, context: InvocationContext) -> String = { message, ctx -> contextualiseDefault(message, ctx) }) : Logger by delegate {
+// Wish we didn't expose org.slf4j.Logger from public API.
+class ContextualLogger(private val delegate: Logger, private val context: InvocationContext, private val contextualise: (message: String?, context: InvocationContext) -> String = { message, ctx -> contextualiseDefault(message, ctx) }) : Logger by delegate {
 
     override fun warn(marker: Marker?, format: String?, vararg arguments: Any?) {
         delegate.warn(marker, contextualise(format, context), *arguments)
@@ -216,8 +216,14 @@ data class ContextualLogger(private val delegate: Logger, private val context: I
 
         private val InvocationContext.serialised: String
             get() {
-                // TODO sollecitom implement here
-                return ""
+                // TODO sollecitom consider a different default
+                val keys = mutableMapOf<String, String>()
+                keys += "actor" to "{id: ${actor.id.value}, store: ${actor.serviceId.value}, identity: $owningLegalIdentity}"
+                keys += "trace" to "{invocation: ${trace.invocationId.value}, session: ${trace.sessionId.value}}"
+                externalTrace?.let {
+                    keys += "externalTrace" to "{invocation: ${it.invocationId.value}, session: ${it.sessionId.value}}"
+                }
+                return keys.entries.joinToString(separator = ", ", prefix = "context: {", postfix = "}") { "${it.key}: ${it.value}" }
             }
     }
 }

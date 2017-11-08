@@ -28,6 +28,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.RPCUserService
+import net.corda.node.services.logging.ContextualLogger
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.Message
@@ -40,6 +41,7 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
+import org.slf4j.Logger
 import rx.Notification
 import rx.Observable
 import rx.Subscriber
@@ -273,17 +275,18 @@ class RPCServer(
                     clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                 }
                 val context = artemisMessage.context()
+                val logger = ContextualLogger(log, context.invocation)
                 when (arguments) {
                     is Try.Success -> {
                         rpcExecutor!!.submit {
-                            val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                            val result = invokeRpc(context, logger, clientToServer.methodName, arguments.value)
                             sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, result)
                         }
                     }
                     is Try.Failure -> {
                         // We failed to deserialise the arguments, route back the error
                         // TODO sollecitom try and log with context here as well.
-                        log.warn("Inbound RPC failed", arguments.exception)
+                        logger.warn("Inbound RPC failed", arguments.exception)
                         sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, arguments)
                     }
                 }
@@ -295,11 +298,11 @@ class RPCServer(
         artemisMessage.acknowledge()
     }
 
-    private fun invokeRpc(context: RpcAuthContext, methodName: String, arguments: List<Any?>): Try<Any> {
+    private fun invokeRpc(context: RpcAuthContext, logger: Logger, methodName: String, arguments: List<Any?>): Try<Any> {
         return Try.on {
             try {
                 CURRENT_RPC_CONTEXT.set(context)
-                log.debug { "Calling $methodName" }
+                logger.debug { "Calling $methodName" }
                 val method = methodTable[methodName] ?:
                         throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
                 method.invoke(ops, *arguments.toTypedArray())
