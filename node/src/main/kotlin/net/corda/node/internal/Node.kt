@@ -12,7 +12,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.nodeSerializationEnv
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme

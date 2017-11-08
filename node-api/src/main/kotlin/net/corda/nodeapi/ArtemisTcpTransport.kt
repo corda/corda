@@ -1,7 +1,7 @@
 package net.corda.nodeapi
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.serialization.nodeSerializationEnv
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration

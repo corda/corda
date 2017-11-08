@@ -37,7 +37,7 @@ class SerializationEnvironmentImpl(
     }
 }
 
-internal val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv", true)
+private val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv", true)
 @VisibleForTesting
 val _globalSerializationEnv = SimpleToggleField<SerializationEnvironment>("globalSerializationEnv")
 @VisibleForTesting
@@ -53,3 +53,5 @@ internal val effectiveSerializationEnv: SerializationEnvironment
             it.printStackTrace() // Sadly, it won't always propagate.
         }
     }
+/** Should be set once in main. */
+var nodeSerializationEnv by _nodeSerializationEnv

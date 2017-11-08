@@ -2,7 +2,6 @@ package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.serialization.internal._nodeSerializationEnv
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
@@ -181,9 +180,6 @@ object SerializationDefaults {
     val STORAGE_CONTEXT get() = effectiveSerializationEnv.storageContext
     val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
 }
-
-/** Should be set once in main. */
-var nodeSerializationEnv by _nodeSerializationEnv
 
 /**
  * Convenience extension method for deserializing a ByteSequence, utilising the defaults.
