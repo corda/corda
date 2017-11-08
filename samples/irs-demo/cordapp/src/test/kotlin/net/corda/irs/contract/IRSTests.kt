@@ -382,7 +382,7 @@ class IRSTests {
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
 
-        return ledger(initialiseSerialization = false) {
+        return ledger {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement") { singleIRS() }
@@ -415,7 +415,7 @@ class IRSTests {
     @Test
     fun `ensure failure occurs when there are inbound states for an agreement command`() {
         val irs = singleIRS()
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             input(IRS_PROGRAM_ID, irs)
             output(IRS_PROGRAM_ID, "irs post agreement", irs)
@@ -429,7 +429,7 @@ class IRSTests {
     fun `ensure failure occurs when no events in fix schedule`() {
         val irs = singleIRS()
         val emptySchedule = mutableMapOf<LocalDate, FixedRatePaymentEvent>()
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule)))
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -442,7 +442,7 @@ class IRSTests {
     fun `ensure failure occurs when no events in floating schedule`() {
         val irs = singleIRS()
         val emptySchedule = mutableMapOf<LocalDate, FloatingRatePaymentEvent>()
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule)))
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -454,7 +454,7 @@ class IRSTests {
     @Test
     fun `ensure notionals are non zero`() {
         val irs = singleIRS()
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, irs.copy(irs.fixedLeg.copy(notional = irs.fixedLeg.notional.copy(quantity = 0))))
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -462,7 +462,7 @@ class IRSTests {
             this `fails with` "All notionals must be non zero"
         }
 
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, irs.copy(irs.fixedLeg.copy(notional = irs.floatingLeg.notional.copy(quantity = 0))))
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -475,7 +475,7 @@ class IRSTests {
     fun `ensure positive rate on fixed leg`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(fixedRate = FixedRate(PercentageRatioUnit("-0.1"))))
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, modifiedIRS)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -491,7 +491,7 @@ class IRSTests {
     fun `ensure same currency notionals`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.fixedLeg.notional.quantity, Currency.getInstance("JPY"))))
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, modifiedIRS)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -504,7 +504,7 @@ class IRSTests {
     fun `ensure notional amounts are equal`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.floatingLeg.notional.quantity + 1, irs.floatingLeg.notional.token)))
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, modifiedIRS)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -517,7 +517,7 @@ class IRSTests {
     fun `ensure trade date and termination date checks are done pt1`() {
         val irs = singleIRS()
         val modifiedIRS1 = irs.copy(fixedLeg = irs.fixedLeg.copy(terminationDate = irs.fixedLeg.effectiveDate.minusDays(1)))
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, modifiedIRS1)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -526,7 +526,7 @@ class IRSTests {
         }
 
         val modifiedIRS2 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.floatingLeg.effectiveDate.minusDays(1)))
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, modifiedIRS2)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -540,7 +540,7 @@ class IRSTests {
         val irs = singleIRS()
 
         val modifiedIRS3 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.fixedLeg.terminationDate.minusDays(1)))
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, modifiedIRS3)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -550,7 +550,7 @@ class IRSTests {
 
 
         val modifiedIRS4 = irs.copy(floatingLeg = irs.floatingLeg.copy(effectiveDate = irs.fixedLeg.effectiveDate.minusDays(1)))
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, modifiedIRS4)
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -565,7 +565,7 @@ class IRSTests {
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
 
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             output(IRS_PROGRAM_ID, "irs post agreement") { singleIRS() }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -579,7 +579,7 @@ class IRSTests {
                 oldIRS.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
                 oldIRS.common)
 
-        transaction(initialiseSerialization = false) {
+        transaction {
             attachments(IRS_PROGRAM_ID)
             input(IRS_PROGRAM_ID, oldIRS)
 
@@ -657,7 +657,7 @@ class IRSTests {
 
         val irs = singleIRS()
 
-        return ledger(initialiseSerialization = false) {
+        return ledger {
             transaction("Agreement") {
                 attachments(IRS_PROGRAM_ID)
                 output(IRS_PROGRAM_ID, "irs post agreement1") {
