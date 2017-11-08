@@ -21,9 +21,14 @@ import java.security.SignatureException
  * @property checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
  * @property statesToRecord which transaction states should be recorded in the vault, if any.
  */
-class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
-                                                       private val checkSufficientSignatures: Boolean = true,
-                                                       private val statesToRecord: StatesToRecord = StatesToRecord.NONE) : FlowLogic<SignedTransaction>() {
+class ReceiveTransactionFlow(private val otherSideSession: FlowSession,
+                             private val checkSufficientSignatures: Boolean,
+                             private val statesToRecord: StatesToRecord) : FlowLogic<SignedTransaction>() {
+    /** Receives a [SignedTransaction] from [otherSideSession], verifies it and then records it in the vault. */
+    constructor(otherSideSession: FlowSession, checkSufficientSignatures: Boolean) : this(otherSideSession, checkSufficientSignatures, StatesToRecord.NONE)
+    /** Receives a [SignedTransaction] from [otherSideSession], verifies it and then records it in the vault. */
+    constructor(otherSideSession: FlowSession) : this(otherSideSession, true)
+
     @Suppress("KDocMissingDocumentation")
     @Suspendable
     @Throws(SignatureException::class,
