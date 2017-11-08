@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.*;
 
 public class VaultQueryJavaTests {
     @Rule
-    public SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
+    public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private MockServices services;
     private MockServices issuerServices;
     private VaultService vaultService;

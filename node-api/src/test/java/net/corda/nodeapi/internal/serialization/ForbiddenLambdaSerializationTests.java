@@ -20,7 +20,7 @@ import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
 public final class ForbiddenLambdaSerializationTests {
     @Rule
-    public SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
+    public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private SerializationFactory factory;
 
     @Before
