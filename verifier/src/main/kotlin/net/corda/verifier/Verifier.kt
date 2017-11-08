@@ -3,9 +3,20 @@ package net.corda.verifier
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.internal.div
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -24,8 +35,11 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import java.io.InputStream
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.sql.Connection
+import java.time.Clock
 
 data class VerifierConfiguration(
         override val baseDirectory: Path,
@@ -64,11 +78,12 @@ class Verifier {
                 session.close()
                 sessionFactory.close()
             }
-            initialiseSerialization()
+            val serializationContext = initialiseSerialization()
+
             val consumer = session.createConsumer(VERIFICATION_REQUESTS_QUEUE_NAME)
             val replyProducer = session.createProducer()
             consumer.setMessageHandler {
-                val (request, context) = VerifierApi.VerificationRequest.fromClientMessage(it)
+                val (request, context) = VerifierApi.VerificationRequest.fromClientMessage(it, serializationContext)
                 log.debug { "Received verification request with id ${request.verificationId}" }
                 val error = try {
                     request.transaction.verify()
@@ -88,7 +103,7 @@ class Verifier {
             Thread.sleep(Long.MAX_VALUE)
         }
 
-        private fun initialiseSerialization() {
+        private fun initialiseSerialization(): SerializationContext {
             SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
                 registerScheme(KryoVerifierSerializationScheme)
                 registerScheme(AMQPVerifierSerializationScheme)
@@ -98,6 +113,50 @@ class Verifier {
              * request received, see use of [context] in [main] method.
              */
             SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+
+            // Need a way to load ContractAttachments
+            val mockServiceHub = object : ServiceHub {
+                override val attachments: AttachmentStorage = object : AttachmentStorage {
+                    override fun openAttachment(id: AttachmentId): Attachment? {
+                        return GeneratedAttachment(kotlin.ByteArray(0))
+                    }
+
+                    override fun importAttachment(jar: InputStream): AttachmentId {
+                        throw UnsupportedOperationException()
+                    }
+                }
+
+                override fun loadState(stateRef: StateRef): TransactionState<*> {
+                    throw UnsupportedOperationException()
+                }
+
+                override val identityService: IdentityService get() = throw UnsupportedOperationException()
+                override val cordappProvider: CordappProvider get() = throw UnsupportedOperationException()
+                override val vaultService: VaultService get() = throw UnsupportedOperationException()
+                override val keyManagementService: KeyManagementService get() = throw UnsupportedOperationException()
+                override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
+                override val validatedTransactions: TransactionStorage get() = throw UnsupportedOperationException()
+                override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
+                override val transactionVerifierService: TransactionVerifierService get() = throw UnsupportedOperationException()
+                override val clock: Clock get() = throw UnsupportedOperationException()
+                override val myInfo: NodeInfo get() = throw UnsupportedOperationException()
+
+                override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
+                    throw UnsupportedOperationException()
+                }
+
+                override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+                    throw UnsupportedOperationException()
+                }
+
+                override fun jdbcSession(): Connection {
+                    throw UnsupportedOperationException()
+                }
+            }
+
+            val factory = SerializationFactory.defaultFactory
+            val context = factory.defaultContext
+            return context.withTokenContext(SerializeAsTokenContextImpl(Any(), factory, context, mockServiceHub))
         }
     }
 

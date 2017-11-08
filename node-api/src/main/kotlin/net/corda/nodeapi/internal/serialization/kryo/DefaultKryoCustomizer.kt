@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
@@ -197,15 +198,16 @@ object DefaultKryoCustomizer {
 
     private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
         override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
-            output.writeBytesWithLength(obj.attachment.id.bytes)
+            output.writeBytes(obj.attachment.id.bytes)
             output.writeString(obj.contract)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
-            val attachmentHash = SecureHash.SHA256(input.readBytesWithLength())
+            val attachmentHash = SecureHash.SHA256(input.readBytes(32))
+            val context = kryo.serializationContext() ?: throw KryoException("Attempt to read a ${type.name} instance without initialising a context")
+            val attachmentStorage = context.serviceHub.attachments
 
             val lazyAttachment = object : AbstractAttachment({
-                val attachmentStorage = kryo.serializationContext()!!.serviceHub.attachments
                 val attachment = attachmentStorage.openAttachment(attachmentHash) ?: throw MissingAttachmentsException(listOf(attachmentHash))
                 attachment.open().readBytes()
             }) {
