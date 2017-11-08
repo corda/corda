@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.nodeSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort

@@ -11,7 +11,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.core.serialization.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.nodeSerializationEnv
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
@@ -26,7 +26,6 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
-import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*

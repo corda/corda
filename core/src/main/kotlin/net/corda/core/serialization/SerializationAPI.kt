@@ -2,11 +2,8 @@ package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.internal.InheritableThreadLocalToggleField
-import net.corda.core.internal.SimpleToggleField
-import net.corda.core.internal.ThreadLocalToggleField
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.serialization.internal._nodeSerializationEnv
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
@@ -56,7 +53,7 @@ abstract class SerializationFactory {
      * A context to use as a default if you do not require a specially configured context.  It will be the current context
      * if the use is somehow nested (see [currentContext]).
      */
-    val defaultContext: SerializationContext get() = currentContext ?: SerializationDefaults.P2P_CONTEXT
+    val defaultContext: SerializationContext get() = currentContext ?: effectiveSerializationEnv.p2pContext
 
     private val _currentContext = ThreadLocal<SerializationContext?>()
 
@@ -93,7 +90,7 @@ abstract class SerializationFactory {
         /**
          * A default factory for serialization/deserialization, taking into account the [currentFactory] if set.
          */
-        val defaultFactory: SerializationFactory get() = currentFactory ?: SerializationDefaults.SERIALIZATION_FACTORY
+        val defaultFactory: SerializationFactory get() = currentFactory ?: effectiveSerializationEnv.serializationFactory
 
         /**
          * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
@@ -173,46 +170,18 @@ interface SerializationContext {
     enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint }
 }
 
-class SerializationEnvironmentImpl(
-        override val SERIALIZATION_FACTORY: SerializationFactory,
-        override val P2P_CONTEXT: SerializationContext,
-        rpcServerContext: SerializationContext? = null,
-        rpcClientContext: SerializationContext? = null,
-        storageContext: SerializationContext? = null,
-        checkpointContext: SerializationContext? = null) : SerializationEnvironment {
-    // Those that are passed in as null are never inited:
-    override lateinit var RPC_SERVER_CONTEXT: SerializationContext
-    override lateinit var RPC_CLIENT_CONTEXT: SerializationContext
-    override lateinit var STORAGE_CONTEXT: SerializationContext
-    override lateinit var CHECKPOINT_CONTEXT: SerializationContext
-
-    init {
-        rpcServerContext?.let { RPC_SERVER_CONTEXT = it }
-        rpcClientContext?.let { RPC_CLIENT_CONTEXT = it }
-        storageContext?.let { STORAGE_CONTEXT = it }
-        checkpointContext?.let { CHECKPOINT_CONTEXT = it }
-    }
-}
-
-private val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv", true)
-@VisibleForTesting
-val _globalSerializationEnv = SimpleToggleField<SerializationEnvironment>("globalSerializationEnv")
-@VisibleForTesting
-val _contextSerializationEnv = ThreadLocalToggleField<SerializationEnvironment>("contextSerializationEnv")
-@VisibleForTesting
-val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField<SerializationEnvironment>("inheritableContextSerializationEnv")
-private val serializationEnvProperties = listOf(_nodeSerializationEnv, _globalSerializationEnv, _contextSerializationEnv, _inheritableContextSerializationEnv)
 /**
  * Global singletons to be used as defaults that are injected elsewhere (generally, in the node or in RPC client).
  */
-val SerializationDefaults: SerializationEnvironment
-    get() = serializationEnvProperties.map { Pair(it, it.get()) }.filter { it.second != null }.run {
-        singleOrNull()?.run {
-            second!!
-        } ?: throw IllegalStateException("Expected exactly 1 of {${serializationEnvProperties.joinToString(", ") { it.name }}} but got: {${joinToString(", ") { it.first.name }}}").also {
-            it.printStackTrace() // Sadly, it won't always propagate.
-        }
-    }
+object SerializationDefaults {
+    val SERIALIZATION_FACTORY get() = effectiveSerializationEnv.serializationFactory
+    val P2P_CONTEXT get() = effectiveSerializationEnv.p2pContext
+    val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext
+    val RPC_CLIENT_CONTEXT get() = effectiveSerializationEnv.rpcClientContext
+    val STORAGE_CONTEXT get() = effectiveSerializationEnv.storageContext
+    val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
+}
+
 /** Should be set once in main. */
 var nodeSerializationEnv by _nodeSerializationEnv
 

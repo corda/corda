@@ -2,7 +2,7 @@ package net.corda.client.rpc.internal
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.nodeSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT

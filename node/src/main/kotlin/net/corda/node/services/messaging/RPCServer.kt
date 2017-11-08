@@ -18,7 +18,7 @@ import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -267,7 +267,7 @@ class RPCServer(
         when (clientToServer) {
             is RPCApi.ClientToServer.RpcRequest -> {
                 val arguments = Try.on {
-                    clientToServer.serialisedArguments.deserialize<List<Any?>>(context = SerializationDefaults.RPC_SERVER_CONTEXT)
+                    clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                 }
                 when (arguments) {
                     is Try.Success -> {
@@ -429,7 +429,7 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     private val log = loggerFor<RpcServerObservableSerializer>()
 
     fun createContext(observableContext: ObservableContext): SerializationContext {
-        return SerializationDefaults.RPC_SERVER_CONTEXT.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
+        return RPC_SERVER_CONTEXT.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
     }
 
     override fun read(kryo: Kryo?, input: Input?, type: Class<Observable<*>>?): Observable<Any> {

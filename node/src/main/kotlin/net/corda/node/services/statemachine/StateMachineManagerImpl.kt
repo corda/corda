@@ -18,7 +18,8 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -117,7 +118,7 @@ class StateMachineManagerImpl(
     // Context for tokenized services in checkpoints
     private lateinit var tokenizableServices: List<Any>
     private val serializationContext by lazy {
-        SerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.SERIALIZATION_FACTORY, SerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
+        SerializeAsTokenContextImpl(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
     }
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
@@ -391,12 +392,12 @@ class StateMachineManagerImpl(
     }
 
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
-        return fiber.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(serializationContext))
+        return fiber.serialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext))
     }
 
     private fun deserializeFiber(checkpoint: Checkpoint, logger: Logger): FlowStateMachineImpl<*>? {
         return try {
-            checkpoint.serializedFiber.deserialize(context = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply {
+            checkpoint.serializedFiber.deserialize(context = CHECKPOINT_CONTEXT.withTokenContext(serializationContext)).apply {
                 fromCheckpoint = true
             }
         } catch (t: Throwable) {
