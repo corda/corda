@@ -39,6 +39,19 @@ class ToggleFieldTest {
     }
 
     @Test
+    fun `write-at-most-once field works`() {
+        val field = SimpleToggleField<String>("field", true)
+        assertNull(field.get())
+        assertThatThrownBy { field.set(null) }.isInstanceOf(IllegalStateException::class.java)
+        field.set("finalValue")
+        assertEquals("finalValue", field.get())
+        listOf("otherValue", "finalValue", null).forEach { value ->
+            assertThatThrownBy { field.set(value) }.isInstanceOf(IllegalStateException::class.java)
+            assertEquals("finalValue", field.get())
+        }
+    }
+
+    @Test
     fun `thread local works`() {
         val field = ThreadLocalToggleField<String>("field")
         assertNull(field.get())

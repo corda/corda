@@ -23,11 +23,14 @@ abstract class ToggleField<T>(val name: String) {
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T?) = set(value)
 }
 
-class SimpleToggleField<T>(name: String) : ToggleField<T>(name) {
+class SimpleToggleField<T>(name: String, private val once: Boolean = false) : ToggleField<T>(name) {
     private val holder = AtomicReference<T?>() // Force T? in API for safety.
     override fun get() = holder.get()
     override fun setImpl(value: T) = holder.set(value)
-    override fun clear() = holder.set(null)
+    override fun clear() {
+        check(!once) { "Value of $name cannot be changed." }
+        holder.set(null)
+    }
 }
 
 class ThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {

@@ -194,7 +194,7 @@ class SerializationEnvironmentImpl(
     }
 }
 
-private val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv")
+private val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv", true)
 @VisibleForTesting
 val _globalSerializationEnv = SimpleToggleField<SerializationEnvironment>("globalSerializationEnv")
 @VisibleForTesting
