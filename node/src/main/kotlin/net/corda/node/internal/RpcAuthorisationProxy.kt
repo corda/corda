@@ -8,6 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.NodeState
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
@@ -61,7 +62,7 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
 
     override fun nodeInfo(): NodeInfo = guard("nodeInfo", implementation::nodeInfo)
 
-    override fun nodeStateObservable(): Observable<String> = guard("nodeStateObservable", implementation::nodeStateObservable)
+    override fun nodeStateObservable(): Observable<NodeState> = guard("nodeStateObservable", implementation::nodeStateObservable)
 
     override fun notaryIdentities(): List<Party> = guard("notaryIdentities", implementation::notaryIdentities)
 

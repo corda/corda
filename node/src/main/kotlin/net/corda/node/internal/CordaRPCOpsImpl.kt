@@ -115,7 +115,7 @@ internal class CordaRPCOpsImpl(
         return services.myInfo
     }
 
-    override fun nodeStateObservable(): Observable<String> {
+    override fun nodeStateObservable(): Observable<NodeState> {
         return services.myNodeStateObservable
     }
 

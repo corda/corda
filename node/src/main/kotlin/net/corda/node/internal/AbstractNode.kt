@@ -125,7 +125,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
     protected lateinit var info: NodeInfo
-    protected val nodeStateObservable: PublishSubject<String> = PublishSubject.create<String>()
+    protected val nodeStateObservable: PublishSubject<NodeState> = PublishSubject.create<NodeState>()
     protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
     protected lateinit var smm: StateMachineManager
@@ -639,7 +639,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // unsubscribes us forcibly, rather than blocking the shutdown process.
 
         // Notify observers that the node is shutting down
-        nodeStateObservable.onNext("Node shutting down.")
+        nodeStateObservable.onNext(NodeState.SHUTTING_DOWN)
 
         // Run shutdown hooks in opposite order to starting
         for (toRun in runOnStop.reversed()) {
@@ -742,7 +742,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         override val networkService: MessagingService get() = network
         override val clock: Clock get() = platformClock
         override val myInfo: NodeInfo get() = info
-        override val myNodeStateObservable: Observable<String> get() = nodeStateObservable
+        override val myNodeStateObservable: Observable<NodeState> get() = nodeStateObservable
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {

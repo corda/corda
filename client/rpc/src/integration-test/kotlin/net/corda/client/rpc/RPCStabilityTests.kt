@@ -6,6 +6,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.NodeState
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
@@ -245,7 +246,7 @@ class RPCStabilityTests {
         val bob = User("Bob", "Bob", setOf(invokeRpc(CordaRPCOps::nodeStateObservable)))
         val slagathor = User("Slagathor", "Slagathor", setOf(invokeRpc(CordaRPCOps::nodeStateObservable)))
         val userList = listOf(alice, bob, slagathor)
-        val expectedMessages = ArrayList<String>()
+        val expectedMessages = ArrayList<NodeState>()
 
         rpcDriver(startNodesInProcess = true) {
             val node = startNode(rpcUsers = listOf(alice, bob, slagathor)).getOrThrow()
@@ -258,9 +259,9 @@ class RPCStabilityTests {
             }
 
             node.stop()
-            assertEquals(userList.size, expectedMessages.size)
-            assertEquals("Node shutting down.", expectedMessages.first())
         }
+        assertEquals(userList.size, expectedMessages.size)
+        assertEquals(NodeState.SHUTTING_DOWN, expectedMessages.first())
     }
 
     interface TrackSubscriberOps : RPCOps {
