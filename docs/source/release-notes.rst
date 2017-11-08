@@ -12,6 +12,20 @@ Unreleased
   That is the ability to alter an enum constant and, as long as certain rules are followed and the correct
   annotations applied, have older and newer instances of that enumeration be understood.
 
+* **AMQP Enabled**
+
+AMQP Serialization is now enabled for both peer to peer communication and writing states to the vault. This change
+brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
+users.
+
+* **CorDapp Custom Serializers**
+
+To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serialises
+to be written for those classes provided. If needed, a proxy object can be created as an interim step that allows Corda's internal
+serialisers to operate on those types.
+
+A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
+
 Release 2.0
 ----------
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates

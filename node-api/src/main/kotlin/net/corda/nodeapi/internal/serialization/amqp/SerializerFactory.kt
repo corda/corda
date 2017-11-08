@@ -36,7 +36,7 @@ data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typ
 open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
-    private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
+    private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
     val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
 
     open val classCarpenter = ClassCarpenter(cl, whitelist)
@@ -196,6 +196,13 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         }
     }
 
+    fun registerExternal(customSerializer: CorDappCustomSerializer) {
+        if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
+            customSerializers += customSerializer
+            serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
+        }
+    }
+
     /**
      * Iterate over an AMQP schema, for each type ascertain weather it's on ClassPath of [classloader] amd
      * if not use the [ClassCarpenter] to generate a class to use in it's place
@@ -267,11 +274,13 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
                 val declaredSuperClass = declaredType.asClass()?.superclass
-                if (declaredSuperClass == null || !customSerializer.isSerializerFor(declaredSuperClass) || !customSerializer.revealSubclassesInSchema) {
-                    return customSerializer
+                return if (declaredSuperClass == null
+                        || !customSerializer.isSerializerFor(declaredSuperClass)
+                        || !customSerializer.revealSubclassesInSchema) {
+                    customSerializer as? AMQPSerializer<Any>
                 } else {
                     // Make a subclass serializer for the subclass and return that...
-                    return CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
+                    CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
                 }
             }
         }

@@ -3,6 +3,7 @@ package net.corda.core.cordapp
 import net.corda.core.DoNotImplement
 import net.corda.core.flows.FlowLogic
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import java.net.URL
@@ -22,6 +23,8 @@ import java.net.URL
  * @property schedulableFlows List of flows startable by the scheduler
  * @property services List of RPC services
  * @property serializationWhitelists List of Corda plugin registries
+ * @property serializationCustomSerializerProxies List of Proxy classes used by the custom serializers
+ * @property serializationCustomSerializers List of serializers
  * @property customSchemas List of custom schemas
  * @property jarPath The path to the JAR for this CorDapp
  */
@@ -35,6 +38,8 @@ interface Cordapp {
     val schedulableFlows: List<Class<out FlowLogic<*>>>
     val services: List<Class<out SerializeAsToken>>
     val serializationWhitelists: List<SerializationWhitelist>
+    val serializationCustomSerializerProxies: List<Class<*>>
+    val serializationCustomSerializers: List<Class<out SerializationCustomSerializer>>
     val customSchemas: Set<MappedSchema>
     val jarPath: URL
     val cordappClasses: List<String>

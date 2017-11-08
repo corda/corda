@@ -14,7 +14,18 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
     val cordappRegistry = mutableListOf<Pair<Cordapp, AttachmentId>>()
 
     fun addMockCordapp(contractClassName: ContractClassName, attachments: MockAttachmentStorage) {
-        val cordapp = CordappImpl(listOf(contractClassName), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptySet(), Paths.get(".").toUri().toURL())
+        val cordapp = CordappImpl(
+                contractClassNames = listOf(contractClassName),
+                initiatedFlows = emptyList(),
+                rpcFlows = emptyList(),
+                serviceFlows = emptyList(),
+                schedulableFlows = emptyList(),
+                services = emptyList(),
+                serializationWhitelists = emptyList(),
+                serializationCustomSerializerProxies = emptyList(),
+                serializationCustomSerializers = emptyList(),
+                customSchemas = emptySet(),
+                jarPath = Paths.get(".").toUri().toURL())
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
             cordappRegistry.add(Pair(cordapp, findOrImportAttachment(contractClassName.toByteArray(), attachments)))
         }

@@ -2,6 +2,7 @@
 
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
@@ -24,7 +25,8 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     }
 }
 
-abstract class AbstractAMQPSerializationScheme : SerializationScheme {
+abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>) : SerializationScheme {
+
     companion object {
         private val serializationWhitelists: List<SerializationWhitelist> by lazy {
             ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
@@ -62,8 +64,15 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
             register(net.corda.nodeapi.internal.serialization.amqp.custom.EnumSetSerializer(this))
             register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(this))
         }
-        for (whitelistProvider in serializationWhitelists)
+        for (whitelistProvider in serializationWhitelists) {
             factory.addToWhitelist(*whitelistProvider.whitelist.toTypedArray())
+        }
+
+        cordappLoader.forEach { ca ->
+            ca.serializationCustomSerializers.forEach {
+                factory.registerExternal(CorDappCustomSerializer(it.newInstance(), factory))
+            }
+        }
     }
 
     private val serializerFactoriesForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>()
@@ -97,11 +106,11 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
         return SerializationOutput(serializerFactory).serialize(obj)
     }
 
-    protected fun canDeserializeVersion(byteSequence: ByteSequence): Boolean = AMQP_ENABLED && byteSequence == AmqpHeaderV1_0
+    protected fun canDeserializeVersion(byteSequence: ByteSequence): Boolean = byteSequence == AmqpHeaderV1_0
 }
 
 // TODO: This will eventually cover server RPC as well and move to node module, but for now this is not implemented
-class AMQPServerSerializationScheme : AbstractAMQPSerializationScheme() {
+class AMQPServerSerializationScheme(cordapps: List<Cordapp> = emptyList()) : AbstractAMQPSerializationScheme(cordapps) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()
     }
@@ -118,7 +127,7 @@ class AMQPServerSerializationScheme : AbstractAMQPSerializationScheme() {
 }
 
 // TODO: This will eventually cover client RPC as well and move to client module, but for now this is not implemented
-class AMQPClientSerializationScheme : AbstractAMQPSerializationScheme() {
+class AMQPClientSerializationScheme(cordapps: List<Cordapp> = emptyList()) : AbstractAMQPSerializationScheme(cordapps) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }

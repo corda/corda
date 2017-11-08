@@ -62,7 +62,7 @@ fun <T> withTestSerialization(inheritable: Boolean = false, callable: (Serializa
 
 /**
  * For example your test class uses [SerializationEnvironmentRule] but you want to turn it off for one method.
- * Use sparingly, ideally a test class shouldn't mix serialization init mechanisms.
+ * Use sparingly, ideally a test class shouldn't mix serializers init mechanisms.
  */
 fun <T> withoutTestSerialization(callable: () -> T): T {
     val (property, env) = listOf(_contextSerializationEnv, _inheritableContextSerializationEnv).map { Pair(it, it.get()) }.single { it.second != null }
@@ -99,13 +99,12 @@ private fun createTestSerializationEnv(label: String) = object : SerializationEn
         SerializationFactoryImpl().apply {
             registerScheme(KryoClientSerializationScheme())
             registerScheme(KryoServerSerializationScheme())
-            registerScheme(AMQPClientSerializationScheme())
-            registerScheme(AMQPServerSerializationScheme())
+            registerScheme(AMQPClientSerializationScheme(emptyList()))
+            registerScheme(AMQPServerSerializationScheme(emptyList()))
         },
-        if (isAmqpEnabled()) AMQP_P2P_CONTEXT else KRYO_P2P_CONTEXT,
+        AMQP_P2P_CONTEXT,
         KRYO_RPC_SERVER_CONTEXT,
-        KRYO_RPC_CLIENT_CONTEXT,
-        if (isAmqpEnabled()) AMQP_STORAGE_CONTEXT else KRYO_STORAGE_CONTEXT,
+        AMQP_STORAGE_CONTEXT,
         KRYO_CHECKPOINT_CONTEXT) {
     override fun toString() = "testSerializationEnv($label)"
 }

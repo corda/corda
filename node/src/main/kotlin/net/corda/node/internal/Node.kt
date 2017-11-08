@@ -300,11 +300,11 @@ open class Node(configuration: NodeConfiguration,
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoServerSerializationScheme())
-                    registerScheme(AMQPServerSerializationScheme())
+                    registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
                 },
-                KRYO_P2P_CONTEXT.withClassLoader(classloader),
+                p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
-                storageContext = KRYO_STORAGE_CONTEXT.withClassLoader(classloader),
+                storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
     }
 

@@ -10,9 +10,8 @@ import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.serialization.SerializationWhitelist
-import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
+import net.corda.core.serialization.*
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
@@ -175,15 +174,17 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         /** A Cordapp representing the core package which is not scanned automatically. */
         @VisibleForTesting
         internal val coreCordapp = CordappImpl(
-                listOf(),
-                listOf(),
-                coreRPCFlows,
-                listOf(),
-                listOf(),
-                listOf(),
-                listOf(),
-                setOf(),
-                ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
+                contractClassNames = listOf(),
+                initiatedFlows = listOf(),
+                rpcFlows = coreRPCFlows,
+                serviceFlows = listOf(),
+                schedulableFlows = listOf(),
+                services = listOf(),
+                serializationWhitelists = listOf(),
+                serializationCustomSerializerProxies = listOf(),
+                serializationCustomSerializers = listOf(),
+                customSchemas = setOf(),
+                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
         )
     }
 
@@ -197,6 +198,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findSchedulableFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
+                    findSerialiserProxies(scanResult),
+                    findSerialzers(scanResult),
                     findCustomSchemas(scanResult),
                     it.url)
         }
@@ -245,6 +248,14 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         return ServiceLoader.load(SerializationWhitelist::class.java, URLClassLoader(arrayOf(cordappJarPath.url), appClassLoader)).toList().filter {
             it.javaClass.protectionDomain.codeSource.location == cordappJarPath.url && it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix)
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
+    }
+
+    private fun findSerialiserProxies(scanResult: RestrictedScanResult) : List<Class<*>> {
+        return scanResult.getClassesWithAnnotation(Class::class, CordaCustomSerializerProxy::class)
+    }
+
+    private fun findSerialzers(scanResult: RestrictedScanResult) : List<Class<out SerializationCustomSerializer>> {
+        return scanResult.getClassesWithAnnotation(SerializationCustomSerializer::class, CordaCustomSerializer::class)
     }
 
     private fun findCustomSchemas(scanResult: RestrictedScanResult): Set<MappedSchema> {

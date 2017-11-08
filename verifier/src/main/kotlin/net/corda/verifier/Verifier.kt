@@ -91,11 +91,7 @@ class Verifier {
                         registerScheme(KryoVerifierSerializationScheme)
                         registerScheme(AMQPVerifierSerializationScheme)
                     },
-                    /**
-                     * Even though default context is set to Kryo P2P, the encoding will be adjusted depending on the incoming
-                     * request received, see use of [context] in [main] method.
-                     */
-                    KRYO_P2P_CONTEXT)
+                    AMQP_P2P_CONTEXT)
         }
     }
 
@@ -108,7 +104,7 @@ class Verifier {
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
     }
 
-    private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme() {
+    private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
         override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
             return (byteSequence == AmqpHeaderV1_0 && (target == SerializationContext.UseCase.P2P))
         }
