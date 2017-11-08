@@ -62,6 +62,7 @@ import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
+import rx.subjects.PublishSubject
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.security.KeyPair
@@ -124,6 +125,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
     protected lateinit var info: NodeInfo
+    protected val nodeStateObservable: PublishSubject<NodeState> = PublishSubject.create<NodeState>()
     protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
     protected lateinit var smm: StateMachineManager
@@ -636,6 +638,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // Meanwhile, we let the remote service send us updates until the acknowledgment buffer overflows and it
         // unsubscribes us forcibly, rather than blocking the shutdown process.
 
+        // Notify observers that the node is shutting down
+        nodeStateObservable.onNext(NodeState.SHUTTING_DOWN)
+
         // Run shutdown hooks in opposite order to starting
         for (toRun in runOnStop.reversed()) {
             toRun()
@@ -737,6 +742,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         override val networkService: MessagingService get() = network
         override val clock: Clock get() = platformClock
         override val myInfo: NodeInfo get() = info
+        override val myNodeStateObservable: Observable<NodeState> get() = nodeStateObservable
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
