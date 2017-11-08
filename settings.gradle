@@ -47,6 +47,10 @@ include 'samples:bank-of-corda-demo'
 include 'cordform-common'
 include 'network-management'
 include 'verify-enclave'
-include 'sgx-jvm/hsm-tool'
+include 'hsm-tool'
+project(':hsm-tool').with {
+    name = 'sgx-hsm-tool'
+    projectDir = file("$settingsDir/sgx-jvm/hsm-tool")
+}
 include 'perftestcordapp'
 
