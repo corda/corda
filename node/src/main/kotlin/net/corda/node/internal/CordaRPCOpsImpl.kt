@@ -115,6 +115,10 @@ internal class CordaRPCOpsImpl(
         return services.myInfo
     }
 
+    override fun nodeStateObservable(): Observable<NodeState> {
+        return services.myNodeStateObservable
+    }
+
     override fun notaryIdentities(): List<Party> {
         return services.networkMapCache.notaryIdentities
     }
