@@ -9,7 +9,6 @@ import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert
@@ -29,7 +28,7 @@ class CustomVaultQueryTest {
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeA.internals.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
-        notary = nodeA.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After

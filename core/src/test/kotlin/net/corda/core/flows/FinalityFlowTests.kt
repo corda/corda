@@ -7,8 +7,11 @@ import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.CHARLIE
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -32,7 +35,7 @@ class FinalityFlowTests {
         bobServices = bobNode.services
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
-        notary = aliceServices.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After

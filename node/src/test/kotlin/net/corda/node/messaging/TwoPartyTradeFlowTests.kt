@@ -97,7 +97,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val bankNode = mockNet.createPartyNode(BOC_NAME)
             val alice = aliceNode.info.singleIdentity()
             val bank = bankNode.info.singleIdentity()
-            val notary = notaryNode.services.getDefaultNotary()
+            val notary = mockNet.defaultNotaryIdentity
             val cashIssuer = bank.ref(1)
             val cpIssuer = bank.ref(1, 2, 3)
 
@@ -148,7 +148,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val alice = aliceNode.info.singleIdentity()
             val bank = bankNode.info.singleIdentity()
             val issuer = bank.ref(1)
-            val notary = aliceNode.services.getDefaultNotary()
+            val notary = mockNet.defaultNotaryIdentity
 
             aliceNode.internals.disableDBCloseOnStop()
             bobNode.internals.disableDBCloseOnStop()
@@ -207,7 +207,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
             mockNet.runNetwork() // Clear network map registration messages
 
-            val notary = notaryNode.services.getDefaultNotary()
+            val notary = mockNet.defaultNotaryIdentity
             val alice = aliceNode.info.singleIdentity()
             val bank = bankNode.info.singleIdentity()
             val issuer = bank.ref(1, 2, 3)
@@ -311,7 +311,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
         mockNet.runNetwork()
-        val notary = aliceNode.services.getDefaultNotary()
+        val notary = mockNet.defaultNotaryIdentity
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()
         val bank = bankNode.info.singleIdentity()
@@ -417,7 +417,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bobNode = makeNodeWithTracking(BOB_NAME)
         val bankNode = makeNodeWithTracking(BOC_NAME)
 
-        val notary = aliceNode.services.getDefaultNotary()
+        val notary = mockNet.defaultNotaryIdentity
         val alice: Party = aliceNode.info.singleIdentity()
         val bank: Party = bankNode.info.singleIdentity()
         val issuer = bank.ref(1, 2, 3)
@@ -569,7 +569,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val bankNode = mockNet.createPartyNode(BOC_NAME)
 
-        val notary = aliceNode.services.getDefaultNotary()
+        val notary = mockNet.defaultNotaryIdentity
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()
         val bank = bankNode.info.singleIdentity()
@@ -607,8 +607,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             node: StartedNode<*>,
             notaryNode: StartedNode<*>,
             vararg extraSigningNodes: StartedNode<*>): Map<SecureHash, SignedTransaction> {
-
-        val notaryParty = node.services.getDefaultNotary()
+        val notaryParty = mockNet.defaultNotaryIdentity
         val signed = wtxToSign.map {
             val id = it.id
             val sigs = mutableListOf<TransactionSignature>()
@@ -714,7 +713,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     }
 
 
-    class RecordingTransactionStorage(val database: CordaPersistence, val delegate: WritableTransactionStorage) : WritableTransactionStorage, SingletonSerializeAsToken() {
+    class RecordingTransactionStorage(
+            private val database: CordaPersistence,
+            private val delegate: WritableTransactionStorage
+    ) : WritableTransactionStorage, SingletonSerializeAsToken() {
         override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()
