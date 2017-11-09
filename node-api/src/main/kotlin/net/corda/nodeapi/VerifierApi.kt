@@ -20,15 +20,15 @@ object VerifierApi {
             val responseAddress: SimpleString
     ) {
         companion object {
-            fun fromClientMessage(message: ClientMessage, serializationContext: SerializationContext): ObjectWithCompatibleContext<VerificationRequest> {
+            fun fromClientMessage(message: ClientMessage): ObjectWithCompatibleContext<VerificationRequest> {
                 val bytes = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
                 val bytesSequence = bytes.sequence()
-                val transaction = bytesSequence.deserialize<LedgerTransaction>(context = serializationContext)
+                val (transaction, context) = bytesSequence.deserializeWithCompatibleContext<LedgerTransaction>()
                 val request = VerificationRequest(
                         message.getLongProperty(VERIFICATION_ID_FIELD_NAME),
                         transaction,
                         MessageUtil.getJMSReplyTo(message))
-                return ObjectWithCompatibleContext(request, serializationContext)
+                return ObjectWithCompatibleContext(request, context)
             }
         }
 
