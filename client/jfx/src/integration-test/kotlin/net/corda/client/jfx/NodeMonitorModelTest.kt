@@ -26,8 +26,7 @@ import net.corda.finance.USD
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -52,17 +51,17 @@ class NodeMonitorModelTest {
 
     private fun setup(runTest: () -> Unit) {
         driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {
-            val cashUser = User("user1", "test", permissions = setOf(
-                    startFlow<CashIssueFlow>(),
-                    startFlow<CashPaymentFlow>(),
-                    startFlow<CashExitFlow>(),
-                    invokeRpc(CordaRPCOps::notaryIdentities),
-                    invokeRpc("vaultTrackBy"),
-                    invokeRpc("vaultQueryBy"),
-                    invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
-                    invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
-                    invokeRpc(CordaRPCOps::stateMachinesFeed),
-                    invokeRpc(CordaRPCOps::networkMapFeed))
+            val cashUser = User("user1", "test", permissions = setOfPermissionStrings(
+                    RPCPermission.startFlow<CashIssueFlow>(),
+                    RPCPermission.startFlow<CashPaymentFlow>(),
+                    RPCPermission.startFlow<CashExitFlow>(),
+                    RPCPermission.invokeRpc(CordaRPCOps::notaryIdentities),
+                    RPCPermission.invokeRpc("vaultTrackBy"),
+                    RPCPermission.invokeRpc("vaultQueryBy"),
+                    RPCPermission.invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
+                    RPCPermission.invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
+                    RPCPermission.invokeRpc(CordaRPCOps::stateMachinesFeed),
+                    RPCPermission.invokeRpc(CordaRPCOps::networkMapFeed))
             )
             val aliceNodeHandle = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser)).getOrThrow()
             aliceNode = aliceNodeHandle.nodeInfo

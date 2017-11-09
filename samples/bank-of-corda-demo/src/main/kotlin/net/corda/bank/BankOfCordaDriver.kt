@@ -3,17 +3,19 @@ package net.corda.bank
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.finance.flows.CashConfigDataFlow
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
+import net.corda.testing.setOfPermissionStrings
 import kotlin.system.exitProcess
 
 /**
@@ -60,20 +62,20 @@ private class BankOfCordaDriver {
                         val bankUser = User(
                                 BANK_USERNAME,
                                 "test",
-                                permissions = setOf(
-                                        startFlow<CashPaymentFlow>(),
-                                        startFlow<CashConfigDataFlow>(),
-                                        startFlow<CashExitFlow>(),
-                                        startFlow<CashIssueAndPaymentFlow>(),
-                                        startFlow<CashConfigDataFlow>()
+                                permissions = setOfPermissionStrings(
+                                        RPCPermission.startFlow<CashPaymentFlow>(),
+                                        RPCPermission.startFlow<CashConfigDataFlow>(),
+                                        RPCPermission.startFlow<CashExitFlow>(),
+                                        RPCPermission.startFlow<CashIssueAndPaymentFlow>(),
+                                        RPCPermission.startFlow<CashConfigDataFlow>()
                                 ))
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
                                 rpcUsers = listOf(bankUser))
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
-                                permissions = setOf(
-                                        startFlow<CashPaymentFlow>(),
-                                        startFlow<CashConfigDataFlow>()))
+                                permissions = setOfPermissionStrings(
+                                        RPCPermission.startFlow<CashPaymentFlow>(),
+                                        RPCPermission.startFlow<CashConfigDataFlow>()))
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()

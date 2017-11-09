@@ -11,8 +11,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -25,17 +24,17 @@ class IntegrationTestingTutorial {
         // START 1
         driver(startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
-            val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
-                    startFlow<CashIssueFlow>(),
-                    startFlow<CashPaymentFlow>(),
-                    invokeRpc("vaultTrackBy"),
-                    invokeRpc(CordaRPCOps::notaryIdentities),
-                    invokeRpc(CordaRPCOps::networkMapFeed)
+            val aliceUser = User("aliceUser", "testPassword1", permissions = setOfPermissionStrings(
+                    RPCPermission.startFlow<CashIssueFlow>(),
+                    RPCPermission.startFlow<CashPaymentFlow>(),
+                    RPCPermission.invokeRpc("vaultTrackBy"),
+                    RPCPermission.invokeRpc(CordaRPCOps::notaryIdentities),
+                    RPCPermission.invokeRpc(CordaRPCOps::networkMapFeed)
             ))
-            val bobUser = User("bobUser", "testPassword2", permissions = setOf(
-                    startFlow<CashPaymentFlow>(),
-                    invokeRpc("vaultTrackBy"),
-                    invokeRpc(CordaRPCOps::networkMapFeed)
+            val bobUser = User("bobUser", "testPassword2", permissions = setOfPermissionStrings(
+                    RPCPermission.startFlow<CashPaymentFlow>(),
+                    RPCPermission.invokeRpc("vaultTrackBy"),
+                    RPCPermission.invokeRpc(CordaRPCOps::networkMapFeed)
             ))
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),

@@ -25,17 +25,15 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.security.RPCPermission
+import net.corda.node.services.security.RPCPermission.Companion.invokeRpc
+import net.corda.node.services.security.RPCPermission.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.nodeapi.User
-import net.corda.testing.chooseIdentity
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.sequence
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -286,12 +284,12 @@ class CordaRPCOpsImplTest {
         override fun call(): Void? = null
     }
 
-    private fun withPermissions(vararg permissions: String, action: () -> Unit) {
+    private fun withPermissions(vararg permissions: RPCPermission, action: () -> Unit) {
 
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
-            CURRENT_RPC_CONTEXT.set(RpcContext(user.copy(permissions = permissions.toSet())))
-            action.invoke()
+            CURRENT_RPC_CONTEXT.set(RpcContext(user.copy(permissions = setOfPermissionStrings(*permissions))))
+            action()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)
         }

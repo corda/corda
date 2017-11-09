@@ -18,7 +18,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
@@ -132,11 +132,11 @@ class ContractUpgradeFlowTest {
             val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)
             val stx = bobNode.services.addSignature(signedByA)
 
-            val user = rpcTestUser.copy(permissions = setOf(
-                    startFlow<FinalityInvoker>(),
-                    startFlow<ContractUpgradeFlow.Initiate<*, *>>(),
-                    startFlow<ContractUpgradeFlow.Authorise>(),
-                    startFlow<ContractUpgradeFlow.Deauthorise>()
+            val user = rpcTestUser.copy(permissions = setOfPermissionStrings(
+                    RPCPermission.startFlow<FinalityInvoker>(),
+                    RPCPermission.startFlow<ContractUpgradeFlow.Initiate<*, *>>(),
+                    RPCPermission.startFlow<ContractUpgradeFlow.Authorise>(),
+                    RPCPermission.startFlow<ContractUpgradeFlow.Deauthorise>()
             ))
             val rpcA = startProxy(aliceNode, user)
             val rpcB = startProxy(bobNode, user)

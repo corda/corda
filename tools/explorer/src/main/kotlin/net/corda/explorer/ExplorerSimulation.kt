@@ -20,10 +20,11 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.*
 import net.corda.finance.flows.CashExitFlow.ExitRequest
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
+import net.corda.testing.setOfPermissionStrings
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
@@ -31,15 +32,15 @@ import java.time.Instant
 import java.util.*
 
 class ExplorerSimulation(private val options: OptionSet) {
-    private val user = User("user1", "test", permissions = setOf(
-            startFlow<CashPaymentFlow>(),
-            startFlow<CashConfigDataFlow>()
+    private val user = User("user1", "test", permissions = setOfPermissionStrings(
+            RPCPermission.startFlow<CashPaymentFlow>(),
+            RPCPermission.startFlow<CashConfigDataFlow>()
     ))
-    private val manager = User("manager", "test", permissions = setOf(
-            startFlow<CashIssueAndPaymentFlow>(),
-            startFlow<CashPaymentFlow>(),
-            startFlow<CashExitFlow>(),
-            startFlow<CashConfigDataFlow>())
+    private val manager = User("manager", "test", permissions = setOfPermissionStrings(
+            RPCPermission.startFlow<CashIssueAndPaymentFlow>(),
+            RPCPermission.startFlow<CashPaymentFlow>(),
+            RPCPermission.startFlow<CashExitFlow>(),
+            RPCPermission.startFlow<CashConfigDataFlow>())
     )
 
     private lateinit var notaryNode: NodeHandle

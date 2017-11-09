@@ -2,13 +2,13 @@ package net.corda.attachmentdemo
 
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.setOfPermissionStrings
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
 
@@ -18,13 +18,13 @@ class AttachmentDemoTest {
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
         driver(isDebug = true, portAllocation = PortAllocation.Incremental(20000)) {
-            val demoUser = listOf(User("demo", "demo", setOf(
-                    startFlow<AttachmentDemoFlow>(),
-                    invokeRpc(CordaRPCOps::attachmentExists),
-                    invokeRpc(CordaRPCOps::uploadAttachment),
-                    invokeRpc(CordaRPCOps::openAttachment),
-                    invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
-                    invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed)
+            val demoUser = listOf(User("demo", "demo", setOfPermissionStrings(
+                    RPCPermission.startFlow<AttachmentDemoFlow>(),
+                    RPCPermission.invokeRpc(CordaRPCOps::attachmentExists),
+                    RPCPermission.invokeRpc(CordaRPCOps::uploadAttachment),
+                    RPCPermission.invokeRpc(CordaRPCOps::openAttachment),
+                    RPCPermission.invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
+                    RPCPermission.invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed)
             )))
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g"),

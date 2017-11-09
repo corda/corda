@@ -11,6 +11,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -82,3 +83,9 @@ fun testNodeConfiguration(
         doCallRealMethod().whenever(it).nodeKeystore
     }
 }
+
+/**
+ * Helper function to create a set of permission strings in the Node config format
+ */
+fun<T : RPCPermission> setOfPermissionStrings(vararg elements : T) : Set<String> =
+    elements.map {it.toConfigString()}.toSet ()

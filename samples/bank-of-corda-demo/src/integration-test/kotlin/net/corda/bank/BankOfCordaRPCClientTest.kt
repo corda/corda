@@ -8,8 +8,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -18,14 +17,15 @@ import org.junit.Test
 class BankOfCordaRPCClientTest {
     @Test
     fun `issuer flow via RPC`() {
-        val commonPermissions = setOf(
-                invokeRpc("vaultTrackByCriteria"),
-                invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
-                invokeRpc(CordaRPCOps::notaryIdentities)
+        val commonPermissions = setOfPermissionStrings(
+                RPCPermission.invokeRpc("vaultTrackByCriteria"),
+                RPCPermission.invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
+                RPCPermission.invokeRpc(CordaRPCOps::notaryIdentities)
         )
         driver(extraCordappPackagesToScan = listOf("net.corda.finance"), isDebug = true) {
             val bocManager = User("bocManager", "password1", permissions = setOf(
-                    startFlow<CashIssueAndPaymentFlow>()) + commonPermissions)
+                    RPCPermission.startFlow<CashIssueAndPaymentFlow>().toConfigString()) +
+                    commonPermissions)
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet<String>() + commonPermissions)
             val (nodeBankOfCorda, nodeBigCorporation) = listOf(
                     startNode(providedName = BOC.name, rpcUsers = listOf(bocManager)),

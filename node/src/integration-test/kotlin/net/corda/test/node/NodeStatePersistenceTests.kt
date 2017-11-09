@@ -17,10 +17,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.chooseIdentity
+import net.corda.testing.setOfPermissionStrings
 import net.corda.testing.driver.driver
 import org.junit.Assume.assumeFalse
 import org.junit.Test
@@ -38,7 +38,11 @@ class NodeStatePersistenceTests {
         // More investigation is needed to establish why.
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
 
-        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
+        val user = User(
+                "mark",
+                "dadada",
+                setOfPermissionStrings(RPCPermission.startFlow<SendMessageFlow>(),
+                                       RPCPermission.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
             val nodeName = {

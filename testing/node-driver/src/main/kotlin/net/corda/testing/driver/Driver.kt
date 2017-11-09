@@ -27,7 +27,7 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.security.RPCPermission
 import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.NodeInfoFilesCopier
@@ -78,10 +78,10 @@ private val DEFAULT_POLL_INTERVAL = 500.millis
 
 private const val DEFAULT_WARN_COUNT = 120
 
-private val DRIVER_REQUIRED_PERMISSIONS = setOf(
-        invokeRpc(CordaRPCOps::nodeInfo),
-        invokeRpc(CordaRPCOps::networkMapFeed),
-        invokeRpc(CordaRPCOps::networkMapSnapshot)
+private val DRIVER_REQUIRED_PERMISSIONS = setOfPermissionStrings(
+        RPCPermission.invokeRpc(CordaRPCOps::nodeInfo),
+        RPCPermission.invokeRpc(CordaRPCOps::networkMapFeed),
+        RPCPermission.invokeRpc(CordaRPCOps::networkMapSnapshot)
 )
 
 /**

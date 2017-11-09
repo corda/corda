@@ -26,8 +26,9 @@ import static java.util.Objects.requireNonNull;
 import static kotlin.test.AssertionsKt.assertEquals;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
-import static net.corda.node.services.Permissions.invokeRpc;
-import static net.corda.node.services.Permissions.startFlow;
+import static net.corda.node.services.security.RPCPermission.invokeRpc;
+import static net.corda.node.services.security.RPCPermission.startFlow;
+import static net.corda.testing.NodeTestUtils.setOfPermissionStrings;
 import static net.corda.testing.TestConstants.getALICE;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
@@ -35,13 +36,13 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
         super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()));
     }
 
-    private List<String> perms = Arrays.asList(
+    private Set<String> permSet = setOfPermissionStrings(
             startFlow(CashPaymentFlow.class),
             startFlow(CashIssueFlow.class),
             invokeRpc("nodeInfo"),
             invokeRpc("vaultQueryBy"),
             invokeRpc("vaultQueryByCriteria"));
-    private Set<String> permSet = new HashSet<>(perms);
+
     private User rpcUser = new User("user1", "test", permSet);
 
     private StartedNode<Node> node;

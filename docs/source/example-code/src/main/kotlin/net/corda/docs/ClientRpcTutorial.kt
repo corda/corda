@@ -15,11 +15,11 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.driver.driver
+import net.corda.testing.setOfPermissionStrings
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.MultiGraph
@@ -43,10 +43,11 @@ fun main(args: Array<String>) {
     val printOrVisualise = PrintOrVisualise.valueOf(args[0])
 
     val baseDirectory = Paths.get("build/rpc-api-tutorial")
-    val user = User("user", "password", permissions = setOf(startFlow<CashIssueFlow>(),
-            startFlow<CashPaymentFlow>(),
-            startFlow<CashExitFlow>(),
-            invokeRpc(CordaRPCOps::nodeInfo)
+    val user = User("user", "password", permissions = setOfPermissionStrings(
+            RPCPermission.startFlow<CashIssueFlow>(),
+            RPCPermission.startFlow<CashPaymentFlow>(),
+            RPCPermission.startFlow<CashExitFlow>(),
+            RPCPermission.invokeRpc(CordaRPCOps::nodeInfo)
     ))
     driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance")) {
         val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()

@@ -8,7 +8,7 @@ import net.corda.core.internal.list
 import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockNetwork
@@ -229,7 +229,12 @@ class FlowStackSnapshotTest {
     @Test
     fun `flowStackSnapshot contains full frames when methods with side effects are called`() {
         driver(startNodesInProcess = true) {
-            val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<SideEffectFlow>())))).get()
+            val rpcUser = User(
+                    Constants.USER,
+                    Constants.PASSWORD,
+                    setOfPermissionStrings(startFlow<SideEffectFlow>()))
+
+            val a = startNode(rpcUsers = listOf(rpcUser)).get()
             a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
                 val stackSnapshotFrames = connection.proxy.startFlow(::SideEffectFlow).returnValue.get()
                 val iterator = stackSnapshotFrames.listIterator()
@@ -244,7 +249,12 @@ class FlowStackSnapshotTest {
     @Test
     fun `flowStackSnapshot contains empty frames when methods with no side effects are called`() {
         driver(startNodesInProcess = true) {
-            val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<NoSideEffectFlow>())))).get()
+            val rpcUser = User(
+                    Constants.USER,
+                    Constants.PASSWORD,
+                    setOfPermissionStrings(startFlow<NoSideEffectFlow>()))
+
+            val a = startNode(rpcUsers = listOf(rpcUser)).get()
             a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
                 val stackSnapshotFrames = connection.proxy.startFlow(::NoSideEffectFlow).returnValue.get()
                 val iterator = stackSnapshotFrames.listIterator()
@@ -259,7 +269,12 @@ class FlowStackSnapshotTest {
     @Test
     fun `persistFlowStackSnapshot persists empty frames to a file when methods with no side effects are called`() {
         driver(startNodesInProcess = true) {
-            val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<PersistingNoSideEffectFlow>())))).get()
+            val rpcUser = User(
+                    Constants.USER,
+                    Constants.PASSWORD,
+                    setOfPermissionStrings(startFlow<PersistingNoSideEffectFlow>()))
+
+            val a = startNode(rpcUsers = listOf(rpcUser)).get()
 
             a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
                 val flowId = connection.proxy.startFlow(::PersistingNoSideEffectFlow).returnValue.get()
@@ -276,7 +291,12 @@ class FlowStackSnapshotTest {
     @Test
     fun `persistFlowStackSnapshot persists multiple snapshots in different files`() {
         driver(startNodesInProcess = true) {
-            val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<MultiplePersistingSideEffectFlow>())))).get()
+            val rpcUser = User(
+                    Constants.USER,
+                    Constants.PASSWORD,
+                    setOfPermissionStrings(startFlow<MultiplePersistingSideEffectFlow>()))
+
+            val a = startNode(rpcUsers = listOf(rpcUser)).get()
 
             a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
                 val numberOfFlowSnapshots = 5
@@ -305,7 +325,12 @@ class FlowStackSnapshotTest {
     @Test
     fun `persistFlowStackSnapshot stack traces are aligned with stack objects`() {
         driver(startNodesInProcess = true) {
-            val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<PersistingSideEffectFlow>())))).get()
+            val rpcUser = User(
+                    Constants.USER,
+                    Constants.PASSWORD,
+                    setOfPermissionStrings(startFlow<PersistingSideEffectFlow>()))
+
+            val a = startNode(rpcUsers = listOf(rpcUser)).get()
 
             a.rpcClientToNode().use(Constants.USER, Constants.PASSWORD) { connection ->
                 val flowId = connection.proxy.startFlow(::PersistingSideEffectFlow).returnValue.get()

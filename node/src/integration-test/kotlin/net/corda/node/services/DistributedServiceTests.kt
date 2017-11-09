@@ -11,8 +11,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
@@ -32,11 +31,11 @@ class DistributedServiceTests {
     private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
 
     private fun setup(testBlock: () -> Unit) {
-        val testUser = User("test", "test", permissions = setOf(
-                startFlow<CashIssueFlow>(),
-                startFlow<CashPaymentFlow>(),
-                invokeRpc(CordaRPCOps::nodeInfo),
-                invokeRpc(CordaRPCOps::stateMachinesFeed))
+        val testUser = User("test", "test", permissions = setOfPermissionStrings(
+                RPCPermission.startFlow<CashIssueFlow>(),
+                RPCPermission.startFlow<CashPaymentFlow>(),
+                RPCPermission.invokeRpc(CordaRPCOps::nodeInfo),
+                RPCPermission.invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
 
         driver(

@@ -17,11 +17,11 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
+import net.corda.testing.setOfPermissionStrings
 import net.corda.testing.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -33,12 +33,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
-    private val rpcUser = User("user1", "test", permissions = setOf(
-            startFlow<CashIssueFlow>(),
-            startFlow<CashPaymentFlow>(),
-            invokeRpc("vaultQueryBy"),
-            invokeRpc(CordaRPCOps::stateMachinesFeed),
-            invokeRpc("vaultQueryByCriteria"))
+    private val rpcUser = User("user1", "test", permissions = setOfPermissionStrings(
+            RPCPermission.startFlow<CashIssueFlow>(),
+            RPCPermission.startFlow<CashPaymentFlow>(),
+            RPCPermission.invokeRpc("vaultQueryBy"),
+            RPCPermission.invokeRpc(CordaRPCOps::stateMachinesFeed),
+            RPCPermission.invokeRpc("vaultQueryByCriteria"))
     )
     private lateinit var node: StartedNode<Node>
     private lateinit var client: CordaRPCClient

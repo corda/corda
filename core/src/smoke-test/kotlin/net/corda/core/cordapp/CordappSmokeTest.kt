@@ -20,6 +20,7 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.streams.toList
 
+
 class CordappSmokeTest {
     private companion object {
         private const val CORDAPPS_DIR_NAME = "cordapps"

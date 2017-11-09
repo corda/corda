@@ -2,8 +2,9 @@ package net.corda.traderdemo
 
 import net.corda.core.internal.div
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.services.Permissions.Companion.all
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.security.RPCPermission
+import net.corda.testing.setOfPermissionStrings
+
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_BANK_A
@@ -17,15 +18,19 @@ import net.corda.traderdemo.flow.SellerFlow
  * Do not use in a production environment.
  */
 fun main(args: Array<String>) {
-    val permissions = setOf(
-            startFlow<CashIssueFlow>(),
-            startFlow<SellerFlow>(),
-            all())
+    val permissions = setOfPermissionStrings(
+            RPCPermission.startFlow<CashIssueFlow>(),
+            RPCPermission.startFlow<SellerFlow>(),
+            RPCPermission.all)
     val demoUser = listOf(User("demo", "demo", permissions))
     driver(driverDirectory = "build" / "trader-demo-nodes", isDebug = true) {
-        val user = User("user1", "test", permissions = setOf(startFlow<CashIssueFlow>(),
-                startFlow<CommercialPaperIssueFlow>(),
-                startFlow<SellerFlow>()))
+        val user = User(
+            "user1",
+            "test",
+            setOfPermissionStrings(
+                    RPCPermission.startFlow<CashIssueFlow>(),
+                    RPCPermission.startFlow<CommercialPaperIssueFlow>(),
+                    RPCPermission.startFlow<SellerFlow>()))
         startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser)
         startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser)
         startNode(providedName = BOC.name, rpcUsers = listOf(user))

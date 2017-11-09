@@ -3,7 +3,6 @@ package net.corda.notarydemo
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.core.internal.div
-import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.User
 import net.corda.notarydemo.flows.DummyIssueAndMove
@@ -19,7 +18,7 @@ import net.corda.testing.internal.demorun.runNodes
 
 fun main(args: Array<String>) = SingleNotaryCordform().runNodes()
 
-val notaryDemoUser = User("demou", "demop", setOf(all()))
+val notaryDemoUser = User("demou", "demop", setOf("ALL"))
 
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
 // NOT use this as a design to copy.
