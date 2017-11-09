@@ -10,11 +10,10 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.NodeState
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.messaging.requireEitherPermission
 import rx.Observable
@@ -23,6 +22,14 @@ import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
 class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcContext, private val permissionsAllowing: (methodName: String, args: List<Any?>) -> Set<String>) : CordaRPCOps {
+
+    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash = guard("uploadAttachmentWithMetadata") {
+        implementation.uploadAttachmentWithMetadata(jar, uploader, filename)
+    }
+
+    override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> = guard("queryAttachments") {
+        implementation.queryAttachments(query, sorting)
+    }
 
     override fun stateMachinesSnapshot() = guard("stateMachinesSnapshot") {
         implementation.stateMachinesSnapshot()
