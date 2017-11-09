@@ -279,11 +279,6 @@ open class NodeStartup(val args: Array<String>) {
                     "Computers are useless. They can only\ngive you answers.  -- Picasso"
             )
 
-            // TODO: Delete this after CordaCon.
-            val cordaCon2017date = LocalDate.of(2017, 9, 12)
-            val cordaConBanner = if (LocalDate.now() < cordaCon2017date)
-                "${Emoji.soon} Register for our Free CordaCon event : see https://goo.gl/Z15S8W" else ""
-
             if (Emoji.hasEmojiTerminal)
                 messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
             val (msg1, msg2) = messages.randomOrNull()!!.split('\n')
@@ -296,8 +291,6 @@ open class NodeStartup(val args: Array<String>) {
                     """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
                     a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
                     newline().
-                    newline().
-                    a(cordaConBanner).
                     newline().
                     reset())
         }

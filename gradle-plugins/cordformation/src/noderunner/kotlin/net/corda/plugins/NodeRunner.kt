@@ -90,7 +90,7 @@ private abstract class JavaCommand(
 }
 
 private class HeadlessJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>, jvmArgs: List<String>)
-    : JavaCommand(jarName, dir, debugPort, dir.name, { add("--no-local-shell") }, args, jvmArgs) {
+    : JavaCommand(jarName, dir, debugPort, dir.name, { }, args, jvmArgs) {
     override fun processBuilder() = ProcessBuilder(command).redirectError(File("error.$nodeName.log")).inheritIO()
     override fun getJavaPath() = File(File(System.getProperty("java.home"), "bin"), "java").path
 }
