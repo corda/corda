@@ -6,8 +6,21 @@ Here are release notes for each snapshot release from M9 onwards.
 Release 2.0
 ----------
 
+Following quickly after the release of Corda 1.0 we are follows this up with the relase of 2.0 consolodating
+a number of security updates on dependent librarues alonsgide the reintroductin of the Observer node that
+was absetnt V1 <<< because reasons >>>.
+
+In addition a small bugfix present in the Coin Selection code of V1.0 is integrated from master
+
+<<< Do we want to address why this is 2.0 and not 1.1 >>>
+
+* **Observer Nodes**
+
 Support for observer/regulator nodes has returned. Read :doc:`tutorial-observer-nodes` to learn more or examine the
 interest rate swaps demo.
+
+<<< Does someone want to flesh this out a bit >>>
+
 
 Release 1.0
 -----------
