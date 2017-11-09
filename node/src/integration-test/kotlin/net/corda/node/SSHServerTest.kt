@@ -110,6 +110,9 @@ class SSHServerTest {
 
             val flowNameEscaped = Pattern.quote("StartFlow.${SSHServerTest::class.qualifiedName}$${FlowICannotRun::class.simpleName}")
 
+            channel.disconnect()
+            session.disconnect()
+
             assertThat(response).matches("(?s)User not permissioned with any of \\[[^]]*${flowNameEscaped}.*")
         }
     }

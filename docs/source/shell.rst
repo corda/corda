@@ -55,7 +55,7 @@ running node on the same computer. Password will be asked after estabilishing co
 
 :note: While developing, checking multiple samples or simply restarting a node frequently host key may be regenerated. SSH usually
     saved once trusted hosts and will refuse to connect in case of a change. Then check may be disabled with extra options
-    ``ssh -o StrictHostKeyChecking=no user@host -p2222``. This option should never be in production environment!
+    ``ssh -o StrictHostKeyChecking=no user@host -p2222``. This option should never be used in production environment!
 
 Getting help
 ------------

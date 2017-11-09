@@ -87,27 +87,26 @@ object InteractiveShell {
         val dir = configuration.baseDirectory
         val runSSH = configuration.sshd != null
 
-        val config = Properties()
-        if (runSSH) {
-            val sshKeysDir = dir / "sshkey"
-            sshKeysDir.toFile().mkdirs()
-
-            // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
-            config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
-            config["crash.ssh.keygen"] = "true"
-            config["crash.ssh.port"] = configuration.sshd?.port.toString()
-            config["crash.auth"] = "corda"
+        if (!runSSH) {
+            return
         }
 
+        val config = Properties()
+        val sshKeysDir = dir / "sshkey"
+        sshKeysDir.toFile().mkdirs()
+
+        // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
+        config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
+        config["crash.ssh.keygen"] = "true"
+        config["crash.ssh.port"] = configuration.sshd?.port.toString()
+        config["crash.auth"] = "corda"
 
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
         shell = ShellLifecycle(dir).start(config)
 
-        if (runSSH) {
-            Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
-        }
+        Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
     }
 
     class ShellLifecycle(val dir: Path) : PluginLifeCycle() {
@@ -221,7 +220,7 @@ object InteractiveShell {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
         } catch (e:PermissionException) {
-            output.println(e.message ?: "Access denied")
+            output.println(e.message ?: "Access denied", Color.red)
         } finally {
             InputStreamDeserializer.closeAll()
         }
