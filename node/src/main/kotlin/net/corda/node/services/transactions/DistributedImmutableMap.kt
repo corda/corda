@@ -27,9 +27,9 @@ class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence,
     object Commands {
         class PutAll<K, V>(val entries: Map<K, V>) : Command<Map<K, V>> {
             override fun compaction(): Command.CompactionMode {
-                // The SNAPSHOT compaction mode indicates that a command can be removed from the Raft log once
-                // a snapshot of the state machine has been written to disk
-                return Command.CompactionMode.SNAPSHOT
+                // The SEQUENTIAL compaction mode retains the command in the log until it has been stored and applied
+                // on all servers in the cluster.
+                return Command.CompactionMode.SEQUENTIAL
             }
         }
 
