@@ -54,7 +54,8 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                         val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                         serializer.kryo.apply {
                             field.set(this, classResolver)
-                            DefaultKryoCustomizer.customize(this, publicKeySerializer)
+                            // don't allow overriding the public key serializer for checkpointing
+                            DefaultKryoCustomizer.customize(this)
                             addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
                             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
                             classLoader = it.second
