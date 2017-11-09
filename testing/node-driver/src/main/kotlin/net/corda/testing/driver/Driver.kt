@@ -80,7 +80,8 @@ private const val DEFAULT_WARN_COUNT = 120
 private val DRIVER_REQUIRED_PERMISSIONS = setOf(
         invokeRpc(CordaRPCOps::nodeInfo),
         invokeRpc(CordaRPCOps::networkMapFeed),
-        invokeRpc(CordaRPCOps::networkMapSnapshot)
+        invokeRpc(CordaRPCOps::networkMapSnapshot),
+        invokeRpc(CordaRPCOps::registeredFlows)
 )
 
 /**

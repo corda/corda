@@ -127,7 +127,6 @@ open class Node(configuration: NodeConfiguration,
 
     private var shutdownHook: ShutdownHook? = null
 
-    private lateinit var userService: RPCUserService
 
     override fun makeMessagingService(): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)

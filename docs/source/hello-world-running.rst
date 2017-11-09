@@ -28,6 +28,7 @@ Let's take a look at the nodes we're going to deploy. Open the project's ``build
             advertisedServices = ["corda.notary.validating"]
             p2pPort 10002
             rpcPort 10003
+            sshdPort 10022
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
         }
         node {
@@ -35,16 +36,18 @@ Let's take a look at the nodes we're going to deploy. Open the project's ``build
             p2pPort 10005
             rpcPort 10006
             webPort 10007
+            sshdPort 10023
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL]]]
         }
         node {
             name "O=PartyB,L=New York,C=US"
             p2pPort 10008
             rpcPort 10009
             webPort 10010
+            sshdPort 10024
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
         }
     }
 
@@ -93,7 +96,7 @@ Let's start the nodes by running the following commands from the root of the pro
 
 This will start a terminal window for each node, and an additional terminal window for each node's webserver - eight
 terminal windows in all. Give each node a moment to start - you'll know it's ready when its terminal windows displays
-the message, "Welcome to the Corda interactive shell.".
+the message like, "Node for "Notary Service" started up and registered in 13.95 sec".
 
   .. image:: resources/running_node.png
      :scale: 25%
@@ -103,10 +106,13 @@ Interacting with the nodes
 --------------------------
 Now that our nodes are running, let's order one of them to create an IOU by kicking off our ``IOUFlow``. In a larger
 app, we'd generally provide a web API sitting on top of our node. Here, for simplicity, we'll be interacting with the
-node via its built-in CRaSH shell.
+node via its built-in SSH server.
 
-Go to the terminal window displaying the CRaSH shell of PartyA. Typing ``help`` will display a list of the available
+Connect via SSH to the PartyA node. Typing ``help`` will display a list of the available
 commands.
+
+.. note:: More about SSH and how to connect can be found on :doc:`Shell` page. Here we configured Party A node to use
+    port 10023 for SSH
 
 We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
 

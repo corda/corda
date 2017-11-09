@@ -11,6 +11,6 @@ public class StartShellCommand extends InteractiveShellCommand {
     @Man("An alias for 'flow start'. Example: \"start Yo target: Some other company\"")
     public void main(@Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
                      @Usage("The data to pass as input") @Argument(unquote = false) List<String> input) {
-        FlowShellCommand.startFlow(name, input, out);
+        FlowShellCommand.startFlow(name, input, out, ops());
     }
 }

@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``SSH Server`` - Local shell has been removed. Instead the node can now expose SSH server with proper authorization
+  and permissioning built in.
+
 * ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
 
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.

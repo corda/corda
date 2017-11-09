@@ -9,32 +9,25 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.io.Closeables
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.client.rpc.PermissionException
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
-import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
-import net.corda.node.services.messaging.RpcContext
-import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.ANSIProgressRenderer
+import net.corda.node.services.RPCUserService
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.CordaPersistence
-import net.corda.nodeapi.ArtemisMessagingComponent
-import net.corda.nodeapi.User
 import org.crsh.command.InvocationContext
-import org.crsh.console.jline.JLineProcessor
-import org.crsh.console.jline.TerminalFactory
-import org.crsh.console.jline.console.ConsoleReader
 import org.crsh.lang.impl.java.JavaLanguage
 import org.crsh.plugin.CRaSHPlugin
 import org.crsh.plugin.PluginContext
@@ -45,7 +38,6 @@ import org.crsh.shell.ShellFactory
 import org.crsh.shell.impl.command.ExternalResolver
 import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
-import org.crsh.util.InterruptHandler
 import org.crsh.util.Utils
 import org.crsh.vfs.FS
 import org.crsh.vfs.spi.file.FileMountFactory
@@ -58,10 +50,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
-import kotlin.concurrent.thread
 
 // TODO: Add command history.
 // TODO: Command completion.
@@ -76,71 +66,47 @@ import kotlin.concurrent.thread
 
 object InteractiveShell {
     private val log = loggerFor<InteractiveShell>()
-    private lateinit var node: StartedNode<Node>
     @VisibleForTesting
     internal lateinit var database: CordaPersistence
+
+    private lateinit var rpcOps:CordaRPCOps
+    private lateinit var userService:RPCUserService
+    private lateinit var identityService:IdentityService
+
+    private var shell:Shell? = null
 
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(dir: Path, runLocalShell: Boolean, runSSHServer: Boolean, node: StartedNode<Node>) {
-        this.node = node
-        this.database = node.database
-        var runSSH = runSSHServer
+    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, userService: RPCUserService, identityService: IdentityService, database: CordaPersistence) {
+        this.rpcOps = cordaRPCOps
+        this.userService = userService
+        this.identityService = identityService
+        this.database = database
+        val dir = configuration.baseDirectory
+        val runSSH = configuration.sshd != null
 
         val config = Properties()
         if (runSSH) {
-            // TODO: Finish and enable SSH access.
-            // This means bringing the CRaSH SSH plugin into the Corda tree and applying Marek's patches
-            // found in https://github.com/marekdapps/crash/commit/8a37ce1c7ef4d32ca18f6396a1a9d9841f7ff643
-            // to that local copy, as CRaSH is no longer well maintained by the upstream and the SSH plugin
-            // that it comes with is based on a very old version of Apache SSHD which can't handle connections
-            // from newer SSH clients. It also means hooking things up to the authentication system.
-            Node.printBasicNodeInfo("SSH server access is not fully implemented, sorry.")
-            runSSH = false
+            val sshKeysDir = dir / "sshkey"
+            sshKeysDir.toFile().mkdirs()
+
+            // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
+            config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
+            config["crash.ssh.keygen"] = "true"
+            config["crash.ssh.port"] = configuration.sshd?.port.toString()
+            config["crash.auth"] = "corda"
         }
 
-        if (runSSH) {
-            // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
-            config["crash.ssh.keypath"] = (dir / "sshkey").toString()
-            config["crash.ssh.keygen"] = "true"
-            // config["crash.ssh.port"] = node.configuration.sshdAddress.port.toString()
-            config["crash.auth"] = "simple"
-            config["crash.auth.simple.username"] = "admin"
-            config["crash.auth.simple.password"] = "admin"
-        }
 
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
-        val shell = ShellLifecycle(dir).start(config)
+        shell = ShellLifecycle(dir).start(config)
 
         if (runSSH) {
-            // printBasicNodeInfo("SSH server listening on address", node.configuration.sshdAddress.toString())
-        }
-
-        // Possibly bring up a local shell in the launching terminal window, unless it's disabled.
-        if (!runLocalShell)
-            return
-        // TODO: Automatically set up the JDBC sub-command with a connection to the database.
-        val terminal = TerminalFactory.create()
-        val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
-        val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
-        InterruptHandler { jlineProcessor.interrupt() }.install()
-        thread(name = "Command line shell processor", isDaemon = true) {
-            // Give whoever has local shell access administrator access to the node.
-            CURRENT_RPC_CONTEXT.set(RpcContext(User(ArtemisMessagingComponent.NODE_USER, "", setOf())))
-            Emoji.renderIfSupported {
-                jlineProcessor.run()
-            }
-        }
-        thread(name = "Command line shell terminator", isDaemon = true) {
-            // Wait for the shell to finish.
-            jlineProcessor.closed()
-            log.info("Command shell has exited")
-            terminal.restore()
-            node.dispose()
+            Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
         }
     }
 
@@ -168,27 +134,25 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage }
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, userService)
                 }
             }
             val attributes = mapOf(
-                    "node" to node.internals,
-                    "services" to node.services,
-                    "ops" to node.rpcOps,
+                    "ops" to rpcOps,
                     "mapper" to yamlInputMapper
             )
             val context = PluginContext(discovery, attributes, commandsFS, confFS, classLoader)
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null)
+            return context.getPlugin(ShellFactory::class.java).create(null, null)
         }
     }
 
     private val yamlInputMapper: ObjectMapper by lazy {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
-        JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory(), true).apply {
+        JacksonSupport.createInMemoryMapper(identityService, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule()
             rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
             rpcModule.addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
@@ -217,41 +181,47 @@ object InteractiveShell {
     /**
      * Called from the 'flow' shell command. Takes a name fragment and finds a matching flow, or prints out
      * the list of options if the request is ambiguous. Then parses [inputData] as constructor arguments using
-     * the [runFlowFromString] method and starts the requested flow using the [ANSIProgressRenderer] to draw
-     * the progress tracker. Ctrl-C can be used to cancel.
+     * the [runFlowFromString] method and starts the requested flow. Ctrl-C can be used to cancel.
      */
     @JvmStatic
-    fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter) {
-        val matches = node.services.rpcFlows.filter { nameFragment in it.name }
+    fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps) {
+        val matches = rpcOps.registeredFlows().filter { nameFragment in it }
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return
         } else if (matches.size > 1) {
-            output.println("Ambigous name provided, please be more specific. Your options are:")
+            output.println("Ambiguous name provided, please be more specific. Your options are:")
             matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
             return
         }
 
-        val clazz: Class<FlowLogic<*>> = uncheckedCast(matches.single())
+        val clazz: Class<FlowLogic<*>> = uncheckedCast(Class.forName(matches.single()))
         try {
-            // TODO Flow invocation should use startFlowDynamic.
-            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell).getOrThrow() }, inputData, clazz)
-            // Show the progress tracker on the console until the flow completes or is interrupted with a
-            // Ctrl-C keypress.
-            val latch = CountDownLatch(1)
-            ANSIProgressRenderer.onDone = { latch.countDown() }
-            ANSIProgressRenderer.progressTracker = (fsm as FlowStateMachineImpl).logic.progressTracker
-            try {
-                // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
-                // the tracker is done with the screen.
-                latch.await()
-            } catch (e: InterruptedException) {
-                ANSIProgressRenderer.progressTracker = null
-                // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
+            val stateObservable = runFlowFromString({ clazz,args -> rpcOps.startTrackedFlowDynamic (clazz, *args) }, inputData, clazz)
+
+            output.println("Flow ID ${stateObservable.id}")
+
+            val result = maybeFollow(stateObservable.progress, { it as String }, output)
+            if (result is Future<*>) {
+                if (!result.isDone) {
+                    output.println("Waiting for completion or Ctrl-C ... ")
+                    output.flush()
+                }
+                try {
+                    result.get()
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                } catch (e: ExecutionException) {
+                    throw e.rootCause
+                } catch (e: InvocationTargetException) {
+                    throw e.rootCause
+                }
             }
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
+        } catch (e:PermissionException) {
+            output.println(e.message ?: "Access denied")
         } finally {
             InputStreamDeserializer.closeAll()
         }
@@ -272,10 +242,10 @@ object InteractiveShell {
      * @throws NoApplicableConstructor if no constructor could be found for the given set of types.
      */
     @Throws(NoApplicableConstructor::class)
-    fun runFlowFromString(invoke: (FlowLogic<*>) -> FlowStateMachine<*>,
+    fun <T> runFlowFromString(invoke: (Class<out FlowLogic<T>>, Array<out Any?>) -> FlowProgressHandle<T>,
                           inputData: String,
-                          clazz: Class<out FlowLogic<*>>,
-                          om: ObjectMapper = yamlInputMapper): FlowStateMachine<*> {
+                          clazz: Class<out FlowLogic<T>>,
+                          om: ObjectMapper = yamlInputMapper): FlowProgressHandle<T> {
         // For each constructor, attempt to parse the input data as a method call. Use the first that succeeds,
         // and keep track of the reasons we failed so we can print them out if no constructors are usable.
         val parser = StringToMethodCallParser(clazz, om)
@@ -302,7 +272,7 @@ object InteractiveShell {
                     errors.add("A flow must override the progress tracker in order to be run from the shell")
                     continue
                 }
-                return invoke(flow)
+                return invoke(clazz, args)
             } catch (e: StringToMethodCallParser.UnparseableCallException.MissingParameter) {
                 errors.add("${getPrototype()}: missing parameter ${e.paramName}")
             } catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
@@ -320,8 +290,8 @@ object InteractiveShell {
 
     // TODO Filtering on error/success when we will have some sort of flow auditing, for now it doesn't make much sense.
     @JvmStatic
-    fun runStateMachinesView(out: RenderPrintWriter): Any? {
-        val proxy = node.rpcOps
+    fun runStateMachinesView(out: RenderPrintWriter, rpcOps: CordaRPCOps): Any? {
+        val proxy = rpcOps
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
@@ -427,7 +397,7 @@ object InteractiveShell {
         @Synchronized
         override fun onError(e: Throwable) {
             toStream.println("Observable completed with an error")
-            e.printStackTrace()
+            e.printStackTrace(toStream)
             future.setException(e)
         }
     }

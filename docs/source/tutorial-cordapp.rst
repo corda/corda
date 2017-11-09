@@ -246,12 +246,6 @@ For each node, the ``runnodes`` script creates a node tab/window:
     Loaded plugins                          : com.example.plugin.ExamplePlugin
     Node for "PartyA" started up and registered in 35.0 sec
 
-
-    Welcome to the Corda interactive shell.
-    Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
-
-    Fri Jul 07 10:33:47 BST 2017>>>
-
 For every node except the controller, the script also creates a webserver terminal tab/window:
 
 .. sourcecode:: none
@@ -392,9 +386,9 @@ You can view the newly-created IOU by accessing the vault of PartyA or PartyB:
 The vault and web front-end of PartyC (on ``localhost:10013``) will not display any IOUs. This is because PartyC was
 not involved in this transaction.
 
-Via the interactive shell (terminal only)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Nodes started via the terminal will display an interactive shell:
+Via the SSH shell (terminal only)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Nodes will start SSH server - see :doc:`shell`. Once connected, you should see:
 
 .. sourcecode:: none
 
