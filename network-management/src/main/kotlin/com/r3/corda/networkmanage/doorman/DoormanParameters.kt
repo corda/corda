@@ -41,7 +41,7 @@ fun parseParameters(vararg args: String): DoormanParameters {
     val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().defaultsTo(".").describedAs("filepath")
         accepts("configFile", "Overriding configuration file, default to <<current directory>>/node.conf.").withRequiredArg().describedAs("filepath")
-        accepts("mode", "Execution mode. Allowed values: ${DoormanParameters.Mode.values()}").withRequiredArg().defaultsTo(DoormanParameters.Mode.DOORMAN.name)
+        accepts("mode", "Execution mode. Allowed values: ${DoormanParameters.Mode.values().toList()}").withRequiredArg().defaultsTo(DoormanParameters.Mode.DOORMAN.name)
         accepts("keystorePath", "CA keystore filepath").withRequiredArg().describedAs("filepath")
         accepts("rootStorePath", "Root CA keystore filepath").withRequiredArg().describedAs("filepath")
         accepts("keystorePassword", "CA keystore password.").withRequiredArg().describedAs("password")
