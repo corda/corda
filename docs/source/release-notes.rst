@@ -6,13 +6,19 @@ Here are release notes for each snapshot release from M9 onwards.
 Release 2.0
 ----------
 
-Following quickly after the release of Corda 1.0 we are follows this up with the relase of 2.0 consolodating
-a number of security updates on dependent librarues alonsgide the reintroductin of the Observer node that
-was absetnt V1 <<< because reasons >>>.
+Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
+a number of security updates for our dependent libraries alongside the reintroduction of the Observer node functionality.
+This was absent from version 1 but based on user feedback it's re-introduction removes the need for complicated "isRelevant()" checks
+and which is compatible with Compatible Identities.
 
-In addition a small bugfix present in the Coin Selection code of V1.0 is integrated from master
+In addition the fix for a small bug present in the Coin Selection code of V1.0 is integrated from master
 
-<<< Do we want to address why this is 2.0 and not 1.1 >>>
+* **Version Bump**
+
+Our versioning policy for Corda would normally dictate a bugfix release with additional features added only incur a minor
+version number bump. In this case from 1.0 to 1.1. However, to bring clarity of compatibility to users of Corda, in the case of features
+that introduce new functionality to the API we have committed to raising the major number to indicate it, as is the case with
+Corda version 2.0 and the introduction of the observer node functionality
 
 * **Observer Nodes**
 
