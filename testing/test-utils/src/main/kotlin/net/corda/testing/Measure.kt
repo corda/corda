@@ -26,14 +26,15 @@ private fun <R> measure(paramIterables: List<Iterable<Any?>>, kCallable: KCallab
     val kParameters = kCallable.parameters
     return iterateLexical(paramIterables).map { params ->
         MeasureResult(
-                parameters = params.mapIndexed { index, param -> Pair(kParameters[index].name!!, param) },
+                // For example an underscore param in a lambda does not have a name:
+                parameters = params.mapIndexed { index, param -> Pair(kParameters[index].name, param) },
                 result = call(params.toTypedArray())
         )
     }
 }
 
 data class MeasureResult<out R>(
-        val parameters: List<Pair<String, Any?>>,
+        val parameters: List<Pair<String?, Any?>>,
         val result: R
 )
 
