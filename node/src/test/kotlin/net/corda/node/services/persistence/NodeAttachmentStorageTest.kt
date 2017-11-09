@@ -9,6 +9,10 @@ import net.corda.core.internal.read
 import net.corda.core.internal.readAll
 import net.corda.core.internal.write
 import net.corda.core.internal.writeLines
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
@@ -51,8 +55,7 @@ class NodeAttachmentStorageTest {
 
     @Test
     fun `insert and retrieve`() {
-        val testJar = makeTestJar()
-        val expectedHash = testJar.readAll().sha256()
+        val (testJar,expectedHash) = makeTestJar()
 
         database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
@@ -77,10 +80,87 @@ class NodeAttachmentStorageTest {
         }
     }
 
+    @Test
+    fun `metadata can be used to search`() {
+        val (jarA,hashA) = makeTestJar()
+        val (jarB,hashB) = makeTestJar(listOf(Pair("file","content")))
+        val (jarC,hashC) = makeTestJar(listOf(Pair("magic_file","magic_content_puff")))
+
+        database.transaction {
+            val storage = NodeAttachmentService(MetricRegistry())
+
+            jarA.read { storage.importAttachment(it) }
+            jarB.read { storage.importAttachment(it, "uploaderB", "fileB.zip") }
+            jarC.read { storage.importAttachment(it, "uploaderC", "fileC.zip") }
+
+            assertEquals(
+                listOf(hashB),
+                storage.queryAttachments( AttachmentQueryCriteria.AttachmentsQueryCriteria( Builder.equal("uploaderB")))
+            )
+
+            assertEquals (
+                    listOf(hashB, hashC),
+                storage.queryAttachments( AttachmentQueryCriteria.AttachmentsQueryCriteria( Builder.like ("%uploader%")))
+            )
+        }
+    }
+
+    @Test
+    fun `sorting and compound conditions work`() {
+        val (jarA,hashA) = makeTestJar(listOf(Pair("a","a")))
+        val (jarB,hashB) = makeTestJar(listOf(Pair("b","b")))
+        val (jarC,hashC) = makeTestJar(listOf(Pair("c","c")))
+
+        fun uploaderCondition(s:String) = AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal(s))
+        fun filenamerCondition(s:String) = AttachmentQueryCriteria.AttachmentsQueryCriteria(filenameCondition = Builder.equal(s))
+
+        fun filenameSort(direction: Sort.Direction) = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.FILENAME, direction)))
+
+        database.transaction {
+            val storage = NodeAttachmentService(MetricRegistry())
+
+            jarA.read { storage.importAttachment(it, "complexA", "archiveA.zip") }
+            jarB.read { storage.importAttachment(it, "complexB", "archiveB.zip") }
+            jarC.read { storage.importAttachment(it, "complexC", "archiveC.zip") }
+
+            // DOCSTART AttachmentQueryExample1
+
+            assertEquals(
+                emptyList(),
+                storage.queryAttachments(
+                    AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexA"))
+                    .and(AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexB"))))
+            )
+
+            assertEquals(
+                listOf(hashA, hashB),
+                storage.queryAttachments(
+
+                    AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexA"))
+                    .or(AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexB"))))
+            )
+
+            val complexCondition =
+                    (uploaderCondition("complexB").and(filenamerCondition("archiveB.zip"))).or(filenamerCondition("archiveC.zip"))
+
+            // DOCEND AttachmentQueryExample1
+
+            assertEquals (
+                    listOf(hashB, hashC),
+                storage.queryAttachments(complexCondition, sorting = filenameSort(Sort.Direction.ASC))
+            )
+            assertEquals (
+                    listOf(hashC, hashB),
+                storage.queryAttachments(complexCondition, sorting = filenameSort(Sort.Direction.DESC))
+            )
+
+        }
+    }
+
     @Ignore("We need to be able to restart nodes - make importing attachments idempotent?")
     @Test
     fun `duplicates not allowed`() {
-        val testJar = makeTestJar()
+        val (testJar,_) = makeTestJar()
         database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
             testJar.read {
@@ -96,7 +176,7 @@ class NodeAttachmentStorageTest {
 
     @Test
     fun `corrupt entry throws exception`() {
-        val testJar = makeTestJar()
+        val (testJar,_) = makeTestJar()
         val id = database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
@@ -139,7 +219,7 @@ class NodeAttachmentStorageTest {
     }
 
     private var counter = 0
-    private fun makeTestJar(): Path {
+    private fun makeTestJar(extraEntries: List<Pair<String,String>> = emptyList()): Pair<Path, SecureHash> {
         counter++
         val file = fs.getPath("$counter.jar")
         file.write {
@@ -149,8 +229,12 @@ class NodeAttachmentStorageTest {
             jar.closeEntry()
             jar.putNextEntry(JarEntry("test2.txt"))
             jar.write("Some more useful content".toByteArray())
+            extraEntries.forEach {
+                jar.putNextEntry(JarEntry(it.first))
+                jar.write(it.second.toByteArray())
+            }
             jar.closeEntry()
         }
-        return file
+        return Pair(file, file.readAll().sha256())
     }
 }

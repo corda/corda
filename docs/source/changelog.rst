@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``AttachmentStorage`` now allows providing metadata on attachments upload - username and filename, currently as plain
+  strings. Those can be then used for querying, utilizing ``queryAttachments`` method of the same interface.
+
 * ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
 
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.

@@ -1364,12 +1364,14 @@ public final class net.corda.core.identity.IdentityUtils extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream openAttachment(net.corda.core.crypto.SecureHash)
   @org.jetbrains.annotations.NotNull public abstract Set partiesFromName(String, boolean)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party partyFromKey(java.security.PublicKey)
+  @org.jetbrains.annotations.NotNull public abstract List queryAttachments(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentSort)
   @org.jetbrains.annotations.NotNull public abstract List registeredFlows()
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed stateMachineRecordedTransactionMappingFeed()
   @org.jetbrains.annotations.NotNull public abstract List stateMachineRecordedTransactionMappingSnapshot()
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.DataFeed stateMachinesFeed()
   @org.jetbrains.annotations.NotNull public abstract List stateMachinesSnapshot()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash uploadAttachment(java.io.InputStream)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash uploadAttachmentWithMetadata(java.io.InputStream, String, String)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.Vault$Page vaultQuery(Class)
   @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.Vault$Page vaultQueryBy(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.PageSpecification, net.corda.core.node.services.vault.Sort, Class)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.Vault$Page vaultQueryByCriteria(net.corda.core.node.services.vault.QueryCriteria, Class)
@@ -1548,7 +1550,9 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.node.services.AttachmentStorage
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.crypto.SecureHash importAttachment(java.io.InputStream, String, String)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.contracts.Attachment openAttachment(net.corda.core.crypto.SecureHash)
+  @org.jetbrains.annotations.NotNull public abstract List queryAttachments(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentSort)
 ##
 public final class net.corda.core.node.services.AttachmentStorageKt extends java.lang.Object
 ##
@@ -1837,6 +1841,76 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   public static net.corda.core.node.services.vault.AggregateFunctionType valueOf(String)
   public static net.corda.core.node.services.vault.AggregateFunctionType[] values()
 ##
+@net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.node.services.vault.AttachmentQueryCriteria extends java.lang.Object implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria and(net.corda.core.node.services.vault.AttachmentQueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria or(net.corda.core.node.services.vault.AttachmentQueryCriteria)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.AttachmentQueryCriteria$AndComposition extends net.corda.core.node.services.vault.AttachmentQueryCriteria implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$AndVisitor
+  public <init>(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentQueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria extends net.corda.core.node.services.vault.AttachmentQueryCriteria
+  public <init>()
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate)
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate component1()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate component2()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate component3()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria copy(net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate getFilenameCondition()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate getUploadDateCondition()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.node.services.vault.ColumnPredicate getUploaderCondition()
+  public int hashCode()
+  public String toString()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.AttachmentQueryCriteria$OrComposition extends net.corda.core.node.services.vault.AttachmentQueryCriteria implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$OrVisitor
+  public <init>(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentQueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.AttachmentQueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser)
+##
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.services.vault.AttachmentSort extends net.corda.core.node.services.vault.BaseSort
+  public <init>(Collection)
+  @org.jetbrains.annotations.NotNull public final Collection component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentSort copy(Collection)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final Collection getColumns()
+  public int hashCode()
+  public String toString()
+##
+public static final class net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute extends java.lang.Enum
+  protected <init>(String, int, String)
+  @org.jetbrains.annotations.NotNull public final String getColumnName()
+  public static net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute valueOf(String)
+  public static net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute[] values()
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.AttachmentSort$AttachmentSortColumn extends java.lang.Object
+  public <init>(net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute, net.corda.core.node.services.vault.Sort$Direction)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.Sort$Direction component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentSort$AttachmentSortColumn copy(net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute, net.corda.core.node.services.vault.Sort$Direction)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.Sort$Direction getDirection()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute getSortAttribute()
+  public int hashCode()
+  public String toString()
+##
+public interface net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser extends net.corda.core.node.services.vault.BaseQueryCriteriaParser
+  @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria)
+##
+public interface net.corda.core.node.services.vault.BaseQueryCriteriaParser
+  @org.jetbrains.annotations.NotNull public abstract Collection parse(net.corda.core.node.services.vault.GenericQueryCriteria, net.corda.core.node.services.vault.BaseSort)
+  @org.jetbrains.annotations.NotNull public abstract Collection parseAnd(net.corda.core.node.services.vault.GenericQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria)
+  @org.jetbrains.annotations.NotNull public abstract Collection parseOr(net.corda.core.node.services.vault.GenericQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria)
+##
+public abstract class net.corda.core.node.services.vault.BaseSort extends java.lang.Object
+  public <init>()
+##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.node.services.vault.BinaryComparisonOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
   protected <init>(String, int)
   public static net.corda.core.node.services.vault.BinaryComparisonOperator valueOf(String)
@@ -2052,15 +2126,29 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   public static net.corda.core.node.services.vault.EqualityComparisonOperator valueOf(String)
   public static net.corda.core.node.services.vault.EqualityComparisonOperator[] values()
 ##
-@net.corda.core.DoNotImplement public interface net.corda.core.node.services.vault.IQueryCriteriaParser
-  @org.jetbrains.annotations.NotNull public abstract Collection parse(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.Sort)
-  @org.jetbrains.annotations.NotNull public abstract Collection parseAnd(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.QueryCriteria)
+public interface net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public abstract Collection visit(net.corda.core.node.services.vault.BaseQueryCriteriaParser)
+##
+public static interface net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria and(net.corda.core.node.services.vault.GenericQueryCriteria)
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria or(net.corda.core.node.services.vault.GenericQueryCriteria)
+##
+public static interface net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$AndVisitor extends net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public abstract Collection visit(net.corda.core.node.services.vault.BaseQueryCriteriaParser)
+##
+public static interface net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$OrVisitor extends net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.vault.GenericQueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public abstract Collection visit(net.corda.core.node.services.vault.BaseQueryCriteriaParser)
+##
+@net.corda.core.DoNotImplement public interface net.corda.core.node.services.vault.IQueryCriteriaParser extends net.corda.core.node.services.vault.BaseQueryCriteriaParser
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$CommonQueryCriteria)
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$FungibleAssetQueryCriteria)
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$LinearStateQueryCriteria)
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$VaultCustomQueryCriteria)
   @org.jetbrains.annotations.NotNull public abstract Collection parseCriteria(net.corda.core.node.services.vault.QueryCriteria$VaultQueryCriteria)
-  @org.jetbrains.annotations.NotNull public abstract Collection parseOr(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.QueryCriteria)
 ##
 @net.corda.core.serialization.CordaSerializable @net.corda.core.DoNotImplement public final class net.corda.core.node.services.vault.LikenessOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
   protected <init>(String, int)
@@ -2087,10 +2175,15 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   public final boolean isDefault()
   public String toString()
 ##
-@net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.node.services.vault.QueryCriteria extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.QueryCriteria and(net.corda.core.node.services.vault.QueryCriteria)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.QueryCriteria or(net.corda.core.node.services.vault.QueryCriteria)
-  @org.jetbrains.annotations.NotNull public abstract Collection visit(net.corda.core.node.services.vault.IQueryCriteriaParser)
+@net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.node.services.vault.QueryCriteria extends java.lang.Object implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria and(net.corda.core.node.services.vault.QueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria or(net.corda.core.node.services.vault.QueryCriteria)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.QueryCriteria$AndComposition extends net.corda.core.node.services.vault.QueryCriteria implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$AndVisitor
+  public <init>(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.QueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria getB()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.IQueryCriteriaParser)
 ##
 @net.corda.core.serialization.CordaSerializable public abstract static class net.corda.core.node.services.vault.QueryCriteria$CommonQueryCriteria extends net.corda.core.node.services.vault.QueryCriteria
   public <init>()
@@ -2149,6 +2242,12 @@ public final class net.corda.core.node.services.VaultServiceKt extends java.lang
   @org.jetbrains.annotations.Nullable public final List getUuid()
   public int hashCode()
   public String toString()
+  @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.IQueryCriteriaParser)
+##
+@net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.QueryCriteria$OrComposition extends net.corda.core.node.services.vault.QueryCriteria implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria$OrVisitor
+  public <init>(net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.QueryCriteria)
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria getA()
+  @org.jetbrains.annotations.NotNull public net.corda.core.node.services.vault.QueryCriteria getB()
   @org.jetbrains.annotations.NotNull public Collection visit(net.corda.core.node.services.vault.IQueryCriteriaParser)
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.vault.QueryCriteria$SoftLockingCondition extends java.lang.Object
@@ -2234,7 +2333,7 @@ public final class net.corda.core.node.services.vault.QueryCriteriaUtils extends
   public static final int DEFAULT_PAGE_SIZE = 200
   public static final int MAX_PAGE_SIZE = 2147483647
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.services.vault.Sort extends java.lang.Object
+@net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.services.vault.Sort extends net.corda.core.node.services.vault.BaseSort
   public <init>(Collection)
   @org.jetbrains.annotations.NotNull public final Collection component1()
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.vault.Sort copy(Collection)

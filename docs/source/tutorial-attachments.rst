@@ -25,6 +25,13 @@ is also available for interactive use via the shell. To **upload** run:
 
 ``>>> run uploadAttachment jar: /path/to/the/file.jar``
 
+or
+
+``>>> run uploadAttachmentWithMetadata jar: /path/to/the/file.jar, uploader: myself, filename: original_name.jar``
+
+to include the metadata with the attachment which can be used to find it later on. Note, that currently both uploader
+and filename are just plain strings (there is no connection between uploader and the RPC users for example).
+
 The file is uploaded, checked and if successful the hash of the file is returned. This is how the attachment is
 identified inside the node.
 
@@ -35,6 +42,28 @@ To download an attachment, you can do:
 which will then ask you to provide a path to save the file to. To do the same thing programmatically, you
 can pass a simple ``InputStream`` or ``SecureHash`` to the ``uploadAttachment``/``openAttachment`` RPCs from
 a JVM client.
+
+Searching for attachments
+-------------------------
+
+Attachments metadata can be used to query, in the similar manner as :doc:`api-vault-query`.
+
+``AttachmentQueryCriteria`` can be used to build a query, utilizing set of operations per column, namely:
+
+* Binary logical (AND, OR)
+* Comparison (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL)
+* Equality (EQUAL, NOT_EQUAL)
+* Likeness (LIKE, NOT_LIKE)
+* Nullability (IS_NULL, NOT_NULL)
+* Collection based (IN, NOT_IN)
+
+``And`` and ``or`` operators can be used to build queries of arbitrary complexity. Example of such query:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/persistence/NodeAttachmentStorageTest.kt
+        :language: kotlin
+        :start-after: DOCSTART AttachmentQueryExample1
+        :end-before: DOCEND AttachmentQueryExample1
+        :dedent: 12
 
 Protocol
 --------
