@@ -18,7 +18,7 @@ class KryoServerSerializationScheme : AbstractKryoSerializationScheme() {
 
     override fun rpcServerKryoPool(context: SerializationContext): KryoPool {
         return KryoPool.Builder {
-            DefaultKryoCustomizer.customize(RPCKryo(RpcServerObservableSerializer, context)).apply {
+            DefaultKryoCustomizer.customize(RPCKryo(RpcServerObservableSerializer, context), publicKeySerializer).apply {
                 classLoader = context.deserializationClassLoader
             }
         }.build()
