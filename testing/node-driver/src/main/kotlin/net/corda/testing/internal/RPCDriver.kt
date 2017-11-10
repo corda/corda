@@ -48,7 +48,6 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
-import javax.security.cert.X509Certificate
 
 interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
     /**
@@ -478,6 +477,7 @@ data class RPCDriverDSL(
     ): RpcServerHandle {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            isUseGlobalPools = false
         }
         val userService = object : RPCUserService {
             override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
