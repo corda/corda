@@ -14,7 +14,7 @@ import org.junit.runners.model.Statement
 
 /** @param inheritable whether new threads inherit the environment, use sparingly. */
 class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
-    val env = createTestSerializationEnv()
+    val env: SerializationEnvironment = createTestSerializationEnv()
     override fun apply(base: Statement, description: Description?) = object : Statement() {
         override fun evaluate() = env.asContextEnv(inheritable) {
             base.evaluate()
