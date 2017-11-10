@@ -8,6 +8,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
@@ -110,6 +111,7 @@ class RPCClient<I : RPCOps>(
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
                 reconnectAttempts = rpcConfiguration.maxReconnectAttempts
                 minLargeMessageSize = rpcConfiguration.maxFileSize
+                isUseGlobalPools = nodeSerializationEnv != null
             }
 
             val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext)

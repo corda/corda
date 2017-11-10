@@ -11,6 +11,7 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -217,6 +218,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             locator.connectionTTL = -1
             locator.clientFailureCheckPeriod = -1
             locator.minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            locator.isUseGlobalPools = nodeSerializationEnv != null
             sessionFactory = locator.createSessionFactory()
 
             // Login using the node username. The broker will authentiate us as its node (as opposed to another peer)

@@ -1,6 +1,7 @@
 package net.corda.nodeapi
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -48,7 +49,8 @@ class ArtemisTcpTransport {
                     // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop.
                     // It does not use AMQP messages for its own messages e.g. topology and heartbeats.
                     // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications.
-                    TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP"
+                    TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP",
+                    TransportConstants.USE_GLOBAL_WORKER_POOL_PROP_NAME to (nodeSerializationEnv != null)
             )
 
             if (config != null && enableSSL) {
