@@ -210,7 +210,7 @@ class NodeInterestRatesTest {
             internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
-                internals.findTokenizableService(NodeInterestRates.Oracle::class.java)!!.knownFixes = TEST_DATA
+                services.cordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
             }
         }
         val tx = makePartialTX()

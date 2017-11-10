@@ -60,7 +60,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
             }
-            BFTSMaRt.Client(it, replicaId, cluster)
+            BFTSMaRt.Client(it, replicaId, cluster, this)
         }
     }
 
