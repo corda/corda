@@ -61,6 +61,7 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
             register(net.corda.nodeapi.internal.serialization.amqp.custom.InputStreamSerializer)
             register(net.corda.nodeapi.internal.serialization.amqp.custom.BitSetSerializer(this))
             register(net.corda.nodeapi.internal.serialization.amqp.custom.EnumSetSerializer(this))
+            register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(this))
         }
         for (whitelistProvider in serializationWhitelists)
             factory.addToWhitelist(*whitelistProvider.whitelist.toTypedArray())
