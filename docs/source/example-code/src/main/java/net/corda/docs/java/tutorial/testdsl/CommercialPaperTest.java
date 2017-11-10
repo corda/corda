@@ -6,6 +6,8 @@ import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.contracts.ICommercialPaperState;
 import net.corda.finance.contracts.JavaCommercialPaper;
 import net.corda.finance.contracts.asset.Cash;
+import net.corda.testing.SerializationEnvironmentRule;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.time.temporal.ChronoUnit;
@@ -19,6 +21,8 @@ import static net.corda.testing.NodeTestUtils.transaction;
 import static net.corda.testing.TestConstants.*;
 
 public class CommercialPaperTest {
+    @Rule
+    public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{123});
 
     // DOCSTART 1

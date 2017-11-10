@@ -25,19 +25,9 @@ import java.nio.file.Path
 @JvmOverloads
 fun ledger(
         services: ServiceHub = MockServices(),
-        initialiseSerialization: Boolean = true,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    val callable = {
-        val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
-        dsl(ledgerDsl)
-        ledgerDsl
-    }
-    return if (initialiseSerialization) {
-        withTestSerialization { callable() }
-    } else {
-        callable()
-    }
+    return LedgerDSL(TestLedgerDSLInterpreter(services)).also { dsl(it) }
 }
 
 /**
@@ -48,10 +38,9 @@ fun ledger(
 @JvmOverloads
 fun transaction(
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
-        initialiseSerialization: Boolean = true,
         cordappPackages: List<String> = emptyList(),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(services = MockServices(cordappPackages), initialiseSerialization = initialiseSerialization) {
+) = ledger(services = MockServices(cordappPackages)) {
     dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
 }
 

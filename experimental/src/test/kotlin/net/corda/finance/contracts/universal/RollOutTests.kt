@@ -2,11 +2,16 @@ package net.corda.finance.contracts.universal
 
 import net.corda.finance.contracts.Frequency
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 
 class RollOutTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
     val contract = arrange {
