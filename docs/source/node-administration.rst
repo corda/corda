@@ -47,6 +47,11 @@ Now start the node as usual but with the additional parameter ``log4j.configurat
 
 ``java <Your existing startup options here> -Dlog4j.configurationFile=sql.xml -jar corda.jar``
 
+To determine the name of the logger, for Corda objects, use the fully qualified name (e.g. to look at node output
+in more detail, use ``net.corda.node.internal.Node`` although be aware that as we have marked this class ``internal`` we
+reserve the right to move and rename it as it's not part of the public API as yet). For other libraries, refer to their
+logging name construction. If you can't find what you need to refer to, use the ``--logging-level`` option as above and
+then determine the logging module name from the console output.
 
 Database access
 ---------------
