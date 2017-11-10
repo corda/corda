@@ -14,7 +14,10 @@ import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.AbstractAttachment
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -196,15 +199,38 @@ object DefaultKryoCustomizer {
 
     private object ContractAttachmentSerializer : Serializer<ContractAttachment>() {
         override fun write(kryo: Kryo, output: Output, obj: ContractAttachment) {
-            val buffer = ByteArrayOutputStream()
-            obj.attachment.open().use { it.copyTo(buffer) }
-            output.writeBytesWithLength(buffer.toByteArray())
+            if (kryo.serializationContext() != null) {
+                output.writeBytes(obj.attachment.id.bytes)
+            } else {
+                val buffer = ByteArrayOutputStream()
+                obj.attachment.open().use { it.copyTo(buffer) }
+                output.writeBytesWithLength(buffer.toByteArray())
+            }
             output.writeString(obj.contract)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
-            val attachment = GeneratedAttachment(input.readBytesWithLength())
-            return ContractAttachment(attachment, input.readString())
+            if (kryo.serializationContext() != null) {
+                val attachmentHash = SecureHash.SHA256(input.readBytes(32))
+                val contract = input.readString()
+
+                val context = kryo.serializationContext()!!
+                val attachmentStorage = context.serviceHub.attachments
+
+                val lazyAttachment = object : AbstractAttachment({
+                    val attachment = attachmentStorage.openAttachment(attachmentHash) ?: throw MissingAttachmentsException(listOf(attachmentHash))
+                    attachment.open().readBytes()
+                }) {
+                    override val id = attachmentHash
+                }
+
+                return ContractAttachment(lazyAttachment, contract)
+            } else {
+                val attachment = GeneratedAttachment(input.readBytesWithLength())
+                val contract = input.readString()
+
+                return ContractAttachment(attachment, contract)
+            }
         }
     }
 }
