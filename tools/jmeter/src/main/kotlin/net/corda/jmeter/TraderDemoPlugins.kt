@@ -20,8 +20,8 @@ abstract class AsbtractTraderDemoPlugin : CordaRPCSampler.Plugin {
     val bankB = CordaX500Name(organisation = "Bank B", locality = "New York", country = "US")
 
     protected fun getIdentities(rpc: CordaRPCOps) {
-        buyer = rpc.wellKnownPartyFromX500Name(bankA) ?: throw IllegalStateException("Don't know $bankA")
-        seller = rpc.wellKnownPartyFromX500Name(bankB) ?: throw IllegalStateException("Don't know $bankB")
+        //buyer = rpc.wellKnownPartyFromX500Name(bankA) ?: throw IllegalStateException("Don't know $bankA")
+        //seller = rpc.wellKnownPartyFromX500Name(bankB) ?: throw IllegalStateException("Don't know $bankB")
         notary = rpc.notaryIdentities().first()
     }
 }
