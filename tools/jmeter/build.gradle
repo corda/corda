@@ -59,6 +59,10 @@ run {
     // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
     args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
              "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
+    if ( project.hasProperty("jmeterHosts") ) {
+        args+= "-Xssh"
+        args+= Eval.me(jmeterHosts)
+    }
 }
 
 jar {
