@@ -8,20 +8,31 @@ import org.apache.shiro.authz.permission.DomainPermission
 import kotlin.reflect.full.declaredMemberFunctions
 
 /**
- * Encapsulate a user permission to perform a collection of RPC calls
- *
- * TODO: extend doc
+ * Provide a representation of RPC permissions based on Apache Shiro permissions framework.
+ * A permission represents a set of actions: for example, the set of all RPC invocations, or the set
+ * of RPC invocations acting on a given class of Flows in input. A permission `implies` another one if
+ * its set of actions contains the set of actions in the other one. In Apache Shiro, permissions are
+ * represented by instances of the [Permission] interface which offers a single method: [implies], to
+ * test if the 'x implies y' binary predicate is satisfied.
  */
 class RPCPermission : DomainPermission {
 
     /**
-     * Main constructor from string representation.
+     * Main constructor taking in input an RPC string representation conforming to the syntax used
+     * in a Node configuration. Currently valid permission strings have one of the forms:
      *
-     * @param representation The string representation of the permission
+     *   - `ALL`: allowing all type of RPC calls
+     *
+     *   - `InvokeRpc.$RPCMethodName`: allowing to call a given RPC method without restrictions on its arguments.
+     *
+     *   - `StartFlow.$FlowClassName`: allowing to call a `startFlow*` RPC method targeting a Flow instance
+     *     of a given class
+     *
+     * @param representation The input string representation
      */
     constructor (representation : String) {
 
-        this.domain = RPC_PERMISSION_DOMAIN
+        domain = RPC_PERMISSION_DOMAIN
         /*
          * Parse action and targets from string representation
          */
@@ -29,12 +40,12 @@ class RPCPermission : DomainPermission {
         when(action) {
             ACTION_INVOKE_RPC.toLowerCase() -> {
                 /*
-                 * Permission to call a given RPC with any input
+                 * Permission to call a given RPC on any input
                  */
                 val rpcCall = representation.substringAfter(SEPARATOR)
                 require(representation.count { it == SEPARATOR } == 1) {
                     "Malformed permission string" }
-                this.actions = setOf(rpcCall)
+                actions = setOf(rpcCall)
             }
             ACTION_START_FLOW.toLowerCase() -> {
                 /*
@@ -43,8 +54,8 @@ class RPCPermission : DomainPermission {
                 val targetFlow = representation.substringAfter(SEPARATOR)
                 require(targetFlow.isNotEmpty()) {
                     "Missing target flow after StartFlow" }
-                this.actions = FLOW_RPC_CALLS
-                this.targets = setOf(targetFlow)
+                actions = FLOW_RPC_CALLS
+                targets = setOf(targetFlow)
             }
             ACTION_ALL.toLowerCase() -> {
                 // Leaving empty set of targets and actions to match everything
@@ -57,19 +68,15 @@ class RPCPermission : DomainPermission {
      * Helper constructor directly setting actions and target field
      */
     internal constructor(actions: Set<String>,
-                         targets: Set<String>? = null)
+                         target: String? = null)
+        : super(actions, if (target != null) setOf(target) else null)
     {
-        require(ALL_RPC_CALLS.containsAll(actions) ||
-                FLOW_RPC_CALLS.containsAll(actions)) {
+        require(ALL_RPC_CALLS.containsAll(actions)  ||
+                FLOW_RPC_CALLS.containsAll(actions) ||
+                actions == setOf(ACTION_ALL)) {
             "Function name not registered in RPC client interface"
         }
-
-        this.domain = RPC_PERMISSION_DOMAIN
-        this.actions = actions
-
-        if (targets != null) {
-            this.targets = targets
-        }
+        domain = RPC_PERMISSION_DOMAIN
     }
 
     /**
@@ -83,14 +90,14 @@ class RPCPermission : DomainPermission {
     /**
      * Overload of onTarget() to specify target type at runtime
      */
-    fun onTarget(target : Class<*>) : RPCPermission {
+    fun onTarget(target : Class<*>) : DomainPermission {
         require (this.targets == null) {"attempt resetting target"}
-
-        return RPCPermission(this.actions, setOf(target.name))
+        return RPCPermission(this.actions, target.name)
     }
 
     /**
-     * TODO: extend documentations
+     * Produce string representation of this instance conforming to the syntax used in
+     * Node configuration
      */
     fun toConfigString() : String {
         if (actions == null || actions.isEmpty()) {
@@ -110,12 +117,33 @@ class RPCPermission : DomainPermission {
         }
     }
 
+    /*
+     * Collection of static factory functions and private string constants
+     */
     companion object {
 
-        val SEPARATOR          = '.'
-        val ACTION_START_FLOW  = "StartFlow"
-        val ACTION_INVOKE_RPC  = "InvokeRpc"
-        val ACTION_ALL         = "ALL"
+        private val SEPARATOR          = '.'
+        private val ACTION_START_FLOW  = "StartFlow"
+        private val ACTION_INVOKE_RPC  = "InvokeRpc"
+        private val ACTION_ALL         = "ALL"
+
+        /*
+         * Internal tag identifying RPC permission domains (for shiro.DomainPermission)
+         */
+        private val RPC_PERMISSION_DOMAIN = "RPC"
+
+        /*
+         * List of RPC calls granted by a StartFlow permission
+         */
+        private val FLOW_RPC_CALLS = setOf("startFlowDynamic",
+                "startTrackedFlowDynamic")
+        /*
+         * List of all RPC calls from wrapped interface
+         */
+        private val ALL_RPC_CALLS = CordaRPCOps::class.declaredMemberFunctions
+                .filter { it.visibility == KVisibility.PUBLIC }
+                .map { it.name }
+                .toSet()
 
         /**
          * Global admin permissions.
@@ -124,12 +152,12 @@ class RPCPermission : DomainPermission {
         val all = RPCPermission(ACTION_ALL)
 
         /**
-         * Creates a flow permission object
+         * Creates a flow permission instance.
          *
          * @param className a flow class name for which permission is created.
          */
         @JvmStatic
-        fun startFlow(className: String) = RPCPermission(FLOW_RPC_CALLS, setOf(className))
+        fun startFlow(className: String) = RPCPermission(FLOW_RPC_CALLS, className)
 
         /**
          * An overload for [startFlow]
@@ -148,7 +176,7 @@ class RPCPermission : DomainPermission {
         inline fun <reified T : FlowLogic<*>> startFlow() = startFlow(T::class.java)
 
         /**
-         * Creates an RPC permission.
+         * Creates an RPC invocation permission.
          *
          * @param methodName a RPC method name for which permission is created.
          */
@@ -156,30 +184,11 @@ class RPCPermission : DomainPermission {
         fun invokeRpc(methodName: String) = RPCPermission(setOf(methodName))
 
         /**
-         * Creates a permission string with format "InvokeRpc.{method.name}".
+         * An overload for [invokeRpc]
          *
          * @param method a RPC [KFunction] for which permission is created.
          */
         @JvmStatic
         fun invokeRpc(method: KFunction<*>) = invokeRpc(method.name)
-
-        /*
-         * Internal tag identifying RPC permission domains (for shiro.DomainPermission)
-         */
-        private val RPC_PERMISSION_DOMAIN = "RPC"
-
-        /*
-         * List of RPC calls granted by a StartFlow permission
-         */
-        private val FLOW_RPC_CALLS = setOf("startFlowDynamic",
-                                           "startTrackedFlowDynamic")
-        /*
-         * List of all RPC calls from wrapped interface
-         */
-        private val ALL_RPC_CALLS = CordaRPCOps::class.declaredMemberFunctions
-                .filter { it.visibility == KVisibility.PUBLIC }
-                .map { it.name }
-                .toSet()
-
     }
 }

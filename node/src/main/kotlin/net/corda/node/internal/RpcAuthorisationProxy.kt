@@ -15,6 +15,7 @@ import java.io.InputStream
 import java.security.PublicKey
 import net.corda.node.services.security.RPCPermission
 import net.corda.node.services.security.RPCPermission.Companion.invokeRpc
+import org.apache.shiro.authz.permission.DomainPermission
 
 class RpcAuthorisationProxy(
         private val implementation: CordaRPCOps,
@@ -205,14 +206,15 @@ class RpcAuthorisationProxy(
             implementation.vaultTrackByWithSorting(contractStateType, criteria, sorting)
         }
 
-    private fun authorise(permission : RPCPermission) {
+    private fun authorise(permission : DomainPermission) {
+        // TODO: delegate to Shiro Authorizer instance
         val userPermissions = context().currentUser.permissions.map {RPCPermission(it)}
         if (!userPermissions.any {it.implies(permission)}) {
             throw PermissionException ("Current user permissions do not authorise $permission")
         }
     }
 
-    private inline fun <RESULT> guard(permission: RPCPermission, action: () -> RESULT) : RESULT {
+    private inline fun <T> guard(permission: DomainPermission, action: () -> T) : T{
         authorise(permission)
         return action()
     }

@@ -56,7 +56,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
 
     @Test
     fun `test RPCPermission construction`() {
-
         assertEquals(RPCPermission("ALL"),  RPCPermission.all)
         assertEquals(RPCPermission("InvokeRpc.nodeInfo"), RPCPermission.invokeRpc(CordaRPCOps::nodeInfo))
         assertEquals(RPCPermission("InvokeRpc.vaultTrackBy"), RPCPermission.invokeRpc("vaultTrackBy"))
