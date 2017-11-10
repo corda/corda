@@ -296,8 +296,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = { args ->
             object : MockNetwork.MockNode(args) {
                 // That constructs a recording tx storage
-                override fun makeTransactionStorage(): WritableTransactionStorage {
-                    return RecordingTransactionStorage(database, super.makeTransactionStorage())
+                override fun makeTransactionStorage(database: CordaPersistence): WritableTransactionStorage {
+                    return RecordingTransactionStorage(database, super.makeTransactionStorage(database))
                 }
             }
         })
