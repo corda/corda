@@ -1,6 +1,7 @@
 package net.corda.testing.messaging
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisTcpTransport
@@ -27,6 +28,7 @@ class SimpleMQClient(val target: NetworkHostAndPort,
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             isBlockOnNonDurableSend = true
             threadPoolMaxSize = 1
+            isUseGlobalPools = nodeSerializationEnv != null
         }
         sessionFactory = locator.createSessionFactory()
         session = sessionFactory.createSession(username, password, false, true, true, locator.isPreAcknowledge, locator.ackBatchSize)

@@ -2,8 +2,7 @@ package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.WriteOnceProperty
-import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
@@ -53,7 +52,7 @@ abstract class SerializationFactory {
      * A context to use as a default if you do not require a specially configured context.  It will be the current context
      * if the use is somehow nested (see [currentContext]).
      */
-    val defaultContext: SerializationContext get() = currentContext ?: SerializationDefaults.P2P_CONTEXT
+    val defaultContext: SerializationContext get() = currentContext ?: effectiveSerializationEnv.p2pContext
 
     private val _currentContext = ThreadLocal<SerializationContext?>()
 
@@ -90,7 +89,7 @@ abstract class SerializationFactory {
         /**
          * A default factory for serialization/deserialization, taking into account the [currentFactory] if set.
          */
-        val defaultFactory: SerializationFactory get() = currentFactory ?: SerializationDefaults.SERIALIZATION_FACTORY
+        val defaultFactory: SerializationFactory get() = currentFactory ?: effectiveSerializationEnv.serializationFactory
 
         /**
          * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
@@ -173,13 +172,13 @@ interface SerializationContext {
 /**
  * Global singletons to be used as defaults that are injected elsewhere (generally, in the node or in RPC client).
  */
-object SerializationDefaults : SerializationEnvironment {
-    override var SERIALIZATION_FACTORY: SerializationFactory by WriteOnceProperty()
-    override var P2P_CONTEXT: SerializationContext by WriteOnceProperty()
-    override var RPC_SERVER_CONTEXT: SerializationContext by WriteOnceProperty()
-    override var RPC_CLIENT_CONTEXT: SerializationContext by WriteOnceProperty()
-    override var STORAGE_CONTEXT: SerializationContext by WriteOnceProperty()
-    override var CHECKPOINT_CONTEXT: SerializationContext by WriteOnceProperty()
+object SerializationDefaults {
+    val SERIALIZATION_FACTORY get() = effectiveSerializationEnv.serializationFactory
+    val P2P_CONTEXT get() = effectiveSerializationEnv.p2pContext
+    val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext
+    val RPC_CLIENT_CONTEXT get() = effectiveSerializationEnv.rpcClientContext
+    val STORAGE_CONTEXT get() = effectiveSerializationEnv.storageContext
+    val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
 }
 
 /**

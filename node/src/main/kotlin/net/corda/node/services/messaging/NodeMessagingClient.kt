@@ -11,6 +11,7 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort

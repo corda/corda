@@ -2430,19 +2430,13 @@ public static final class net.corda.core.serialization.SerializationContext$UseC
   public static net.corda.core.serialization.SerializationContext$UseCase valueOf(String)
   public static net.corda.core.serialization.SerializationContext$UseCase[] values()
 ##
-public final class net.corda.core.serialization.SerializationDefaults extends java.lang.Object implements net.corda.core.serialization.internal.SerializationEnvironment
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getCHECKPOINT_CONTEXT()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getP2P_CONTEXT()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getRPC_CLIENT_CONTEXT()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getRPC_SERVER_CONTEXT()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationFactory getSERIALIZATION_FACTORY()
-  @org.jetbrains.annotations.NotNull public net.corda.core.serialization.SerializationContext getSTORAGE_CONTEXT()
-  public void setCHECKPOINT_CONTEXT(net.corda.core.serialization.SerializationContext)
-  public void setP2P_CONTEXT(net.corda.core.serialization.SerializationContext)
-  public void setRPC_CLIENT_CONTEXT(net.corda.core.serialization.SerializationContext)
-  public void setRPC_SERVER_CONTEXT(net.corda.core.serialization.SerializationContext)
-  public void setSERIALIZATION_FACTORY(net.corda.core.serialization.SerializationFactory)
-  public void setSTORAGE_CONTEXT(net.corda.core.serialization.SerializationContext)
+public final class net.corda.core.serialization.SerializationDefaults extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getCHECKPOINT_CONTEXT()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getP2P_CONTEXT()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getRPC_CLIENT_CONTEXT()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getRPC_SERVER_CONTEXT()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationFactory getSERIALIZATION_FACTORY()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getSTORAGE_CONTEXT()
   public static final net.corda.core.serialization.SerializationDefaults INSTANCE
 ##
 public abstract class net.corda.core.serialization.SerializationFactory extends java.lang.Object

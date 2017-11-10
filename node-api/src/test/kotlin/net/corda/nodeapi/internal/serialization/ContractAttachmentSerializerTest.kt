@@ -27,9 +27,8 @@ class ContractAttachmentSerializerTest {
 
     @Before
     fun setup() {
-        factory = testSerialization.env.SERIALIZATION_FACTORY
-        context = testSerialization.env.CHECKPOINT_CONTEXT
-
+        factory = testSerialization.env.serializationFactory
+        context = testSerialization.env.checkpointContext
         contextWithToken = context.withTokenContext(SerializeAsTokenContextImpl(Any(), factory, context, mockServices))
     }
 

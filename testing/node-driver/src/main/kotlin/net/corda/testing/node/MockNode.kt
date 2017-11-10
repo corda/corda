@@ -39,7 +39,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.setGlobalSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
@@ -136,9 +136,8 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     private val networkId = random63BitValue()
     private val networkParameters: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
-    private val serializationEnv = initialiseTestSerialization(initialiseSerialization)
+    private val serializationEnv = setGlobalSerialization(initialiseSerialization)
     private val sharedUserCount = AtomicInteger(0)
-
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
 
@@ -419,7 +418,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
-        serializationEnv.resetTestSerialization()
+        serializationEnv.unset()
     }
 
     // Test method to block until all scheduled activity, active flows

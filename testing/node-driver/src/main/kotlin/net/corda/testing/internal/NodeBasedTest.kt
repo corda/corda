@@ -38,7 +38,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
@@ -63,16 +63,20 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     @After
     fun stopAllNodes() {
         val shutdownExecutor = Executors.newScheduledThreadPool(nodes.size)
-        nodes.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
-        // Wait until ports are released
-        val portNotBoundChecks = nodes.flatMap {
-            listOf(
-                    it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
-                    it.internals.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
-            )
-        }.filterNotNull()
-        nodes.clear()
-        portNotBoundChecks.transpose().getOrThrow()
+        try {
+            nodes.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
+            // Wait until ports are released
+            val portNotBoundChecks = nodes.flatMap {
+                listOf(
+                        it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
+                        it.internals.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
+                )
+            }.filterNotNull()
+            nodes.clear()
+            portNotBoundChecks.transpose().getOrThrow()
+        } finally {
+            shutdownExecutor.shutdown()
+        }
     }
 
     @JvmOverloads
