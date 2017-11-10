@@ -3,12 +3,8 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.AMQP_RPC_CLIENT_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationContextImpl
-import net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer
 import org.apache.qpid.proton.codec.Data
 import org.assertj.core.api.Assertions
-import org.junit.Assert
 import org.junit.Test
 import java.lang.reflect.Type
 import java.security.PublicKey
