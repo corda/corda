@@ -45,13 +45,11 @@ val _contextSerializationEnv = ThreadLocalToggleField<SerializationEnvironment>(
 @VisibleForTesting
 val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField<SerializationEnvironment>("inheritableContextSerializationEnv")
 private val serializationEnvProperties = listOf(_nodeSerializationEnv, _globalSerializationEnv, _contextSerializationEnv, _inheritableContextSerializationEnv)
-internal val effectiveSerializationEnv: SerializationEnvironment
+val effectiveSerializationEnv: SerializationEnvironment
     get() = serializationEnvProperties.map { Pair(it, it.get()) }.filter { it.second != null }.run {
         singleOrNull()?.run {
             second!!
-        } ?: throw IllegalStateException("Expected exactly 1 of {${serializationEnvProperties.joinToString(", ") { it.name }}} but got: {${joinToString(", ") { it.first.name }}}").also {
-            it.printStackTrace() // Sadly, it won't always propagate.
-        }
+        } ?: throw IllegalStateException("Expected exactly 1 of {${serializationEnvProperties.joinToString(", ") { it.name }}} but got: {${joinToString(", ") { it.first.name }}}")
     }
 /** Should be set once in main. */
 var nodeSerializationEnv by _nodeSerializationEnv

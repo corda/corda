@@ -3,7 +3,6 @@ package net.corda.irs.web
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.finance.plugin.registerFinanceJSONMappers
@@ -46,7 +45,6 @@ class IrsDemoWebApplication {
     // running as standalone java app
     companion object {
         @JvmStatic fun main(args: Array<String>) {
-            KryoClientSerializationScheme.initialiseSerialization()
             SpringApplication.run(IrsDemoWebApplication::class.java, *args)
         }
     }

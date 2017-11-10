@@ -3,7 +3,6 @@
 package net.corda.webserver
 
 import com.typesafe.config.ConfigException
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.internal.div
 import net.corda.core.internal.rootCause
 import net.corda.webserver.internal.NodeWebServer
@@ -59,7 +58,7 @@ fun main(args: Array<String>) {
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
     log.info("Starting as webserver on ${conf.webAddress}")
-    KryoClientSerializationScheme.initialiseSerialization()
+
     try {
         val server = NodeWebServer(conf)
         server.start()

@@ -1,8 +1,10 @@
 package net.corda.client.rpc
 
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
@@ -68,6 +70,18 @@ class CordaRPCClient @JvmOverloads constructor(
         hostAndPort: NetworkHostAndPort,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
 ) {
+    init {
+        try {
+            effectiveSerializationEnv
+        } catch (e: IllegalStateException) {
+            try {
+                KryoClientSerializationScheme.initialiseSerialization()
+            } catch (e: IllegalStateException) {
+                // Race e.g. two of these constructed in parallel, ignore.
+            }
+        }
+    }
+
     private val rpcClient = RPCClient<CordaRPCOps>(
             tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = null),
             configuration.toRpcClientConfiguration(),
