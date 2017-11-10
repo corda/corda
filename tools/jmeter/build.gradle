@@ -76,7 +76,7 @@ jar {
 // No additional args required but will be passed if specified.
 task buildJMeterJAR(type: FatCapsule, dependsOn: 'jar') {
     applicationClass 'net.corda.jmeter.Launcher'
-    archiveName "corda-jmeter-${corda_release_version}.jar"
+    archiveName "jmeter-corda-${corda_release_version}.jar"
     applicationSource = files(
             project(':tools:jmeter').jar
     )
