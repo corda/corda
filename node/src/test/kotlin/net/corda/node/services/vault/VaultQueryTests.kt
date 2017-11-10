@@ -12,7 +12,10 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.days
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.toHexString
 import net.corda.finance.*
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
@@ -31,7 +34,6 @@ import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -57,7 +59,7 @@ class VaultQueryTests {
     private lateinit var services: MockServices
     private lateinit var notaryServices: MockServices
     private val vaultService: VaultService get() = services.vaultService
-    private val identitySvc: IdentityService = makeTestIdentityService()
+    private lateinit var identitySvc: IdentityService
     private lateinit var database: CordaPersistence
 
     // test cash notary
@@ -68,14 +70,14 @@ class VaultQueryTests {
     @Before
     fun setUp() {
         // register additional identities
-        identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
-        identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY),
-                createIdentityService = { identitySvc },
                 cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
+        identitySvc = services.identityService
+        identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
+        identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
 
     @After
