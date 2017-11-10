@@ -15,6 +15,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
 import org.hibernate.query.criteria.internal.expression.LiteralExpression
+import org.hibernate.query.criteria.internal.path.SingularAttributePath
 import org.hibernate.query.criteria.internal.predicate.ComparisonPredicate
 import org.hibernate.query.criteria.internal.predicate.InPredicate
 import java.util.*
@@ -210,6 +211,10 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     val groupByExpressions =
                             columns.map { _column ->
                                 val path = root.get<Any?>(getColumnName(_column))
+                                if (path is SingularAttributePath) //remove the same columns from different joins to match the single column in 'group by' only (from the last join)
+                                    aggregateExpressions.removeAll {
+                                        elem -> if (elem is SingularAttributePath) elem.attribute.javaMember == path.attribute.javaMember else false
+                                    }
                                 aggregateExpressions.add(path)
                                 path
                             }
