@@ -4,6 +4,7 @@ import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.loadtest.setupJSchWithSshAgent
+import net.corda.nodeapi.internal.addShutdownHook
 import org.slf4j.LoggerFactory
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -15,7 +16,8 @@ class Ssh {
         val log = LoggerFactory.getLogger(this::class.java)
 
         @JvmStatic
-        fun main(args: Array<String>) {
+        @JvmOverloads
+        fun main(args: Array<String>, wait: Boolean = true) {
             val userName = System.getProperty("user.name")
             val jsch = setupJSchWithSshAgent()
             val sessions = mutableListOf<Session>()
@@ -58,14 +60,23 @@ class Ssh {
                 // ssh ${remoteHostAndPort.host} -R 0.0.0.0:clientRmiLocalPort:localhost:clientRmiLocalPort -N
                 createInboundTunnel(session, NetworkHostAndPort("0.0.0.0", clientRmiLocalPort), NetworkHostAndPort("localhost", clientRmiLocalPort))
             }
-            val input = BufferedReader(InputStreamReader(System.`in`))
 
-            do {
-                log.info("Type 'quit' to exit cleanly.")
-            } while (input.readLine() != "quit")
-            sessions.forEach {
-                log.info("Closing tunnels for ${it.host}")
-                it.disconnect()
+            if (wait) {
+                val input = BufferedReader(InputStreamReader(System.`in`))
+                do {
+                    log.info("Type 'quit' to exit cleanly.")
+                } while (input.readLine() != "quit")
+                sessions.forEach {
+                    log.info("Closing tunnels for ${it.host}")
+                    it.disconnect()
+                }
+            } else {
+                addShutdownHook {
+                    sessions.forEach {
+                        log.info("Closing tunnels for ${it.host}")
+                        it.disconnect()
+                    }
+                }
             }
         }
 

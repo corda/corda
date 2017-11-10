@@ -13,6 +13,7 @@ class Launcher {
         @JvmStatic
         fun main(args: Array<String>) {
             val logger = LoggerFactory.getLogger(this::class.java)
+            logger.info("Launcher called with ${args.toList()}")
             val jmeter = JMeter()
             val capsuleDir = System.getProperty("capsule.dir")
             if (capsuleDir != null) {
@@ -44,8 +45,21 @@ class Launcher {
                 }
                 jmeter.start(arrayOf("-s", "-p", (capsuleDirPath / "jmeter.properties").toString()) + extraArgs + args)
             } else {
-                jmeter.start(args)
+                jmeter.start(maybeOpenSshTunnels(args))
             }
+        }
+
+        private fun maybeOpenSshTunnels(args: Array<String>): Array<String> {
+            var index = 0
+            for (arg in args) {
+                if (arg == "-Xssh") {
+                    // start ssh
+                    Ssh.main(args.copyOfRange(index + 1, args.size), false)
+                    return if (index == 0) emptyArray() else args.copyOfRange(0, index)
+                }
+                index++
+            }
+            return args
         }
     }
 }
