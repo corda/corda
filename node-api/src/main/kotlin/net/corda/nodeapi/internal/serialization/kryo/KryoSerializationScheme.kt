@@ -40,7 +40,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     protected abstract fun rpcClientKryoPool(context: SerializationContext): KryoPool
     protected abstract fun rpcServerKryoPool(context: SerializationContext): KryoPool
 
-    // this can be overriden in derived serialization schemes (e.g. in the enterprise version of CORDA)
+    // this can be overriden in derived serialization schemes
     open protected val publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer
 
     private fun getPool(context: SerializationContext): KryoPool {
