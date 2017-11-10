@@ -6,7 +6,8 @@ mainClassName = 'net.corda.jmeter.Launcher'
 
 dependencies {
     compile project(':client:rpc')
-    compile project(":finance")
+    compile project(':finance')
+    compile project(':tools:loadtest')
 
     // JMeter
     ext.jmVersion = "3.3"
@@ -42,8 +43,18 @@ task(runServer, dependsOn: 'classes', type: JavaExec) {
              "-s" ]
 }
 
+task(runSsh, dependsOn: 'classes', type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.jmeter.Ssh'
+    if ( project.hasProperty("jmeterHosts") ) {
+        args Eval.me(jmeterHosts)
+    }
+    standardInput = System.in
+}
+
 run {
     systemProperty "search_paths", project(':tools:jmeter').configurations.runtime.files.join(";")
+    systemProperty "java.rmi.server.hostname", "localhost"
     systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
     // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
     args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
@@ -70,12 +81,14 @@ task buildJMeterJAR(type: FatCapsule, dependsOn: 'jar') {
             project(':tools:jmeter').jar
     )
     from 'NOTICE' // Copy CDDL notice
-    from { "$rootDir/tools/jmeter/build/resources/main/jmeter.properties" }
-    from { "$rootDir/tools/jmeter/build/resources/main/log4j2.xml" }
+    from("$rootDir/tools/jmeter/build/resources/main") {
+        include "log4j2.xml"
+        include "*.properties"
+    }
 
     capsuleManifest {
         applicationVersion = corda_release_version
-        systemProperties['java.rmi.server.hostname'] = '0.0.0.0'
+        systemProperties['java.rmi.server.hostname'] = 'localhost'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
 

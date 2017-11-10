@@ -3,6 +3,7 @@ package net.corda.jmeter
 import net.corda.core.internal.div
 import org.apache.jmeter.JMeter
 import org.slf4j.LoggerFactory
+import java.net.InetAddress
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.streams.asSequence
@@ -18,8 +19,9 @@ class Launcher {
                 // We are running under Capsule, so assume we want a JMeter slave server to be controlled from
                 // elsewhere.
                 logger.info("Starting JMeter in server mode from $capsuleDir")
+                val capsuleDirPath = Paths.get(capsuleDir)
                 // Add all JMeter and Corda jars onto the JMeter search_paths
-                val searchPath = Files.list(Paths.get(capsuleDir)).asSequence().filter {
+                val searchPath = Files.list(capsuleDirPath).asSequence().filter {
                     val filename = it.fileName.toString()
                     filename.endsWith(".jar") && (filename.contains("corda") || filename.contains("jmeter", true))
                 }.joinToString(";")
@@ -28,9 +30,19 @@ class Launcher {
                 // Set the JMeter home as a property rather than command line arg, due to inconsistent code in JMeter.
                 System.setProperty("jmeter.home", capsuleDir)
                 // Create two dirs that JMeter expects, if they don't already exist.
-                Files.createDirectories(Paths.get(capsuleDir) / "lib" / "ext")
-                Files.createDirectories(Paths.get(capsuleDir) / "lib" / "junit")
-                jmeter.start(arrayOf("-s", "-p", "$capsuleDir/jmeter.properties") + args)
+                Files.createDirectories(capsuleDirPath / "lib" / "ext")
+                Files.createDirectories(capsuleDirPath / "lib" / "junit")
+                // Now see if we have a hostname specific property file, and if so, add it.
+                val hostName = InetAddress.getLocalHost().hostName
+                val hostSpecificConfigFile = capsuleDirPath / "$hostName.properties"
+                logger.info("Attempting to use host-specific properties file $hostSpecificConfigFile")
+                val extraArgs = if (Files.exists(hostSpecificConfigFile)) {
+                    logger.info("Found host-specific properties file")
+                    arrayOf("-q", hostSpecificConfigFile.toString())
+                } else {
+                    emptyArray()
+                }
+                jmeter.start(arrayOf("-s", "-p", (capsuleDirPath / "jmeter.properties").toString()) + extraArgs + args)
             } else {
                 jmeter.start(args)
             }
