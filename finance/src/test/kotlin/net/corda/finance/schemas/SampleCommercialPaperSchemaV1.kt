@@ -48,7 +48,7 @@ object SampleCommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPap
             @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var faceValueIssuerPartyHash: String,
 
-            @Column(name = "face_value_issuer_ref", columnDefinition = "varchar(3)")
+            @Column(name = "face_value_issuer_ref", columnDefinition = "varchar(16)")
             @Type(type = "opaquebytes")
             var faceValueIssuerRef: OpaqueBytes
     ) : PersistentState()

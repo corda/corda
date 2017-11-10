@@ -39,7 +39,7 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            @Column(name = "issuer_ref", columnDefinition = "varchar(3)")
+            @Column(name = "issuer_ref", columnDefinition = "varchar(16)")
             @Type(type = "opaquebytes")
             var issuerRef: OpaqueBytes
     ) : PersistentState()

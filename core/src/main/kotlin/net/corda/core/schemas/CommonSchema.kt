@@ -76,7 +76,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            @Column(name = "issuer_reference", columnDefinition = "varchar(3)")
+            @Column(name = "issuer_reference", columnDefinition = "varchar(16)")
             @Type(type = "opaquebytes")
             var issuerRef: OpaqueBytes
     ) : PersistentState()

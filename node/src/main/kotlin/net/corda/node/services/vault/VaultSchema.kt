@@ -126,7 +126,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            @Column(name = "issuer_reference", columnDefinition = "varchar(3)")
+            @Column(name = "issuer_reference", columnDefinition = "varchar(16)")
             @Type(type = "opaquebytes")
             var issuerRef: OpaqueBytes
     ) : PersistentState() {
