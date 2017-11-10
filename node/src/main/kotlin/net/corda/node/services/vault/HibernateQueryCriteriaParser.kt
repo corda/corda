@@ -349,8 +349,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         // issuer reference
         criteria.issuerRef?.let {
-            val issuerRefs = (criteria.issuerRef as List<OpaqueBytes>).map { it.bytes }
-            predicateSet.add(criteriaBuilder.and(vaultFungibleStates.get<ByteArray>("issuerRef").`in`(issuerRefs)))
+            val issuerRefs = criteria.issuerRef as List<OpaqueBytes>
+            predicateSet.add(criteriaBuilder.and(vaultFungibleStates.get<OpaqueBytes>("issuerRef").`in`(issuerRefs)))
         }
 
         // participants
