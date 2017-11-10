@@ -139,7 +139,9 @@ class HibernateConfigurationTest {
 
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
-        val coins = queryResults.map { it.contractState.deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT).data }.sumCash()
+        val coins = queryResults.map {
+            (services.loadState(toStateRef(it.stateRef!!)) as TransactionState<Cash.State>).data
+        }.sumCash()
         assertThat(coins.toDecimal() >= BigDecimal("50.00"))
     }
 
@@ -657,8 +659,7 @@ class HibernateConfigurationTest {
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
 
         queryResults.forEach {
-            val contractState = it.contractState.deserialize<TransactionState<ContractState>>(context = SerializationDefaults.STORAGE_CONTEXT)
-            val cashState = contractState.data as Cash.State
+            val cashState = (services.loadState(toStateRef(it.stateRef!!)) as TransactionState<Cash.State>).data
             println("${it.stateRef} with owner: ${cashState.owner.owningKey.toBase58String()}")
         }
 
@@ -742,8 +743,7 @@ class HibernateConfigurationTest {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         queryResults.forEach {
-            val contractState = it.contractState.deserialize<TransactionState<ContractState>>(context = SerializationDefaults.STORAGE_CONTEXT)
-            val cashState = contractState.data as Cash.State
+            val cashState = (services.loadState(toStateRef(it.stateRef!!)) as TransactionState<Cash.State>).data
             println("${it.stateRef} with owner ${cashState.owner.owningKey.toBase58String()} and participants ${cashState.participants.map { it.owningKey.toBase58String() }}")
         }
 
@@ -879,5 +879,9 @@ class HibernateConfigurationTest {
             }
             Assert.assertEquals(cashStates.count(), count)
         }
+    }
+
+    private fun toStateRef(pStateRef: PersistentStateRef): StateRef {
+        return StateRef(SecureHash.parse(pStateRef.txId!!), pStateRef.index!!)
     }
 }

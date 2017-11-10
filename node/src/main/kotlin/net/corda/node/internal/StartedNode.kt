@@ -37,4 +37,9 @@ class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : S
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
         return stx.resolveBaseTransaction(this).outputs[stateRef.index]
     }
+
+    @Throws(TransactionResolutionException::class)
+    override fun loadStates(stateRefs: Set<StateRef>): Set<TransactionState<*>> {
+        return (stateRefs.map { loadState(it) }).toSet()
+    }
 }

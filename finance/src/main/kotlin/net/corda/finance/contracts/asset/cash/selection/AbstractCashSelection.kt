@@ -134,11 +134,11 @@ abstract class AbstractCashSelection {
                 while (rs.next()) {
                     val txHash = SecureHash.parse(rs.getString(1))
                     val index = rs.getInt(2)
+                    val pennies = rs.getLong(3)
+                    totalPennies = rs.getLong(4)
+                    val rowLockId = rs.getString(5)
                     val stateRef = StateRef(txHash, index)
-                    val state = rs.getBlob(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
-                    val pennies = rs.getLong(4)
-                    totalPennies = rs.getLong(5)
-                    val rowLockId = rs.getString(6)
+                    val state = services.loadState(stateRef) as TransactionState<Cash.State>
                     stateAndRefs.add(StateAndRef(state, stateRef))
                     log.trace { "ROW: $rowLockId ($lockId): $stateRef : $pennies ($totalPennies)" }
                 }

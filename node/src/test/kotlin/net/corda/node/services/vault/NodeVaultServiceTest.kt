@@ -5,7 +5,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -517,21 +517,31 @@ class NodeVaultServiceTest {
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
         // Issue then move some cash
-        val issueTx = TransactionBuilder(identity.party).apply {
+        val builder = TransactionBuilder(identity.party).apply {
             Cash().generateIssue(this, amount, anonymousIdentity.party.anonymise(), identity.party)
-        }.toWireTransaction(bocServices)
+        }
+        val issueTx = builder.toWireTransaction(bocServices)
         val cashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
+
+        // ensure transaction contract state is persisted in DBStorage
+        val signedIssuedTx = services.signInitialTransaction(builder)
+        services.validatedTransactions.addTransaction(signedIssuedTx)
 
         database.transaction { service.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
 
         database.transaction {
-            val moveTx = TransactionBuilder(services.myInfo.chooseIdentity()).apply {
+            val builder = TransactionBuilder(services.myInfo.chooseIdentity()).apply {
                 Cash.generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
-            }.toWireTransaction(services)
+            }
+            val moveTx = builder.toWireTransaction(services)
             service.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
         }
         val expectedMoveUpdate = Vault.Update(setOf(cashState), emptySet(), null)
+
+        // ensure transaction contract state is persisted in DBStorage
+        val signedMoveTx = services.signInitialTransaction(builder)
+        services.validatedTransactions.addTransaction(signedMoveTx)
 
         val observedUpdates = vaultSubscriber.onNextEvents
         assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedMoveUpdate))
@@ -572,12 +582,20 @@ class NodeVaultServiceTest {
             service.notifyAll(StatesToRecord.ONLY_RELEVANT, listOf(issueStx.tx, changeNotaryTx))
         }
 
+        // ensure transaction contract state is persisted in DBStorage
+        services.validatedTransactions.addTransaction(SignedTransaction(changeNotaryTx, listOf(NullKeys.NULL_SIGNATURE)))
+
         // Move cash
-        val moveTx = database.transaction {
+        val moveTxBuilder = database.transaction {
             TransactionBuilder(newNotary).apply {
                 Cash.generateSpend(services, this, Amount(amount.quantity, GBP), anonymousIdentity, thirdPartyIdentity.party.anonymise())
-            }.toWireTransaction(services)
+            }
         }
+        val moveTx = moveTxBuilder.toWireTransaction(services)
+
+        // ensure transaction contract state is persisted in DBStorage
+        val signedMoveTx = services.signInitialTransaction(moveTxBuilder)
+        services.validatedTransactions.addTransaction(signedMoveTx)
 
         database.transaction {
             service.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
@@ -608,6 +626,10 @@ class NodeVaultServiceTest {
         database.transaction {
             vaultService.notify(StatesToRecord.ONLY_RELEVANT, wtx)
         }
+
+        // ensure transaction contract state is persisted in DBStorage
+        val signedTxb = services.signInitialTransaction(txb)
+        services.validatedTransactions.addTransaction(signedTxb)
 
         // Check that it was ignored as irrelevant.
         assertEquals(currentCashStates, countCash())

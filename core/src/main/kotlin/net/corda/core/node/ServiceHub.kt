@@ -31,6 +31,14 @@ interface StateLoader {
      */
     @Throws(TransactionResolutionException::class)
     fun loadState(stateRef: StateRef): TransactionState<*>
+
+    /**
+     * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    @Throws(TransactionResolutionException::class)
+    fun loadStates(stateRefs: Set<StateRef>): Set<TransactionState<*>>
 }
 
 /**

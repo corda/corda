@@ -14,10 +14,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
@@ -89,7 +86,6 @@ class NodeVaultService(
                 val state = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
-                        contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
                         recordedTime = clock.instant())
                 state.stateRef = PersistentStateRef(stateAndRef.key)
@@ -224,7 +220,7 @@ class NodeVaultService(
             results.asSequence().forEach {
                 val txHash = SecureHash.parse(it.stateRef?.txId!!)
                 val index = it.stateRef?.index!!
-                val state = it.contractState.deserialize<TransactionState<ContractState>>(context = STORAGE_CONTEXT)
+                val state = stateLoader.loadState(StateRef(txHash,index))
                 states.add(StateAndRef(state, StateRef(txHash, index)))
             }
         }
@@ -470,7 +466,7 @@ class NodeVaultService(
                                     return@forEachIndexed
                                 val vaultState = result[0] as VaultSchemaV1.VaultStates
                                 val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
-                                val state = vaultState.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
+                                val state = stateLoader.loadState(stateRef)
                                 statesMeta.add(Vault.StateMetadata(stateRef,
                                         vaultState.contractStateClassName,
                                         vaultState.recordedTime,
@@ -479,7 +475,7 @@ class NodeVaultService(
                                         vaultState.notary,
                                         vaultState.lockId,
                                         vaultState.lockUpdateTime))
-                                statesAndRefs.add(StateAndRef(state, stateRef))
+                                statesAndRefs.add(StateAndRef(state, stateRef) as StateAndRef<T>)
                             } else {
                                 // TODO: improve typing of returned other results
                                 log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }

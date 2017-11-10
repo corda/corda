@@ -29,6 +29,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     @Table(name = "vault_states",
             indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
     class VaultStates(
+            /** NOTE: serialized transaction state (including contract state) is now resolved from transaction store **/
+
             /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name")
             var notary: Party,
@@ -36,11 +38,6 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name")
             var contractStateClassName: String,
-
-            /** refers to serialized transaction Contract State */
-            @Lob
-            @Column(name = "contract_state")
-            var contractState: ByteArray,
 
             /** state lifecycle: unconsumed, consumed */
             @Column(name = "state_status")
