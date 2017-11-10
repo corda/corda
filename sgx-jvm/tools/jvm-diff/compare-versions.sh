@@ -4,7 +4,7 @@ BASE_VERSION="jdk-8.0.0.jar"
 NEW_VERSION="jdk-8.0.0-deterministic.jar"
 
 # Derive list of differences between the two JARs
-pkgdiff -check-byte-code -extra-info pkgdiff_extra \
+pkgdiff -check-byte-code -track-unchanged -extra-info pkgdiff_extra \
     "$BASE_VERSION" "$NEW_VERSION"
 
 # Find packages and classes marked for exclusion in JavaDoc
