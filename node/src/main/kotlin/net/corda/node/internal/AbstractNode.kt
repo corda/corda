@@ -377,12 +377,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return service
     }
 
-    fun <T : Any> findTokenizableService(clazz: Class<T>): T? {
-        return tokenizableServices.firstOrNull { clazz.isAssignableFrom(it.javaClass) }?.let { uncheckedCast(it) }
-    }
-
-    inline fun <reified T : Any> findTokenizableService() = findTokenizableService(T::class.java)
-
     private fun handleCustomNotaryService(service: NotaryService) {
         runOnStop += service::stop
         service.start()
@@ -614,7 +608,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
         return object : BFTSMaRt.Cluster {
-            override fun waitUntilAllReplicasHaveInitialized() {
+            override fun waitUntilAllReplicasHaveInitialized(notaryService: BFTNonValidatingNotaryService) {
                 log.warn("A BFT replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
             }
         }
