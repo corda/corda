@@ -22,11 +22,9 @@ Corda version 2.0 and the introduction of the observer node functionality
 
 * **Observer Nodes**
 
-Support for observer/regulator nodes has returned. Read :doc:`tutorial-observer-nodes` to learn more or examine the
-interest rate swaps demo.
-
-<<< Does someone want to flesh this out a bit >>>
-
+Adds the facility for transparent forwarding of transactions to some third party observer, such as a regulator. By having
+that entity simply run an Observer node the ycan simply recieve a stream of digitally signed, de-duplicated reports that
+can be used for reporting
 
 Release 1.0
 -----------
