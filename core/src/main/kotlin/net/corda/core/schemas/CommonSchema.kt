@@ -5,6 +5,8 @@ import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.OwnableState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
+import net.corda.core.utilities.OpaqueBytes
+import org.hibernate.annotations.Type
 import java.util.*
 import javax.persistence.*
 
@@ -74,7 +76,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            @Column(name = "issuer_reference")
-            var issuerRef: ByteArray
+            @Column(name = "issuer_reference", columnDefinition = "varchar(3)")
+            @Type(type = "opaquebytes")
+            var issuerRef: OpaqueBytes
     ) : PersistentState()
 }

@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.internal.castIfPossible
 import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.api.SchemaService
@@ -14,13 +15,18 @@ import org.hibernate.boot.model.naming.Identifier
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
+import org.hibernate.dialect.Dialect
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
+import org.hibernate.type.DiscriminatorType
+import org.hibernate.type.descriptor.WrapperOptions
+import org.hibernate.type.descriptor.java.AbstractTypeDescriptor
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
+import org.hibernate.type.descriptor.sql.VarcharTypeDescriptor
 import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -83,6 +89,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
+            applyBasicType(OpaqueBytesType, OpaqueBytesType.name)
             build()
         }
 
@@ -137,6 +144,53 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                     return "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
                 }
             }
+        }
+    }
+    // Type helper to enable storage and query of Corda OpaqueBytes type
+    private object OpaqueBytesType : AbstractSingleColumnStandardBasicType<OpaqueBytes>(VarcharTypeDescriptor.INSTANCE, OpaqueBytesDescriptor), DiscriminatorType<OpaqueBytes> {
+
+        override fun stringToObject(text: String): OpaqueBytes {
+            return OpaqueBytes.of(text.toByte())
+        }
+
+        override fun objectToSQLString(value: OpaqueBytes, dialect: Dialect?): String {
+            return value.toString().trim('[',']')
+        }
+
+        override fun getName(): String {
+            return "opaquebytes"
+        }
+    }
+
+    private object OpaqueBytesDescriptor : AbstractTypeDescriptor<OpaqueBytes>(OpaqueBytes::class.java) {
+
+        override fun fromString(text: String): OpaqueBytes {
+            return OpaqueBytes.of(text.toByte())
+        }
+
+        override fun toString(value: OpaqueBytes): String {
+            return value.toString().trim('[',']')
+        }
+
+        override fun <X : Any> wrap(value: X, options: WrapperOptions?): OpaqueBytes {
+            if (String::class.java.isInstance(value)) {
+                return fromString(value as String)
+            }
+            if (OpaqueBytes::class.java.isInstance(value)) {
+                return value as OpaqueBytes
+            }
+            throw unknownWrap(value::class.java)
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <X : Any?> unwrap(value: OpaqueBytes, type: Class<X>?, options: WrapperOptions?): X {
+            if (OpaqueBytes::class.java.isAssignableFrom(type)) {
+                return value as X
+            }
+            if (String::class.java.isAssignableFrom(type)) {
+                return value.toString().trim('[',']') as X
+            }
+            throw unknownUnwrap(type)
         }
     }
 }

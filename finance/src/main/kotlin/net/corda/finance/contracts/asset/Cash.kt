@@ -84,7 +84,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         issuerPartyHash = this.amount.token.issuer.party.owningKey.toStringShort(),
-                        issuerRef = this.amount.token.issuer.reference.bytes
+                        issuerRef = this.amount.token.issuer.reference
                 )
             /** Additional schema mappings would be added here (eg. CashSchemaV2, CashSchemaV3, ...) */
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")

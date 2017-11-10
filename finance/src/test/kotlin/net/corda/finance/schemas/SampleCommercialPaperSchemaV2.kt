@@ -4,6 +4,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import net.corda.core.utilities.OpaqueBytes
+import org.hibernate.annotations.Type
 import java.time.Instant
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -30,8 +32,9 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var faceValueIssuerPartyHash: String,
 
-            @Column(name = "face_value_issuer_ref")
-            var faceValueIssuerRef: ByteArray,
+            @Column(name = "face_value_issuer_ref", columnDefinition = "varchar(3)")
+            @Type(type = "opaquebytes")
+            var faceValueIssuerRef: OpaqueBytes,
 
             /** parent attributes */
             @Transient
