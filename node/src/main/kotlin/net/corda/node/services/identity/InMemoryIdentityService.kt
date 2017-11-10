@@ -85,9 +85,6 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         }
 
         log.trace { "Registering identity $identity" }
-        identity.certPath.certificates.reversed().forEach {
-
-        }
         keyToParties[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
         principalToParties.computeIfAbsent(identity.name) { identity }
