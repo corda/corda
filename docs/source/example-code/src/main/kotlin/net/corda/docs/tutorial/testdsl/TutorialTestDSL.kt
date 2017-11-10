@@ -8,11 +8,15 @@ import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.ICommercialPaperState
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.ownedBy
 import net.corda.testing.*
+import org.junit.Rule
 import org.junit.Test
 
 class CommercialPaperTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
     // DOCSTART 1
     fun getPaper(): ICommercialPaperState = CommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
