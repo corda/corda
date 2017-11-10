@@ -41,6 +41,10 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val detectPublicIp: Boolean get() = true
 }
 
+fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
+    return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
+}
+
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
