@@ -562,7 +562,8 @@ class SerializationOutputTests {
         val state = TransactionState(FooState(), FOO_PROGRAM_ID, MEGA_CORP)
 
         val scheme = AMQPServerSerializationScheme()
-        val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }.java.getDeclaredMethod("registerCustomSerializers", SerializerFactory::class.java)
+        val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }
+                .java.getDeclaredMethod("registerCustomSerializers", SerializerFactory::class.java)
         func.isAccessible = true
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())

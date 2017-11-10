@@ -23,7 +23,6 @@ class OverridePKSerializerTest {
 
         override val schemaForDocumentation: Schema
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
-
     }
 
     class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme() {
@@ -38,7 +37,6 @@ class OverridePKSerializerTest {
         }
 
         override val publicKeySerializer = TestPublicKeySerializer()
-
     }
 
     class TestPublicKey : PublicKey {
@@ -53,7 +51,6 @@ class OverridePKSerializerTest {
         override fun getFormat(): String {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
-
     }
 
     @Test
@@ -64,8 +61,5 @@ class OverridePKSerializerTest {
         Assertions
                 .assertThatThrownBy { scheme.serialize(key, AMQP_P2P_CONTEXT) }
                 .hasMessageMatching("Custom write call")
-
-
     }
-
 }

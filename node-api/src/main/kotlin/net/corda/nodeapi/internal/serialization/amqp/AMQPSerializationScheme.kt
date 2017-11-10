@@ -70,7 +70,8 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
 
     protected abstract fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory
     protected abstract fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory
-    open protected val publicKeySerializer: CustomSerializer.Implements<PublicKey> = net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer
+    open protected val publicKeySerializer: CustomSerializer.Implements<PublicKey>
+            = net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer
 
     private fun getSerializerFactory(context: SerializationContext): SerializerFactory {
         return serializerFactoriesForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
