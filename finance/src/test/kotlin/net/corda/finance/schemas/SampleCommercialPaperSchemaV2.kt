@@ -47,6 +47,6 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             @Transient
             val _issuerParty: AbstractParty,
             @Transient
-            val _issuerRef: ByteArray
+            val _issuerRef: OpaqueBytes
     ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef)
 }
