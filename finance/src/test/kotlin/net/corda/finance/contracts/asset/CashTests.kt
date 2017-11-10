@@ -80,6 +80,10 @@ class CashTests {
             ourServices.identityService.verifyAndRegisterIdentity(identity)
         }
 
+        // As we're only creating mock services instead of a full network, we have to manually register identities
+        megaCorpServices.identityService.verifyAndRegisterIdentity(miniCorpServices.myInfo.singleIdentityAndCert())
+        miniCorpServices.identityService.verifyAndRegisterIdentity(megaCorpServices.myInfo.singleIdentityAndCert())
+
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
                 database.transaction {
             ourServices.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
