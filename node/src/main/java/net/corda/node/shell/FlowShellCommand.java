@@ -2,6 +2,7 @@ package net.corda.node.shell;
 
 // See the comments at the top of run.java
 
+import net.corda.core.messaging.CordaRPCOps;
 import org.crsh.cli.*;
 import org.crsh.command.*;
 import org.crsh.text.*;
@@ -25,25 +26,26 @@ public class FlowShellCommand extends InteractiveShellCommand {
             @Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
             @Usage("The data to pass as input") @Argument(unquote = false) List<String> input
     ) {
-        startFlow(name, input, out);
+        startFlow(name, input, out, ops());
     }
 
     // TODO Limit number of flows shown option?
     @Command
     @Usage("watch information about state machines running on the node with result information")
     public void watch(InvocationContext<TableElement> context) throws Exception {
-        runStateMachinesView(out);
+        runStateMachinesView(out, ops());
     }
 
     static void startFlow(@Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
                           @Usage("The data to pass as input") @Argument(unquote = false) List<String> input,
-                          RenderPrintWriter out) {
+                          RenderPrintWriter out,
+                          CordaRPCOps rpcOps) {
         if (name == null) {
             out.println("You must pass a name for the flow, see 'man flow'", Color.red);
             return;
         }
         String inp = input == null ? "" : String.join(" ", input).trim();
-        runFlowByNameFragment(name, inp, out);
+        runFlowByNameFragment(name, inp, out, rpcOps);
     }
 
     @Command

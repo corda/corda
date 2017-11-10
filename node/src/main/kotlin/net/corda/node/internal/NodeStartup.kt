@@ -101,16 +101,6 @@ open class NodeStartup(val args: Array<String>) {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
-
-            // Don't start the shell if there's no console attached.
-            val runShell = !cmdlineOptions.noLocalShell && System.console() != null
-            startedNode.internals.startupComplete.then {
-                try {
-                    InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, startedNode)
-                } catch (e: Throwable) {
-                    logger.error("Shell failed to start", e)
-                }
-            }
         },
                 { th ->
                     logger.error("Unexpected exception during registration", th)
@@ -289,11 +279,6 @@ open class NodeStartup(val args: Array<String>) {
                     "Computers are useless. They can only\ngive you answers.  -- Picasso"
             )
 
-            // TODO: Delete this after CordaCon.
-            val cordaCon2017date = LocalDate.of(2017, 9, 12)
-            val cordaConBanner = if (LocalDate.now() < cordaCon2017date)
-                "${Emoji.soon} Register for our Free CordaCon event : see https://goo.gl/Z15S8W" else ""
-
             if (Emoji.hasEmojiTerminal)
                 messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
             val (msg1, msg2) = messages.randomOrNull()!!.split('\n')
@@ -306,8 +291,6 @@ open class NodeStartup(val args: Array<String>) {
                     """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
                     a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
                     newline().
-                    newline().
-                    a(cordaConBanner).
                     newline().
                     reset())
         }

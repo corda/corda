@@ -14,6 +14,11 @@ The default logging level is ``INFO`` which can be adjusted by the ``--logging-l
 custom logging, the logger settings can be completely overridden with a `Log4j 2 <https://logging.apache.org/log4j/2.x>`_
 configuration file assigned to the ``log4j.configurationFile`` system property.
 
+SSH access
+----------
+
+Node can be configured to run SSH server. See :doc:`shell` for details.
+
 Database access
 ---------------
 

@@ -80,7 +80,8 @@ private const val DEFAULT_WARN_COUNT = 120
 private val DRIVER_REQUIRED_PERMISSIONS = setOf(
         invokeRpc(CordaRPCOps::nodeInfo),
         invokeRpc(CordaRPCOps::networkMapFeed),
-        invokeRpc(CordaRPCOps::networkMapSnapshot)
+        invokeRpc(CordaRPCOps::networkMapSnapshot),
+        invokeRpc(CordaRPCOps::registeredFlows)
 )
 
 /**
@@ -997,8 +998,7 @@ class DriverDSL(
                         className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                         arguments = listOf(
                                 "--base-directory=${nodeConf.baseDirectory}",
-                                "--logging-level=$loggingLevel",
-                                "--no-local-shell"
+                                "--logging-level=$loggingLevel"
                         ),
                         jdwpPort = debugPort,
                         extraJvmArguments = extraJvmArguments,
