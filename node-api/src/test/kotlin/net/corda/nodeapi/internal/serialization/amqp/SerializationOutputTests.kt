@@ -36,6 +36,10 @@ import java.nio.ByteBuffer
 import java.time.*
 import java.time.temporal.ChronoUnit
 import java.util.*
+import kotlin.reflect.full.declaredFunctions
+import kotlin.reflect.full.declaredMemberFunctions
+import kotlin.reflect.full.superclasses
+import kotlin.reflect.jvm.javaMethod
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -557,11 +561,16 @@ class SerializationOutputTests {
     fun `test transaction state`() {
         val state = TransactionState(FooState(), FOO_PROGRAM_ID, MEGA_CORP)
 
+        val scheme = AMQPServerSerializationScheme()
+        val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }
+                .java.getDeclaredMethod("registerCustomSerializers", SerializerFactory::class.java)
+        func.isAccessible = true
+
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        AbstractAMQPSerializationScheme.registerCustomSerializers(factory)
+        func.invoke(scheme, factory)
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        AbstractAMQPSerializationScheme.registerCustomSerializers(factory2)
+        func.invoke(scheme, factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertTrue((desState as TransactionState<*>).data is FooState)

@@ -51,6 +51,7 @@ import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
 import java.io.InputStream
 import java.lang.reflect.Modifier.isPublic
+import java.security.PublicKey
 import java.security.cert.CertPath
 import java.util.*
 import kotlin.collections.ArrayList
@@ -60,7 +61,7 @@ object DefaultKryoCustomizer {
         ServiceLoader.load(SerializationWhitelist::class.java, this.javaClass.classLoader).toList() + DefaultWhitelist
     }
 
-    fun customize(kryo: Kryo): Kryo {
+    fun customize(kryo: Kryo, publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer): Kryo {
         return kryo.apply {
             // Store a little schema of field names in the stream the first time a class is used which increases tolerance
             // for change to a class.
@@ -95,10 +96,10 @@ object DefaultKryoCustomizer {
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
             noReferencesWithin<WireTransaction>()
-            register(ECPublicKeyImpl::class.java, PublicKeySerializer)
-            register(EdDSAPublicKey::class.java, PublicKeySerializer)
+            register(ECPublicKeyImpl::class.java, publicKeySerializer)
+            register(EdDSAPublicKey::class.java, publicKeySerializer)
             register(EdDSAPrivateKey::class.java, PrivateKeySerializer)
-            register(CompositeKey::class.java, PublicKeySerializer)  // Using a custom serializer for compactness
+            register(CompositeKey::class.java, publicKeySerializer)  // Using a custom serializer for compactness
             // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
             register(Array<StackTraceElement>::class, read = { _, _ -> emptyArray() }, write = { _, _, _ -> })
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
@@ -111,11 +112,11 @@ object DefaultKryoCustomizer {
             register(X500Name::class.java, X500NameSerializer)
             register(X509CertificateHolder::class.java, X509CertificateSerializer)
             register(BCECPrivateKey::class.java, PrivateKeySerializer)
-            register(BCECPublicKey::class.java, PublicKeySerializer)
+            register(BCECPublicKey::class.java, publicKeySerializer)
             register(BCRSAPrivateCrtKey::class.java, PrivateKeySerializer)
-            register(BCRSAPublicKey::class.java, PublicKeySerializer)
+            register(BCRSAPublicKey::class.java, publicKeySerializer)
             register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
-            register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
+            register(BCSphincs256PublicKey::class.java, publicKeySerializer)
             register(NotaryChangeWireTransaction::class.java, NotaryChangeWireTransactionSerializer)
             register(PartyAndCertificate::class.java, PartyAndCertificateSerializer)
 

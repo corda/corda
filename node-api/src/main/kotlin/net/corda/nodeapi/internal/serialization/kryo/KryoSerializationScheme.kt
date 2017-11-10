@@ -18,6 +18,7 @@ import net.corda.core.serialization.*
 import net.corda.core.internal.LazyPool
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.SerializationScheme
+import java.security.PublicKey
 
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
 val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteArray(Charsets.UTF_8))
@@ -39,6 +40,9 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     protected abstract fun rpcClientKryoPool(context: SerializationContext): KryoPool
     protected abstract fun rpcServerKryoPool(context: SerializationContext): KryoPool
 
+    // this can be overriden in derived serialization schemes
+    open protected val publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer
+
     private fun getPool(context: SerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
             when (context.useCase) {
@@ -50,6 +54,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                         val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                         serializer.kryo.apply {
                             field.set(this, classResolver)
+                            // don't allow overriding the public key serializer for checkpointing
                             DefaultKryoCustomizer.customize(this)
                             addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
                             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
@@ -62,7 +67,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                     rpcServerKryoPool(context)
                 else ->
                     KryoPool.Builder {
-                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(context))).apply { classLoader = it.second }
+                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(context)), publicKeySerializer).apply { classLoader = it.second }
                     }.build()
             }
         }
