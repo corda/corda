@@ -20,6 +20,7 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
@@ -32,7 +33,7 @@ import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
-class AttachmentLoadingTests {
+class AttachmentLoadingTests : IntegrationTest() {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -79,6 +80,7 @@ class AttachmentLoadingTests {
 
     @Before
     fun setup() {
+        super.setUp()
         services = Services()
     }
 

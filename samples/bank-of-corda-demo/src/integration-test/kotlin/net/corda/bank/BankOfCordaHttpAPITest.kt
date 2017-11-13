@@ -4,11 +4,12 @@ import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.BOC
+import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.driver
 import org.junit.Test
 import kotlin.test.assertTrue
 
-class BankOfCordaHttpAPITest {
+class BankOfCordaHttpAPITest : IntegrationTest() {
     @Test
     fun `issuer flow via Http`() {
         driver(extraCordappPackagesToScan = listOf("net.corda.finance"), isDebug = true) {

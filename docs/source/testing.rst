@@ -43,16 +43,24 @@ TODO: Add instructions on manual testing
 External Database Testing
 -------------------------
 
-By default, all tests which need a database, utilize built-in H2 instances. In case the testing with other database backends
-or other database setup (H2 in server mode for example), while running tests extra parameters can be used to specify required
-properties. Appropriate changes will then be applied to all tests in a appropriate manner.
+By default, all tests which need a database, utilize built-in H2 instances. For the purpose of testing other relational
+database providers or different database setups (for example, H2 in server mode), we introduce an optional system
+property called ``databaseProvider`` which is resolved at run-time to load a configuration file on the classpath with the
+name ``$databaseProvider.conf`` containing database configuration properties defined in the general node configuration
+file (see ``reference.conf``). These will be used to override the default H2 settings defined in ``reference.conf``.
+
+Appropriate changes will then be applied to all tests in a appropriate manner.
 
 - ``dataSourceProperties.dataSource.url`` - JDBC datasource URL. Appropriate drivers must be available in classpath. Also, for
     different tests random database name is appended at the end of this string, ie. ``jdbc:h2:tcp://localhost:9092`` will become
     full, proper URL - ie.``jdbc:h2:tcp://localhost:9092/34jh543gk243g2`` - mind the last slash missing.
 
-- ``dataSourceProperties.dataSourceClassName`` - JDBC driver classname - defaults to ``org.h2.jdbcx.JdbcDataSource``)
+- ``dataSourceProperties.dataSourceClassName`` - JDBC driver classname
 
-- ``dataSourceProperties.dataSource.user`` - JDBC username - defaults to ``sa``
+- ``dataSourceProperties.dataSource.user`` - JDBC username
 
-- ``dataSourceProperties.dataSource.password`` - JDBC password - defaults to ``""`` (Empty string)
+- ``dataSourceProperties.dataSource.password`` - JDBC password
+
+- ``database.transactionIsolationLevel`` - Isolation level pertinent to relevant database provider
+
+All defaults are taken from the ``reference.conf`` file.

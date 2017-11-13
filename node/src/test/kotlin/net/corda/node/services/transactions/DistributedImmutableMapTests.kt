@@ -89,7 +89,7 @@ class DistributedImmutableMapTests {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "PORT_${myAddress.port}_"), ::makeTestIdentityService)
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         databases.add(database)
         val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createMap) }
 

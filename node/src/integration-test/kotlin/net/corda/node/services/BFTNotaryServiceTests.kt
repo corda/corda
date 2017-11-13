@@ -35,16 +35,22 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.node.MockNodeParameters
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
-    private val mockNet = MockNetwork()
+    private lateinit var mockNet: MockNetwork
     private lateinit var notary: Party
     private lateinit var node: StartedNode<MockNode>
 
+    @Before
+    fun before() {
+        mockNet = MockNetwork()
+        node = mockNet.createNode()
+    }
     @After
     fun stopNodes() {
         mockNet.stopNodes()

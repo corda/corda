@@ -1,6 +1,9 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -20,6 +23,7 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.config.configOf
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshCertificate
 import net.corda.node.services.keys.getSigner
@@ -27,7 +31,6 @@ import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
@@ -58,42 +61,54 @@ open class MockServices(
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
-        private val systemProperties = System.getProperties().toList().map { it.first.toString() to it.second.toString() }.toMap()
+        private fun readDatabaseConfig(nodeName: String? = null, postifx: String? = null): Config {
+            val standarizedNodeName = if (nodeName!= null) nodeName.replace(" ", "").replace("-", "_") else null
+            val h2InstanceName =  if (postifx != null) standarizedNodeName + "_" + postifx  else standarizedNodeName
+            val parseOptions = ConfigParseOptions.defaults()
+            val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider") + ".conf", parseOptions.setAllowMissing(true))
+            val fixedOverride = ConfigFactory.parseString("baseDirectory = \"\"")
+            val nodeOrganizationNameConfig = if (standarizedNodeName != null) configOf("nodeOrganizationName" to standarizedNodeName) else ConfigFactory.empty()
+            val defaultProps = Properties()
+            defaultProps.setProperty("dataSourceProperties.dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+            defaultProps.setProperty("dataSourceProperties.dataSource.url", "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=100;DB_CLOSE_ON_EXIT=TRUE")//;TRACE_LEVEL_SYSTEM_OUT=4")
+            defaultProps.setProperty("dataSourceProperties.dataSource.user", "sa")
+            defaultProps.setProperty("dataSourceProperties.dataSource.password", "")
+            val defaultConfig = ConfigFactory.parseProperties(defaultProps, parseOptions)
 
-        private val dbNames = mutableMapOf<String, String>()
-
+            return databaseConfig.withFallback(fixedOverride)
+                    .withFallback(nodeOrganizationNameConfig)
+                    .withFallback(defaultConfig)
+                    .resolve()
+        }
         /**
          * Make properties appropriate for creating a DataSource for unit tests.
          *
-         * @param nodeName Reflects the "instance" of the in-memory database.  Defaults to a random string.
+         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.  Defaults to a random string.
+         * @param nodeNameExtension Provides additional name extension for the "instance" of in-memory database to provide uniqnes when running unit tests against H2 db.
          */
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
-        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
-            val overriddenDatasourceUrl = systemProperties["dataSourceProperties.dataSource.url"]?.let { property ->
-                dbNames.computeIfAbsent(nodeName, { property + "/" + UUID.randomUUID().toString()})
-            }
-
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(), nodeNameExtension: String? = null): Properties {
+            val config = readDatabaseConfig(nodeName, nodeNameExtension)
             val props = Properties()
-            props.setProperty("dataSourceClassName", systemProperties["dataSourceProperties.dataSourceClassName"] ?: "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", overriddenDatasourceUrl ?: "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-            props.setProperty("dataSource.user", systemProperties["dataSourceProperties.dataSource.user"] ?: "sa")
-            props.setProperty("dataSource.password", systemProperties["dataSourceProperties.dataSource.password"] ?: "")
+            props.setProperty("dataSourceClassName", config.getString("dataSourceProperties.dataSourceClassName"))
+            props.setProperty("dataSource.url", config.getString("dataSourceProperties.dataSource.url"))
+            props.setProperty("dataSource.user", config.getString("dataSourceProperties.dataSource.user"))
+            props.setProperty("dataSource.password", config.getString("dataSourceProperties.dataSource.password"))
             return props
         }
 
         /**
          * Make properties appropriate for creating a Database for unit tests.
          *
-         * @param key (optional) key of a database property to be set.
-         * @param value (optional) value of a database property to be set.
+         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
          */
         @JvmStatic
-        fun makeTestDatabaseProperties(key: String? = null, value: String? = null): Properties {
+        fun makeTestDatabaseProperties(nodeName: String? = null): Properties {
             val props = Properties()
             props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
-            if (key != null) {
-                props.setProperty(key, value)
+            if (nodeName != null) {
+                props.setProperty("nodeOrganizationName", nodeName)
             }
             return props
         }

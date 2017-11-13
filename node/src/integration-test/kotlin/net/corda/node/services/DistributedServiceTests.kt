@@ -24,7 +24,7 @@ import org.junit.Test
 import rx.Observable
 import java.util.*
 
-class DistributedServiceTests {
+class DistributedServiceTests : IntegrationTest() {
     private lateinit var alice: NodeHandle
     private lateinit var notaryNodes: List<NodeHandle.OutOfProcess>
     private lateinit var aliceProxy: CordaRPCOps

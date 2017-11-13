@@ -66,7 +66,7 @@ fun testNodeConfiguration(
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary
         doReturn(makeTestDataSourceProperties(myLegalName.organisation)).whenever(it).dataSourceProperties
-        doReturn(makeTestDatabaseProperties()).whenever(it).database
+        doReturn(makeTestDatabaseProperties(myLegalName.organisation)).whenever(it).database
         doReturn("").whenever(it).emailAddress
         doReturn("").whenever(it).exportJMXto
         doReturn(true).whenever(it).devMode

@@ -15,7 +15,7 @@ import net.corda.testing.*
 import net.corda.testing.driver.driver
 import org.junit.Test
 
-class BankOfCordaRPCClientTest {
+class BankOfCordaRPCClientTest : IntegrationTest() {
     @Test
     fun `issuer flow via RPC`() {
         val commonPermissions = setOf(

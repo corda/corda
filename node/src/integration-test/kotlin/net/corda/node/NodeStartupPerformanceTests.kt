@@ -1,6 +1,7 @@
 package net.corda.node
 
 import com.google.common.base.Stopwatch
+import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.driver
 import org.junit.Ignore
 import org.junit.Test
@@ -8,7 +9,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 @Ignore("Only use locally")
-class NodeStartupPerformanceTests {
+class NodeStartupPerformanceTests : IntegrationTest() {
 
     // Measure the startup time of nodes. Note that this includes an RPC roundtrip, which causes e.g. Kryo initialisation.
     @Test

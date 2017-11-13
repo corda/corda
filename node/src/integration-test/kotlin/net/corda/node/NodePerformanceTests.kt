@@ -15,6 +15,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
@@ -38,7 +39,7 @@ private fun checkQuasarAgent() {
 }
 
 @Ignore("Run these locally")
-class NodePerformanceTests {
+class NodePerformanceTests : IntegrationTest() {
     @StartableByRPC
     class EmptyFlow : FlowLogic<Unit>() {
         @Suspendable
@@ -54,6 +55,7 @@ class NodePerformanceTests {
     @Before
     fun before() {
         checkQuasarAgent()
+        super.setUp()
     }
 
     @Test

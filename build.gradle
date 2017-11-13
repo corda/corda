@@ -48,6 +48,7 @@ buildscript {
     ext.dependency_checker_version = '3.0.1'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
+    ext.spring_jdbc_version ='5.0.0.RELEASE'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -150,13 +151,20 @@ allprojects {
         final AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
         systemProperty(AMQP_ENABLE_PROP_NAME, System.getProperty(AMQP_ENABLE_PROP_NAME))
 
-        //Allows to pass database-related properties for unit and integration tests
+         // relational database provider to be used by node
+        final DATABASE_PROVIDER = "databaseProvider"
         final DATASOURCE_URL = "dataSourceProperties.dataSource.url"
         final DATASOURCE_CLASSNAME = "dataSourceProperties.dataSourceClassName"
         final DATASOURCE_USER = "dataSourceProperties.dataSource.user"
         final DATASOURCE_PASSWORD = "dataSourceProperties.dataSource.password"
 
-        [DATASOURCE_URL, DATASOURCE_CLASSNAME, DATASOURCE_USER, DATASOURCE_PASSWORD].forEach {
+        // integration testing database configuration (to be used in conjunction with a DATABASE_PROVIDER)
+        final TEST_DB_ADMIN_USER = "test.db.admin.user"
+        final TEST_DB_ADMIN_PASSWORD = "test.db.admin.password"
+        final TEST_DB_SCRIPT_DIR = "test.db.script.dir"
+
+        [DATABASE_PROVIDER,DATASOURCE_URL, DATASOURCE_CLASSNAME, DATASOURCE_USER, DATASOURCE_PASSWORD,
+          TEST_DB_ADMIN_USER, TEST_DB_ADMIN_PASSWORD, TEST_DB_SCRIPT_DIR].forEach {
             def property = System.getProperty(it)
             if (property != null) {
                 systemProperty(it, property)

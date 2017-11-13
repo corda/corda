@@ -11,12 +11,13 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
+import net.corda.testing.IntegrationTest
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class CordappScanningDriverTest {
+class CordappScanningDriverTest : IntegrationTest() {
     @Test
     fun `sub-classed initiated flow pointing to the same initiating flow as its super-class`() {
         val user = User("u", "p", setOf(startFlow<ReceiveFlow>()))

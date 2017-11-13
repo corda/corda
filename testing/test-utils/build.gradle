@@ -26,6 +26,9 @@ dependencies {
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
+
+    // integration test helpers
+    compile "org.springframework:spring-jdbc:$spring_jdbc_version"
 }
 
 jar {

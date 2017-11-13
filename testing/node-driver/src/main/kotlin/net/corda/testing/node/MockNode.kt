@@ -42,6 +42,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -54,7 +55,6 @@ import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import net.corda.testing.testNodeConfiguration
 
 fun StartedNode<MockNetwork.MockNode>.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
     return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
@@ -360,7 +360,8 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(id).createDirectories(),
                 myLegalName = parameters.legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
-            doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
+            doReturn(makeTestDataSourceProperties("node_$id", "net_$networkId")).whenever(it).dataSourceProperties
+            doReturn(makeTestDatabaseProperties("node_$id")).whenever(it).database
             parameters.configOverrides(it)
         }
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot))

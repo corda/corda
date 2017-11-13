@@ -17,6 +17,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.ALICE
+import net.corda.testing.IntegrationTest
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
@@ -30,7 +31,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-class P2PMessagingTest {
+class P2PMessagingTest : IntegrationTest() {
     private companion object {
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
     }

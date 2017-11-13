@@ -7,12 +7,13 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
 
-class AttachmentDemoTest {
+class AttachmentDemoTest : IntegrationTest() {
     // run with a 10,000,000 bytes in-memory zip file. In practice, a slightly bigger file will be used (~10,002,000 bytes).
     // Force INFO logging to prevent printing 10MB arrays in logfiles
     @Test

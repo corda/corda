@@ -5,6 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.vega.api.PortfolioApi
@@ -16,7 +17,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
 
-class SimmValuationTest {
+class SimmValuationTest : IntegrationTest() {
     private companion object {
         // SIMM demo can only currently handle one valuation date due to a lack of market data or a market data source.
         val valuationDate: LocalDate = LocalDate.parse("2016-06-06")

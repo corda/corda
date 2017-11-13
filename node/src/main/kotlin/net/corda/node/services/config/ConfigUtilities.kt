@@ -8,6 +8,7 @@ import net.corda.core.internal.*
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.*
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.config.toProperties
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
@@ -27,10 +28,25 @@ object ConfigHelper {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
+        val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider")+".conf", parseOptions.setAllowMissing(true))
+
+        //typesafe workaround: a system property with placeholder is passed as value (inside quotes),
+        //undo adding the quotes for a fixed placeholder ${nodeOrganizationName}
+        //https://github.com/lightbend/config/issues/265
+        var systemUnquotedPlaceholders: Config = ConfigFactory.empty()
+        ConfigFactory.systemProperties().toProperties().forEach { name, value ->
+            if (value.toString().contains("\${nodeOrganizationName}")) {
+                var unquotedPlaceholder = "\"" + value.toString().replace("\${nodeOrganizationName}","\"\${nodeOrganizationName}\"") + "\""
+                systemUnquotedPlaceholders = systemUnquotedPlaceholders.withFallback(ConfigFactory.parseString(name.toString() + " = " + unquotedPlaceholder))
+            }
+        }
         val finalConfig = configOverrides
                 // Add substitution values here
+                .withFallback(systemUnquotedPlaceholders)
+                .withFallback(configOf("nodeOrganizationName" to baseDirectory.fileName.toString().replace(" ","").replace("-","_")))
                 .withFallback(ConfigFactory.systemProperties())
                 .withFallback( configOf("baseDirectory" to baseDirectory.toString()))
+                .withFallback(databaseConfig)
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()

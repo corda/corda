@@ -13,6 +13,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.IntegrationTest
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.driver.NodeHandle
@@ -25,7 +26,7 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class RaftNotaryServiceTests {
+class RaftNotaryServiceTests : IntegrationTest() {
     private val notaryName = CordaX500Name(RaftValidatingNotaryService.id, "RAFT Notary Service", "London", "GB")
 
     @Test
