@@ -188,7 +188,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService) {
             val transactionStorage = makeTransactionStorage()
             val stateLoader = StateLoaderImpl(transactionStorage)
-            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader)val notaryService = makeNotaryService(services)
+            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader)
+            val notaryService = makeNotaryService(nodeServices)
             smm = makeStateMachineManager()
             val flowStarter = FlowStarterImpl(serverThread, smm)
             val schedulerService = NodeSchedulerService(
