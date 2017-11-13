@@ -208,8 +208,8 @@ class NodeInterestRatesTest {
     @Test
     fun `network tearoff`() = withoutTestSerialization {
         val mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
-        val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val oracleNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME)).apply {
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
             internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {

@@ -62,7 +62,6 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
      * @throws IllegalArgumentException if the node has no matching identity.
      */
     fun identityAndCertFromX500Name(name: CordaX500Name): PartyAndCertificate {
-        val identity = legalIdentitiesAndCerts.singleOrNull { it.name == name } ?: throw IllegalArgumentException("Node does not have an identity \"$name\"")
-        return identity
+        return legalIdentitiesAndCerts.singleOrNull { it.name == name } ?: throw IllegalArgumentException("Node does not have an identity \"$name\"")
     }
 }

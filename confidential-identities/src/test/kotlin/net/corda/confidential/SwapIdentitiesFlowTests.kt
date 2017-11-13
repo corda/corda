@@ -87,7 +87,7 @@ class SwapIdentitiesFlowTests {
         val bobNode = mockNet.createPartyNode(BOB.name)
         val alice: PartyAndCertificate = aliceNode.info.singleIdentityAndCert()
         val bob: PartyAndCertificate = bobNode.info.singleIdentityAndCert()
-        val notary: PartyAndCertificate = notaryNode.info.identityAndCertFromX500Name(DUMMY_NOTARY.name)
+        val notary: PartyAndCertificate = mockNet.defaultNotaryIdentityAndCert
         // Check that the wrong signature is rejected
         notaryNode.database.transaction {
             notaryNode.services.keyManagementService.freshKeyAndCert(notary, false)
