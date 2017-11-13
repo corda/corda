@@ -12,17 +12,19 @@ import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext
 
 abstract class AsbtractTraderDemoPlugin : CordaRPCSampler.Plugin {
 
-    lateinit var buyer: Party
-    lateinit var seller: Party
+    //lateinit var buyer: Party
+    //lateinit var seller: Party
     lateinit var notary: Party
 
-    val bankA = CordaX500Name(organisation = "Bank A", locality = "London", country = "GB")
-    val bankB = CordaX500Name(organisation = "Bank B", locality = "New York", country = "US")
+    //val bankA = CordaX500Name(organisation = "Bank A", locality = "London", country = "GB")
+    //val bankB = CordaX500Name(organisation = "Bank B", locality = "New York", country = "US")
+    val node1 = CordaX500Name(commonName = null, state = null, organisation = "Perf-10.155.0.4", organisationUnit = "Corda", locality = "London", country = "GB")
 
     protected fun getIdentities(rpc: CordaRPCOps) {
         //buyer = rpc.wellKnownPartyFromX500Name(bankA) ?: throw IllegalStateException("Don't know $bankA")
         //seller = rpc.wellKnownPartyFromX500Name(bankB) ?: throw IllegalStateException("Don't know $bankB")
-        notary = rpc.notaryIdentities().first()
+        //notary = rpc.notaryIdentities().first()
+        notary = rpc.wellKnownPartyFromX500Name(node1) ?: throw IllegalStateException("Don't know $node1")
     }
 }
 
