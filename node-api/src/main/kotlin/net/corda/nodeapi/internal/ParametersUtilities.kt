@@ -1,4 +1,4 @@
-package net.corda.testing.common.internal
+package net.corda.nodeapi.internal
 
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.NetworkParameters
