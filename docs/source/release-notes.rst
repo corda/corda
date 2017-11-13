@@ -8,17 +8,14 @@ Release 2.0
 
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
 a number of security updates for our dependent libraries alongside the reintroduction of the Observer node functionality.
-This was absent from version 1 but based on user feedback it's re-introduction removes the need for complicated "isRelevant()" checks
-and which is compatible with Compatible Identities.
+This was absent from version 1 but based on user feedback its re-introduction removes the need for complicated "isRelevant()" checks.
 
-In addition the fix for a small bug present in the Coin Selection code of V1.0 is integrated from master
+In addition the fix for a small bug present in the coin selection code of V1.0 is integrated from master.
 
 * **Version Bump**
 
-Our versioning policy for Corda would normally dictate a bugfix release with additional features added only incur a minor
-version number bump. In this case from 1.0 to 1.1. However, to bring clarity of compatibility to users of Corda, in the case of features
-that introduce new functionality to the API we have committed to raising the major number to indicate it, as is the case with
-Corda version 2.0 and the introduction of the observer node functionality
+Due to the introduction of new APIs, Corda 2.0 has a platform version of 2. This will be advertised in the network map structures
+and via the versioning APIs.
 
 * **Observer Nodes**
 
