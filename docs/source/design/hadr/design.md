@@ -2,9 +2,9 @@
 
 # High Availability and Disaster Recovery for Corda: A Phased Approach
 
-============================================
+-------------------
 DOCUMENT MANAGEMENT
-============================================
+===================
 
 ## Document Control
 
@@ -22,7 +22,7 @@ DOCUMENT MANAGEMENT
 
 ## Document History
 
-============================================
+--------------------------------------------
 HIGH LEVEL DESIGN
 ============================================
 
@@ -93,7 +93,7 @@ Proceed direct to implementation
 Proceed to Technical Design stage
 Proposed Platform Technical team(s) to implement design (if not already decided)
 
-============================================
+--------------------------------------------
 IMPLEMENTATION PLAN
 ============================================
 
