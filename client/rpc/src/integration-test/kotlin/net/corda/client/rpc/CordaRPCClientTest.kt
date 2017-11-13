@@ -139,7 +139,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
         var countShellFlows = 0
         proxy.stateMachinesFeed().updates.subscribe {
             if (it is StateMachineUpdate.Added) {
-                val context = it.stateMachineInfo.context
+                val context = it.stateMachineInfo.context()
                 when {
                     context.origin is Origin.RPC -> countRpcFlows++
                     context.origin is Origin.Shell -> countShellFlows++

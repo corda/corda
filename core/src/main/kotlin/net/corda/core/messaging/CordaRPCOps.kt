@@ -1,6 +1,8 @@
 package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.Actor
+import net.corda.core.context.AuthServiceId
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -9,6 +11,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
@@ -25,13 +29,46 @@ import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
 
+private val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
+
 @CordaSerializable
-data class StateMachineInfo(
+data class StateMachineInfo @JvmOverloads constructor(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
-        val context: InvocationContext,
-        val progressTrackerStepAndUpdates: DataFeed<String, String>?
+        val initiator: FlowInitiator,
+        val progressTrackerStepAndUpdates: DataFeed<String, String>?,
+        val context: InvocationContext? = null
 ) {
+    fun context(): InvocationContext = context ?: contextFrom(initiator)
+
+    private fun contextFrom(initiator: FlowInitiator): InvocationContext {
+        val actor: Actor
+        val origin: Origin
+        when (initiator) {
+            is FlowInitiator.RPC -> {
+                actor = Actor(Actor.Id(initiator.username), AuthServiceId("UNKNOWN"), unknownName)
+                origin = Origin.RPC
+            }
+            is FlowInitiator.Peer -> {
+                actor = Actor(Actor.Id(initiator.party.name.toString()), AuthServiceId("PEER"), initiator.party.name)
+                origin = Origin.Peer(initiator.party.name)
+            }
+            is FlowInitiator.Service -> {
+                actor = Actor.service(initiator.serviceClassName, unknownName)
+                origin = Origin.Service(initiator.serviceClassName)
+            }
+            is FlowInitiator.Shell -> {
+                actor = Actor(Actor.Id(initiator.name), AuthServiceId("SHELL"), unknownName)
+                origin = Origin.Shell
+            }
+            is FlowInitiator.Scheduled -> {
+                actor = Actor(Actor.Id("SCHEDULED"), AuthServiceId("SCHEDULED"), unknownName)
+                origin = Origin.Scheduled(initiator.scheduledState)
+            }
+        }
+        return InvocationContext(actor, origin)
+    }
+
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
 }
 
