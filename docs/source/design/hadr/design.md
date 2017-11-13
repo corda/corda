@@ -29,9 +29,12 @@ HIGH LEVEL DESIGN
 ## Overview
 
 The term high availability (HA) is used in this document to refer to the ability to rapidly handle any single component failure, whether due to physical issues (e.g. hard drive failure), network connectivity loss, or software faults.
+
 Expectations of HA in modern enterprise systems are for systems to recover normal operation in a few minutes at most, while ensuring minimal/zero data loss. Whilst overall reliability is the overriding objective, it is desirable for Corda to offer HA mechanisms which are both highly automated and transparent to node operators. HA mechanism must not involve any configuration changes that require more than an appropriate admin tool, or a simple start/stop of a process as that would need an Emergency Change Request.
+
 HA naturally grades into requirements for Disaster Recovery (DR), which requires that there is a tested procedure to handle large scale multi-component failures e.g. due to data centre flooding, acts of terrorism.  DR processes are permitted to involve significant manual intervention, although the complications of actually invoking a Business Continuity Plan (BCP) mean that the less manual intervention, the more competitive Corda will be in the modern vendor market.
 For modern financial institutions, maintaining comprehensive and effective BCP procedures are a legal requirement which is generally tested at least once a year.
+
 However, until Corda is the system of record, or the primary system for transactions we are unlikely to be required to have any kind of fully automatic DR. In fact, we are likely to be restarted only once BCP has restored the most critical systems.
 In contrast, typical financial institutions maintain large, complex technology landscapes in which individual component failures can occur, such as:
 
@@ -96,90 +99,14 @@ Proceed to Technical Design stage
 Proposed Platform Technical team(s) to implement design (if not already decided)
 
 ============================================
-TECHNICAL DESIGN
-============================================
-
-## Interfaces
-
-* Public APIs impact
-* Internal APIs impacted
-* Modules impacted
-    ** Illustrate with Software Component diagrams
-
-## Functional
-
-* UI requirements
-    ** Illustrate with UI Mockups and/or Wireframes
-
-* (Subsystem) Components descriptions and interactions)
-    Consider and list existing impacted components and services within Corda:
-    ** Doorman
-    ** Network Map
-    ** Public API's (ServiceHub, RPCOps)
-    ** Vault
-    ** Notaries
-    ** Identity services
-    ** Flow framework
-    ** Attachments
-    ** Core data structures, libraries or utilities
-    ** Testing frameworks
-    ** Pluggable infrastructure: DBs, Message Brokers, LDAP
-
-* Data model & serialization impact and changes required
-    Illustrate with ERD diagrams
-
-* Infrastructure services: persistence (schemas), messaging
-
-## Non-Functional
-
-* Performance
-* Scalability
-* High Availability
-
-## Operational
-
-* Deployment
-    ** Versioning
-* Maintenance
-    ** Upgradability, migration
-* Management
-    ** Audit, alerting, monitoring, backup/recovery, archiving
-
-## Security
-
-* Data privacy
-* Authentication
-* Access control
-
-## Software Development Tools & Programming Standards to be adopted.
-
-* languages
-* frameworks
-* 3rd party libraries
-* supporting tools
-
-## Testability
-
-* Unit
-* Integration
-* Smoke
-* Non-functional (performance)
-
-============================================
 IMPLEMENTATION PLAN
 ============================================
 
-* Estimated time (number of Sprints) and effort (resources)
-* Fit within Corda Release schedule
-* Long term feature
-  ** Epic and story breakdown
-  ** Shippable timelines
-
-# We need the JDBC support for an external clustered database completed and merged. Azure SQL Server has been identified as the most likely Finestra. With this we should be able to point at an HA database instance for Ledger and Checkpoint data.
-# I am suggesting that for the near term we just use the Azure Load Balancer to hide the multiple machine addresses. This does require allowing a health monitoring link to the Artemis broker, but so far testing indicates that this operates without issue. Longer term we need to ensure that the network map and configuration support exists for the system to work with multiple TCP/IP endpoints advertised to external nodes. Ideally this should be rolled into the work for AMPQ bridges and Floats.
-# Implement a very simple mutual exclusion feature, so that an enterprise node cannot start if another is running onto the same database. This can be via a simple heartbeat update in the database, or possibly some other library. This feature should be enabled only when specified by configuration.
-# The replication of the Artemis Message Queues will have to be via an external mechanism. On Azure we believe that the only practical solution is the 'Azure Files' approach which maps a virtual Samba drive. This we are testing in-case it is too slow to work. The mounting of separate Data Disks is possible, but they can only be mounted to one VM at a time, so they would not be compatible with the goal of no change requests for HA.
-# need to improve our health monitoring to better indicate fault failure. Extending our existing JMX and logging support should manage this, although we probably need to create watchdog CordApp that verifies that the State Machine and Artemis messaging are able to process new work and to monitor flow latency.
-# We should test the checkpointing mechanism and confirm that failures don't corrupt the data by deploying an HA setup on Azure and driving flows through the system as we stop the node randomly and switch to the other node. If this reveals any issues we will have to fix them.
-# We need to confirm that the behaviour of the RPC proxy is stable through these restarts, from the perspective of a stateless REST server calling through to RPC. The RPC API should provide positive feedback to the application, so that it can respond in a controlled fashion when disconnected.
-# We may need to work on some flow hospital tools
+1. We need the JDBC support for an external clustered database completed and merged. Azure SQL Server has been identified as the most likely Finastra. With this we should be able to point at an HA database instance for Ledger and Checkpoint data.
+2. I am suggesting that for the near term we just use the Azure Load Balancer to hide the multiple machine addresses. This does require allowing a health monitoring link to the Artemis broker, but so far testing indicates that this operates without issue. Longer term we need to ensure that the network map and configuration support exists for the system to work with multiple TCP/IP endpoints advertised to external nodes. Ideally this should be rolled into the work for AMPQ bridges and Floats.
+3. Implement a very simple mutual exclusion feature, so that an enterprise node cannot start if another is running onto the same database. This can be via a simple heartbeat update in the database, or possibly some other library. This feature should be enabled only when specified by configuration.
+4. The replication of the Artemis Message Queues will have to be via an external mechanism. On Azure we believe that the only practical solution is the 'Azure Files' approach which maps a virtual Samba drive. This we are testing in-case it is too slow to work. The mounting of separate Data Disks is possible, but they can only be mounted to one VM at a time, so they would not be compatible with the goal of no change requests for HA.
+5. need to improve our health monitoring to better indicate fault failure. Extending our existing JMX and logging support should manage this, although we probably need to create watchdog CordApp that verifies that the State Machine and Artemis messaging are able to process new work and to monitor flow latency.
+6. We should test the checkpointing mechanism and confirm that failures don't corrupt the data by deploying an HA setup on Azure and driving flows through the system as we stop the node randomly and switch to the other node. If this reveals any issues we will have to fix them.
+7. We need to confirm that the behaviour of the RPC proxy is stable through these restarts, from the perspective of a stateless REST server calling through to RPC. The RPC API should provide positive feedback to the application, so that it can respond in a controlled fashion when disconnected.
+8. We may need to work on some flow hospital tools
