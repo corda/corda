@@ -23,7 +23,10 @@ object RPCRealmFactory {
      */
     fun build(config : NodeConfiguration) : AuthorizingRealm {
         /*
-         * A single implementation for no
+         * Run-time switch to actual AuthorizingRealm implementation used in Node.
+         *
+         * Currently we only support authorization/authentication data
+         * explicitly reported in the node configuration.
          */
         return buildInMemory(config.rpcUsers)
     }
@@ -40,7 +43,7 @@ object RPCRealmFactory {
 
 /*
  * An implementation of AuthorizingRealm serving data
- * from the input list of User
+ * from an input list of User
  */
 internal class InMemoryRealm : AuthorizingRealm {
 
@@ -63,8 +66,8 @@ internal class InMemoryRealm : AuthorizingRealm {
     }
 
     /*
-     * Methods from AuthorizingRealm used to pull authentication/
-     * authorization data for a given user
+     * Methods from AuthorizingRealm interface used by Shiro to query
+     * for authentication/authorization data for a given user
      */
     override fun doGetAuthenticationInfo(token: AuthenticationToken) =
             authenticationInfoByUser.getValue(token.credentials as String)
