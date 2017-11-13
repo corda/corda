@@ -132,7 +132,6 @@ object InteractiveShell {
             // Give whoever has local shell access administrator access to the node.
 
             CURRENT_RPC_CONTEXT.set(RpcContext(
-                    username = ArtemisMessagingComponent.NODE_USER,
                     authenticatedSubject = buildAdminSubject(ArtemisMessagingComponent.NODE_USER)))
             Emoji.renderIfSupported {
                 jlineProcessor.run()

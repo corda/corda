@@ -357,7 +357,6 @@ class RPCServer(
             ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
 
         return RpcContext(
-                username = username,
                 authenticatedSubject = Subject.Builder()
                      .authenticated(true)
                      .principals(SimplePrincipalCollection(username, "RPC"))
@@ -379,10 +378,11 @@ fun rpcContext(): RpcContext = CURRENT_RPC_CONTEXT.get()
  * @param currentUser This is available to RPC implementations to query the validated [User] that is calling it. Each
  *     user has a set of permissions they're entitled to which can be used to control access.
  */
-data class RpcContext(
-        val username : String,
-        val authenticatedSubject: Subject
-)
+data class RpcContext(val authenticatedSubject: Subject) {
+    // Helper function to extract RPC user name
+    val username get() =
+            authenticatedSubject.principals.primaryPrincipal as String
+}
 
 class ObservableSubscription(
         val subscription: Subscription
