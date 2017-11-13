@@ -310,7 +310,7 @@ object SimmFlow {
             val seller = TwoPartyDealFlow.Instigator(
                     replyToSession,
                     TwoPartyDealFlow.AutoOffer(offer.notary, offer.dealBeingOffered))
-            logger.info("Starting two party deal context with: ${replyToSession.counterparty.name}")
+            logger.info("Starting two party deal initiator with: ${replyToSession.counterparty.name}")
             return subFlow(seller)
         }
 
