@@ -52,18 +52,7 @@ Typical modern DMZ rules are:
 
 ## Timeline 
 
-This design document outlines a range of topologies which will be enabled through progressive enhancements from the short to long term.
-
-On the timescales available for the current production pilot deployments we clearly do not have time to reach the ideal of a highly fault tolerant, horizontally scaled Corda.
-
-Instead, I suggest that we can only achieve the simplest state of a standby Corda installation only by January 5th and even this is contingent on other enterprise features, such as external database and network map stabilisation being completed on this timescale, plus any issues raised by testing.
-
-For the March 31st timeline, I hope that we can achieve a more fully automatic node failover state, with the Artemis broker running as a cluster too. I include a diagram of a fully scaled Corda for completeness and so that I can discuss what work is re-usable/throw away.
-
 ## Requirements
-
-* A node running Corda Enterprise should be Highly Available and resilient to component failures
-* Corda must enable effective recovery in the event of an unplanned outage
 
 ## Proposed Solution
 
@@ -103,6 +92,12 @@ My proposal is to make the bridge control as stateless as possible. Thus, nodes 
 7. The Float on receiving Delivery notification from the internal side should acknowledge back the correlated original Delivery.
 8. The Float should protect against excessive inbound messages by AMQP flow control and refusing to accept excessive unacknowledged deliveries.
 9. The Float should only expose its inbound server socket when activated by a valid AMQP link from the Bridge Control Manager to allow for a simple HA pool of DMZ Float processes. We cannot run the Floats hot-hot as this would invalidate our message ordering guarantees.
+
+### Challenges and Unanswered Questions
+
+The main uncertainty for the Float design is key management for the private key portion of the TLS certificate. This is likely to reside inside an HSM and it is unlikely to be accessible from the DMZ servers. It may be possible to tunnel the PrivateKey signing step to the internal Bridge Control Manager, but this makes things complicated. However, it is common for this to be configured inside the firewall, although we will have to see our non-standard PKI interacts with a typical firewall.zt
+
+The other uncertainty is if/how we should provide end-to-end encryption of the business data. I think it is inevitable that this will be desired, so we should allow for it in our wire format. However, to properly implement this with session keys and properly authenticated encryption is a significant design task. (At minimum, we would probably use some form of Ephemeral-Static Diffie Hellman against the remote Legal Identity to create the session secret and then AES-GCM, or similar AEAD for the message data. The AMQP headers would also need to be protected in this process, along with careful choice of IV to prevent any collisions.)
 
 
 ## Alternative Options
