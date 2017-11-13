@@ -72,7 +72,7 @@ object BFTSMaRt {
 
     interface Cluster {
         /** Avoid bug where a replica fails to start due to a consensus change during the BFT startup sequence. */
-        fun waitUntilAllReplicasHaveInitialized(notaryService: BFTNonValidatingNotaryService)
+        fun waitUntilAllReplicasHaveInitialized()
     }
 
     class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster, private val notaryService: BFTNonValidatingNotaryService) : SingletonSerializeAsToken() {
@@ -106,7 +106,7 @@ object BFTSMaRt {
         fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
             require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
             awaitClientConnectionToCluster()
-            cluster.waitUntilAllReplicasHaveInitialized(notaryService)
+            cluster.waitUntilAllReplicasHaveInitialized()
             val requestBytes = CommitRequest(transaction, otherSide).serialize().bytes
             val responseBytes = proxy.invokeOrdered(requestBytes)
             return responseBytes.deserialize<ClusterResponse>()
