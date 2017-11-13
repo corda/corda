@@ -51,7 +51,7 @@ Typical modern DMZ rules are:
 * Reference(s) to similar or related work
 
 ## Timeline
-The proposed timeline is that we agree a model and deployment diagrams to be sent to Finestra before teh end of November. We would not expect to have implemented this until March\April 2018.
+The proposed timeline is that we agree a model and deployment diagrams to be sent to Finestra before the end of November. We would not expect to have implemented this until March\April 2018.
 
 ## Requirements
 
@@ -79,7 +79,7 @@ The proposed timeline is that we agree a model and deployment diagrams to be sen
 1. In this phase of evolution we hook the same bridge creation code as before and use the same in-process data access to network map cache.
 2. However, we now implement AMQP sender clients using proton-j and netty for TLS layer and connection retry.
 3. This will also involve formalising the AMQP packet format of the Corda P2P protocol.
-4. Once a bridge makes a successful link to a remote nodes Artemis broker it will subscribe to the associated local queue.
+4. Once a bridge makes a successful link to a remote node's Artemis broker it will subscribe to the associated local queue.
 5. The messages will be picked up from the local broker via an Artemis CORE consumer for simplicity of initial implementation.
 6. The queue consumer should be implemented with a simple generic interface as façade, to allow future replacement.
 7. The message will be sent across the AMQP protocol directly to the remote Artemis broker.
@@ -87,14 +87,14 @@ The proposed timeline is that we agree a model and deployment diagrams to be sen
 9. This will remove the original item from the source queue.
 10. If delivery fails due to link loss the subscriber should be closed until a new link is established to ensure messages are not consumed.
 11. If delivery fails for other reasons there should be some for of periodic retry over the AMQP link.
-12. For authentication checks the client cert returned from the remote server will be checked and the link dropped if it doesnt match expectations.
+12. For authentication checks the client cert returned from the remote server will be checked and the link dropped if it doesn't match expectations.
 
 #### Out of process Artemis Broker and Bridges
 ![Out of process Artemis Broker and Bridges](./out-of-proc-artemis-broker-bridges.png)
 
 1. Move the Artemis broker and bridge formation logic out of the node. This requires formalising the bridge creation requests, but allows clustered brokers, standardised AMQP usage and ultimately pluggable brokers.
 2. We should implement a netty socket server on the bridge and forward authenticated packets to the local Artemis broker inbound queues. An AMQP server socket is required for the float, although it should be transparent whether a NodeInfo refers to a bridge socket address, or an Artemis broker.
-3. The queue names should use the sha-256 of the PublicKey not the full key. Also, the name should be used for in and out queues, so that multiple distinct nodes can coexist on the same broker. This will simplify development as developers just run a background broker and shouldnt need to restart it.
+3. The queue names should use the sha-256 of the PublicKey not the full key. Also, the name should be used for in and out queues, so that multiple distinct nodes can coexist on the same broker. This will simplify development as developers just run a background broker and shouldn't need to restart it.
 4. To export the network map information and to initiate bridges a non-durable bridge control protocol will be needed (in blue). Essentially the messages declare the local queue names and target TLS link information. For in-bound messages only messages for known inbox targets will be acknowledged.
 5. It should not be hard to make the bridges active-passive HA as they contain no persisted message state and simple RPC can resync the state of the bridge.
 6. Queue creation will remain with the node as this must use non-AMQP mechanisms and because flows should be able to queue sent messages even if the bridge is temporarily down.
@@ -110,9 +110,8 @@ The proposed timeline is that we agree a model and deployment diagrams to be sen
 5. Outgoing bridge formation and message sending should probably come directly from the internal Bridge Manager, possibly via a SOCKS 4/5 proxy, which is easy enough to enable in netty, or directly through the corporate firewall. It could be initiated from the float, but this just seems insecure.
 6. There is probably a need for end-to-end encryption of the payload, but that is for as later phase. At this point a header field indicating plaintext/encrypted payload should be sufficient.
 7. I have open questions about the management of the private key for the float certificate if the TLS terminated is directly onto the proxy. This is presumably stored in an HSM, but I am unclear on whether this would be allowed.
-8. If instead TLS terminates onto the external firewall, with self-signed certs for TLS in the DMZ this is more standard, but breaks our authentication checks. One solution for authentication checks might be to enable AMQP SASL checks e.g. using https://tools.ietf.org/html/rfc3163 to run challenge response against the nodes legal identity certificates, but it needs discussion.
+8. If instead TLS terminates onto the external firewall, with self-signed certs for TLS in the DMZ this is more standard, but breaks our authentication checks. One solution for authentication checks might be to enable AMQP SASL checks e.g. using https://tools.ietf.org/html/rfc3163 to run challenge response against the node's legal identity certificates, but it needs discussion.
 9. HA should be built in from the start and should be easy as the bridge manager can choose which float to make active. Only fully connected DMZ floats should activate their listening port.
-
 
 ### Challenges and Unanswered Questions
 
@@ -161,7 +160,14 @@ My proposal is to make the bridge control as stateless as possible. Thus, nodes 
 
 ## Alternative Options
 
-List any alternative solutions that may be viable but not recommended.
+### An Alternative Design Idea Using Direct P2P Communication
+I do also have a completely different model of what to do instead of the float/AMQP work, but whilst I don’t think this is likely to be accepted, I do think it has a lot of merits and may be surprisingly fast to implement, at least for small semi-private networks.
+
+Essentially, I would discard the Artemis server/AMQP support for peer-to-peer communications. Instead I would write an implementation of our MessagingService which takes direct responsibility for message retries and stores the pending messages into our own DB. The wire level of this service would be built on top of a fully encrypted MIX network which would not require a fully connected graph, but rather send messages on randomly selected paths over the dynamically managed network graph topology.
+
+For packet format I would use the ![SPHINX packet format](http://www0.cs.ucl.ac.uk/staff/G.Danezis/papers/sphinx-eprint.pdf) although with the body encryption updated to a modern AEAD scheme as in https://www.cs.ru.nl/~bmennink/pubs/16cans.pdf . In this scheme, nodes would be identified in the overlay network solely by Curve25519 public key addresses and floats would be dumb nodes that only run the MIX network code and don’t act as message sources, or sinks. Intermediate traffic would not be readable except by the intended waypoint and only the final node can read the payload.
+
+The point to point links would be standard TLS and the network certificates would be whatever is acceptable to the host institutions e.g. standard Verisign certs. It is assumed institutions would select partners to connect to that they trust and permission them individually in their firewalls. Inside the MIX network the nodes would be connected mostly in a static way and use standard HELLO packets to determine the liveness of neighbour routes, then use tunnelled gossip to distribute the signed/versioned Link topology messages. The nodes will be allowed to advertise a Public IP as well, so some dynamic links and publicly visible nodes would exist. The network map addresses would then be mappings from Legal Identity to these overlay network addresses, not to physical network locations.
 
 ## Final recommendation
 
