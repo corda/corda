@@ -17,6 +17,7 @@ import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.configureDatabase
 import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.junit.After

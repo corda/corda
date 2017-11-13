@@ -20,6 +20,8 @@ import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.testing.common.internal.testNetworkParameters
 import org.bouncycastle.asn1.x500.X500Name
 import org.codehaus.jackson.map.ObjectMapper
 import org.junit.BeforeClass
@@ -72,7 +74,8 @@ class NodeInfoWebServiceTest {
             on { getCertificatePath(any()) }.thenReturn(certPath)
         }
 
-        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage)).use {
+        DoormanServer(NetworkHostAndPort("localhost", 0),
+                NodeInfoWebService(nodeInfoStorage, testNetworkParameters(emptyList()))).use {
             it.start()
             val registerURL = URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}/register")
             val nodeInfoAndSignature = SignedData(nodeInfo.serialize(), digitalSignature).serialize().bytes
@@ -98,7 +101,8 @@ class NodeInfoWebServiceTest {
             on { getCertificatePath(any()) }.thenReturn(certPath)
         }
 
-        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage)).use {
+        DoormanServer(NetworkHostAndPort("localhost", 0),
+                NodeInfoWebService(nodeInfoStorage, testNetworkParameters(emptyList()))).use {
             it.start()
             val registerURL = URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}/register")
             val nodeInfoAndSignature = SignedData(nodeInfo.serialize(), digitalSignature).serialize().bytes
@@ -116,7 +120,8 @@ class NodeInfoWebServiceTest {
         val nodeInfoStorage: NodeInfoStorage = mock {
             on { getNodeInfoHashes() }.thenReturn(networkMapList)
         }
-        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage)).use {
+        DoormanServer(NetworkHostAndPort("localhost", 0),
+                NodeInfoWebService(nodeInfoStorage, testNetworkParameters(emptyList()))).use {
             it.start()
             val conn = URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}").openConnection() as HttpURLConnection
             val response = conn.inputStream.bufferedReader().use { it.readLine() }
@@ -139,7 +144,8 @@ class NodeInfoWebServiceTest {
             on { getNodeInfo(nodeInfoHash) }.thenReturn(nodeInfo)
         }
 
-        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage)).use {
+        DoormanServer(NetworkHostAndPort("localhost", 0),
+                NodeInfoWebService(nodeInfoStorage, testNetworkParameters(emptyList()))).use {
             it.start()
             val nodeInfoURL = URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}/$nodeInfoHash")
             val conn = nodeInfoURL.openConnection()

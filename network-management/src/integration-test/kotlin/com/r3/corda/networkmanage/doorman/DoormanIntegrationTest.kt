@@ -20,6 +20,7 @@ import org.junit.rules.TemporaryFolder
 import java.net.URL
 import java.util.*
 import kotlin.test.assertEquals
+import net.corda.testing.common.internal.testNetworkParameters
 
 class DoormanIntegrationTest {
     @Rule
@@ -41,7 +42,7 @@ class DoormanIntegrationTest {
         val signer = Signer(intermediateCAKey, arrayOf(intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate()))
 
         //Start doorman server
-        val doorman = startDoorman(NetworkHostAndPort("localhost", 0), database, true, signer, null)
+        val doorman = startDoorman(NetworkHostAndPort("localhost", 0), database, true, testNetworkParameters(emptyList()), signer, null)
 
         // Start Corda network registration.
         val config = testNodeConfiguration(

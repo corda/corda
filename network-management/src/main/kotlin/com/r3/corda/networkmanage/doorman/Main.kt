@@ -16,6 +16,7 @@ import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
+import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
@@ -159,6 +160,7 @@ fun generateCAKeyPair(keystorePath: Path, rootStorePath: Path, rootKeystorePass:
 fun startDoorman(hostAndPort: NetworkHostAndPort,
                  database: CordaPersistence,
                  approveAll: Boolean,
+                 initialNetworkMapParameters: NetworkParameters,
                  signer: Signer? = null,
                  jiraConfig: DoormanParameters.JiraConfig? = null): DoormanServer {
 
@@ -179,7 +181,8 @@ fun startDoorman(hostAndPort: NetworkHostAndPort,
         DefaultCsrHandler(requestService, signer)
     }
 
-    val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus), NodeInfoWebService(PersistenceNodeInfoStorage(database)))
+    val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus),
+            NodeInfoWebService(PersistenceNodeInfoStorage(database), initialNetworkMapParameters))
     doorman.start()
 
     // Thread process approved request periodically.
@@ -241,7 +244,9 @@ fun main(args: Array<String>) {
                 DoormanParameters.Mode.DOORMAN -> {
                     val database = configureDatabase(dataSourceProperties, databaseProperties, { throw UnsupportedOperationException() }, SchemaService())
                     val signer = buildLocalSigner(this)
-                    startDoorman(NetworkHostAndPort(host, port), database, approveAll, signer, jiraConfig)
+
+                    val networkParameters = parseNetworkParametersFrom(initialNetworkParameters)
+                    startDoorman(NetworkHostAndPort(host, port), database, approveAll, networkParameters, signer, jiraConfig)
                 }
             }
         }

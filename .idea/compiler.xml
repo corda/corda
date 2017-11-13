@@ -50,6 +50,8 @@
       <module name="graphs_test" target="1.8" />
       <module name="intellij-plugin_main" target="1.8" />
       <module name="intellij-plugin_test" target="1.8" />
+      <module name="irs-demo-cordapp_main" target="1.8" />
+      <module name="irs-demo-cordapp_test" target="1.8" />
       <module name="irs-demo_integrationTest" target="1.8" />
       <module name="irs-demo_main" target="1.8" />
       <module name="irs-demo_test" target="1.8" />
@@ -96,6 +98,8 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="sgx-hsm-tool_main" target="1.8" />
+      <module name="sgx-hsm-tool_test" target="1.8" />
       <module name="sgx-jvm_hsm-tool_main" target="1.8" />
       <module name="sgx-jvm_hsm-tool_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />

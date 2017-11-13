@@ -4,6 +4,7 @@ import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.networkMapPath
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignedData
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -21,7 +22,7 @@ import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
 @Path(networkMapPath)
-class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage) {
+class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage, private val networkParameters: NetworkParameters) {
     companion object {
         const val networkMapPath = "network-map"
     }
@@ -60,6 +61,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage) {
     @GET
     fun getNetworkMap(): Response {
         // TODO: Cache the response?
+        // TODO: Add the networkParamters to this returned response.
         return ok(ObjectMapper().writeValueAsString(nodeInfoStorage.getNodeInfoHashes())).build()
     }
 

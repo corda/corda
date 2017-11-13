@@ -22,7 +22,8 @@ data class DoormanParameters(val basedir: Path,
                              val databaseProperties: Properties? = null,
                              val jiraConfig: JiraConfig? = null,
                              val keystorePath: Path? = null, // basedir / "certificates" / "caKeystore.jks",
-                             val rootStorePath: Path? = null // basedir / "certificates" / "rootCAKeystore.jks"
+                             val rootStorePath: Path? = null, // basedir / "certificates" / "rootCAKeystore.jks"
+                             val initialNetworkParameters: Path
 ) {
     enum class Mode {
         DOORMAN, CA_KEYGEN, ROOT_KEYGEN
@@ -50,6 +51,7 @@ fun parseParameters(vararg args: String): DoormanParameters {
         accepts("rootPrivateKeyPassword", "Root private key password.").withRequiredArg().describedAs("password")
         accepts("host", "Doorman web service host override").withRequiredArg().describedAs("hostname")
         accepts("port", "Doorman web service port override").withRequiredArg().ofType(Int::class.java).describedAs("port number")
+        accepts("initialNetworkParameters", "initial network parameters filepath").withRequiredArg().describedAs("The initial network map").describedAs("filepath")
     }
 
     val configFile = if (argConfig.hasPath("configFile")) {

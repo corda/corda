@@ -1,7 +1,7 @@
 ext {
-    // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
-    // align with the corresponding Corda release.
-    corda_dependency_version = '2.0-20171017.135310-6'
+    // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman release is
+    // aligned with the corresponding Corda release.
+    corda_dependency_version = '2.0-20171104.000037-23'
 }
 
 version "$corda_dependency_version"
@@ -92,6 +92,7 @@ dependencies {
     compile "net.corda:corda-node-api:$corda_dependency_version"
     testCompile "net.corda:corda-test-utils:$corda_dependency_version"
     testCompile "net.corda:corda-node-driver:$corda_dependency_version"
+    testCompile "net.corda:corda-test-common:$corda_dependency_version"
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"

@@ -24,6 +24,7 @@ import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.CHARLIE
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.testNodeConfiguration
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.h2.tools.Server
@@ -90,7 +91,8 @@ class SigningServiceIntegrationTest {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         }, SchemaService())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true)
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true,
+                initialNetworkMapParameters = testNetworkParameters(emptyList()))
 
         // Start Corda network registration.
         val config = testNodeConfiguration(
@@ -137,7 +139,8 @@ class SigningServiceIntegrationTest {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         }, SchemaService())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true)
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true,
+                initialNetworkMapParameters = testNetworkParameters(emptyList()))
 
         thread(start = true, isDaemon = true) {
             val h2ServerArgs = arrayOf("-tcpPort", H2_TCP_PORT, "-tcpAllowOthers")
