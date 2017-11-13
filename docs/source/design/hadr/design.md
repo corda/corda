@@ -66,6 +66,9 @@ For the March 31st timeline, I hope that we can achieve a more fully automatic n
 
 ## Requirements
 
+* A node running Corda Enterprise should be Highly Available and resilient to component failures
+* Corda must enable effective recovery in the event of an unplanned outage
+
 ## Proposed Solution
 ### Current (single process)
 ![Current (single process)](./HA%20deployment%20-%20No%20HA.png)
