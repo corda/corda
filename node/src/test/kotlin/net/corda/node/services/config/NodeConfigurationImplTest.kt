@@ -23,10 +23,10 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `check devModeOptions flag helper`() {
-        assertFalse { configDebugOptions(true, null).devModeOptions?.disableCheckpointChecker == true }
-        assertFalse { configDebugOptions(true, DevModeOptions()).devModeOptions?.disableCheckpointChecker == true }
-        assertFalse { configDebugOptions(true, DevModeOptions(false)).devModeOptions?.disableCheckpointChecker == true }
-        assertTrue { configDebugOptions(true, DevModeOptions(true)).devModeOptions?.disableCheckpointChecker == true }
+        assertTrue { configDebugOptions(true, null).shouldCheckCheckpoints() }
+        assertTrue { configDebugOptions(true, DevModeOptions()).shouldCheckCheckpoints() }
+        assertTrue { configDebugOptions(true, DevModeOptions(false)).shouldCheckCheckpoints() }
+        assertFalse { configDebugOptions(true, DevModeOptions(true)).shouldCheckCheckpoints() }
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?) : NodeConfiguration {

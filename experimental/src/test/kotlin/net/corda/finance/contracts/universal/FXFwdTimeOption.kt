@@ -1,12 +1,16 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 
-class FXFwdTimeOption
-{
+class FXFwdTimeOption {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     // An FX Fwd with Time Option is an early exercise call option that must be exercised no later than maturity
     val initialContract = arrange {
 

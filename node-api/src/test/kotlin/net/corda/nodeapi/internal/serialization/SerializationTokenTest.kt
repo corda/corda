@@ -8,7 +8,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
-import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.rigorousMock
 import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
@@ -26,8 +25,8 @@ class SerializationTokenTest {
 
     @Before
     fun setup() {
-        factory = testSerialization.env.SERIALIZATION_FACTORY
-        context = testSerialization.env.CHECKPOINT_CONTEXT.withWhitelisted(SingletonSerializationToken::class.java)
+        factory = testSerialization.env.serializationFactory
+        context = testSerialization.env.checkpointContext.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized

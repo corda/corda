@@ -37,6 +37,7 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.setGlobalSerialization
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -414,7 +415,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
+    val serializationEnv = setGlobalSerialization(initialiseSerialization)
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -425,7 +426,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        serializationEnv.resetTestSerialization()
+        serializationEnv.unset()
     }
 }
 
@@ -452,7 +453,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         driverDslWrapper: (DriverDSL) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
+    val serializationEnv = setGlobalSerialization(initialiseSerialization)
     val driverDsl = driverDslWrapper(
             DriverDSL(
                     portAllocation = portAllocation,
@@ -476,7 +477,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        serializationEnv.resetTestSerialization()
+        serializationEnv.unset()
     }
 }
 

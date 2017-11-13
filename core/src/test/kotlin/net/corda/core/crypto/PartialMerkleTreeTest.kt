@@ -10,6 +10,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.*
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
@@ -23,43 +24,45 @@ class PartialMerkleTreeTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val nodes = "abcdef"
-    private val hashed = nodes.map { node ->
-        withTestSerialization {
-            node.serialize().sha256()
-        }
-    }
-    private val expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
-    private val merkleTree = MerkleTree.getMerkleTree(hashed)
-
-    private val testLedger = ledger {
-        unverifiedTransaction {
-            attachments(Cash.PROGRAM_ID)
-            output(Cash.PROGRAM_ID, "MEGA_CORP cash") {
-                Cash.State(
-                        amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                        owner = MEGA_CORP
-                )
+    private lateinit var hashed: List<SecureHash.SHA256>
+    private lateinit var expectedRoot: SecureHash
+    private lateinit var merkleTree: MerkleTree
+    private lateinit var testLedger: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
+    private lateinit var txs: List<WireTransaction>
+    private lateinit var testTx: WireTransaction
+    @Before
+    fun init() {
+        hashed = nodes.map { it.serialize().sha256() }
+        expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
+        merkleTree = MerkleTree.getMerkleTree(hashed)
+        testLedger = ledger {
+            unverifiedTransaction {
+                attachments(Cash.PROGRAM_ID)
+                output(Cash.PROGRAM_ID, "MEGA_CORP cash") {
+                    Cash.State(
+                            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                            owner = MEGA_CORP
+                    )
+                }
+                output(Cash.PROGRAM_ID, "dummy cash 1") {
+                    Cash.State(
+                            amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                            owner = MINI_CORP
+                    )
+                }
             }
-            output(Cash.PROGRAM_ID, "dummy cash 1") {
-                Cash.State(
-                        amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                        owner = MINI_CORP
-                )
+            transaction {
+                attachments(Cash.PROGRAM_ID)
+                input("MEGA_CORP cash")
+                output(Cash.PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                timeWindow(TEST_TX_TIME)
+                this.verifies()
             }
         }
-
-        transaction {
-            attachments(Cash.PROGRAM_ID)
-            input("MEGA_CORP cash")
-            output(Cash.PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
-            command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-            timeWindow(TEST_TX_TIME)
-            this.verifies()
-        }
+        txs = testLedger.interpreter.transactionsToVerify
+        testTx = txs[0]
     }
-
-    private val txs = testLedger.interpreter.transactionsToVerify
-    private val testTx = txs[0]
 
     // Building full Merkle Tree tests.
     @Test

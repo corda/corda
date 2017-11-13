@@ -24,12 +24,16 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.security.KeyPair
 import java.util.*
 import kotlin.test.*
 
 class CashTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     private val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     private val defaultIssuer = MEGA_CORP.ref(defaultRef)
     private val inState = Cash.State(
@@ -51,7 +55,7 @@ class CashTests {
     private lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
 
     @Before
-    fun setUp() = withTestSerialization {
+    fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
         megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), MEGA_CORP_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = listOf("net.corda.finance.contracts.asset"), keys = listOf(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY))
@@ -153,7 +157,7 @@ class CashTests {
     }
 
     @Test
-    fun generateIssueRaw() = withTestSerialization {
+    fun generateIssueRaw() {
         // Test generation works.
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = AnonymousParty(ALICE_PUBKEY), notary = DUMMY_NOTARY)
@@ -168,7 +172,7 @@ class CashTests {
     }
 
     @Test
-    fun generateIssueFromAmount() = withTestSerialization {
+    fun generateIssueFromAmount() {
         // Test issuance from an issued amount
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
@@ -236,7 +240,7 @@ class CashTests {
      * cash inputs.
      */
     @Test(expected = IllegalStateException::class)
-    fun `reject issuance with inputs`() = withTestSerialization {
+    fun `reject issuance with inputs`() {
         // Issue some cash
         var ptx = TransactionBuilder(DUMMY_NOTARY)
 
@@ -247,7 +251,6 @@ class CashTests {
         ptx = TransactionBuilder(DUMMY_NOTARY)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP, notary = DUMMY_NOTARY)
-        Unit
     }
 
     @Test
@@ -512,7 +515,7 @@ class CashTests {
      * Try exiting an amount which matches a single state.
      */
     @Test
-    fun generateSimpleExit() = withTestSerialization {
+    fun generateSimpleExit() {
         val wtx = makeExit(miniCorpServices, 100.DOLLARS, MEGA_CORP, 1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(0, wtx.outputs.size)
@@ -527,7 +530,7 @@ class CashTests {
      * Try exiting an amount smaller than the smallest available input state, and confirm change is generated correctly.
      */
     @Test
-    fun generatePartialExit() = withTestSerialization {
+    fun generatePartialExit() {
         val wtx = makeExit(miniCorpServices, 50.DOLLARS, MEGA_CORP, 1)
         val actualInput = wtx.inputs.single()
         // Filter the available inputs and confirm exactly one has been used
@@ -544,52 +547,47 @@ class CashTests {
      * Try exiting a currency we don't have.
      */
     @Test
-    fun generateAbsentExit() = withTestSerialization {
+    fun generateAbsentExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, MEGA_CORP, 1) }
-        Unit
     }
 
     /**
      * Try exiting with a reference mis-match.
      */
     @Test
-    fun generateInvalidReferenceExit() = withTestSerialization {
+    fun generateInvalidReferenceExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, MEGA_CORP, 2) }
-        Unit
     }
 
     /**
      * Try exiting an amount greater than the maximum available.
      */
     @Test
-    fun generateInsufficientExit() = withTestSerialization {
+    fun generateInsufficientExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 1000.DOLLARS, MEGA_CORP, 1) }
-        Unit
     }
 
     /**
      * Try exiting for an owner with no states
      */
     @Test
-    fun generateOwnerWithNoStatesExit() = withTestSerialization {
+    fun generateOwnerWithNoStatesExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, CHARLIE, 1) }
-        Unit
     }
 
     /**
      * Try exiting when vault is empty
      */
     @Test
-    fun generateExitWithEmptyVault() = withTestSerialization {
+    fun generateExitWithEmptyVault() {
         assertFailsWith<IllegalArgumentException> {
             val tx = TransactionBuilder(DUMMY_NOTARY)
             Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList(), OUR_IDENTITY_1)
         }
-        Unit
     }
 
     @Test
-    fun generateSimpleDirectSpend() = withTestSerialization {
+    fun generateSimpleDirectSpend() {
         val wtx =
                 database.transaction {
                     makeSpend(100.DOLLARS, THEIR_IDENTITY_1)
@@ -603,7 +601,7 @@ class CashTests {
     }
 
     @Test
-    fun generateSimpleSpendWithParties() = withTestSerialization {
+    fun generateSimpleSpendWithParties() {
         database.transaction {
 
             val tx = TransactionBuilder(DUMMY_NOTARY)
@@ -614,7 +612,7 @@ class CashTests {
     }
 
     @Test
-    fun generateSimpleSpendWithChange() = withTestSerialization {
+    fun generateSimpleSpendWithChange() {
         val wtx =
                 database.transaction {
                     makeSpend(10.DOLLARS, THEIR_IDENTITY_1)
@@ -639,7 +637,7 @@ class CashTests {
     }
 
     @Test
-    fun generateSpendWithTwoInputs() = withTestSerialization {
+    fun generateSpendWithTwoInputs() {
         val wtx =
                 database.transaction {
                     makeSpend(500.DOLLARS, THEIR_IDENTITY_1)
@@ -655,7 +653,7 @@ class CashTests {
     }
 
     @Test
-    fun generateSpendMixedDeposits() = withTestSerialization {
+    fun generateSpendMixedDeposits() {
         val wtx =
                 database.transaction {
                     val wtx = makeSpend(580.DOLLARS, THEIR_IDENTITY_1)
@@ -676,7 +674,7 @@ class CashTests {
     }
 
     @Test
-    fun generateSpendInsufficientBalance() = withTestSerialization {
+    fun generateSpendInsufficientBalance() {
         database.transaction {
 
             val e: InsufficientBalanceException = assertFailsWith("balance") {
@@ -688,7 +686,6 @@ class CashTests {
                 makeSpend(81.SWISS_FRANCS, THEIR_IDENTITY_1)
             }
         }
-        Unit
     }
 
     /**
@@ -815,7 +812,7 @@ class CashTests {
     }
 
     @Test
-    fun multiSpend() = withTestSerialization {
+    fun multiSpend() {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
             val payments = listOf(

@@ -41,7 +41,7 @@ import kotlin.test.assertEquals
 class HTTPNetworkMapClientTest {
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     private lateinit var server: Server
 
     private lateinit var networkMapClient: NetworkMapClient

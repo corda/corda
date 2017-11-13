@@ -48,7 +48,6 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
-import javax.security.cert.X509Certificate
 
 interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
     /**
@@ -255,10 +254,9 @@ fun <A> rpcDriver(
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = isValid(user, password)
-    override fun validateUser(user: String?, password: String?, certificates: Array<out X509Certificate>?): String? {
+    override fun validateUser(user: String?, password: String?, remotingConnection: RemotingConnection?): String? {
         return validate(user, password)
     }
-
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
         return validate(user, password)
     }
@@ -479,6 +477,7 @@ data class RPCDriverDSL(
     ): RpcServerHandle {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            isUseGlobalPools = false
         }
         val userService = object : RPCUserService {
             override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null

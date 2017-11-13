@@ -5,7 +5,8 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -89,15 +90,16 @@ class Verifier {
         }
 
         private fun initialiseSerialization() {
-            SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                registerScheme(KryoVerifierSerializationScheme)
-                registerScheme(AMQPVerifierSerializationScheme)
-            }
-            /**
-             * Even though default context is set to Kryo P2P, the encoding will be adjusted depending on the incoming
-             * request received, see use of [context] in [main] method.
-             */
-            SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+            nodeSerializationEnv = SerializationEnvironmentImpl(
+                    SerializationFactoryImpl().apply {
+                        registerScheme(KryoVerifierSerializationScheme)
+                        registerScheme(AMQPVerifierSerializationScheme)
+                    },
+                    /**
+                     * Even though default context is set to Kryo P2P, the encoding will be adjusted depending on the incoming
+                     * request received, see use of [context] in [main] method.
+                     */
+                    KRYO_P2P_CONTEXT)
         }
     }
 

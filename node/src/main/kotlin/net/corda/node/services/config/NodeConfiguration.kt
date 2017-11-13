@@ -42,6 +42,10 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val sshd: SSHDConfiguration?
 }
 
+fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
+    return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
+}
+
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
