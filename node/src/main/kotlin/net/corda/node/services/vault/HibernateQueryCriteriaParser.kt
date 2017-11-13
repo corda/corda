@@ -196,6 +196,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                             AggregateFunctionType.MAX -> criteriaBuilder.max(column)
                             AggregateFunctionType.MIN -> criteriaBuilder.min(column)
                         }
+                //TODO investigate possibility to avoid producing redundant joins in SQL for multiple aggregate functions against the same table
                 aggregateExpressions.add(aggregateExpression)
                 // optionally order by this aggregate function
                 expression.orderBy?.let {
