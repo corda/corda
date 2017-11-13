@@ -20,6 +20,8 @@ class Node(private val project: Project) : CordformNode() {
         val nodeJarName = "corda.jar"
         @JvmStatic
         val webJarName = "corda-webserver.jar"
+        @JvmStatic
+        val cordaNodeJarName = "corda-node.jar"
         private val configFileProperty = "configFile"
         val capsuleCacheDir: String = "./cache"
     }
@@ -108,6 +110,7 @@ class Node(private val project: Project) : CordformNode() {
     internal fun build() {
         configureProperties()
         installCordaJar()
+        installCordaNodeJar()
         if (config.hasPath("webAddress")) {
             installWebserverJar()
         }
@@ -151,7 +154,7 @@ class Node(private val project: Project) : CordformNode() {
      * Installs the corda fat JAR to the node directory.
      */
     private fun installCordaJar() {
-        val cordaJar = verifyAndGetCordaJar()
+        val cordaJar = verifyAndGetJar("corda")
         project.copy {
             it.apply {
                 from(cordaJar)
@@ -163,10 +166,24 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     /**
+     * Installs the corda node JAR to the node directory.
+     */
+    private fun installCordaNodeJar() {
+        val cordaNodeJar = verifyAndGetJar("corda-node")
+        project.copy {
+            it.apply {
+                from(cordaNodeJar)
+                into(nodeDir)
+                rename(cordaNodeJar.name, cordaNodeJarName)
+            }
+        }
+    }
+
+    /**
      * Installs the corda webserver JAR to the node directory
      */
     private fun installWebserverJar() {
-        val webJar = verifyAndGetWebserverJar()
+        val webJar = verifyAndGetJar("corda-webserver")
         project.copy {
             it.apply {
                 from(webJar)
@@ -250,34 +267,17 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     /**
-     * Find the corda JAR amongst the dependencies.
+     * Find the given JAR amongst the dependencies
+     * @param jarName JAR name without the version part, for example for corda-2.0-SNAPSHOT.jar provide only "corda" as jarName
      *
-     * @return A file representing the Corda JAR.
+     * @return A file representing found JAR
      */
-    private fun verifyAndGetCordaJar(): File {
-        val maybeCordaJAR = project.configuration("runtime").filter {
-            it.toString().contains("corda-$releaseVersion.jar") || it.toString().contains("corda-enterprise-$releaseVersion.jar")
-        }
-        if (maybeCordaJAR.isEmpty) {
-            throw RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-$releaseVersion.jar\"")
-        } else {
-            val cordaJar = maybeCordaJAR.singleFile
-            assert(cordaJar.isFile)
-            return cordaJar
-        }
-    }
-
-    /**
-     * Find the corda JAR amongst the dependencies
-     *
-     * @return A file representing the Corda webserver JAR
-     */
-    private fun verifyAndGetWebserverJar(): File {
+    private fun verifyAndGetJar(jarName: String): File {
         val maybeJar = project.configuration("runtime").filter {
-            it.toString().contains("corda-webserver-$releaseVersion.jar")
+            it.toString().contains("$jarName-$releaseVersion.jar") || it.toString().contains("$jarName-enterprise-$releaseVersion.jar")
         }
         if (maybeJar.isEmpty) {
-            throw RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-$releaseVersion.jar\"")
+            throw RuntimeException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")
         } else {
             val jar = maybeJar.singleFile
             assert(jar.isFile)

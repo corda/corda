@@ -9,9 +9,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.TaskAction
-import java.io.File
 import java.net.URLClassLoader
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -30,6 +28,7 @@ open class Cordform : DefaultTask() {
     var definitionClass: String? = null
     private var directory = Paths.get("build", "nodes")
     private val nodes = mutableListOf<Node>()
+    private val notaryMap: HashMap<String, Boolean> = hashMapOf()
 
     /**
      * Set the directory to install nodes into.
@@ -124,6 +123,7 @@ open class Cordform : DefaultTask() {
         installRunScript()
         nodes.forEach(Node::build)
         generateAndInstallNodeInfos()
+        generateAndInstallNetworkParameters()
     }
 
     private fun initializeConfiguration() {
@@ -142,6 +142,69 @@ open class Cordform : DefaultTask() {
         }
     }
 
+    private fun generateAndInstallNetworkParameters() {
+        project.logger.info("Generating network parameters")
+        gatherNotaries()
+        val networkParamsProcess = buildNetworkParamsProcess()
+        try {
+            validateParametersProcess(networkParamsProcess, nodes[0].logDirectory())
+        } finally {
+            networkParamsProcess.destroyForcibly()
+        }
+        project.logger.info("Installing network parameters")
+        val sourcePath = nodes[0].fullPath().toString()
+        for (destination in nodes.drop(1)) {
+            project.copy {
+                it.apply {
+                    from(sourcePath)
+                    include("network-parameters")
+                    into(destination.fullPath().toString())
+                }
+            }
+        }
+    }
+
+    private fun gatherNotaries() {
+        val notaryNodes = nodes.filter { it.notary != null }
+        notaryNodes.forEach {
+            notaryMap[it.name] = it.notary.getOrDefault("validating", false) as Boolean
+        }
+    }
+
+    private fun buildNetworkParamsProcess(): Process = buildParamsProcess(generateParamsCommand(nodes[0]), nodes[0])
+
+    private fun validateParametersProcess(process: Process, logsPath: Path) {
+        val generateTimeoutSeconds = 60L
+        if (!process.waitFor(generateTimeoutSeconds, TimeUnit.SECONDS)) {
+            throw GradleException("Network parameters generation process too more than $generateTimeoutSeconds seconds - see logs at $logsPath")
+        }
+        if (process.exitValue() != 0) {
+            throw GradleException("Network parameters generation process exited with ${process.exitValue()} - see logs at $logsPath")
+        }
+        project.logger.info("Generated network parameters")
+    }
+
+    private fun buildParamsProcess(command: List<String>, node: Node): Process {
+        return ProcessBuilder(command)
+                .directory(node.fullPath().toFile())
+                .redirectErrorStream(true)
+                // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
+                // Must redirect to output or logger (node log is still written, this is just startup banner)
+                .redirectOutput(node.logFile("generate-params.log").toFile())
+                .start()
+    }
+
+    private fun generateParamsCommand(node: Node): List<String> = listOf(
+            "java",
+            "-cp",
+            Node.cordaNodeJarName,
+            "net.corda.node.internal.networkParametersGenerator.NetworkParametersGenerator",
+            "--base-directory",
+            node.fullPath().toString(),
+            "--notaries",
+            notaryMap.map { (key, value) -> key + ":" + value.toString() }.joinToString("#")
+    )
+
     private fun generateAndInstallNodeInfos() {
         generateNodeInfos()
         installNodeInfos()
@@ -149,7 +212,7 @@ open class Cordform : DefaultTask() {
 
     private fun generateNodeInfos() {
         project.logger.info("Generating node infos")
-        var nodeProcesses = buildNodeProcesses()
+        val nodeProcesses = buildNodeProcesses()
         try {
             validateNodeProcessess(nodeProcesses)
         } finally {
@@ -177,12 +240,12 @@ open class Cordform : DefaultTask() {
 
     private fun buildNodeProcess(node: Node): Pair<Node, Process> {
         node.makeLogDirectory()
-        var process = ProcessBuilder(generateNodeInfoCommand())
+        val process = ProcessBuilder(generateNodeInfoCommand())
                 .directory(node.fullPath().toFile())
                 .redirectErrorStream(true)
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
                 // Must redirect to output or logger (node log is still written, this is just startup banner)
-                .redirectOutput(node.logFile().toFile())
+                .redirectOutput(node.logFile("generate-info.log").toFile())
                 .addEnvironment("CAPSULE_CACHE_DIR", Node.capsuleCacheDir)
                 .start()
         return Pair(node, process)
@@ -224,6 +287,6 @@ open class Cordform : DefaultTask() {
             }
         }
     }
-    private fun Node.logFile(): Path = this.logDirectory().resolve("generate-info.log")
+    private fun Node.logFile(name: String): Path = this.logDirectory().resolve(name)
     private fun ProcessBuilder.addEnvironment(key: String, value: String) = this.apply { environment().put(key, value) }
 }
