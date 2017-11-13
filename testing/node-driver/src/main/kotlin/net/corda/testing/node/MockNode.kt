@@ -45,7 +45,6 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
-import sun.plugin.dom.DOMObjectFactory.createNode
 import java.io.Closeable
 import java.math.BigInteger
 import java.nio.file.Path
