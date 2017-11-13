@@ -87,7 +87,6 @@ object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::clas
     @Table(name = "Children")
     class Child {
         @Id
-        @GeneratedValue(strategy = GenerationType.AUTO)
         @Column(name = "child_id", unique = true, nullable = false)
         var childId: Int? = null
 
