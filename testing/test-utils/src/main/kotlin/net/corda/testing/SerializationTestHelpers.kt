@@ -8,6 +8,7 @@ import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.testing.common.internal.asContextEnv
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -30,16 +31,6 @@ interface GlobalSerializationEnvironment : SerializationEnvironment {
 /** @param inheritable whether new threads inherit the environment, use sparingly. */
 fun <T> withTestSerialization(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
     return createTestSerializationEnv().asContextEnv(inheritable, callable)
-}
-
-private fun <T> SerializationEnvironment.asContextEnv(inheritable: Boolean, callable: (SerializationEnvironment) -> T): T {
-    val property = if (inheritable) _inheritableContextSerializationEnv else _contextSerializationEnv
-    property.set(this)
-    try {
-        return callable(this)
-    } finally {
-        property.set(null)
-    }
 }
 
 /**

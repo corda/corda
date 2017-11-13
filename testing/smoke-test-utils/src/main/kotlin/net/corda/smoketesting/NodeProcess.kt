@@ -10,6 +10,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.asContextEnv
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -53,11 +54,11 @@ class NodeProcess(
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
             val defaultNetworkParameters = run {
-                // TODO withTestSerialization is in test-utils, which we don't have access to
-                KryoClientSerializationScheme.initialiseSerialization()
-                // There are no notaries in the network parameters for smoke test nodes. If this is required then we would
-                // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
-                NetworkParametersCopier(testNetworkParameters(emptyList()))
+                KryoClientSerializationScheme.createSerializationEnv().asContextEnv {
+                    // There are no notaries in the network parameters for smoke test nodes. If this is required then we would
+                    // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
+                    NetworkParametersCopier(testNetworkParameters(emptyList()))
+                }
             }
 
             init {
