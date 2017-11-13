@@ -37,12 +37,14 @@ class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
             nodeSerializationEnv = createSerializationEnv()
         }
 
-        fun createSerializationEnv(): SerializationEnvironment = SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
-                    registerScheme(KryoClientSerializationScheme())
-                    registerScheme(AMQPClientSerializationScheme())
-                },
-                KRYO_P2P_CONTEXT,
-                rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+        fun createSerializationEnv(): SerializationEnvironment {
+            return SerializationEnvironmentImpl(
+                    SerializationFactoryImpl().apply {
+                        registerScheme(KryoClientSerializationScheme())
+                        registerScheme(AMQPClientSerializationScheme())
+                    },
+                    KRYO_P2P_CONTEXT,
+                    rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+        }
     }
 }
