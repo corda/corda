@@ -18,7 +18,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
-import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
@@ -39,6 +38,7 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
+import org.apache.shiro.mgt.SecurityManager
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -203,7 +203,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             var recipients: ByteArray = ByteArray(0)
     )
 
-    fun start(rpcOps: RPCOps, userService: RPCUserService) {
+    fun start(rpcOps: RPCOps, rpcSecurityManager: SecurityManager) {
         state.locked {
             check(!started) { "start can't be called twice" }
             started = true
@@ -235,7 +235,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             p2pConsumer = session.createConsumer(P2P_QUEUE)
 
             val myCert = loadKeyStore(config.sslKeystore, config.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_TLS)
-            rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, CordaX500Name.build(myCert.subjectX500Principal))
+            rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER,
+                                  locator, rpcSecurityManager,
+                                  CordaX500Name.build(myCert.subjectX500Principal))
 
             fun checkVerifierCount() {
                 if (session.queueQuery(SimpleString(VERIFICATION_REQUESTS_QUEUE_NAME)).consumerCount == 0) {

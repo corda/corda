@@ -147,7 +147,8 @@ internal class CordaRPCOpsImpl(
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
-        val currentUser = FlowInitiator.RPC(rpcContext().currentUser.username)
+        val username = rpcContext().username
+        val currentUser = FlowInitiator.RPC(username)
         // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
         return flowStarter.invokeFlowAsync(logicType, currentUser, *args).getOrThrow()
     }

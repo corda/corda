@@ -13,10 +13,10 @@ import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.services.security.RPCRealmFactory
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
@@ -44,6 +44,7 @@ import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
+import org.apache.shiro.mgt.DefaultSecurityManager
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -480,16 +481,14 @@ data class RPCDriverDSL(
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
         }
-        val userService = object : RPCUserService {
-            override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
-            override val users: List<User> get() = listOf(rpcUser)
-        }
+        val userRealm = RPCRealmFactory.buildInMemory(listOf(rpcUser))
+
         val rpcServer = RPCServer(
                 ops,
                 rpcUser.username,
                 rpcUser.password,
                 locator,
-                userService,
+                DefaultSecurityManager(userRealm),
                 nodeLegalName,
                 configuration
         )

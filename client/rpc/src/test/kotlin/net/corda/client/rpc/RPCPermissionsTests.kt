@@ -40,8 +40,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         override val protocolVersion = 1
         override fun validatePermission(str: String) {
             val permission = RPCPermission(str)
-            val userPermissions = rpcContext().currentUser.permissions.map {RPCPermission(it)}
-            if (!userPermissions.any {it.implies(permission)}) {
+            val rpcSubject = rpcContext().authenticatedSubject
+            if (!rpcSubject.isPermitted(permission)) {
                 throw PermissionException ("Current user permissions do not authorise $permission")
             }
         }
@@ -81,7 +81,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
 
     @Test
     fun `test RPCPermission entitlements`() {
-
         val startFlowPerm1 = RPCPermission("StartFlow.net.corda.client.rpc.DummyFlow")
         val startFlowPerm2 = RPCPermission("StartFlow.net.corda.client.rpc.OtherFlow")
         val rpcPerm1 = RPCPermission("InvokeRpc.nodeInfo")

@@ -24,7 +24,6 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.Message
@@ -37,6 +36,9 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
+import org.apache.shiro.mgt.SecurityManager
+import org.apache.shiro.subject.SimplePrincipalCollection
+import org.apache.shiro.subject.Subject
 import rx.Notification
 import rx.Observable
 import rx.Subscriber
@@ -79,7 +81,7 @@ class RPCServer(
         private val rpcServerUsername: String,
         private val rpcServerPassword: String,
         private val serverLocator: ServerLocator,
-        private val userService: RPCUserService,
+        private val rpcSecurityManager: SecurityManager,
         private val nodeLegalName: CordaX500Name,
         private val rpcConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
 ) {
@@ -271,7 +273,7 @@ class RPCServer(
                 }
                 when (arguments) {
                     is Try.Success -> {
-                        val rpcContext = RpcContext(currentUser = getUser(artemisMessage))
+                        val rpcContext = buildRpcContext(artemisMessage)
                         rpcExecutor!!.submit {
                             val result = invokeRpc(rpcContext, clientToServer.methodName, arguments.value)
                             sendReply(clientToServer.id, clientToServer.clientAddress, result)
@@ -349,19 +351,17 @@ class RPCServer(
         observableMap.cleanUp()
     }
 
-    // TODO remove this User once webserver doesn't need it
-    private val nodeUser = User(NODE_USER, NODE_USER, setOf())
+    private fun buildRpcContext(message : ClientMessage) : RpcContext {
+        val username =
+            message.getStringProperty(Message.HDR_VALIDATED_USER)
+            ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
 
-    private fun getUser(message: ClientMessage): User {
-        val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
-        val rpcUser = userService.getUser(validatedUser)
-        if (rpcUser != null) {
-            return rpcUser
-        } else if (CordaX500Name.parse(validatedUser) == nodeLegalName) {
-            return nodeUser
-        } else {
-            throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")
-        }
+        return RpcContext(
+                username = username,
+                authenticatedSubject = Subject.Builder()
+                     .authenticated(true)
+                     .principals(SimplePrincipalCollection(username, "RPC"))
+                     .buildSubject())
     }
 }
 
@@ -380,7 +380,8 @@ fun rpcContext(): RpcContext = CURRENT_RPC_CONTEXT.get()
  *     user has a set of permissions they're entitled to which can be used to control access.
  */
 data class RpcContext(
-        val currentUser: User
+        val username : String,
+        val authenticatedSubject: Subject
 )
 
 class ObservableSubscription(

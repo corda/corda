@@ -60,6 +60,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.shiro.mgt.SecurityManager
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
@@ -137,6 +138,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * or has loaded network map data from local database */
     val nodeReadyFuture: CordaFuture<Unit>
         get() = _nodeReadyFuture
+
+    protected abstract val rpcSecurityManager : SecurityManager
+
     /** A [CordaX500Name] with null common name. */
     protected val myLegalName: CordaX500Name by lazy {
         val cert = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_CA)

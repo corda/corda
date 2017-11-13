@@ -15,13 +15,12 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.node.services.RPCUserService
-import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.security.RPCRealmFactory
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
@@ -30,6 +29,7 @@ import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import org.apache.shiro.mgt.DefaultSecurityManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Clock
@@ -61,6 +61,7 @@ open class Node(configuration: NodeConfiguration,
 
         internal fun failStartUp(message: String): Nothing {
             println(message)
+            println("Corda will now exit...")
             println("Corda will now exit...")
             exitProcess(1)
         }
@@ -123,14 +124,16 @@ open class Node(configuration: NodeConfiguration,
     // serialisation/deserialisation work.
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread-$sameVmNodeNumber", 1)
 
+    /** Manage authentication and authorization of RPC calls*/
+    override val rpcSecurityManager = DefaultSecurityManager(
+            RPCRealmFactory.build(configuration)
+    )
+
     private var messageBroker: ArtemisMessagingServer? = null
 
     private var shutdownHook: ShutdownHook? = null
 
-    private lateinit var userService: RPCUserService
-
     override fun makeMessagingService(): MessagingService {
-        userService = RPCUserServiceImpl(configuration.rpcUsers)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val advertisedAddress = info.addresses.single()
@@ -150,7 +153,9 @@ open class Node(configuration: NodeConfiguration,
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, userService)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port,
+                                                   services.networkMapCache, rpcSecurityManager,
+                                                   configuration.rpcUsers.map {it.username}.toSet())
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
@@ -195,7 +200,7 @@ open class Node(configuration: NodeConfiguration,
         }
 
         // Start up the MQ client.
-        (network as NodeMessagingClient).start(rpcOps, userService)
+        (network as NodeMessagingClient).start(rpcOps, rpcSecurityManager)
     }
 
     /**

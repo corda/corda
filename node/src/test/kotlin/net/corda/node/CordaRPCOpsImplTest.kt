@@ -30,6 +30,7 @@ import net.corda.node.services.security.RPCPermission.Companion.invokeRpc
 import net.corda.node.services.security.RPCPermission.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
+import net.corda.node.services.security.buildSubject
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
@@ -67,7 +68,8 @@ class CordaRPCOpsImplTest {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
         aliceNode = mockNet.createNode()
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
-        CURRENT_RPC_CONTEXT.set(RpcContext(user))
+        CURRENT_RPC_CONTEXT.set(RpcContext(username = user.username,
+                                           authenticatedSubject = buildSubject(user)))
 
         mockNet.runNetwork()
         withPermissions(invokeRpc(CordaRPCOps::notaryIdentities)) {
@@ -288,7 +290,9 @@ class CordaRPCOpsImplTest {
 
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
-            CURRENT_RPC_CONTEXT.set(RpcContext(user.copy(permissions = setOfPermissionStrings(*permissions))))
+            val subject = buildSubject(user.copy(permissions = setOfPermissionStrings(*permissions)))
+            CURRENT_RPC_CONTEXT.set(RpcContext(username = user.username,
+                                               authenticatedSubject = subject))
             action()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)

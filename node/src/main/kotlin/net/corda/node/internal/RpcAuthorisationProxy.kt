@@ -11,6 +11,7 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.node.services.messaging.RpcContext
+import net.corda.node.services.messaging.rpcContext
 import java.io.InputStream
 import java.security.PublicKey
 import net.corda.node.services.security.RPCPermission
@@ -207,9 +208,7 @@ class RpcAuthorisationProxy(
         }
 
     private fun authorise(permission : DomainPermission) {
-        // TODO: delegate to Shiro Authorizer instance
-        val userPermissions = context().currentUser.permissions.map {RPCPermission(it)}
-        if (!userPermissions.any {it.implies(permission)}) {
+        if (!rpcContext().authenticatedSubject.isPermitted(permission)) {
             throw PermissionException ("Current user permissions do not authorise $permission")
         }
     }

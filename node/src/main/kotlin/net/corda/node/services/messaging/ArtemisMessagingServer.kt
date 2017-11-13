@@ -16,7 +16,6 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.node.internal.Node
-import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
@@ -48,6 +47,8 @@ import org.apache.activemq.artemis.spi.core.security.jaas.CertificateCallback
 import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
 import org.apache.activemq.artemis.utils.ConfigurationHelper
+import org.apache.shiro.authc.Authenticator
+import org.apache.shiro.authc.UsernamePasswordToken
 import rx.Subscription
 import java.io.IOException
 import java.math.BigInteger
@@ -90,7 +91,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                              val p2pPort: Int,
                              val rpcPort: Int?,
                              val networkMapCache: NetworkMapCache,
-                             val userService: RPCUserService) : ArtemisMessagingComponent() {
+                             val rpcAuthenticator: Authenticator,
+                             val rpcUsers : Set<String>) : ArtemisMessagingComponent() {
     companion object {
         private val log = loggerFor<ArtemisMessagingServer>()
         /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
@@ -234,7 +236,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
         // TODO remove the NODE_USER role once the webserver doesn't need it
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
-        for ((username) in userService.users) {
+        for (username in rpcUsers) {
             securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#"] = setOf(
                     nodeInternalRole,
                     restrictedRole("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username", consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true))
@@ -268,7 +270,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
-                        RPCUserService::class.java.name to userService,
+                        Authenticator::class.java.name to rpcAuthenticator,
                         NodeLoginModule.CERT_CHAIN_CHECKS_OPTION_NAME to certChecks)
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
             }
@@ -525,7 +527,7 @@ sealed class CertificateChainCheckPolicy {
  * the same as our root CA. If that's the case the only access they're given is the ablility send to our P2P address.
  * In both cases the messages these authenticated nodes send to us are tagged with their subject DN and we assume
  * the CN within that is their legal name.
- * Otherwise if the username is neither of the above we assume it's an RPC user and authenticate against our list of
+ * Otherwise if the username is neither of the above we assume it's an RPCj  user and authenticate against our list of
  * valid RPC users. RPC clients are given permission to perform RPC and nothing else.
  */
 class NodeLoginModule : LoginModule {
@@ -544,7 +546,7 @@ class NodeLoginModule : LoginModule {
     private var loginSucceeded: Boolean = false
     private lateinit var subject: Subject
     private lateinit var callbackHandler: CallbackHandler
-    private lateinit var userService: RPCUserService
+    private lateinit var rpcAuthenticator: Authenticator
     private lateinit var peerCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var nodeCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var verifierCertCheck: CertificateChainCheckPolicy.Check
@@ -553,7 +555,7 @@ class NodeLoginModule : LoginModule {
     override fun initialize(subject: Subject, callbackHandler: CallbackHandler, sharedState: Map<String, *>, options: Map<String, *>) {
         this.subject = subject
         this.callbackHandler = callbackHandler
-        userService = options[RPCUserService::class.java.name] as RPCUserService
+        rpcAuthenticator = options[Authenticator::class.java.name] as Authenticator
         val certChainChecks: Map<String, CertificateChainCheckPolicy.Check> = uncheckedCast(options[CERT_CHAIN_CHECKS_OPTION_NAME])
         peerCertCheck = certChainChecks[PEER_ROLE]!!
         nodeCertCheck = certChainChecks[NODE_ROLE]!!
@@ -615,12 +617,8 @@ class NodeLoginModule : LoginModule {
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
-        val rpcUser = userService.getUser(username) ?: throw FailedLoginException("User does not exist")
-        if (password != rpcUser.password) {
-            // TODO Switch to hashed passwords
-            // TODO Retrieve client IP address to include in exception message
-            throw FailedLoginException("Password for user $username does not match")
-        }
+        val authToken = UsernamePasswordToken(username, password)
+        rpcAuthenticator.authenticate(authToken)
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses
         return username

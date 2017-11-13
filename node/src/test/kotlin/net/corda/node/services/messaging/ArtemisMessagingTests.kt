@@ -7,13 +7,12 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.RPCUserService
-import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
+import net.corda.node.services.security.RPCRealmFactory
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
@@ -23,6 +22,8 @@ import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import org.apache.shiro.mgt.DefaultSecurityManager
+import org.apache.shiro.mgt.SecurityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -57,13 +58,13 @@ class ArtemisMessagingTests {
 
     private lateinit var config: NodeConfiguration
     private lateinit var database: CordaPersistence
-    private lateinit var userService: RPCUserService
     private lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
 
     private var messagingClient: NodeMessagingClient? = null
     private var messagingServer: ArtemisMessagingServer? = null
 
     private lateinit var networkMapCache: NetworkMapCacheImpl
+    private lateinit var rpcSecurityManager: SecurityManager
 
     private val rpcOps = object : RPCOps {
         override val protocolVersion: Int get() = throw UnsupportedOperationException()
@@ -72,7 +73,7 @@ class ArtemisMessagingTests {
     @Before
     fun setUp() {
         val baseDirectory = temporaryFolder.root.toPath()
-        userService = RPCUserServiceImpl(emptyList())
+        rpcSecurityManager= DefaultSecurityManager(RPCRealmFactory.buildInMemory(emptyList()))
         config = testNodeConfiguration(
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
@@ -187,7 +188,7 @@ class ArtemisMessagingTests {
     }
 
     private fun startNodeMessagingClient() {
-        messagingClient!!.start(rpcOps, userService)
+        messagingClient!!.start(rpcOps, rpcSecurityManager)
     }
 
     private fun createAndStartClientAndServer(receivedMessages: LinkedBlockingQueue<Message>): NodeMessagingClient {
@@ -220,7 +221,7 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, rpc, networkMapCache, userService).apply {
+        return ArtemisMessagingServer(config, local, rpc, networkMapCache, rpcSecurityManager, emptySet()).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }

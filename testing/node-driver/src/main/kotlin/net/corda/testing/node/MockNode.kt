@@ -30,6 +30,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.security.RPCRealmFactory
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -44,6 +45,7 @@ import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.shiro.mgt.DefaultSecurityManager
 import org.slf4j.Logger
 import sun.plugin.dom.DOMObjectFactory.createNode
 import java.io.Closeable
@@ -237,6 +239,10 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                     mockNet.sharedUserCount.incrementAndGet()
                     mockNet.sharedServerThread
                 }
+
+        override val rpcSecurityManager = DefaultSecurityManager(
+                RPCRealmFactory.build(configuration)
+        )
 
         override val started: StartedNode<MockNode>? get() = uncheckedCast(super.started)
 
