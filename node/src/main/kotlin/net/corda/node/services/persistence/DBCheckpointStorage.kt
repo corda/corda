@@ -23,7 +23,7 @@ class DBCheckpointStorage : CheckpointStorage {
             var checkpointId: String = "",
 
             @Lob
-            @Column(name = "checkpoint")
+            @Column(name = "checkpoint_value")
             var checkpoint: ByteArray = ByteArray(0)
     )
 

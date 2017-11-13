@@ -68,7 +68,7 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal, private v
     @Table(name = "notary_committed_states")
     class RaftState(
             @Id
-            @Column
+            @Column(name = "id")
             var key: String = "",
 
             @Lob
