@@ -68,9 +68,16 @@ For the March 31st timeline, I hope that we can achieve a more fully automatic n
 
 ## Proposed Solution
 ### Current (single process)
+![Current (single process)](./HA deployment - No HA.png)
+
 ### Hot-Cold (minimum requirement)
+![Hot-Cold (minimum requirement)](./HA deployment - Hot-Cold.png)
+
 ### Hot-Warm (Medium-term solution)
+![Hot-Warm (Medium-term solution)](./HA deployment - Hot-Warm.png)
+
 ### Hot-Hot (Long-term strategic solution)
+![Hot-Hot (Long-term strategic solution)](./HA deployment - Hot-Hot.png)
 
 ## Alternative Options
 
