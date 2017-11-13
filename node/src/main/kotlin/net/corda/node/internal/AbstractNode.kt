@@ -105,7 +105,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             override val database: CordaPersistence,
             override val rpcOps: CordaRPCOps,
             flowStarter: FlowStarter,
-            internal val schedulerService: NodeSchedulerService) : StartedNode<N> {
+            override val notaryService: NotaryService?) : StartedNode<N> {
         override val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter {}
     }
 
@@ -177,10 +177,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         readNetworkParameters()
         val schemaService = NodeSchemaService(cordappLoader)
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val startedImpl = initialiseDatabasePersistence(schemaService) { database ->
+        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService) { database ->
             val transactionStorage = makeTransactionStorage(database)
             val stateLoader = StateLoaderImpl(transactionStorage)
             val services = makeServices(keyPairs, schemaService, transactionStorage, stateLoader, database)
+            val notaryService = makeNotaryService(services, database)
             smm = makeStateMachineManager(database)
             val flowStarter = FlowStarterImpl(serverThread, smm)
             val schedulerService = NodeSchedulerService(
@@ -209,7 +210,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
 
             runOnStop += network::stop
-            StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, schedulerService)
+            Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
         // If we successfully  loaded network data from database, we set this future to Unit.
         services.networkMapCache.addNode(info)
@@ -496,7 +497,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, cordappProvider, this)
-        makeNetworkServices(tokenizableServices, database)
         return tokenizableServices
     }
 
@@ -550,14 +550,15 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeNetworkServices(tokenizableServices: MutableList<Any>, database: CordaPersistence) {
-        configuration.notary?.let {
-            val notaryService = makeCoreNotaryService(it, database)
-            tokenizableServices.add(notaryService)
-            runOnStop += notaryService::stop
-            installCoreFlow(NotaryFlow.Client::class, notaryService::createServiceFlow)
-            log.info("Running core notary: ${notaryService.javaClass.name}")
-            notaryService.start()
+    private fun makeNotaryService(tokenizableServices: MutableList<Any>, database: CordaPersistence): NotaryService? {
+        return configuration.notary?.let {
+            makeCoreNotaryService(it, database).also {
+                tokenizableServices.add(it)
+                runOnStop += it::stop
+                installCoreFlow(NotaryFlow.Client::class, it::createServiceFlow)
+                log.info("Running core notary: ${it.javaClass.name}")
+                it.start()
+            }
         }
     }
 
@@ -596,7 +597,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
         return object : BFTSMaRt.Cluster {
-            override fun waitUntilAllReplicasHaveInitialized(notaryService: BFTNonValidatingNotaryService) {
+            override fun waitUntilAllReplicasHaveInitialized() {
                 log.warn("A BFT replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
             }
         }
