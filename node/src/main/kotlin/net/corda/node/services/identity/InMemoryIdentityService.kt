@@ -16,6 +16,7 @@ import java.security.PublicKey
 import java.security.cert.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
+import javax.security.auth.x500.X500Principal
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
@@ -68,6 +69,21 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
             }
             throw e
         }
+
+        // Ensure we record the first identity of the same name, first
+        val identityPrincipal = identity.name.x500Principal
+        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
+            val principal = (it as? X509Certificate)?.subjectX500Principal
+            principal == identityPrincipal
+        }
+        if (firstCertWithThisName != identity.certificate) {
+            val certificates = identity.certPath.certificates
+            val idx = certificates.lastIndexOf(firstCertWithThisName)
+            val certFactory = CertificateFactory.getInstance("X509")
+            val firstPath = certFactory.generateCertPath(certificates.slice(idx..certificates.size - 1))
+            verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
+        }
+
         log.trace { "Registering identity $identity" }
         keyToParties[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
