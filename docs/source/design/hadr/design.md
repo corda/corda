@@ -94,6 +94,8 @@ Proposed Platform Technical team(s) to implement design (if not already decided)
 IMPLEMENTATION PLAN
 ============================================
 
+# Transitioning from Corda 2.0 to Manually Activated HA
+
 The current Corda is built to run as a fully contained single process with the Flow logic, H2 database and Artemis broker all bundled together. This limits the options for automatic replication, or subsystem failure. Thus, we must use external mechanisms to replicate the data in the case of failure. We also should ensure that accidental dual start is not possible in case of mistakes, or slow shutdown of the primary.
 
 Based on this situation, I suggest the following minimum development tasks are required for a tested HA deployment:
@@ -105,4 +107,21 @@ Based on this situation, I suggest the following minimum development tasks are r
 5. Improve health monitoring to better indicate fault failure. Extending the existing JMX and logging support should achieve  this, although we probably need to create watchdog CordApp that verifies that the State Machine and Artemis messaging are able to process new work and to monitor flow latency.
 6. Test the checkpointing mechanism and confirm that failures don't corrupt the data by deploying an HA setup on Azure and driving flows through the system as we stop the node randomly and switch to the other node. If this reveals any issues we will have to fix them.
 7. Confirm that the behaviour of the RPC proxy is stable through these restarts, from the perspective of a stateless REST server calling through to RPC. The RPC API should provide positive feedback to the application, so that it can respond in a controlled fashion when disconnected.
-8. WeWork on flow hospital tools where needed
+8. Work on flow hospital tools where needed
+
+# Moving Towards Automatic Failover HA
+
+To move towards more automatic failover handling we need to ensure that the node can be partially active i.e. live monitoring the health status and perhaps keeping major data structures in sync for faster activation, but not actually processing flows. This needs to be reversible without leakage, or destabilising the node as it is common to use manually driven master changes to help with software upgrades and to carry out regular node shutdown and maintenance. Also, to reduce the risks associated with the uncoupled replication of the Artemis message data and the database I would recommend that we move the Artemis broker out of the node to allow us to create a failover cluster. This is also in line with the goal of creating a AMQP bridges and Floats.
+
+To this end I would suggest packages of work that include:
+
+1.	Move the broker out of the node, which will require having a protocol that can be used to signal bridge creation and which decouples the network map. This is in line with the Flow work anyway. 
+2.	Create a mastering solution, probably using Atomix.IO although this might require a solution with a minimum of three nodes to avoid split brain issues. Ideally this service should be extensible in the future to lead towards an eventual state with Flow level sharding. Alternatively, we may be able to add a quick enterprise adaptor to ZooKeeper as master selector if time is tight. This will inevitably impact upon configuration and deployment support.
+3.	Test the leakage when we repeated start-stop the Node class and fix any resource leaks, or deadlocks that occur at shutdown.
+4.	Switch the Artemis client code to be able to use the HA mode connection type and thus take advantage of the rapid failover code. Also, ensure that we can support multiple public IP addresses reported in the network map.
+5.	Implement proper detection and handling of disconnect from the external database and/or Artemis broker, which should immediately drop the master status of the node and flush any incomplete flows.
+6.	We should start looking at how to make RPC proxies recover from disconnect/failover, although this is probably not a top priority. However, it would be good to capture the missed results of completed flows and ensure the API allows clients to unregister/re-register Observables.
+
+# The Future
+
+Hopefully, most of the work from the automatic failover mode can be modified when we move to a full hot-hot sharding of flows across nodes. The mastering solution will need to be modified to negotiate finer grained claim on individual flows, rather than stopping the whole of Node. Also, the routing of messages will have to be thought about so that they go to the correct node for processing, but failover if the node dies. However, most of the other health monitoring and operational aspects should be reusable.
