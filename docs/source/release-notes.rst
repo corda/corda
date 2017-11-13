@@ -23,8 +23,8 @@ Corda version 2.0 and the introduction of the observer node functionality
 * **Observer Nodes**
 
 Adds the facility for transparent forwarding of transactions to some third party observer, such as a regulator. By having
-that entity simply run an Observer node the ycan simply recieve a stream of digitally signed, de-duplicated reports that
-can be used for reporting
+that entity simply run an Observer node they can simply recieve a stream of digitally signed, de-duplicated reports that
+can be used for reporting.
 
 Release 1.0
 -----------
