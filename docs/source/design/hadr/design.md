@@ -9,7 +9,7 @@ DOCUMENT MANAGEMENT
 ## Document Control
 
 * High Availability and Disaster Recovery for Corda: A Phased Approach
-* Date: 13th November 2018
+* Date: 13th November 2017
 * Author: Matthew Nesbit
 * Distribution: Design Review Board, Product Management, Services - Technical (Consulting), Platform Delivery
 * Corda target version: Enterprise
