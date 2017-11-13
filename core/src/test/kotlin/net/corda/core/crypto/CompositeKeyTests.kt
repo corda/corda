@@ -8,7 +8,7 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
-import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.kryoSpecific
 import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Rule

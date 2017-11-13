@@ -57,7 +57,10 @@ import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.configureDatabase
+import net.corda.nodeapi.internal.crypto.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -66,7 +69,6 @@ import java.lang.reflect.InvocationTargetException
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.PublicKey
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
@@ -697,7 +699,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
         }
 
-        val certPath = CertificateFactory.getInstance("X509").generateCertPath(certificates)
+        val certPath = X509CertificateFactory().delegate.generateCertPath(certificates)
         return Pair(PartyAndCertificate(certPath), keyPair)
     }
 

@@ -13,10 +13,11 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.BOB_PUBKEY
@@ -41,14 +42,12 @@ import java.security.PrivateKey
 import java.security.SecureRandom
 import java.security.cert.CertPath
 import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.*
 import java.util.stream.Stream
 import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.*
-
 
 class X509UtilitiesTest {
     @Rule
@@ -360,10 +359,16 @@ class X509UtilitiesTest {
                                               trustStorePassword: String
     ): KeyStore {
         val rootCAKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", organisation = "R3CEV", locality = "London", country = "GB"), rootCAKey)
+        val baseName = CordaX500Name(organisation = "R3CEV", locality = "London", country = "GB")
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(baseName.copy(commonName = "Corda Node Root CA"), rootCAKey)
 
         val intermediateCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, CordaX500Name(commonName = "Corda Node Intermediate CA", organisation = "R3CEV", locality = "London", country = "GB"), intermediateCAKeyPair.public)
+        val intermediateCACert = X509Utilities.createCertificate(
+                CertificateType.INTERMEDIATE_CA,
+                rootCACert,
+                rootCAKey,
+                baseName.copy(commonName = "Corda Node Intermediate CA"),
+                intermediateCAKeyPair.public)
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
@@ -426,11 +431,10 @@ class X509UtilitiesTest {
                 emptyMap(),
                 true,
                 SerializationContext.UseCase.P2P)
-        val certFactory = CertificateFactory.getInstance("X509")
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name.x500Name, BOB_PUBKEY)
-        val expected = certFactory.generateCertPath(listOf(certificate.cert, rootCACert.cert))
+        val expected = X509CertificateFactory().delegate.generateCertPath(listOf(certificate.cert, rootCACert.cert))
         val serialized = expected.serialize(factory, context).bytes
         val actual: CertPath = serialized.deserialize(factory, context)
         assertEquals(expected, actual)

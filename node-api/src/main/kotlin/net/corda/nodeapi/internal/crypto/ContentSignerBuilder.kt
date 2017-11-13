@@ -1,4 +1,4 @@
-package net.corda.node.utilities
+package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.SignatureScheme
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
