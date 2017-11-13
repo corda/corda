@@ -28,7 +28,6 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.RPCUserService
-import net.corda.node.services.logging.ContextualLogger
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.Message
@@ -41,7 +40,7 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
-import org.slf4j.Logger
+import org.slf4j.MDC
 import rx.Notification
 import rx.Observable
 import rx.Subscriber
@@ -275,18 +274,17 @@ class RPCServer(
                     clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                 }
                 val context = artemisMessage.context()
-                val logger = ContextualLogger(log, context.invocation)
                 when (arguments) {
                     is Try.Success -> {
                         rpcExecutor!!.submit {
-                            val result = invokeRpc(context, logger, clientToServer.methodName, arguments.value)
+                            val result = invokeRpc(context, clientToServer.methodName, arguments.value)
                             sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, result)
                         }
                     }
                     is Try.Failure -> {
                         // We failed to deserialise the arguments, route back the error
                         // TODO sollecitom try and log with context here as well.
-                        logger.warn("Inbound RPC failed", arguments.exception)
+                        log.warn("Inbound RPC failed", arguments.exception)
                         sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, arguments)
                     }
                 }
@@ -298,11 +296,11 @@ class RPCServer(
         artemisMessage.acknowledge()
     }
 
-    private fun invokeRpc(context: RpcAuthContext, logger: Logger, methodName: String, arguments: List<Any?>): Try<Any> {
+    private fun invokeRpc(context: RpcAuthContext, methodName: String, arguments: List<Any?>): Try<Any> {
         return Try.on {
             try {
                 CURRENT_RPC_CONTEXT.set(context)
-                logger.debug { "Calling $methodName" }
+                log.debug { "Calling $methodName" }
                 val method = methodTable[methodName] ?:
                         throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
                 method.invoke(ops, *arguments.toTypedArray())
@@ -385,7 +383,43 @@ class RPCServer(
 
 // TODO replace this by creating a new CordaRPCImpl for each request, passing the context, after we fix Shell and WebServer
 @JvmField
-internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcAuthContext> = ThreadLocal()
+internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcAuthContext> = CurrentRpcContext()
+
+internal class CurrentRpcContext : ThreadLocal<RpcAuthContext>() {
+
+    override fun remove() {
+        super.remove()
+        MDC.clear()
+    }
+
+    override fun set(context: RpcAuthContext?) {
+        when {
+            context != null -> {
+                super.set(context)
+                context.invocation.mapToMDC()
+            }
+            else -> remove()
+        }
+    }
+
+    private fun InvocationContext.mapToMDC() {
+
+        MDC.put("actor_id", actor.id.value)
+        MDC.put("actor_store_id", actor.serviceId.value)
+        MDC.put("actor_owningIdentity", actor.owningLegalIdentity.toString())
+        MDC.put("invocation_id", trace.invocationId.value)
+        MDC.put("invocation_timestamp", trace.invocationId.timestamp.toString())
+        MDC.put("session_id", trace.sessionId.value)
+        MDC.put("session_timestamp", trace.sessionId.timestamp.toString())
+        externalTrace?.let {
+            MDC.put("external_invocation_id", it.invocationId.value)
+            MDC.put("external_invocation_timestamp", it.invocationId.timestamp.toString())
+            MDC.put("external_session_id", it.sessionId.value)
+            MDC.put("external_session_timestamp", it.sessionId.timestamp.toString())
+        }
+    }
+}
+
 
 /**
  * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will

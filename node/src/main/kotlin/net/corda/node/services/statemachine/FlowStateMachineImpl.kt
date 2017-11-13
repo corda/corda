@@ -23,7 +23,6 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.logging.ContextualLogger
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DatabaseTransaction
@@ -68,7 +67,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
      * is not necessary.
      */
-    override val logger: Logger = ContextualLogger(LoggerFactory.getLogger("net.corda.flow.$id"), context)
+    override val logger: Logger = LoggerFactory.getLogger("net.corda.flow.$id")
     @Transient private var resultFutureTransient: OpenFuture<R>? = openFuture()
     private val _resultFuture get() = resultFutureTransient ?: openFuture<R>().also { resultFutureTransient = it }
     /** This future will complete when the call method returns. */
