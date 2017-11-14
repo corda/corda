@@ -44,15 +44,8 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.NetworkMapCacheImpl
-import net.corda.node.services.network.NodeInfoWatcher
-import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.persistence.*
 import net.corda.node.services.network.*
-import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.persistence.DBTransactionMappingStorage
-import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
@@ -65,6 +58,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.NetworkParameters
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
@@ -137,7 +131,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
-    protected val networkMapClient: NetworkMapClient? by lazy { configuration.compatibilityZoneURL?.let(::NetworkMapClient) }
+    protected val networkMapClient: NetworkMapClient? by lazy {
+        configuration.compatibilityZoneURL?.let {
+            NetworkMapClient(it, services.identityService.trustRoot)
+        }
+    }
 
     lateinit var userService: RPCUserService get
 

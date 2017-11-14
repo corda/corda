@@ -1,9 +1,19 @@
-package net.corda.core.node
+package net.corda.nodeapi
 
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
 import java.time.Duration
 import java.time.Instant
+
+/**
+ * Data class containing hash of [NetworkParameters] and network participant's [NodeInfo] hashes.
+ */
+@CordaSerializable
+data class NetworkMap(val nodeInfoHashes: List<SecureHash>, val networkParameterHash: SecureHash)
 
 /**
  * @property minimumPlatformVersion
@@ -38,3 +48,11 @@ data class NetworkParameters(
  */
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)
+
+
+/**
+ * A serialized [NetworkMap] and its signature and certificate. Enforces signature validity in order to deserialize the data
+ * contained within.
+ */
+class SignedNetworkMap(val rawNetworkMap: SerializedBytes<NetworkMap>, val signatureWithCert: DigitalSignature.WithCert)
+    : SignedData<NetworkMap>(rawNetworkMap, signatureWithCert)

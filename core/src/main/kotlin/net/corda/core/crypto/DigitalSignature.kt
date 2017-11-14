@@ -1,10 +1,13 @@
 package net.corda.core.crypto
 
+import net.corda.core.internal.cert
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
+import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidKeyException
 import java.security.PublicKey
 import java.security.SignatureException
+import java.security.cert.X509Certificate
 
 // TODO: Is there a use-case for bare DigitalSignature, or is everything a DigitalSignature.WithKey? If there's no
 //       actual use-case, we should merge the with key version into the parent class. In that case CompositeSignatureWithKeys
@@ -46,6 +49,10 @@ open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
         fun isValid(content: ByteArray) = by.isValid(content, this)
-        fun withoutKey() : DigitalSignature = DigitalSignature(this.bytes)
+
+        fun withoutKey(): DigitalSignature = DigitalSignature(this.bytes)
     }
+
+    /** A digital signature that identifies who the public key is owned by, and the certificate which provides prove of the identity */
+    class WithCert(val certificate: X509Certificate, val signatureBytes: ByteArray) : WithKey(certificate.publicKey, signatureBytes)
 }

@@ -12,7 +12,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.schemas.NodeInfoSchemaV1
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
@@ -25,6 +24,7 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.nodeapi.NotaryInfo
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
