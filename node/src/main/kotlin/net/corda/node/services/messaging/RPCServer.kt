@@ -476,8 +476,8 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     }
 
     override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
-        val observableId = InvocationId.newInstance()
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
+        val observableId = observableContext.invocationId
         output.writeInvocationId(observableId)
         val observableWithSubscription = ObservableSubscription(
                 // We capture [observableContext] in the subscriber. Note that all synchronisation/kryo borrowing

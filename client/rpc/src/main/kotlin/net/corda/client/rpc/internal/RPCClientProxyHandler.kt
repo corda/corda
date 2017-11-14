@@ -214,6 +214,7 @@ class RPCClientProxyHandler(
         if (sessionAndConsumer!!.session.isClosed) {
             throw RPCException("RPC Proxy is closed")
         }
+        // TODO sollecitom inspect
         val trace = Trace.newInstance()
         callSiteMap?.set(trace.invocationId, Throwable("<Call site of root RPC '${method.name}'>"))
         try {

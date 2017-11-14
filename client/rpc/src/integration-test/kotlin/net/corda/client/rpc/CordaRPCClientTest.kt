@@ -1,9 +1,8 @@
 package net.corda.client.rpc
 
+import net.corda.core.context.*
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.*
 import net.corda.core.utilities.OpaqueBytes
@@ -22,9 +21,11 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
+import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity
 import net.corda.testing.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
@@ -45,8 +46,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null
 
-    private fun login(username: String, password: String) {
-        connection = client.start(username, password)
+    private fun login(username: String, password: String, externalTrace: Trace? = null, impersonatedActor: Actor? = null) {
+        connection = client.start(username, password, externalTrace, impersonatedActor)
     }
 
     @Before
@@ -132,7 +133,9 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
 
     @Test
     fun `flow initiator via RPC`() {
-        login(rpcUser.username, rpcUser.password)
+        val externalTrace = Trace.newInstance()
+        val impersonatedActor = Actor(Actor.Id("Mark Dadada"), AuthServiceId("Test"), owningLegalIdentity = BOB.name)
+        login(rpcUser.username, rpcUser.password, externalTrace, impersonatedActor)
         val proxy = connection!!.proxy
         var countRpcFlows = 0
         var countShellFlows = 0
@@ -143,6 +146,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
                     context.origin is Origin.RPC -> countRpcFlows++
                     context.origin is Origin.Shell -> countShellFlows++
                 }
+                assertThat(context.externalTrace).isEqualTo(externalTrace)
+                assertThat(context.impersonatedActor).isEqualTo(impersonatedActor)
             }
         }
         val nodeIdentity = node.info.chooseIdentity()

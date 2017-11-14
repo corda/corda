@@ -3,6 +3,7 @@ package net.corda.client.rpc
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.internal.effectiveSerializationEnv
@@ -100,7 +101,7 @@ class CordaRPCClient @JvmOverloads constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     fun start(username: String, password: String): CordaRPCConnection {
-        return start(username, password, null)
+        return start(username, password, null, null)
     }
 
     /**
@@ -114,8 +115,8 @@ class CordaRPCClient @JvmOverloads constructor(
      * @param externalTrace external [Trace] for correlation.
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
-    fun start(username: String, password: String, externalTrace: Trace?): CordaRPCConnection {
-        return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password, externalTrace))
+    fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?): CordaRPCConnection {
+        return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password, externalTrace, impersonatedActor))
     }
 
     /**
