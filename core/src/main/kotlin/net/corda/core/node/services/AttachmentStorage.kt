@@ -46,6 +46,13 @@ interface AttachmentStorage {
     fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId
 
     /**
+     * Inserts or returns Attachment Id of attachment. Does not throw an exception if already uploaded.
+     * @param jar [InputStream] of Jar file
+     * @return [AttachmentId] of uploaded attachment
+     */
+    fun importOrGetAttachment(jar: InputStream): AttachmentId
+
+    /**
      * Searches attachment using given criteria and optional sort rules
      * @param criteria Query criteria to use as a filter
      * @param sorting Sorting definition, if not given, order is undefined
@@ -53,5 +60,12 @@ interface AttachmentStorage {
      * @return List of AttachmentId of attachment matching criteria, sorted according to given sorting parameter
      */
     fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort? = null): List<AttachmentId>
+
+    /**
+     * Searches for an attachment already in the store
+     * @param attachmentId The attachment Id
+     * @return true if it's in there
+     */
+    fun hasAttachment(attachmentId: AttachmentId): Boolean
 }
 
