@@ -68,7 +68,7 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         val networkMapEntity = getCurrentNetworkMapEntity(getNetworkMapWithNodeInfoAndCsrHint(session))
         if (networkMapEntity != null) {
             networkMapEntity.nodeInfoList.filter({
-                certificateStatuses == null || certificateStatuses.isEmpty() || certificateStatuses.contains(it.certificateSigningRequest?.certificateData?.certificateStatus)
+                certificateStatuses.isEmpty() || certificateStatuses.contains(it.certificateSigningRequest?.certificateData?.certificateStatus)
             }).map { SecureHash.parse(it.nodeInfoHash) }
         } else {
             emptyList()

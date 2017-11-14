@@ -57,7 +57,7 @@ interface CertificationRequestStorage {
     fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String)
 
     /**
-     * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request status to [RequestStatus.Signed].
+     * Store certificate path with [requestId], this will store the encoded [CertPath] and transit request status to [RequestStatus.SIGNED].
      * @param requestId id of the certificate signing request
      * @param signedBy authority (its identifier) signing this request.
      * @throws IllegalArgumentException if request is not found or not in Approved state.
@@ -71,16 +71,10 @@ sealed class CertificateResponse {
     data class Unauthorised(val message: String) : CertificateResponse()
 }
 
-/**
- * Describes certificate status
- */
-enum class CertificateStatus {
-    VALID, SUSPENDED, REVOKED
+enum class RequestStatus {
+    NEW, APPROVED, REJECTED, SIGNED
 }
 
-/**
- * Describes entire certificate signing request status
- */
-enum class RequestStatus {
-    New, Approved, Rejected, Signed
+enum class CertificateStatus {
+    VALID, SUSPENDED, REVOKED
 }

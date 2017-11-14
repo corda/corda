@@ -46,7 +46,7 @@ class DBCertificateRequestStorageTest : TestBase() {
         assertNotNull(storage.getRequest(requestId)).apply {
             assertEquals(request, this.request)
         }
-        assertThat(storage.getRequests(RequestStatus.New).map { it.requestId }).containsOnly(requestId)
+        assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId)
     }
 
     @Test
@@ -55,7 +55,7 @@ class DBCertificateRequestStorageTest : TestBase() {
         // Add request to DB.
         val requestId = storage.saveRequest(request)
         // Pending request should equals to 1.
-        assertEquals(1, storage.getRequests(RequestStatus.New).size)
+        assertEquals(1, storage.getRequests(RequestStatus.NEW).size)
         // Certificate should be empty.
         assertNull(storage.getRequest(requestId)!!.certData)
         // Store certificate to DB.
@@ -63,7 +63,7 @@ class DBCertificateRequestStorageTest : TestBase() {
         // Check request is not ready yet.
         // assertTrue(storage.getResponse(requestId) is CertificateResponse.NotReady)
         // New request should be empty.
-        assertTrue(storage.getRequests(RequestStatus.New).isEmpty())
+        assertTrue(storage.getRequests(RequestStatus.NEW).isEmpty())
     }
 
     @Test
@@ -91,15 +91,15 @@ class DBCertificateRequestStorageTest : TestBase() {
         // Add request to DB.
         val requestId = storage.saveRequest(csr)
         // New request should equals to 1.
-        assertEquals(1, storage.getRequests(RequestStatus.New).size)
+        assertEquals(1, storage.getRequests(RequestStatus.NEW).size)
         // Certificate should be empty.
         assertNull(storage.getRequest(requestId)!!.certData)
         // Store certificate to DB.
         storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         // Check request is not ready yet.
-        assertEquals(RequestStatus.Approved, storage.getRequest(requestId)!!.status)
+        assertEquals(RequestStatus.APPROVED, storage.getRequest(requestId)!!.status)
         // New request should be empty.
-        assertTrue(storage.getRequests(RequestStatus.New).isEmpty())
+        assertTrue(storage.getRequests(RequestStatus.NEW).isEmpty())
         // Sign certificate
         storage.putCertificatePath(requestId, JcaPKCS10CertificationRequest(csr).run {
             val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -146,21 +146,21 @@ class DBCertificateRequestStorageTest : TestBase() {
     fun `reject request`() {
         val requestId = storage.saveRequest(createRequest("BankA").first)
         storage.rejectRequest(requestId, DOORMAN_SIGNATURE, "Because I said so!")
-        assertThat(storage.getRequests(RequestStatus.New)).isEmpty()
+        assertThat(storage.getRequests(RequestStatus.NEW)).isEmpty()
         assertThat(storage.getRequest(requestId)!!.remark).isEqualTo("Because I said so!")
     }
 
     @Test
     fun `request with the same legal name as a pending request`() {
         val requestId1 = storage.saveRequest(createRequest("BankA").first)
-        assertThat(storage.getRequests(RequestStatus.New).map { it.requestId }).containsOnly(requestId1)
+        assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId1)
         val requestId2 = storage.saveRequest(createRequest("BankA").first)
-        assertThat(storage.getRequests(RequestStatus.New).map { it.requestId }).containsOnly(requestId1)
-        assertEquals(RequestStatus.Rejected, storage.getRequest(requestId2)!!.status)
+        assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId1)
+        assertEquals(RequestStatus.REJECTED, storage.getRequest(requestId2)!!.status)
         assertThat(storage.getRequest(requestId2)!!.remark).containsIgnoringCase("duplicate")
         // Make sure the first request is processed properly
         storage.approveRequest(requestId1, DOORMAN_SIGNATURE)
-        assertThat(storage.getRequest(requestId1)!!.status).isEqualTo(RequestStatus.Approved)
+        assertThat(storage.getRequest(requestId1)!!.status).isEqualTo(RequestStatus.APPROVED)
     }
 
     @Test
@@ -176,9 +176,9 @@ class DBCertificateRequestStorageTest : TestBase() {
         val requestId1 = storage.saveRequest(createRequest("BankA").first)
         storage.rejectRequest(requestId1, DOORMAN_SIGNATURE, "Because I said so!")
         val requestId2 = storage.saveRequest(createRequest("BankA").first)
-        assertThat(storage.getRequests(RequestStatus.New).map { it.requestId }).containsOnly(requestId2)
+        assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId2)
         storage.approveRequest(requestId2, DOORMAN_SIGNATURE)
-        assertThat(storage.getRequest(requestId2)!!.status).isEqualTo(RequestStatus.Approved)
+        assertThat(storage.getRequest(requestId2)!!.status).isEqualTo(RequestStatus.APPROVED)
     }
 
     @Test
@@ -194,10 +194,10 @@ class DBCertificateRequestStorageTest : TestBase() {
         persistence.transaction {
             val auditReader = AuditReaderFactory.get(persistence.entityManagerFactory.createEntityManager())
             val newRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 1)
-            assertEquals(RequestStatus.New, newRevision.status)
+            assertEquals(RequestStatus.NEW, newRevision.status)
             assertTrue(newRevision.modifiedBy.isEmpty())
             val approvedRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 2)
-            assertEquals(RequestStatus.Approved, approvedRevision.status)
+            assertEquals(RequestStatus.APPROVED, approvedRevision.status)
             assertEquals(approver, approvedRevision.modifiedBy.first())
         }
     }

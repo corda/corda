@@ -29,6 +29,8 @@ class NetworkMapSignerTest : TestBase() {
         val signedNodeInfoHashes = listOf(SecureHash.randomSHA256(), SecureHash.randomSHA256())
         val detachedNodeInfoHashes = listOf(SecureHash.randomSHA256())
         val networkMapParameters = createNetworkParameters()
+        whenever(networkMapStorage.getCurrentNetworkMap())
+                .thenReturn(SignedNetworkMap(NetworkMap(signedNodeInfoHashes.map { it.toString() }, "Dummy"), mock()))
         whenever(networkMapStorage.getCurrentNetworkMapNodeInfoHashes(any())).thenReturn(signedNodeInfoHashes)
         whenever(networkMapStorage.getDetachedSignedAndValidNodeInfoHashes()).thenReturn(detachedNodeInfoHashes)
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(networkMapParameters)

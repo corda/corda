@@ -68,7 +68,7 @@ class DBNetworkMapStorageTest : TestBase() {
         nodeInfoStorage.signNodeInfo(nodeInfoHash, signature)
 
         // Create network parameters
-        val networkParametersHash = networkMapStorage.putNetworkParameters(testNetworkParameters(emptyList<NotaryInfo>()))
+        val networkParametersHash = networkMapStorage.putNetworkParameters(testNetworkParameters(emptyList()))
 
         val signatureData = SignatureAndCertPath(signature, certPath)
         val signedNetworkMap = SignedNetworkMap(NetworkMap(listOf(nodeInfoHash.toString()), networkParametersHash.toString()), signatureData)

@@ -2,7 +2,7 @@ package com.r3cev.sgx.utils
 
 import java.util.*
 
-
+// TODO this code (incl. the hsm_errors file) is duplicated with the Network-Management module
 object HsmErrors {
     val errors: Map<Int, String> by lazy(HsmErrors::load)
 

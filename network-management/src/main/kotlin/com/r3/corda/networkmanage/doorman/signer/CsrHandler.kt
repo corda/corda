@@ -15,7 +15,7 @@ interface CsrHandler {
 
 class DefaultCsrHandler(private val storage: CertificationRequestStorage, private val signer: LocalSigner?) : CsrHandler {
     override fun processApprovedRequests() {
-        storage.getRequests(RequestStatus.Approved)
+        storage.getRequests(RequestStatus.APPROVED)
                 .forEach { processRequest(it.requestId, it.request) }
     }
 
@@ -35,9 +35,9 @@ class DefaultCsrHandler(private val storage: CertificationRequestStorage, privat
     override fun getResponse(requestId: String): CertificateResponse {
         val response = storage.getRequest(requestId)
         return when (response?.status) {
-            RequestStatus.New, RequestStatus.Approved, null -> CertificateResponse.NotReady
-            RequestStatus.Rejected -> CertificateResponse.Unauthorised(response.remark ?: "Unknown reason")
-            RequestStatus.Signed -> CertificateResponse.Ready(response.certData?.certPath?: throw IllegalArgumentException("Certificate should not be null."))
+            RequestStatus.NEW, RequestStatus.APPROVED, null -> CertificateResponse.NotReady
+            RequestStatus.REJECTED -> CertificateResponse.Unauthorised(response.remark ?: "Unknown reason")
+            RequestStatus.SIGNED -> CertificateResponse.Ready(response.certData?.certPath ?: throw IllegalArgumentException("Certificate should not be null."))
         }
     }
 }
@@ -55,7 +55,7 @@ class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: Ce
     override fun processApprovedRequests() {
         jiraClient.getApprovedRequests().forEach { (id, approvedBy) -> storage.approveRequest(id, approvedBy) }
         delegate.processApprovedRequests()
-        val signedRequests = storage.getRequests(RequestStatus.Signed).mapNotNull {
+        val signedRequests = storage.getRequests(RequestStatus.SIGNED).mapNotNull {
             it.certData?.certPath.let { certs -> it.requestId to certs!! }
         }.toMap()
         jiraClient.updateSignedRequests(signedRequests)

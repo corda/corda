@@ -25,7 +25,7 @@ abstract class TestBase {
 
     protected fun certificateSigningRequestEntity(
             requestId: String = SecureHash.randomSHA256().toString(),
-            status: RequestStatus = RequestStatus.New,
+            status: RequestStatus = RequestStatus.NEW,
             legalName: String = "TestLegalName",
             modifiedBy: List<String> = emptyList(),
             modifiedAt: Instant = Instant.now(),
@@ -47,7 +47,7 @@ abstract class TestBase {
 
     protected fun certificateSigningRequest(
             requestId: String = SecureHash.randomSHA256().toString(),
-            status: RequestStatus = RequestStatus.New,
+            status: RequestStatus = RequestStatus.NEW,
             legalName: String = "TestLegalName",
             remark: String = "Test remark",
             request: PKCS10CertificationRequest = mock(),

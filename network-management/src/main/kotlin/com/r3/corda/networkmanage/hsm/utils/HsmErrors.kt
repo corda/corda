@@ -7,6 +7,7 @@ import java.util.*
  * CryptoServer error translator object.
  * It holds mapping between CryptoServer error code to its human readable description.
  */
+// TODO this code (incl. the hsm_errors file) is duplicated with the SGX module
 object HsmErrors {
     val errors: Map<Int, String> by lazy(HsmErrors::load)
 

@@ -27,8 +27,8 @@ class DefaultRequestProcessorTest : TestBase() {
 
         val requestStorage: CertificationRequestStorage = mock {
             on { getRequest("New") }.thenReturn(certificateSigningRequest())
-            on { getRequest("Signed") }.thenReturn(certificateSigningRequest(status = RequestStatus.Signed, certData = certificateData("", CertificateStatus.VALID, buildCertPath(cert.toX509Certificate()))))
-            on { getRequest("Rejected") }.thenReturn(certificateSigningRequest(status = RequestStatus.Rejected, remark = "Random reason"))
+            on { getRequest("Signed") }.thenReturn(certificateSigningRequest(status = RequestStatus.SIGNED, certData = certificateData("", CertificateStatus.VALID, buildCertPath(cert.toX509Certificate()))))
+            on { getRequest("Rejected") }.thenReturn(certificateSigningRequest(status = RequestStatus.REJECTED, remark = "Random reason"))
         }
         val signer: LocalSigner = mock()
         val requestProcessor = DefaultCsrHandler(requestStorage, signer)
@@ -46,10 +46,10 @@ class DefaultRequestProcessorTest : TestBase() {
         val request3 = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "Test3", country = "GB"), "my@email.com", Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
 
         val requestStorage: CertificationRequestStorage = mock {
-            on { getRequests(RequestStatus.Approved) }.thenReturn(listOf(
-                    certificateSigningRequest(requestId = "1", request = request1, status = RequestStatus.Approved),
-                    certificateSigningRequest(requestId = "2", request = request2, status = RequestStatus.Approved),
-                    certificateSigningRequest(requestId = "3", request = request3, status = RequestStatus.Approved)
+            on { getRequests(RequestStatus.APPROVED) }.thenReturn(listOf(
+                    certificateSigningRequest(requestId = "1", request = request1, status = RequestStatus.APPROVED),
+                    certificateSigningRequest(requestId = "2", request = request2, status = RequestStatus.APPROVED),
+                    certificateSigningRequest(requestId = "3", request = request3, status = RequestStatus.APPROVED)
             ))
         }
         val signer: LocalSigner = mock()

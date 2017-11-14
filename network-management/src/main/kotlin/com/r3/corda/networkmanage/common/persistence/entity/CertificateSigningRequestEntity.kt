@@ -25,7 +25,7 @@ class CertificateSigningRequestEntity(
         @Audited
         @Column(name = "status", nullable = false)
         @Enumerated(EnumType.STRING)
-        val status: RequestStatus = RequestStatus.New,
+        val status: RequestStatus = RequestStatus.NEW,
 
         @Audited
         @Column(name = "modified_by", length = 512)

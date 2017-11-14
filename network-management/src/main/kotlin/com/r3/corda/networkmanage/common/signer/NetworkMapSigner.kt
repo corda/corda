@@ -35,7 +35,7 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage,
         val nodeInfoHashes = currentNetworkMapValidNodeInfo + detachedValidNodeInfo
         val networkParameters = networkMapStorage.getLatestNetworkParameters()
         val networkMap = NetworkMap(nodeInfoHashes.map { it.toString() }, networkParameters.serialize().hash.toString())
-        if (currentSignedNetworkMap == null || networkMap != currentSignedNetworkMap.networkMap) {
+        if (networkMap != currentSignedNetworkMap.networkMap) {
             val digitalSignature = signer.sign(networkMap.serialize().bytes)
             require(digitalSignature != null) { "Error while signing network map." }
             val signedHashedNetworkMap = SignedNetworkMap(networkMap, digitalSignature!!)

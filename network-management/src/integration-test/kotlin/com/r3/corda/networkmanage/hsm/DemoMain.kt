@@ -23,12 +23,12 @@ import java.util.*
  */
 fun main(args: Array<String>) {
     run(Parameters(
-            dataSourceProperties = makeTestDataSourceProperties("localhost"),
+            dataSourceProperties = makeTestDataSourceProperties(),
             databaseProperties = makeNotInitialisingTestDatabaseProperties()
     ))
 }
 
-private fun makeTestDataSourceProperties(nodeName: String): Properties {
+private fun makeTestDataSourceProperties(): Properties {
     val props = Properties()
     props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
     props.setProperty("dataSource.url", "jdbc:h2:tcp://$HOST:$H2_TCP_PORT/mem:$DB_NAME;DB_CLOSE_DELAY=-1")

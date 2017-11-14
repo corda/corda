@@ -8,6 +8,9 @@ import java.io.Console
 import java.nio.file.Path
 import kotlin.reflect.full.memberProperties
 
+/**
+ * Performs user authentication against the HSM
+ */
 class Authenticator(private val provider: CryptoServerProvider,
                     private val mode: AuthMode = AuthMode.PASSWORD,
                     private val autoUsername: String? = null,

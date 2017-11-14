@@ -20,7 +20,7 @@ class DBSignedCertificateRequestStorage(database: CordaPersistence) : SignedCert
     }
 
     override fun getApprovedRequests(): List<ApprovedCertificateRequestData> {
-        return storage.getRequests(RequestStatus.Approved).map { it.toRequestData() }
+        return storage.getRequests(RequestStatus.APPROVED).map { it.toRequestData() }
     }
 
     private fun CertificateSigningRequest.toRequestData() = ApprovedCertificateRequestData(requestId, request)

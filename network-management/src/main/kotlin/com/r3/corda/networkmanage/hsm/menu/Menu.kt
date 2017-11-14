@@ -1,5 +1,9 @@
 package com.r3.corda.networkmanage.hsm.menu
 
+/**
+ * Single menu item described by the selection [key], label associated with this item, action to be executed on response
+ * to the item selection and termination flag used to decide whether to loop after action completion.
+ */
 data class MenuItem(val key: String, val label: String, val action: () -> Unit, val isTerminating: Boolean = false)
 
 /**

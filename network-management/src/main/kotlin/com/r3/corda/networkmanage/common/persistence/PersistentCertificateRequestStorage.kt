@@ -22,7 +22,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         return database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
             val request = singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
                 val requestIdEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
-                val statusEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), RequestStatus.Approved)
+                val statusEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), RequestStatus.APPROVED)
                 builder.and(requestIdEq, statusEq)
             }
             request ?: throw IllegalArgumentException("Cannot retrieve 'APPROVED' certificate signing request for request id: $requestId")
@@ -30,7 +30,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             val certificateSigningRequest = request.copy(
                     modifiedBy = signedBy,
                     modifiedAt = Instant.now(),
-                    status = RequestStatus.Signed)
+                    status = RequestStatus.SIGNED)
             session.merge(certificateSigningRequest)
             val certificateDataEntity = CertificateDataEntity(
                     publicKeyHash = publicKeyHash,
@@ -51,7 +51,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
                     requestBytes = request.encoded,
                     remark = rejectReason,
                     modifiedBy = emptyList(),
-                    status = if (rejectReason == null) RequestStatus.New else RequestStatus.Rejected
+                    status = if (rejectReason == null) RequestStatus.NEW else RequestStatus.REJECTED
             ))
         }
         return requestId
@@ -61,13 +61,13 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         return database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
             val request = singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
                 builder.and(builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId),
-                        builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), RequestStatus.New))
+                        builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), RequestStatus.NEW))
             }
             request ?: throw IllegalArgumentException("Error when approving request with id: $requestId. Request does not exist or its status is not NEW.")
             val update = request.copy(
                     modifiedBy = listOf(approvedBy),
                     modifiedAt = Instant.now(),
-                    status = RequestStatus.Approved)
+                    status = RequestStatus.APPROVED)
             session.merge(update)
         }
     }
@@ -81,7 +81,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             val update = request.copy(
                     modifiedBy = listOf(rejectedBy),
                     modifiedAt = Instant.now(),
-                    status = RequestStatus.Rejected,
+                    status = RequestStatus.REJECTED,
                     remark = rejectReason
             )
             session.merge(update)
@@ -121,7 +121,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             }
         }
         val duplicates = session.createQuery(query).resultList.filter {
-            it.status == RequestStatus.New || it.status == RequestStatus.Approved || it.certificateData?.certificateStatus == CertificateStatus.VALID
+            it.status == RequestStatus.NEW || it.status == RequestStatus.APPROVED || it.certificateData?.certificateStatus == CertificateStatus.VALID
         }
         return if (duplicates.isEmpty()) {
             Pair(legalName.x500Name, null)
