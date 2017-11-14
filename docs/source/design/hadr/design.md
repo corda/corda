@@ -1,6 +1,6 @@
 ![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
 
-# High Availability and Disaster Recovery for Corda: A Phased Approach
+# High Availability Support for Corda: A Phased Approach
 
 -------------------
 DOCUMENT MANAGEMENT
@@ -53,6 +53,7 @@ Thus, HA is essential for enterprise Corda and providing help to administrators 
 * Goals
 * Non-goals (eg. out of scope)
 * Reference(s) to similar or related work
+* For now DR is only supported where performant synchronous replication is feasible i.e. sites only a few miles apart.
 
 ## Timeline 
 
@@ -63,6 +64,8 @@ On the timescales available for the current production pilot deployments we clea
 Instead, I suggest that we can only achieve the simplest state of a standby Corda installation only by January 5th and even this is contingent on other enterprise features, such as external database and network map stabilisation being completed on this timescale, plus any issues raised by testing.
 
 For the March 31st timeline, I hope that we can achieve a more fully automatic node failover state, with the Artemis broker running as a cluster too. I include a diagram of a fully scaled Corda for completeness and so that I can discuss what work is re-usable/throw away.
+
+With regards to DR it is unclear how this would work where synchronous replication is not feasible. At this point we can only investigate approaches as an aside to the main thrust of work for HA support. In the synchronous replication mode it is assumed that the file and database replication can be used to ensure a cold DR backup.
 
 ## Requirements
 
@@ -128,3 +131,5 @@ To this end I would suggest packages of work that include:
 # The Future
 
 Hopefully, most of the work from the automatic failover mode can be modified when we move to a full hot-hot sharding of flows across nodes. The mastering solution will need to be modified to negotiate finer grained claim on individual flows, rather than stopping the whole of Node. Also, the routing of messages will have to be thought about so that they go to the correct node for processing, but failover if the node dies. However, most of the other health monitoring and operational aspects should be reusable.
+
+We also need to look at DR issues and in particular how we might handle asynchronous replication and possibly alternative recovery/reconciliation mechanisms.
