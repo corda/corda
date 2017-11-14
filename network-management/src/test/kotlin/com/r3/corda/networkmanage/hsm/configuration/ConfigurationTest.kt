@@ -1,5 +1,6 @@
 package com.r3.corda.networkmanage.hsm.configuration
 
+import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.typesafe.config.ConfigException
 import org.junit.Test
@@ -7,7 +8,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class ConfigurationTest {
+class ConfigurationTest : TestBase() {
     private val validConfigPath = File(javaClass.getResource("/hsm.conf").toURI()).absolutePath
     private val invalidConfigPath = File(javaClass.getResource("/hsm_fail.conf").toURI()).absolutePath
 

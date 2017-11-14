@@ -1,12 +1,16 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.utils.toConfigWithOptions
+import com.r3.corda.networkmanage.doorman.DoormanParameters.Companion.DEFAULT_APPROVE_INTERVAL
+import com.r3.corda.networkmanage.doorman.DoormanParameters.Companion.DEFAULT_SIGN_INTERVAL
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.config.parseAs
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.util.*
 
 data class DoormanParameters(val basedir: Path,
@@ -23,6 +27,9 @@ data class DoormanParameters(val basedir: Path,
                              val jiraConfig: JiraConfig? = null,
                              val keystorePath: Path? = null, // basedir / "certificates" / "caKeystore.jks",
                              val rootStorePath: Path? = null, // basedir / "certificates" / "rootCAKeystore.jks"
+                             // TODO Change these to Duration in the future
+                             val approveInterval: Long = DEFAULT_APPROVE_INTERVAL,
+                             val signInterval: Long = DEFAULT_SIGN_INTERVAL,
                              val initialNetworkParameters: Path
 ) {
     enum class Mode {
@@ -36,6 +43,11 @@ data class DoormanParameters(val basedir: Path,
             val password: String,
             val doneTransitionCode: Int
     )
+
+    companion object {
+        val DEFAULT_APPROVE_INTERVAL = 5L // seconds
+        val DEFAULT_SIGN_INTERVAL = 5L // seconds
+    }
 }
 
 fun parseParameters(vararg args: String): DoormanParameters {
@@ -51,6 +63,8 @@ fun parseParameters(vararg args: String): DoormanParameters {
         accepts("rootPrivateKeyPassword", "Root private key password.").withRequiredArg().describedAs("password")
         accepts("host", "Doorman web service host override").withRequiredArg().describedAs("hostname")
         accepts("port", "Doorman web service port override").withRequiredArg().ofType(Int::class.java).describedAs("port number")
+        accepts("approveInterval", "Time interval (in seconds) in which CSRs are approved (default: ${DEFAULT_APPROVE_INTERVAL})").withRequiredArg().ofType(Long::class.java).defaultsTo(DEFAULT_APPROVE_INTERVAL)
+        accepts("signInterval", "Time interval (in seconds) in which network map is signed (default: ${DEFAULT_SIGN_INTERVAL})").withRequiredArg().ofType(Long::class.java).defaultsTo(DEFAULT_SIGN_INTERVAL)
         accepts("initialNetworkParameters", "initial network parameters filepath").withRequiredArg().describedAs("The initial network map").describedAs("filepath")
     }
 

@@ -1,15 +1,20 @@
 package com.r3.corda.networkmanage.hsm
 
+import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
+import com.r3.corda.networkmanage.common.persistence.PersistentNodeInfoStorage
 import com.r3.corda.networkmanage.common.persistence.SchemaService
+import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
 import com.r3.corda.networkmanage.hsm.configuration.Parameters
 import com.r3.corda.networkmanage.hsm.configuration.parseParameters
+import com.r3.corda.networkmanage.hsm.generator.CertificateNameAndPass
 import com.r3.corda.networkmanage.hsm.generator.KeyCertificateGenerator
 import com.r3.corda.networkmanage.hsm.menu.Menu
-import com.r3.corda.networkmanage.hsm.persistence.CertificateRequestData
+import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
-import com.r3.corda.networkmanage.hsm.signer.HsmSigner
+import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
+import com.r3.corda.networkmanage.hsm.signer.HsmNetworkMapSigner
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
 import net.corda.node.utilities.configureDatabase
 
@@ -25,30 +30,42 @@ fun run(parameters: Parameters) {
             // Identity service not needed
             throw UnsupportedOperationException()
         }, SchemaService())
-
-        val storage = DBSignedCertificateRequestStorage(database)
-        val provider = createProvider()
-        val sign: (List<CertificateRequestData>) -> Unit = {
-            val signer = HsmSigner(
-                    storage,
-                    certificateName,
-                    privateKeyPass,
+        val csrStorage = DBSignedCertificateRequestStorage(database)
+        val networkMapStorage = PersistentNetworkMapStorage(database)
+        val nodeInfoStorage = PersistentNodeInfoStorage(database)
+        val hsmNetworkMapSigningThread = HsmNetworkMapSigner(
+                networkMapStorage,
+                nodeInfoStorage,
+                networkMapCertificateName,
+                networkMapPrivateKeyPass,
+                keyStorePass,
+                Authenticator(createProvider(), AuthMode.KEY_FILE, autoUsername, authKeyFilePath, authKeyFilePass, signAuthThreshold)).start()
+        val sign: (List<ApprovedCertificateRequestData>) -> Unit = {
+            val signer = HsmCsrSigner(
+                    csrStorage,
+                    csrCertificateName,
+                    csrPrivateKeyPass,
                     rootCertificateName,
                     validDays,
                     keyStorePass,
-                    Authenticator(provider, authMode, autoUsername, authKeyFilePath, authKeyFilePass, signAuthThreshold))
+                    Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePass, signAuthThreshold))
             signer.sign(it)
         }
         Menu().withExceptionHandler(::processError).addItem("1", "Generate root and intermediate certificates", {
             if (confirmedKeyGen()) {
                 val generator = KeyCertificateGenerator(
-                        Authenticator(provider, authMode, autoUsername, authKeyFilePath, authKeyFilePass, keyGenAuthThreshold),
+                        Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePass, keyGenAuthThreshold),
                         keySpecifier,
                         keyGroup)
-                generator.generateAllCertificates(keyStorePass, certificateName, privateKeyPass, rootCertificateName, rootPrivateKeyPass, validDays)
+                generator.generateAllCertificates(
+                        keyStorePass,
+                        listOf(CertificateNameAndPass(csrCertificateName, csrPrivateKeyPass), CertificateNameAndPass(networkMapCertificateName, networkMapPrivateKeyPass)),
+                        rootCertificateName,
+                        rootPrivateKeyPass,
+                        validDays)
             }
         }).addItem("2", "Sign all approved and unsigned CSRs", {
-            val approved = storage.getApprovedRequests()
+            val approved = csrStorage.getApprovedRequests()
             if (approved.isNotEmpty()) {
                 if (confirmedSign(approved)) {
                     sign(approved)
@@ -57,7 +74,7 @@ fun run(parameters: Parameters) {
                 println("There is no approved CSR")
             }
         }).addItem("3", "List all approved and unsigned CSRs", {
-            val approved = storage.getApprovedRequests()
+            val approved = csrStorage.getApprovedRequests()
             if (approved.isNotEmpty()) {
                 println("Approved CSRs:")
                 approved.forEachIndexed { index, item -> println("${index + 1}. ${item.request.subject}") }
@@ -77,6 +94,7 @@ fun run(parameters: Parameters) {
                 println("There is no approved and unsigned CSR")
             }
         }).showMenu()
+        hsmNetworkMapSigningThread.stop()
     }
 }
 
@@ -85,7 +103,7 @@ private fun processError(exception: Exception) {
     println("An error occured: ${processed.message}")
 }
 
-private fun confirmedSign(selectedItems: List<CertificateRequestData>): Boolean {
+private fun confirmedSign(selectedItems: List<ApprovedCertificateRequestData>): Boolean {
     println("Are you sure you want to sign the following requests:")
     selectedItems.forEachIndexed { index, data ->
         println("${index + 1} ${data.request.subject}")
@@ -102,7 +120,7 @@ private fun confirmedKeyGen(): Boolean {
     return result
 }
 
-private fun getSelection(toSelect: List<CertificateRequestData>): List<CertificateRequestData> {
+private fun getSelection(toSelect: List<ApprovedCertificateRequestData>): List<ApprovedCertificateRequestData> {
     print("CSRs to be signed (comma separated list): ")
     val line = readLine()
     if (line == null) {

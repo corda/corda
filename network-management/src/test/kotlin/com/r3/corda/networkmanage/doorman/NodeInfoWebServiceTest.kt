@@ -4,7 +4,11 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
+import com.r3.corda.networkmanage.TestBase
+import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
+import com.r3.corda.networkmanage.common.signer.NetworkMap
+import com.r3.corda.networkmanage.common.signer.SignedNetworkMap
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
@@ -12,19 +16,15 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.testing.common.internal.testNetworkParameters
 import org.bouncycastle.asn1.x500.X500Name
-import org.codehaus.jackson.map.ObjectMapper
-import org.junit.BeforeClass
 import org.junit.Test
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -34,30 +34,11 @@ import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class NodeInfoWebServiceTest {
+class NodeInfoWebServiceTest : TestBase() {
     private val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(locality = "London", organisation = "R3 LTD", country = "GB", commonName = "Corda Node Root CA"), rootCAKey)
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
-
-    companion object {
-        @BeforeClass
-        @JvmStatic
-        fun initSerialization() {
-            try {
-                SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                    registerScheme(KryoServerSerializationScheme())
-                    registerScheme(AMQPServerSerializationScheme())
-                }
-                SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
-                SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
-                SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
-                SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
-            } catch (ignored: Exception) {
-                // Ignored
-            }
-        }
-    }
 
     @Test
     fun `submit nodeInfo`() {
@@ -74,8 +55,7 @@ class NodeInfoWebServiceTest {
             on { getCertificatePath(any()) }.thenReturn(certPath)
         }
 
-        DoormanServer(NetworkHostAndPort("localhost", 0),
-                NodeInfoWebService(nodeInfoStorage, testNetworkParameters(emptyList()))).use {
+        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock())).use {
             it.start()
             val registerURL = URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}/register")
             val nodeInfoAndSignature = SignedData(nodeInfo.serialize(), digitalSignature).serialize().bytes
@@ -101,8 +81,7 @@ class NodeInfoWebServiceTest {
             on { getCertificatePath(any()) }.thenReturn(certPath)
         }
 
-        DoormanServer(NetworkHostAndPort("localhost", 0),
-                NodeInfoWebService(nodeInfoStorage, testNetworkParameters(emptyList()))).use {
+        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock())).use {
             it.start()
             val registerURL = URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}/register")
             val nodeInfoAndSignature = SignedData(nodeInfo.serialize(), digitalSignature).serialize().bytes
@@ -116,18 +95,16 @@ class NodeInfoWebServiceTest {
 
     @Test
     fun `get network map`() {
-        val networkMapList = listOf(SecureHash.randomSHA256().toString(), SecureHash.randomSHA256().toString())
-        val nodeInfoStorage: NodeInfoStorage = mock {
-            on { getNodeInfoHashes() }.thenReturn(networkMapList)
+        val hashedNetworkMap = NetworkMap(listOf(SecureHash.randomSHA256().toString(), SecureHash.randomSHA256().toString()), SecureHash.randomSHA256().toString())
+        val networkMapStorage: NetworkMapStorage = mock {
+            on { getCurrentNetworkMap() }.thenReturn(SignedNetworkMap(hashedNetworkMap, mock()))
         }
-        DoormanServer(NetworkHostAndPort("localhost", 0),
-                NodeInfoWebService(nodeInfoStorage, testNetworkParameters(emptyList()))).use {
+        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage)).use {
             it.start()
             val conn = URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}").openConnection() as HttpURLConnection
-            val response = conn.inputStream.bufferedReader().use { it.readLine() }
-            val list = ObjectMapper().readValue(response, List::class.java)
-            verify(nodeInfoStorage, times(1)).getNodeInfoHashes()
-            assertEquals(networkMapList, list)
+            val signedHashedNetworkMap = conn.inputStream.readBytes().deserialize<SignedNetworkMap>()
+            verify(networkMapStorage, times(1)).getCurrentNetworkMap()
+            assertEquals(signedHashedNetworkMap.networkMap, hashedNetworkMap)
         }
     }
 
@@ -138,20 +115,20 @@ class NodeInfoWebServiceTest {
         val certPath = buildCertPath(clientCert.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
         val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
 
-        val nodeInfoHash = nodeInfo.serialize().sha256().toString()
+        val nodeInfoHash = nodeInfo.serialize().sha256()
 
         val nodeInfoStorage: NodeInfoStorage = mock {
-            on { getNodeInfo(nodeInfoHash) }.thenReturn(nodeInfo)
+            val serializedNodeInfo = nodeInfo.serialize()
+            on { getSignedNodeInfo(nodeInfoHash) }.thenReturn(SignedData(serializedNodeInfo, keyPair.sign(serializedNodeInfo)))
         }
 
-        DoormanServer(NetworkHostAndPort("localhost", 0),
-                NodeInfoWebService(nodeInfoStorage, testNetworkParameters(emptyList()))).use {
+        DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock())).use {
             it.start()
             val nodeInfoURL = URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}/$nodeInfoHash")
             val conn = nodeInfoURL.openConnection()
-            val nodeInfoResponse = conn.inputStream.readBytes().deserialize<NodeInfo>()
-            verify(nodeInfoStorage, times(1)).getNodeInfo(nodeInfoHash)
-            assertEquals(nodeInfo, nodeInfoResponse)
+            val nodeInfoResponse = conn.inputStream.readBytes().deserialize<SignedData<NodeInfo>>()
+            verify(nodeInfoStorage, times(1)).getSignedNodeInfo(nodeInfoHash)
+            assertEquals(nodeInfo, nodeInfoResponse.verified())
 
             assertFailsWith(FileNotFoundException::class) {
                 URL("http://${it.hostAndPort}/api/${NodeInfoWebService.networkMapPath}/${SecureHash.randomSHA256()}").openConnection().getInputStream()

@@ -4,12 +4,20 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
+import net.corda.core.crypto.sha256
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
+import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+
+// TODO: replace this with Crypto.hash when its available.
+/**
+ * Returns SHA256 hash of this public key
+ */
+fun PublicKey.hashString() = encoded.sha256().toString()
 
 fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Unit): Config {
     val parser = OptionParser()

@@ -1,16 +1,14 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
-import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage
+import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.common.persistence.CertificationRequestStorage.Companion.DOORMAN_SIGNATURE
-import com.r3.corda.networkmanage.common.persistence.DBCertificateRequestStorage
-import com.r3.corda.networkmanage.common.persistence.PersistenceNodeInfoStorage
-import com.r3.corda.networkmanage.common.persistence.SchemaService
+import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.doorman.DoormanServer.Companion.logger
 import com.r3.corda.networkmanage.doorman.signer.DefaultCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.JiraCsrHandler
-import com.r3.corda.networkmanage.doorman.signer.Signer
+import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.Crypto
@@ -19,7 +17,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
 import net.corda.node.utilities.*
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.eclipse.jetty.server.Server
@@ -34,6 +31,8 @@ import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.file.Path
 import java.time.Instant
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
@@ -161,16 +160,18 @@ fun startDoorman(hostAndPort: NetworkHostAndPort,
                  database: CordaPersistence,
                  approveAll: Boolean,
                  initialNetworkMapParameters: NetworkParameters,
-                 signer: Signer? = null,
+                 signer: LocalSigner? = null,
+                 approveInterval: Long,
+                 signInterval: Long,
                  jiraConfig: DoormanParameters.JiraConfig? = null): DoormanServer {
 
     logger.info("Starting Doorman server.")
 
     val requestService = if (approveAll) {
         logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
-        ApproveAllCertificateRequestStorage(DBCertificateRequestStorage(database))
+        ApproveAllCertificateRequestStorage(PersistentCertificateRequestStorage(database))
     } else {
-        DBCertificateRequestStorage(database)
+        PersistentCertificateRequestStorage(database)
     }
 
     val requestProcessor = if (jiraConfig != null) {
@@ -180,29 +181,46 @@ fun startDoorman(hostAndPort: NetworkHostAndPort,
     } else {
         DefaultCsrHandler(requestService, signer)
     }
+    val networkMapStorage = PersistentNetworkMapStorage(database)
+    val nodeInfoStorage = PersistentNodeInfoStorage(database)
 
-    val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus),
-            NodeInfoWebService(PersistenceNodeInfoStorage(database), initialNetworkMapParameters))
+    val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus), NodeInfoWebService(nodeInfoStorage, networkMapStorage, signer))
     doorman.start()
 
+    val networkMapSigner = if (signer != null) NetworkMapSigner(networkMapStorage, signer) else null
+
     // Thread process approved request periodically.
-    thread(name = "Approved Request Process Thread") {
-        while (true) {
-            try {
-                Thread.sleep(10.seconds.toMillis())
-                DoormanServer.serverStatus.lastRequestCheckTime = Instant.now()
-                requestProcessor.processApprovedRequests()
-            } catch (e: Exception) {
-                // Log the error and carry on.
-                DoormanServer.logger.error("Error encountered when approving request.", e)
-            }
+    val scheduledExecutor = Executors.newScheduledThreadPool(2)
+    val approvalThread = Runnable {
+        try {
+            DoormanServer.serverStatus.lastRequestCheckTime = Instant.now()
+            requestProcessor.processApprovedRequests()
+        } catch (e: Exception) {
+            // Log the error and carry on.
+            DoormanServer.logger.error("Error encountered when approving request.", e)
         }
     }
-    Runtime.getRuntime().addShutdownHook(thread(start = false) { doorman.close() })
+    scheduledExecutor.scheduleAtFixedRate(approvalThread, approveInterval, approveInterval, TimeUnit.SECONDS)
+    // Thread sign network map in case of change (i.e. a new node info has been added or a node info has been removed).
+    if (networkMapSigner != null) {
+        val signingThread = Runnable {
+            try {
+                networkMapSigner.signNetworkMap()
+            } catch (e: Exception) {
+                // Log the error and carry on.
+                DoormanServer.logger.error("Error encountered when processing node info changes.", e)
+            }
+        }
+        scheduledExecutor.scheduleAtFixedRate(signingThread, signInterval, signInterval, TimeUnit.SECONDS)
+    }
+    Runtime.getRuntime().addShutdownHook(thread(start = false) {
+        scheduledExecutor.shutdown()
+        doorman.close()
+    })
     return doorman
 }
 
-private fun buildLocalSigner(parameters: DoormanParameters): Signer? {
+private fun buildLocalSigner(parameters: DoormanParameters): LocalSigner? {
     return parameters.keystorePath?.let {
         // Get password from console if not in config.
         val keystorePassword = parameters.keystorePassword ?: readPassword("Keystore Password: ")
@@ -210,7 +228,7 @@ private fun buildLocalSigner(parameters: DoormanParameters): Signer? {
         val keystore = loadOrCreateKeyStore(parameters.keystorePath, keystorePassword)
         val caKeyPair = keystore.getKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, caPrivateKeyPassword)
         val caCertPath = keystore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA)
-        Signer(caKeyPair, caCertPath)
+        LocalSigner(caKeyPair, caCertPath)
     }
 }
 
@@ -218,8 +236,8 @@ private fun buildLocalSigner(parameters: DoormanParameters): Signer? {
  * This storage automatically approves all created requests.
  */
 private class ApproveAllCertificateRequestStorage(private val delegate: CertificationRequestStorage) : CertificationRequestStorage by delegate {
-    override fun saveRequest(rawRequest: PKCS10CertificationRequest): String {
-        val requestId = delegate.saveRequest(rawRequest)
+    override fun saveRequest(request: PKCS10CertificationRequest): String {
+        val requestId = delegate.saveRequest(request)
         approveRequest(requestId, DOORMAN_SIGNATURE)
         return requestId
     }
@@ -246,7 +264,7 @@ fun main(args: Array<String>) {
                     val signer = buildLocalSigner(this)
 
                     val networkParameters = parseNetworkParametersFrom(initialNetworkParameters)
-                    startDoorman(NetworkHostAndPort(host, port), database, approveAll, networkParameters, signer, jiraConfig)
+                    startDoorman(NetworkHostAndPort(host, port), database, approveAll, networkParameters, signer, approveInterval, signInterval, jiraConfig)
                 }
             }
         }

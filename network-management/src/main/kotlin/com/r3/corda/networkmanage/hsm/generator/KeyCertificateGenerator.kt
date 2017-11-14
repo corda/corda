@@ -13,14 +13,14 @@ import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey
 
+data class CertificateNameAndPass(val certificateName: String, val privateKeyPassword: String)
+
 /**
  * Encapsulates logic for root and intermediate key/certificate generation.
  */
 class KeyCertificateGenerator(private val authenticator: Authenticator,
                               private val keySpecifier: Int,
                               private val keyGroup: String) {
-
-
     /**
      * Generates root and intermediate key and certificates and stores them in the key store given by provider.
      * If the keys and certificates already exists they will be overwritten.
@@ -32,15 +32,16 @@ class KeyCertificateGenerator(private val authenticator: Authenticator,
      * @param validDays days of certificate validity
      */
     fun generateAllCertificates(keyStorePassword: String?,
-                                certificateKeyName: String,
-                                privateKeyPassword: String,
+                                intermediateCertificatesCredentials: List<CertificateNameAndPass>,
                                 parentCertificateName: String,
                                 parentPrivateKeyPassword: String,
                                 validDays: Int) {
-        authenticator.connectAndAuthenticate { provider, signers ->
+        authenticator.connectAndAuthenticate { provider, _ ->
             val keyStore = getAndInitializeKeyStore(provider, keyStorePassword)
             generateRootCertificate(provider, keyStore, parentCertificateName, parentPrivateKeyPassword, validDays)
-            generateIntermediateCertificate(provider, keyStore, certificateKeyName, privateKeyPassword, parentCertificateName, parentPrivateKeyPassword, validDays)
+            intermediateCertificatesCredentials.forEach {
+                generateIntermediateCertificate(provider, keyStore, it.certificateName, it.privateKeyPassword, parentCertificateName, parentPrivateKeyPassword, validDays)
+            }
         }
     }
 
@@ -71,7 +72,7 @@ class KeyCertificateGenerator(private val authenticator: Authenticator,
         val parentCACertKey = retrieveCertificateAndKeys(parentCertificateName, parentPrivateKeyPassword, keyStore)
         val keyPair = generateEcdsaKeyPair(provider, keyStore, certificateKeyName, privateKeyPassword)
         val intermediateCertificate = createIntermediateCert("R3 Intermediate", parentCACertKey, keyPair, validDays, provider)
-        keyStore.addOrReplaceKey(certificateKeyName, keyPair.private, privateKeyPassword.toCharArray(), arrayOf(intermediateCertificate.certificate))
+        keyStore.addOrReplaceKey(certificateKeyName, keyPair.private, privateKeyPassword.toCharArray(), arrayOf(intermediateCertificate.certificate, parentCACertKey.certificate))
         println("New certificate and key pair named $certificateKeyName have been generated")
     }
 

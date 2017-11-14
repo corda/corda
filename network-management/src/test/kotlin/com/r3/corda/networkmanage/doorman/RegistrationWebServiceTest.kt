@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.nhaarman.mockito_kotlin.*
+import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
@@ -36,7 +37,7 @@ import java.util.zip.ZipInputStream
 import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
-class RegistrationWebServiceTest {
+class RegistrationWebServiceTest : TestBase() {
     private val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Corda Node Root CA", locality = "London", organisation = "R3 Ltd", country = "GB"), rootCAKey)
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -141,9 +142,7 @@ class RegistrationWebServiceTest {
         }
 
         startSigningServer(storage)
-
         assertThat(pollForResponse(id)).isEqualTo(PollResponse.NotReady)
-
         storage.processApprovedRequests()
 
         val certificates = (pollForResponse(id) as PollResponse.Ready).certChain

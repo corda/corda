@@ -1,15 +1,15 @@
 package com.r3.corda.networkmanage.hsm.authentication
 
-import CryptoServerCXI.CryptoServerCXI
 import CryptoServerJCE.CryptoServerProvider
 import com.nhaarman.mockito_kotlin.*
+import com.r3.corda.networkmanage.TestBase
 import org.junit.Before
 import org.junit.Test
 import java.io.Console
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class AuthenticatorTest {
+class AuthenticatorTest : TestBase() {
 
     private lateinit var provider: CryptoServerProvider
     private lateinit var console: Console
@@ -17,7 +17,7 @@ class AuthenticatorTest {
     @Before
     fun setUp() {
         provider = mock()
-        whenever(provider.cryptoServer).thenReturn(mock<CryptoServerCXI>())
+        whenever(provider.cryptoServer).thenReturn(mock())
         console = mock()
     }
 

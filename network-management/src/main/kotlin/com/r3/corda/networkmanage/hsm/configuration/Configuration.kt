@@ -2,6 +2,16 @@ package com.r3.corda.networkmanage.hsm.configuration
 
 import com.r3.corda.networkmanage.common.utils.toConfigWithOptions
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_AUTH_MODE
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_CSR_CERTIFICATE_NAME
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_DEVICE
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_KEY_GEN_AUTH_THRESHOLD
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_KEY_GROUP
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_KEY_SPECIFIER
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_ROOT_CERTIFICATE_NAME
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_SIGN_AUTH_THRESHOLD
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_SIGN_INTERVAL
+import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT_VALID_DAYS
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
@@ -19,11 +29,14 @@ data class Parameters(val basedir: Path = Paths.get("."),
                       val databaseProperties: Properties? = null,
                       val device: String = DEFAULT_DEVICE,
                       val keyStorePass: String? = null,
+                      // TODO this needs cleaning up after the config-file-only support is implemented
                       val keyGroup: String = DEFAULT_KEY_GROUP,
                       val keySpecifier: Int = DEFAULT_KEY_SPECIFIER,
-                      val rootPrivateKeyPass: String = "",
-                      val privateKeyPass: String = "",
-                      val certificateName: String = DEFAULT_CERTIFICATE_NAME,
+                      val rootPrivateKeyPass: String = DEFAULT_ROOT_PRIVATE_KEY,
+                      val csrPrivateKeyPass: String = DEFAULT_CSR_PRIVATE_KEY,
+                      val csrCertificateName: String = DEFAULT_CSR_CERTIFICATE_NAME,
+                      val networkMapCertificateName: String = DEFAULT_NETWORK_MAP_CERTIFICATE_NAME,
+                      val networkMapPrivateKeyPass: String = DEFAULT_NETWORK_MAP_PRIVATE_KEY_PASS,
                       val rootCertificateName: String = DEFAULT_ROOT_CERTIFICATE_NAME,
                       val validDays: Int = DEFAULT_VALID_DAYS,
                       val signAuthThreshold: Int = DEFAULT_SIGN_AUTH_THRESHOLD,
@@ -31,13 +44,15 @@ data class Parameters(val basedir: Path = Paths.get("."),
                       val authMode: AuthMode = DEFAULT_AUTH_MODE,
                       val authKeyFilePath: Path? = DEFAULT_KEY_FILE_PATH,
                       val authKeyFilePass: String? = DEFAULT_KEY_FILE_PASS,
-                      val autoUsername: String? = DEFAULT_AUTO_USERNAME) {
+                      val autoUsername: String? = DEFAULT_AUTO_USERNAME,
+                      // TODO Change this to Duration in the future
+                      val signInterval: Long = DEFAULT_SIGN_INTERVAL) {
     companion object {
         val DEFAULT_DEVICE = "3001@127.0.0.1"
         val DEFAULT_AUTH_MODE = AuthMode.PASSWORD
         val DEFAULT_SIGN_AUTH_THRESHOLD = 2
         val DEFAULT_KEY_GEN_AUTH_THRESHOLD = 2
-        val DEFAULT_CERTIFICATE_NAME = X509Utilities.CORDA_INTERMEDIATE_CA
+        val DEFAULT_CSR_CERTIFICATE_NAME = X509Utilities.CORDA_INTERMEDIATE_CA
         val DEFAULT_ROOT_CERTIFICATE_NAME = X509Utilities.CORDA_ROOT_CA
         val DEFAULT_VALID_DAYS = 3650
         val DEFAULT_KEY_GROUP = "DEV.DOORMAN"
@@ -45,6 +60,11 @@ data class Parameters(val basedir: Path = Paths.get("."),
         val DEFAULT_KEY_FILE_PATH: Path? = null //Paths.get("/Users/michalkit/WinDev1706Eval/Shared/TEST4.key")
         val DEFAULT_KEY_FILE_PASS: String? = null
         val DEFAULT_AUTO_USERNAME: String? = null
+        val DEFAULT_CSR_PRIVATE_KEY = ""
+        val DEFAULT_ROOT_PRIVATE_KEY = ""
+        val DEFAULT_NETWORK_MAP_CERTIFICATE_NAME = "cordaintermediateca_nm"
+        val DEFAULT_NETWORK_MAP_PRIVATE_KEY_PASS = ""
+        val DEFAULT_SIGN_INTERVAL = 600L // in seconds (10 minutes)
     }
 }
 
@@ -57,21 +77,22 @@ fun parseParameters(vararg args: String): Parameters {
     val argConfig = args.toConfigWithOptions {
         accepts("basedir", "Overriding configuration filepath, default to current directory.").withRequiredArg().defaultsTo(".").describedAs("filepath")
         accepts("configFile", "Overriding configuration file. (default: <<current directory>>/node.conf)").withRequiredArg().describedAs("filepath")
-        accepts("device", "CryptoServer device address (default: ${Parameters.DEFAULT_DEVICE})").withRequiredArg()
+        accepts("device", "CryptoServer device address (default: $DEFAULT_DEVICE)").withRequiredArg()
         accepts("keyStorePass", "Password for the key store").withRequiredArg().describedAs("password")
-        accepts("keyGroup", "CryptoServer key group (default: ${Parameters.DEFAULT_KEY_GROUP})").withRequiredArg().defaultsTo(Parameters.DEFAULT_KEY_GROUP)
-        accepts("keySpecifier", "CryptoServer key specifier (default: ${Parameters.DEFAULT_KEY_SPECIFIER})").withRequiredArg().ofType(Int::class.java).defaultsTo(Parameters.DEFAULT_KEY_SPECIFIER)
+        accepts("keyGroup", "CryptoServer key group (default: $DEFAULT_KEY_GROUP)").withRequiredArg().defaultsTo(DEFAULT_KEY_GROUP)
+        accepts("keySpecifier", "CryptoServer key specifier (default: $DEFAULT_KEY_SPECIFIER)").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_KEY_SPECIFIER)
         accepts("rootPrivateKeyPass", "Password for the root certificate private key").withRequiredArg().describedAs("password")
-        accepts("privateKeyPass", "Password for the certificate private key").withRequiredArg().describedAs("password")
-        accepts("keyGenAuthThreshold", "Authentication strength threshold for the HSM key generation (default: ${Parameters.DEFAULT_KEY_GEN_AUTH_THRESHOLD})").withRequiredArg().ofType(Int::class.java).defaultsTo(Parameters.DEFAULT_KEY_GEN_AUTH_THRESHOLD)
-        accepts("signAuthThreshold", "Authentication strength threshold for the HSM CSR signing (default: ${Parameters.DEFAULT_SIGN_AUTH_THRESHOLD})").withRequiredArg().ofType(Int::class.java).defaultsTo(Parameters.DEFAULT_SIGN_AUTH_THRESHOLD)
-        accepts("authMode", "Authentication mode. Allowed values: ${AuthMode.values()} (default: ${Parameters.DEFAULT_AUTH_MODE} )").withRequiredArg().defaultsTo(Parameters.DEFAULT_AUTH_MODE.name)
+        accepts("csrPrivateKeyPass", "Password for the CSR signing certificate private key").withRequiredArg().describedAs("password")
+        accepts("keyGenAuthThreshold", "Authentication strength threshold for the HSM key generation (default: $DEFAULT_KEY_GEN_AUTH_THRESHOLD)").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_KEY_GEN_AUTH_THRESHOLD)
+        accepts("signAuthThreshold", "Authentication strength threshold for the HSM CSR signing (default: $DEFAULT_SIGN_AUTH_THRESHOLD)").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_SIGN_AUTH_THRESHOLD)
+        accepts("authMode", "Authentication mode. Allowed values: ${AuthMode.values()} (default: $DEFAULT_AUTH_MODE)").withRequiredArg().defaultsTo(DEFAULT_AUTH_MODE.name)
         accepts("authKeyFilePath", "Key file path when authentication is based on a key file (i.e. authMode=${AuthMode.KEY_FILE.name})").withRequiredArg().describedAs("filepath")
         accepts("authKeyFilePass", "Key file password when authentication is based on a key file (i.e. authMode=${AuthMode.KEY_FILE.name})").withRequiredArg()
         accepts("autoUsername", "Username to be used for certificate signing (if not specified it will be prompted for input)").withRequiredArg()
-        accepts("certificateName", "Name of the certificate to be used by this CA (default: ${Parameters.DEFAULT_CERTIFICATE_NAME})").withRequiredArg().defaultsTo(Parameters.DEFAULT_CERTIFICATE_NAME)
-        accepts("rootCertificateName", "Name of the root certificate to be used by this CA (default: ${Parameters.DEFAULT_ROOT_CERTIFICATE_NAME})").withRequiredArg().defaultsTo(Parameters.DEFAULT_ROOT_CERTIFICATE_NAME)
-        accepts("validDays", "Validity duration in days (default: ${Parameters.DEFAULT_VALID_DAYS})").withRequiredArg().ofType(Int::class.java).defaultsTo(Parameters.DEFAULT_VALID_DAYS)
+        accepts("csrCertificateName", "Name of the certificate to be used by this CA to sign CSR (default: $DEFAULT_CSR_CERTIFICATE_NAME)").withRequiredArg().defaultsTo(DEFAULT_CSR_CERTIFICATE_NAME)
+        accepts("rootCertificateName", "Name of the root certificate to be used by this CA (default: $DEFAULT_ROOT_CERTIFICATE_NAME)").withRequiredArg().defaultsTo(DEFAULT_ROOT_CERTIFICATE_NAME)
+        accepts("validDays", "Validity duration in days (default: $DEFAULT_VALID_DAYS)").withRequiredArg().ofType(Int::class.java).defaultsTo(DEFAULT_VALID_DAYS)
+        accepts("signInterval", "Time interval (in seconds) in which network map is signed (default: $DEFAULT_SIGN_INTERVAL)").withRequiredArg().ofType(Long::class.java).defaultsTo(DEFAULT_SIGN_INTERVAL)
     }
 
     val configFile = if (argConfig.hasPath("configFile")) {

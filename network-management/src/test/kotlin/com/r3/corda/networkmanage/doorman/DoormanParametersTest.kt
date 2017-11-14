@@ -1,13 +1,15 @@
 package com.r3.corda.networkmanage.doorman
 
+import com.r3.corda.networkmanage.TestBase
 import com.typesafe.config.ConfigException
+import net.corda.core.utilities.seconds
 import org.junit.Test
 import java.io.File
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class DoormanParametersTest {
+class DoormanParametersTest : TestBase() {
     private val testDummyPath = ".${File.separator}testDummyPath.jks"
     private val validInitialNetworkConfigPath = File(javaClass.getResource("/initial-network-parameters.conf").toURI()).absolutePath
     private val validConfigPath = File(javaClass.getResource("/doorman.conf").toURI()).absolutePath

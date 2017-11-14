@@ -1,7 +1,7 @@
 ext {
-    // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman release is
+    // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
     // aligned with the corresponding Corda release.
-    corda_dependency_version = '2.0-20171104.000037-23'
+    corda_dependency_version = '2.0-20171108.000038-27'
 }
 
 version "$corda_dependency_version"
@@ -10,6 +10,7 @@ description 'Network management module encapsulating components such as Doorman,
 
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'kotlin'
+apply plugin: 'kotlin-jpa'
 
 repositories {
     mavenLocal()
@@ -92,7 +93,6 @@ dependencies {
     compile "net.corda:corda-node-api:$corda_dependency_version"
     testCompile "net.corda:corda-test-utils:$corda_dependency_version"
     testCompile "net.corda:corda-node-driver:$corda_dependency_version"
-    testCompile "net.corda:corda-test-common:$corda_dependency_version"
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -122,7 +122,9 @@ dependencies {
     testCompile 'junit:junit:4.12'
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile "com.nhaarman:mockito-kotlin:0.6.1"
+    testRuntime "net.corda:corda-rpc:$corda_dependency_version"
     testCompile "com.spotify:docker-client:8.9.1"
+    integrationTestRuntime "net.corda:corda-rpc:$corda_dependency_version"
 
     compile('com.atlassian.jira:jira-rest-java-client-core:4.0.0') {
         // The jira client includes jersey-core 1.5 which breaks everything.

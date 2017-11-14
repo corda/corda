@@ -1,7 +1,10 @@
 package com.r3.corda.networkmanage.doorman.signer
 
+import com.r3.corda.networkmanage.common.signer.SignatureAndCertPath
+import com.r3.corda.networkmanage.common.signer.Signer
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
+import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.x500Name
@@ -17,17 +20,19 @@ import java.security.cert.CertPath
 import java.security.cert.Certificate
 
 /**
- *  The [Signer] class signs [PKCS10CertificationRequest] using provided CA keypair and certificate path.
+ *  The [LocalSigner] class signs [PKCS10CertificationRequest] using provided CA key pair and certificate path.
  *  This is intended to be used in testing environment where hardware signing module is not available.
  */
-class Signer(private val caKeyPair: KeyPair, private val caCertPath: Array<Certificate>) {
-    fun sign(certificationRequest: PKCS10CertificationRequest): CertPath {
+class LocalSigner(private val caKeyPair: KeyPair, private val caCertPath: Array<Certificate>) : Signer {
+    fun createSignedClientCertificate(certificationRequest: PKCS10CertificationRequest): CertPath {
         // The sub certs issued by the client must satisfy this directory name (or legal name in Corda) constraints, sub certs' directory name must be within client CA's name's subtree,
         // please see [sun.security.x509.X500Name.isWithinSubtree()] for more information.
         // We assume all attributes in the subject name has been checked prior approval.
         // TODO: add validation to subject name.
         val request = JcaPKCS10CertificationRequest(certificationRequest)
-        val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CordaX500Name.parse(request.subject.toString()).copy(commonName = null).x500Name))), arrayOf())
+        val nameConstraints = NameConstraints(
+                arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, request.subject))),
+                arrayOf())
         val clientCertificate = X509Utilities.createCertificate(CertificateType.CLIENT_CA,
                 caCertPath.first().toX509CertHolder(),
                 caKeyPair,
@@ -35,5 +40,9 @@ class Signer(private val caKeyPair: KeyPair, private val caCertPath: Array<Certi
                 request.publicKey,
                 nameConstraints = nameConstraints).toX509Certificate()
         return buildCertPath(clientCertificate, *caCertPath)
+    }
+
+    override fun sign(data: ByteArray): SignatureAndCertPath {
+        return SignatureAndCertPath(caKeyPair.sign(data), buildCertPath(*caCertPath))
     }
 }

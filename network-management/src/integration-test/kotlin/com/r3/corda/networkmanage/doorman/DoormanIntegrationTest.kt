@@ -3,7 +3,7 @@ package com.r3.corda.networkmanage.doorman
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.common.persistence.SchemaService
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
-import com.r3.corda.networkmanage.doorman.signer.Signer
+import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -39,10 +39,10 @@ class DoormanIntegrationTest {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         }, SchemaService())
-        val signer = Signer(intermediateCAKey, arrayOf(intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate()))
+        val signer = LocalSigner(intermediateCAKey, arrayOf(intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate()))
 
         //Start doorman server
-        val doorman = startDoorman(NetworkHostAndPort("localhost", 0), database, true, testNetworkParameters(emptyList()), signer, null)
+        val doorman = startDoorman(NetworkHostAndPort("localhost", 0), database, true, testNetworkParameters(emptyList()), signer, 2, 10,null)
 
         // Start Corda network registration.
         val config = testNodeConfiguration(

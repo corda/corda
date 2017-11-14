@@ -1,15 +1,17 @@
 package com.r3.corda.networkmanage.doorman.webservice
 
+import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
+import com.r3.corda.networkmanage.common.utils.hashString
+import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.networkMapPath
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.toSHA256Bytes
-import org.codehaus.jackson.map.ObjectMapper
 import java.io.InputStream
 import java.security.InvalidKeyException
 import java.security.SignatureException
@@ -22,7 +24,9 @@ import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
 @Path(networkMapPath)
-class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage, private val networkParameters: NetworkParameters) {
+class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
+                         private val networkMapStorage: NetworkMapStorage,
+                         private val signer: LocalSigner? = null) {
     companion object {
         const val networkMapPath = "network-map"
     }
@@ -37,13 +41,18 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage, private v
         val nodeInfo = registrationData.verified()
         val digitalSignature = registrationData.sig
 
-        val certPath = nodeInfoStorage.getCertificatePath(nodeInfo.legalIdentities.first().owningKey.toSHA256Bytes().toString())
+        val certPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(digitalSignature.by.hashString()))
         return if (certPath != null) {
             try {
-                require(Crypto.doVerify(certPath.certificates.first().publicKey, digitalSignature.bytes, nodeInfo.serialize().bytes))
-                // Store the NodeInfo
-                // TODO: Does doorman need to sign the nodeInfo?
-                nodeInfoStorage.putNodeInfo(nodeInfo)
+                val serializedNodeInfo = nodeInfo.serialize().bytes
+                val nodeCAPubKey = certPath.certificates.first().publicKey
+                // Validate node public key
+                nodeInfo.legalIdentitiesAndCerts.forEach {
+                    require(it.certPath.certificates.any { it.publicKey == nodeCAPubKey })
+                }
+                require(Crypto.doVerify(nodeCAPubKey, digitalSignature.bytes, serializedNodeInfo))
+                // Store the NodeInfo and notify registration listener
+                nodeInfoStorage.putNodeInfo(nodeInfo, signer?.sign(serializedNodeInfo)?.signature)
                 ok()
             } catch (e: Exception) {
                 // Catch exceptions thrown by signature verification.
@@ -61,15 +70,13 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage, private v
     @GET
     fun getNetworkMap(): Response {
         // TODO: Cache the response?
-        // TODO: Add the networkParamters to this returned response.
-        return ok(ObjectMapper().writeValueAsString(nodeInfoStorage.getNodeInfoHashes())).build()
+        return ok(networkMapStorage.getCurrentNetworkMap().serialize().bytes).build()
     }
 
     @GET
-    @Path("{var}")
-    fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
-        // TODO: Use JSON instead.
-        return nodeInfoStorage.getNodeInfo(nodeInfoHash)?.let {
+    @Path("{nodeInfoHash}")
+    fun getNodeInfo(@PathParam("nodeInfoHash") nodeInfoHash: String): Response {
+        return nodeInfoStorage.getSignedNodeInfo(SecureHash.parse(nodeInfoHash))?.let {
             ok(it.serialize().bytes).build()
         } ?: status(Response.Status.NOT_FOUND).build()
     }

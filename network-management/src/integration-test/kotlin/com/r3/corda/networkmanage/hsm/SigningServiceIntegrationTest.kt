@@ -8,12 +8,13 @@ import com.r3.corda.networkmanage.common.persistence.SchemaService
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.startDoorman
-import com.r3.corda.networkmanage.hsm.persistence.CertificateRequestData
+import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
-import com.r3.corda.networkmanage.hsm.signer.HsmSigner
+import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.utilities.CertificateType
@@ -32,6 +33,7 @@ import org.junit.*
 import org.junit.rules.TemporaryFolder
 import java.net.URL
 import java.util.*
+import javax.persistence.PersistenceException
 import kotlin.concurrent.scheduleAtFixedRate
 import kotlin.concurrent.thread
 
@@ -59,7 +61,7 @@ class SigningServiceIntegrationTest {
         timer.cancel()
     }
 
-    private fun givenSignerSigningAllRequests(storage: SignedCertificateRequestStorage): HsmSigner {
+    private fun givenSignerSigningAllRequests(storage: SignedCertificateRequestStorage): HsmCsrSigner {
         // Create all certificates
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA",
@@ -71,8 +73,7 @@ class SigningServiceIntegrationTest {
         // Mock signing logic but keep certificate persistence
         return mock {
             on { sign(any()) }.then {
-                @Suppress("UNCHECKED_CAST")
-                val toSign = it.arguments[0] as List<CertificateRequestData>
+                val toSign: List<ApprovedCertificateRequestData> = uncheckedCast(it.arguments[0])
                 toSign.forEach {
                     JcaPKCS10CertificationRequest(it.request).run {
                         val certificate = X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
@@ -91,8 +92,7 @@ class SigningServiceIntegrationTest {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         }, SchemaService())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true,
-                initialNetworkMapParameters = testNetworkParameters(emptyList()))
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 10, initialNetworkMapParameters = testNetworkParameters(emptyList()))
 
         // Start Corda network registration.
         val config = testNodeConfiguration(
@@ -108,14 +108,22 @@ class SigningServiceIntegrationTest {
 
         val hsmSigner = givenSignerSigningAllRequests(signingServiceStorage)
         // Poll the database for approved requests
-        timer.scheduleAtFixedRate(2.seconds.toMillis(), 1.seconds.toMillis()) {
+        timer.scheduleAtFixedRate(0, 1.seconds.toMillis()) {
             // The purpose of this tests is to validate the communication between this service and Doorman
             // by the means of data in the shared database.
             // Therefore the HSM interaction logic is mocked here.
-            val approved = signingServiceStorage.getApprovedRequests()
-            if (approved.isNotEmpty()) {
-                hsmSigner.sign(approved)
-                timer.cancel()
+            try {
+                val approved = signingServiceStorage.getApprovedRequests()
+                if (approved.isNotEmpty()) {
+                    hsmSigner.sign(approved)
+                    timer.cancel()
+                }
+            } catch (exception: PersistenceException) {
+                // It may happen that Doorman DB is not created at the moment when the signing service polls it.
+                // This is due to the fact that schema is initialized at the time first hibernate session is established.
+                // Since Doorman does this at the time the first CSR arrives, which in turn happens after signing service
+                // startup, the very first iteration of the signing service polling fails with
+                // [org.hibernate.tool.schema.spi.SchemaManagementException] being thrown as the schema is missing.
             }
         }
         NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.certificateSigningService)).buildKeystore()
@@ -139,8 +147,7 @@ class SigningServiceIntegrationTest {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         }, SchemaService())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true,
-                initialNetworkMapParameters = testNetworkParameters(emptyList()))
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 10, initialNetworkMapParameters = testNetworkParameters(emptyList()))
 
         thread(start = true, isDaemon = true) {
             val h2ServerArgs = arrayOf("-tcpPort", H2_TCP_PORT, "-tcpAllowOthers")
