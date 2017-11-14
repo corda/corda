@@ -31,6 +31,5 @@ class Cordformation : Plugin<Project> {
 
     override fun apply(project: Project) {
         Utils.createCompileConfiguration("cordapp", project)
-        project.dependencies.add("runtime", "${project.group}:corda-node:${project.rootProject.ext<String>("corda_release_version")}")
     }
 }
