@@ -1,8 +1,6 @@
 package net.corda.node.internal
 
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
@@ -39,7 +37,8 @@ class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : S
     }
 
     @Throws(TransactionResolutionException::class)
-    override fun loadStates(stateRefs: Set<StateRef>): Set<TransactionState<*>> {
-        return (stateRefs.map { loadState(it) }).toSet()
+    // TODO: future implementation to retrieve contract states from a Vault BLOB store
+    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
+        return (stateRefs.map { StateAndRef(loadState(it), it) }).toSet()
     }
 }

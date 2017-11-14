@@ -131,19 +131,21 @@ abstract class AbstractCashSelection {
                 stateAndRefs.clear()
 
                 var totalPennies = 0L
+                val stateRefs = mutableSetOf<StateRef>()
                 while (rs.next()) {
                     val txHash = SecureHash.parse(rs.getString(1))
                     val index = rs.getInt(2)
                     val pennies = rs.getLong(3)
                     totalPennies = rs.getLong(4)
                     val rowLockId = rs.getString(5)
-                    val stateRef = StateRef(txHash, index)
-                    val state = services.loadState(stateRef) as TransactionState<Cash.State>
-                    stateAndRefs.add(StateAndRef(state, stateRef))
-                    log.trace { "ROW: $rowLockId ($lockId): $stateRef : $pennies ($totalPennies)" }
+                    stateRefs.add(StateRef(txHash, index))
+                    log.trace { "ROW: $rowLockId ($lockId): ${StateRef(txHash, index)} : $pennies ($totalPennies)" }
                 }
+                if (stateRefs.isNotEmpty())
+                    // TODO: future implementation to retrieve contract states from a Vault BLOB store
+                    stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
 
-                if (stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity) {
+                if (totalPennies >= amount.quantity) {
                     // we should have a minimum number of states to satisfy our selection `amount` criteria
                     log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
 

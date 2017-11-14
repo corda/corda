@@ -37,8 +37,10 @@ interface StateLoader {
      *
      * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
      */
+    // TODO: future implementation to use a Vault state ref -> contract state BLOB table and perform single query bulk load
+    // as the existing transaction store will become encrypted at some point
     @Throws(TransactionResolutionException::class)
-    fun loadStates(stateRefs: Set<StateRef>): Set<TransactionState<*>>
+    fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
 }
 
 /**

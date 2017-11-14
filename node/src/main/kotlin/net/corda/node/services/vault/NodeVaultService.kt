@@ -8,10 +8,7 @@ import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.StateLoader
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -165,7 +162,7 @@ class NodeVaultService(
                 return Vault.NoUpdate
             }
 
-            return Vault.Update(consumedStates, ourNewStates.toHashSet())
+            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet())
         }
 
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
@@ -203,28 +200,10 @@ class NodeVaultService(
         processAndNotify(netDelta)
     }
 
-    // TODO: replace this method in favour of a VaultQuery query
-    private fun loadStates(refs: Collection<StateRef>): HashSet<StateAndRef<ContractState>> {
-        val states = HashSet<StateAndRef<ContractState>>()
-        if (refs.isNotEmpty()) {
-            val session = currentDBSession()
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
-            val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-            val statusPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
-            val persistentStateRefs = refs.map(::PersistentStateRef)
-            val compositeKey = vaultStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
-            val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
-            criteriaQuery.where(statusPredicate, stateRefsPredicate)
-            val results = session.createQuery(criteriaQuery).resultList
-            results.asSequence().forEach {
-                val txHash = SecureHash.parse(it.stateRef?.txId!!)
-                val index = it.stateRef?.index!!
-                val state = stateLoader.loadState(StateRef(txHash,index))
-                states.add(StateAndRef(state, StateRef(txHash, index)))
-            }
-        }
-        return states
+    private fun loadStates(refs: Collection<StateRef>): Collection<StateAndRef<ContractState>> {
+        return if (refs.isNotEmpty())
+            queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refs.toList())).states
+        else emptySet()
     }
 
     private fun processAndNotify(update: Vault.Update<ContractState>) {
@@ -458,6 +437,7 @@ class NodeVaultService(
                 val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
                 val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
                 val otherResults: MutableList<Any> = mutableListOf()
+                val stateRefs = mutableSetOf<StateRef>()
 
                 results.asSequence()
                         .forEachIndexed { index, result ->
@@ -466,7 +446,7 @@ class NodeVaultService(
                                     return@forEachIndexed
                                 val vaultState = result[0] as VaultSchemaV1.VaultStates
                                 val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
-                                val state = stateLoader.loadState(stateRef)
+                                stateRefs.add(stateRef)
                                 statesMeta.add(Vault.StateMetadata(stateRef,
                                         vaultState.contractStateClassName,
                                         vaultState.recordedTime,
@@ -475,13 +455,14 @@ class NodeVaultService(
                                         vaultState.notary,
                                         vaultState.lockId,
                                         vaultState.lockUpdateTime))
-                                statesAndRefs.add(StateAndRef(state, stateRef) as StateAndRef<T>)
                             } else {
                                 // TODO: improve typing of returned other results
                                 log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
                                 otherResults.addAll(result.toArray().asList())
                             }
                         }
+                if (stateRefs.isNotEmpty())
+                    statesAndRefs.addAll(stateLoader.loadStates(stateRefs) as Collection<StateAndRef<T>>)
 
                 return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
             } catch (e: java.lang.Exception) {
