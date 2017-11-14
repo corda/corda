@@ -80,6 +80,9 @@ UNRELEASED
 
 * Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey``s.
 
+* Replaced node configuration parameter ``certificateSigningService`` with ``compatibilityZoneURL``, which is Corda
+  compatibility zone network management service's address.
+
 .. _changelog_v1:
 
 Release 1.0

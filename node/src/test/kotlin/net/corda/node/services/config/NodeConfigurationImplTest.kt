@@ -41,7 +41,6 @@ class NodeConfigurationImplTest {
             trustStorePassword = "trustpass",
             dataSourceProperties = makeTestDataSourceProperties(ALICE.name.organisation),
             database = makeTestDatabaseProperties(),
-            certificateSigningService = URL("http://localhost"),
             rpcUsers = emptyList(),
             verifierType = VerifierType.InMemory,
             useHTTPS = false,
