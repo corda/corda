@@ -69,6 +69,13 @@ data class StateMachineInfo @JvmOverloads constructor(
         return InvocationContext(actor, origin)
     }
 
+    fun copy(id: StateMachineRunId = this.id,
+             flowLogicClassName: String = this.flowLogicClassName,
+             initiator: FlowInitiator = this.initiator,
+             progressTrackerStepAndUpdates: DataFeed<String, String>? = this.progressTrackerStepAndUpdates): StateMachineInfo {
+        return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, context = context)
+    }
+
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
 }
 
