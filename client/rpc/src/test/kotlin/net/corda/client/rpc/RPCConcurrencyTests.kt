@@ -7,8 +7,8 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.rpcDriver
+import net.corda.testing.internal.RPCDriverExposedDSLInterface
+import net.corda.testing.internal.rpcDriver
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized

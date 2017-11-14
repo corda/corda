@@ -15,13 +15,13 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.performance.div
-import net.corda.testing.performance.startPublishingFixedRateInjector
-import net.corda.testing.performance.startReporter
-import net.corda.testing.performance.startTightLoopInjector
+import net.corda.testing.node.NotarySpec
+import net.corda.testing.internal.performance.div
+import net.corda.testing.internal.performance.startPublishingFixedRateInjector
+import net.corda.testing.internal.performance.startReporter
+import net.corda.testing.internal.performance.startTightLoopInjector
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
@@ -102,26 +102,25 @@ class NodePerformanceTests {
 
     @Test
     fun `self pay rate`() {
-        driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance")) {
-            val a = startNotaryNode(
-                    DUMMY_NOTARY.name,
-                    rpcUsers = listOf(User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>())))
-            ).getOrThrow()
-            a as NodeHandle.InProcess
-            val metricRegistry = startReporter(shutdownManager, a.node.services.monitoringService.metrics)
-            a.rpcClientToNode().use("A", "A") { connection ->
-                val notary = connection.proxy.notaryIdentities().first()
+        val user = User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>()))
+        driver(
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(user))),
+                startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf("net.corda.finance")
+        ) {
+            val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
+            val metricRegistry = startReporter(shutdownManager, notary.node.services.monitoringService.metrics)
+            notary.rpcClientToNode().use("A", "A") { connection ->
                 println("ISSUING")
                 val doneFutures = (1..100).toList().parallelStream().map {
-                    connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), notary).returnValue
+                    connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue
                 }.toList()
                 doneFutures.transpose().get()
                 println("STARTING PAYMENT")
                 startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 100L / TimeUnit.SECONDS) {
-                    connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, a.nodeInfo.chooseIdentity()).returnValue.get()
+                    connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, defaultNotaryIdentity).returnValue.get()
                 }
             }
-
         }
     }
 }

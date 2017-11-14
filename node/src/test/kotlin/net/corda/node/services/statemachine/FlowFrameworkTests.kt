@@ -73,23 +73,19 @@ class FlowFrameworkTests {
 
     @Before
     fun start() {
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"))
+        mockNet = MockNetwork(
+                servicePeerAllocationStrategy = RoundRobin(),
+                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts")
+        )
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
-        mockNet.runNetwork()
-
-        // We intentionally create our own notary and ignore the one provided by the network
-        // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
-        // service addressing.
-        val notary = mockNet.createNotaryNode()
 
         receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
-        mockNet.runNetwork()
 
         // Extract identities
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
-        notaryIdentity = notary.services.getDefaultNotary()
+        notaryIdentity = mockNet.defaultNotaryIdentity
     }
 
     @After
@@ -214,7 +210,6 @@ class FlowFrameworkTests {
     @Test
     fun `sending to multiple parties`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
         bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         charlieNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
@@ -248,7 +243,6 @@ class FlowFrameworkTests {
     @Test
     fun `receiving from multiple parties`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
         val bobPayload = "Test 1"
         val charliePayload = "Test 2"
@@ -406,7 +400,6 @@ class FlowFrameworkTests {
     @Test
     fun `FlowException propagated in invocation chain`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
         charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
@@ -421,7 +414,6 @@ class FlowFrameworkTests {
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
         // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
@@ -675,7 +667,7 @@ class FlowFrameworkTests {
         val newNode = mockNet.createNode(MockNodeParameters(id))
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
-        mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
+        mockNet.runNetwork()
         newNode.getSingleFlow<P>().first
     }
 

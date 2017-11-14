@@ -11,8 +11,8 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
@@ -28,22 +28,20 @@ class IntegrationTestingTutorial {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),
-                    invokeRpc(CordaRPCOps::waitUntilNetworkReady),
                     invokeRpc("vaultTrackBy"),
                     invokeRpc(CordaRPCOps::notaryIdentities),
                     invokeRpc(CordaRPCOps::networkMapFeed)
             ))
             val bobUser = User("bobUser", "testPassword2", permissions = setOf(
                     startFlow<CashPaymentFlow>(),
-                    invokeRpc(CordaRPCOps::waitUntilNetworkReady),
                     invokeRpc("vaultTrackBy"),
                     invokeRpc(CordaRPCOps::networkMapFeed)
             ))
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE.name, rpcUsers = listOf(aliceUser)),
-                    startNode(providedName = BOB.name, rpcUsers = listOf(bobUser)),
-                    startNotaryNode(DUMMY_NOTARY.name)
+                    startNode(providedName = BOB.name, rpcUsers = listOf(bobUser))
             ).transpose().getOrThrow()
+
             // END 1
 
             // START 2
@@ -52,9 +50,6 @@ class IntegrationTestingTutorial {
 
             val bobClient = bob.rpcClientToNode()
             val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
-
-            aliceProxy.waitUntilNetworkReady().getOrThrow()
-            bobProxy.waitUntilNetworkReady().getOrThrow()
             // END 2
 
             // START 3

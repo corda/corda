@@ -72,6 +72,11 @@ UNRELEASED
 * The ``ReceiveTransactionFlow`` can now be told to record the transaction at the same time as receiving it. Using this
   feature, better support for observer/regulator nodes has been added. See :doc:`tutorial-observer-nodes`.
 
+* Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This is
+  needed to allow new ``node_info_hash`` column to be added for the network map redesign work.
+
+* Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey``s.
+
 .. _changelog_v1:
 
 Release 1.0

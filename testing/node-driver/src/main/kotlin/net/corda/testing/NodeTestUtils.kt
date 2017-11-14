@@ -33,17 +33,9 @@ import java.nio.file.Path
 @JvmOverloads
 fun ledger(
         services: ServiceHub = MockServices(),
-        initialiseSerialization: Boolean = true,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    val serializationEnv = initialiseTestSerialization(initialiseSerialization)
-    try {
-        val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
-        dsl(ledgerDsl)
-        return ledgerDsl
-    } finally {
-        serializationEnv.resetTestSerialization()
-    }
+    return LedgerDSL(TestLedgerDSLInterpreter(services)).also { dsl(it) }
 }
 
 /**
@@ -53,12 +45,10 @@ fun ledger(
  */
 @JvmOverloads
 fun transaction(
-        transactionLabel: String? = null,
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
-        initialiseSerialization: Boolean = true,
         cordappPackages: List<String> = emptyList(),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(services = MockServices(cordappPackages), initialiseSerialization = initialiseSerialization) {
+) = ledger(services = MockServices(cordappPackages)) {
     dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
 }
 
@@ -69,7 +59,6 @@ fun testNodeConfiguration(
     return rigorousMock<MockableNodeConfiguration>().also {
         doReturn(baseDirectory).whenever(it).baseDirectory
         doReturn(myLegalName).whenever(it).myLegalName
-        doReturn(1).whenever(it).minimumPlatformVersion
         doReturn("cordacadevpass").whenever(it).keyStorePassword
         doReturn("trustpass").whenever(it).trustStorePassword
         doReturn(emptyList<User>()).whenever(it).rpcUsers

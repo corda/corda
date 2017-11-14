@@ -42,6 +42,7 @@ class ArtemisMessagingTests {
     companion object {
         const val TOPIC = "platform.self"
     }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -50,21 +51,21 @@ class ArtemisMessagingTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    val serverPort = freePort()
-    val rpcPort = freePort()
-    val identity = generateKeyPair()
+    private val serverPort = freePort()
+    private val rpcPort = freePort()
+    private val identity = generateKeyPair()
 
-    lateinit var config: NodeConfiguration
-    lateinit var database: CordaPersistence
-    lateinit var userService: RPCUserService
-    lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
+    private lateinit var config: NodeConfiguration
+    private lateinit var database: CordaPersistence
+    private lateinit var userService: RPCUserService
+    private lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
 
-    var messagingClient: NodeMessagingClient? = null
-    var messagingServer: ArtemisMessagingServer? = null
+    private var messagingClient: NodeMessagingClient? = null
+    private var messagingServer: ArtemisMessagingServer? = null
 
-    lateinit var networkMapCache: NetworkMapCacheImpl
+    private lateinit var networkMapCache: NetworkMapCacheImpl
 
-    val rpcOps = object : RPCOps {
+    private val rpcOps = object : RPCOps {
         override val protocolVersion: Int get() = throw UnsupportedOperationException()
     }
 
@@ -78,7 +79,7 @@ class ArtemisMessagingTests {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
-        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config), rigorousMock())
+        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config, emptyList()), rigorousMock())
     }
 
     @After

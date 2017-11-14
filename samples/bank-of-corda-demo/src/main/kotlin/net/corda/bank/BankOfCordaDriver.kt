@@ -10,7 +10,6 @@ import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_NOTARY
@@ -57,8 +56,7 @@ private class BankOfCordaDriver {
         try {
             when (role) {
                 Role.ISSUER -> {
-                    driver(dsl = {
-                        startNotaryNode(providedName = DUMMY_NOTARY.name, validating = true)
+                    driver(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
                         val bankUser = User(
                                 BANK_USERNAME,
                                 "test",
@@ -79,11 +77,11 @@ private class BankOfCordaDriver {
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                         waitForAllNodesToFinish()
-                    }, isDebug = true, extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset"))
+                    }
                 }
                 else -> {
                     val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME,
-                            "1", BOC.name, DUMMY_NOTARY.name.copy(commonName = ValidatingNotaryService.id))
+                            "1", BOC.name, DUMMY_NOTARY.name)
                     when(role) {
                         Role.ISSUE_CASH_RPC -> {
                             println("Requesting Cash via RPC ...")

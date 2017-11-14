@@ -26,7 +26,7 @@ class NodeControllerTest {
     @Test
     fun `register notary`() {
         assertFalse(controller.hasNotary())
-        val config = createConfig(commonName = "Name", notary = NotaryService(false))
+        val config = createConfig(organisation = "Name", notary = NotaryService(false))
         controller.register(config)
         assertTrue(controller.hasNotary())
     }
@@ -34,7 +34,7 @@ class NodeControllerTest {
     @Test
     fun `register non notary`() {
         assertFalse(controller.hasNotary())
-        val config = createConfig(commonName = "Name")
+        val config = createConfig(organisation = "Name")
         controller.register(config)
         assertFalse(controller.hasNotary())
     }
@@ -65,15 +65,14 @@ class NodeControllerTest {
 
     @Test
     fun `test register unique nodes`() {
-        val config = createConfig(commonName = organisation2Name)
+        val config = createConfig(organisation = organisation2Name)
         assertTrue(controller.register(config))
         assertFalse(controller.register(config))
     }
 
     @Test
     fun `test unique key after register`() {
-        val config = createConfig(commonName = organisation2Name)
-
+        val config = createConfig(organisation = organisation2Name)
         assertFalse(controller.keyExists("organisation2"))
         controller.register(config)
         assertTrue(controller.keyExists("organisation2"))
@@ -81,8 +80,7 @@ class NodeControllerTest {
 
     @Test
     fun `test matching name after register`() {
-        val config = createConfig(commonName = organisation2Name)
-
+        val config = createConfig(organisation = organisation2Name)
         assertFalse(controller.nameExists("Organisation 2"))
         assertFalse(controller.nameExists("Organisation2"))
         assertFalse(controller.nameExists("organisation 2"))
@@ -138,7 +136,7 @@ class NodeControllerTest {
 
     @Test
     fun `dispose node`() {
-        val config = createConfig(commonName = "MyName")
+        val config = createConfig(organisation = "MyName")
         controller.register(config)
 
         assertEquals(NodeState.STARTING, config.state)
@@ -149,7 +147,7 @@ class NodeControllerTest {
     }
 
     private fun createConfig(
-            commonName: String = "Unknown",
+            organisation: String = "Unknown",
             p2pPort: Int = 0,
             rpcPort: Int = 0,
             webPort: Int = 0,
@@ -159,7 +157,7 @@ class NodeControllerTest {
     ): NodeConfigWrapper {
         val nodeConfig = NodeConfig(
                 myLegalName = CordaX500Name(
-                        organisation = commonName,
+                        organisation = organisation,
                         locality = "New York",
                         country = "US"
                 ),

@@ -15,10 +15,13 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.issueInvalidState
-import net.corda.testing.*
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.singleIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -28,21 +31,19 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ValidatingNotaryServiceTests {
-    lateinit var mockNet: MockNetwork
-    lateinit var notaryServices: StartedNodeServices
-    lateinit var aliceServices: StartedNodeServices
-    lateinit var notary: Party
-    lateinit var alice: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var notaryServices: StartedNodeServices
+    private lateinit var aliceServices: StartedNodeServices
+    private lateinit var notary: Party
+    private lateinit var alice: Party
 
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
-        mockNet.runNetwork() // Clear network map registration messages
-        notaryServices = notaryNode.services
+        notaryServices = mockNet.defaultNotaryNode.services
         aliceServices = aliceNode.services
-        notary = notaryServices.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()
     }
 
@@ -97,7 +98,7 @@ class ValidatingNotaryServiceTests {
         return future
     }
 
-    fun issueState(serviceHub: ServiceHub, identity: Party): StateAndRef<*> {
+    private fun issueState(serviceHub: ServiceHub, identity: Party): StateAndRef<*> {
         val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
         val signedByNode = serviceHub.signInitialTransaction(tx)
         val stx = notaryServices.addSignature(signedByNode, notary.owningKey)

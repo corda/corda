@@ -74,14 +74,12 @@ class TestCordaService2(val appServiceHub: AppServiceHub): SingletonSerializeAsT
 class LegacyCordaService(@Suppress("UNUSED_PARAMETER") simpleServiceHub: ServiceHub) : SingletonSerializeAsToken()
 
 class CordaServiceTest {
-    lateinit var mockNet: MockNetwork
-    lateinit var notaryNode: StartedNode<MockNetwork.MockNode>
-    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: MockNetwork
+    private lateinit var nodeA: StartedNode<MockNetwork.MockNode>
 
     @Before
     fun start() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.node.internal","net.corda.finance"))
-        notaryNode = mockNet.createNotaryNode()
         nodeA = mockNet.createNode()
         mockNet.startNodes()
     }

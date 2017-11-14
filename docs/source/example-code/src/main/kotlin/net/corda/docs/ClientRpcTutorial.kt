@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package net.corda.docs
 
 import net.corda.core.contracts.Amount
@@ -8,17 +10,15 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.ALICE
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.driver
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
@@ -49,14 +49,12 @@ fun main(args: Array<String>) {
             invokeRpc(CordaRPCOps::nodeInfo)
     ))
     driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance")) {
-        startNotaryNode(DUMMY_NOTARY.name)
         val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()
         // END 1
 
         // START 2
         val client = node.rpcClientToNode()
         val proxy = client.start("user", "password").proxy
-        proxy.waitUntilNetworkReady().getOrThrow()
 
         thread {
             generateTransactions(proxy)

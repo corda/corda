@@ -1,10 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
@@ -13,19 +9,26 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.client.rpc.RPCException
+import net.corda.core.contracts.*
+import net.corda.core.internal.AbstractAttachment
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
+import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
 import net.corda.testing.BOB_IDENTITY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.withTestSerialization
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -36,6 +39,10 @@ import java.nio.ByteBuffer
 import java.time.*
 import java.time.temporal.ChronoUnit
 import java.util.*
+import kotlin.reflect.full.declaredFunctions
+import kotlin.reflect.full.declaredMemberFunctions
+import kotlin.reflect.full.superclasses
+import kotlin.reflect.jvm.javaMethod
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -557,11 +564,16 @@ class SerializationOutputTests {
     fun `test transaction state`() {
         val state = TransactionState(FooState(), FOO_PROGRAM_ID, MEGA_CORP)
 
+        val scheme = AMQPServerSerializationScheme()
+        val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }
+                .java.getDeclaredMethod("registerCustomSerializers", SerializerFactory::class.java)
+        func.isAccessible = true
+
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        AbstractAMQPSerializationScheme.registerCustomSerializers(factory)
+        func.invoke(scheme, factory)
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        AbstractAMQPSerializationScheme.registerCustomSerializers(factory2)
+        func.invoke(scheme, factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertTrue((desState as TransactionState<*>).data is FooState)
@@ -983,5 +995,37 @@ class SerializationOutputTests {
         obj[Month.APRIL] = Month.APRIL.value
         obj[Month.AUGUST] = Month.AUGUST.value
         serdes(obj)
+    }
+
+    @Test
+    fun `test contract attachment serialize`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(factory2))
+
+        val obj = ContractAttachment(GeneratedAttachment("test".toByteArray()), DummyContract.PROGRAM_ID)
+        val obj2 = serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
+        assertEquals(obj.id, obj2.attachment.id)
+        assertEquals(obj.contract, obj2.contract)
+        assertArrayEquals(obj.open().readBytes(), obj2.open().readBytes())
+    }
+
+    @Test
+    fun `test contract attachment throws if missing attachment`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(factory))
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(factory2))
+
+        val obj = ContractAttachment(object : AbstractAttachment({ throw Exception() }) {
+            override val id = SecureHash.zeroHash
+        }, DummyContract.PROGRAM_ID)
+
+        assertThatThrownBy {
+            serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
+        }.isInstanceOf(MissingAttachmentsException::class.java)
     }
 }

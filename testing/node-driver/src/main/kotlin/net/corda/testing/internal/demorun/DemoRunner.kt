@@ -15,6 +15,7 @@ fun CordformDefinition.clean() {
 /**
  * Creates and starts all nodes required for the demo.
  */
+// TODO add notaries to cordform!
 fun CordformDefinition.runNodes() = driver(
         isDebug = true,
         driverDirectory = driverDirectory,

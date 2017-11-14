@@ -19,19 +19,14 @@ import static org.junit.Assert.fail;
 import static net.corda.testing.NodeTestUtils.startFlow;
 
 public class FlowsInJavaTest {
-
     private final MockNetwork mockNet = new MockNetwork();
     private StartedNode<MockNetwork.MockNode> aliceNode;
     private StartedNode<MockNetwork.MockNode> bobNode;
 
     @Before
     public void setUp() throws Exception {
-        mockNet.createNotaryNode();
         aliceNode = mockNet.createPartyNode(TestConstants.getALICE().getName());
         bobNode = mockNet.createPartyNode(TestConstants.getBOB().getName());
-        mockNet.runNetwork();
-        // Ensure registration was successful
-        aliceNode.getInternals().getNodeReadyFuture().get();
     }
 
     @After

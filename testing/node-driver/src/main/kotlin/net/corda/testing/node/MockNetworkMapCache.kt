@@ -18,7 +18,10 @@ import java.math.BigInteger
 /**
  * Network map cache with no backing map service.
  */
-class MockNetworkMapCache(database: CordaPersistence, configuration: NodeConfiguration) : PersistentNetworkMapCache(database, configuration) {
+class MockNetworkMapCache(
+        database: CordaPersistence,
+        configuration: NodeConfiguration
+) : PersistentNetworkMapCache(database, configuration, emptyList()) {
     private companion object {
         val BANK_C = getTestPartyAndCertificate(CordaX500Name(organisation = "Bank C", locality = "London", country = "GB"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
         val BANK_D = getTestPartyAndCertificate(CordaX500Name(organisation = "Bank D", locality = "London", country = "GB"), entropyToKeyPair(BigInteger.valueOf(2000)).public)

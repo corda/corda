@@ -203,14 +203,14 @@ class NodeInterestRatesTest {
     }
 
     @Test
-    fun `network tearoff`() {
-        val mockNet = MockNetwork(initialiseSerialization = false, cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
-        val n1 = mockNet.createNotaryNode()
+    fun `network tearoff`() = withoutTestSerialization {
+        val mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
+        val aliceNode = mockNet.createPartyNode(ALICE.name)
         val oracleNode = mockNet.createNode().apply {
             internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
-                internals.findTokenizableService(NodeInterestRates.Oracle::class.java)!!.knownFixes = TEST_DATA
+                services.cordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
             }
         }
         val tx = makePartialTX()
@@ -218,7 +218,7 @@ class NodeInterestRatesTest {
         val flow = FilteredRatesFlow(tx, oracleNode.info.chooseIdentity(), fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
         LogHelper.setLevel("rates")
         mockNet.runNetwork()
-        val future = n1.services.startFlow(flow).resultFuture
+        val future = aliceNode.services.startFlow(flow).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
         // We should now have a valid fix of our tx from the oracle.

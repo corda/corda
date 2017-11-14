@@ -72,7 +72,6 @@ data class LoadTest<T, S>(
         if (parameters.clearDatabaseBeforeRun) {
             log.info("Clearing databases as clearDatabaseBeforeRun=true")
             // We need to clear the network map first so that other nodes register fine
-            nodes.networkMap.clearDb()
             (nodes.simpleNodes + listOf(nodes.notary)).parallelStream().forEach {
                 it.clearDb()
             }
@@ -152,10 +151,9 @@ data class LoadTest<T, S>(
 
 data class Nodes(
         val notary: NodeConnection,
-        val networkMap: NodeConnection,
         val simpleNodes: List<NodeConnection>
 ) {
-    val allNodes by lazy { (listOf(notary, networkMap) + simpleNodes).associateBy { it.info }.values }
+    val allNodes by lazy { (listOf(notary) + simpleNodes).associateBy { it.info }.values }
 }
 
 /**
@@ -171,8 +169,6 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             RemoteNode(hostname, it.remoteSystemdServiceName, it.sshUser, it.rpcUser, it.rpcPort, it.remoteNodeDirectory)
         }
     }
-
-    val networkMap = remoteNodes[0].hostname// TODO Should be taken from configs? but also we don't care that much about that, because networkMapService will be gone and no one uses LoadTesting now
 
     connectToNodes(remoteNodes, PortAllocation.Incremental(configuration.localTunnelStartingPort)) { connections ->
         log.info("Connected to all nodes!")
@@ -193,12 +189,10 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             hostNodeMap.put(connection.remoteNode.hostname, connection)
         }
 
-        val networkMapNode = hostNodeMap[networkMap]!!
-        val notaryIdentity = networkMapNode.proxy.notaryIdentities().single()
+        val notaryIdentity = hostNodeMap.values.first().proxy.notaryIdentities().single()
         val notaryNode = hostNodeMap.values.single { notaryIdentity in it.info.legalIdentities }
         val nodes = Nodes(
                 notary = notaryNode,
-                networkMap = networkMapNode,
                 simpleNodes = hostNodeMap.values.filter { it.info.legalIdentitiesAndCerts.size == 1 } // TODO Fix it with network map.
         )
 

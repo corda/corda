@@ -16,7 +16,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.MockNetwork.NotarySpec
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
@@ -27,24 +27,25 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
-    lateinit var mockNet: MockNetwork
-    lateinit var oldNotaryNode: StartedNode<MockNetwork.MockNode>
-    lateinit var newNotaryNode: StartedNode<MockNetwork.MockNode>
-    lateinit var clientNodeA: StartedNode<MockNetwork.MockNode>
-    lateinit var clientNodeB: StartedNode<MockNetwork.MockNode>
-    lateinit var newNotaryParty: Party
-    lateinit var oldNotaryParty: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var oldNotaryNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var clientNodeA: StartedNode<MockNetwork.MockNode>
+    private lateinit var clientNodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var newNotaryParty: Party
+    private lateinit var oldNotaryParty: Party
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        oldNotaryNode = mockNet.createNotaryNode(MockNodeParameters(legalName = DUMMY_NOTARY.name))
+        val oldNotaryName = DUMMY_REGULATOR.name
+        mockNet = MockNetwork(
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name), NotarySpec(oldNotaryName)),
+                cordappPackages = listOf("net.corda.testing.contracts")
+        )
         clientNodeA = mockNet.createNode()
         clientNodeB = mockNet.createNode()
-        newNotaryNode = mockNet.createNotaryNode(MockNodeParameters(legalName = DUMMY_NOTARY.name.copy(organisation = "Dummy Notary 2")))
-        mockNet.runNetwork() // Clear network map registration messages
-        oldNotaryParty = newNotaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
-        newNotaryParty = newNotaryNode.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME.copy(organisation = "Dummy Notary 2"))!!
+        oldNotaryNode = mockNet.notaryNodes[1]
+        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY.name)!!
+        oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(oldNotaryName)!!
     }
 
     @After

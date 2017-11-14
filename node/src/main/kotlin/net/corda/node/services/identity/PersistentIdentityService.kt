@@ -14,6 +14,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.node.utilities.X509Utilities
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
 import java.security.InvalidAlgorithmParameterException
@@ -124,6 +125,20 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
                 log.error(it.toX509CertHolder().subject.toString())
             }
             throw e
+        }
+
+        // Ensure we record the first identity of the same name, first
+        val identityPrincipal = identity.name.x500Principal
+        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
+            val principal = (it as? X509Certificate)?.subjectX500Principal
+            principal == identityPrincipal
+        }
+        if (firstCertWithThisName != identity.certificate) {
+            val certificates = identity.certPath.certificates
+            val idx = certificates.lastIndexOf(firstCertWithThisName)
+            val certFactory = CertificateFactory.getInstance("X509")
+            val firstPath = certFactory.generateCertPath(certificates.slice(idx..certificates.size - 1))
+            verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 
         log.debug { "Registering identity $identity" }

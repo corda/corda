@@ -13,7 +13,7 @@ import java.math.BigInteger
 import kotlin.test.assertEquals
 
 class NetworkMapCacheTest {
-    val mockNet: MockNetwork = MockNetwork()
+    private val mockNet = MockNetwork()
 
     @After
     fun teardown() {
@@ -24,7 +24,6 @@ class NetworkMapCacheTest {
     fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
         val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE.name, entropyRoot = entropy))
-        mockNet.runNetwork()
 
         // Node A currently knows only about itself, so this returns node A
         assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(aliceNode.info.chooseIdentity().owningKey).singleOrNull(), aliceNode.info)
@@ -38,13 +37,12 @@ class NetworkMapCacheTest {
 
     @Test
     fun `getNodeByLegalIdentity`() {
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val notaryCache: NetworkMapCache = notaryNode.services.networkMapCache
+        val bobNode = mockNet.createPartyNode(BOB.name)
+        val bobCache: NetworkMapCache = bobNode.services.networkMapCache
         val expected = aliceNode.info
 
-        mockNet.runNetwork()
-        val actual = notaryNode.database.transaction { notaryCache.getNodeByLegalIdentity(aliceNode.info.chooseIdentity()) }
+        val actual = bobNode.database.transaction { bobCache.getNodeByLegalIdentity(aliceNode.info.chooseIdentity()) }
         assertEquals(expected, actual)
 
         // TODO: Should have a test case with anonymous lookup
@@ -52,30 +50,28 @@ class NetworkMapCacheTest {
 
     @Test
     fun `getPeerByLegalName`() {
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val notaryCache: NetworkMapCache = notaryNode.services.networkMapCache
+        val bobNode = mockNet.createPartyNode(BOB.name)
+        val bobCache: NetworkMapCache = bobNode.services.networkMapCache
         val expected = aliceNode.info.legalIdentities.single()
 
-        mockNet.runNetwork()
-        val actual = notaryNode.database.transaction { notaryCache.getPeerByLegalName(ALICE.name) }
+        val actual = bobNode.database.transaction { bobCache.getPeerByLegalName(ALICE.name) }
         assertEquals(expected, actual)
     }
 
     @Test
     fun `remove node from cache`() {
-        val notaryNode = mockNet.createNotaryNode()
         val aliceNode = mockNet.createPartyNode(ALICE.name)
-        val notaryLegalIdentity = notaryNode.info.chooseIdentity()
+        val bobNode = mockNet.createPartyNode(BOB.name)
+        val bobLegalIdentity = bobNode.info.chooseIdentity()
         val alice = aliceNode.info.chooseIdentity()
-        val notaryCache = notaryNode.services.networkMapCache
-        mockNet.runNetwork()
-        notaryNode.database.transaction {
-            assertThat(notaryCache.getNodeByLegalIdentity(alice) != null)
-            notaryCache.removeNode(aliceNode.info)
-            assertThat(notaryCache.getNodeByLegalIdentity(alice) == null)
-            assertThat(notaryCache.getNodeByLegalIdentity(notaryLegalIdentity) != null)
-            assertThat(notaryCache.getNodeByLegalName(alice.name) == null)
+        val bobCache = bobNode.services.networkMapCache
+        bobNode.database.transaction {
+            assertThat(bobCache.getNodeByLegalIdentity(alice) != null)
+            bobCache.removeNode(aliceNode.info)
+            assertThat(bobCache.getNodeByLegalIdentity(alice) == null)
+            assertThat(bobCache.getNodeByLegalIdentity(bobLegalIdentity) != null)
+            assertThat(bobCache.getNodeByLegalName(alice.name) == null)
         }
     }
 }

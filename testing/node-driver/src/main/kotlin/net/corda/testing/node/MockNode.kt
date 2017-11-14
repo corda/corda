@@ -7,13 +7,14 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.Party
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
@@ -23,23 +24,22 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.InMemoryNetworkMapService
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.nodeapi.internal.ServiceInfo
+import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.common.internal.NetworkParametersCopier
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.setGlobalSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
@@ -50,6 +50,7 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -75,8 +76,6 @@ data class MockNetworkParameters(
 }
 
 /**
- * @param notaryIdentity a set of service entries to use in place of the node's default service entries,
- * for example where a node's service is part of a cluster.
  * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
  * but can be overridden to cause nodes to have stable or colliding identity/service keys.
  * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
@@ -85,12 +84,10 @@ data class MockNetworkParameters(
 data class MockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
-        val notaryIdentity: Pair<ServiceInfo, KeyPair>? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: (NodeConfiguration) -> Any? = {}) {
     fun setForcedID(forcedID: Int?) = copy(forcedID = forcedID)
     fun setLegalName(legalName: CordaX500Name?) = copy(legalName = legalName)
-    fun setNotaryIdentity(notaryIdentity: Pair<ServiceInfo, KeyPair>?) = copy(notaryIdentity = notaryIdentity)
     fun setEntropyRoot(entropyRoot: BigInteger) = copy(entropyRoot = entropyRoot)
     fun setConfigOverrides(configOverrides: (NodeConfiguration) -> Any?) = copy(configOverrides = configOverrides)
 }
@@ -99,8 +96,8 @@ data class MockNodeArgs(
         val config: NodeConfiguration,
         val network: MockNetwork,
         val id: Int,
-        val notaryIdentity: Pair<ServiceInfo, KeyPair>?,
-        val entropyRoot: BigInteger)
+        val entropyRoot: BigInteger
+)
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -114,6 +111,9 @@ data class MockNodeArgs(
  * You can get a printout of every message sent by using code like:
  *
  *    LogHelper.setLevel("+messages")
+ *
+ * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
+ * This node is available by calling [defaultNotaryNode].
  */
 class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                   private val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
@@ -121,6 +121,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+                  private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
                   private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
@@ -132,19 +133,42 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
+    private val networkParameters: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
+    private val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    private val sharedUserCount = AtomicInteger(0)
     /** A read only view of the current set of executing nodes. */
     val nodes: List<MockNode> get() = _nodes
-    private val serializationEnv = initialiseTestSerialization(initialiseSerialization)
 
-    init {
-        filesystem.getPath("/nodes").createDirectory()
+    /**
+     * Returns the list of nodes started by the network. Each notary specified when the network is constructed ([notarySpecs]
+     * parameter) maps 1:1 to the notaries returned by this list.
+     */
+    val notaryNodes: List<StartedNode<MockNode>>
+
+    /**
+     * Returns the single notary node on the network. Throws if there are none or more than one.
+     * @see notaryNodes
+     */
+    val defaultNotaryNode: StartedNode<MockNode> get() {
+        return when (notaryNodes.size) {
+            0 -> throw IllegalStateException("There are no notaries defined on the network")
+            1 -> notaryNodes[0]
+            else -> throw IllegalStateException("There is more than one notary defined on the network")
+        }
+    }
+
+    /**
+     * Return the identity of the default notary node.
+     * @see defaultNotaryNode
+     */
+    val defaultNotaryIdentity: Party get() {
+        return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
     }
 
     /**
      * Because this executor is shared, we need to be careful about nodes shutting it down.
      */
-    private val sharedUserCount = AtomicInteger(0)
     private val sharedServerThread = object : ServiceAffinityExecutor("Mock network", 1) {
         override fun shutdown() {
             // We don't actually allow the shutdown of the network-wide shared thread pool until all references to
@@ -155,66 +179,105 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         }
 
         override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean {
-            if (!isShutdown) {
+            return if (!isShutdown) {
                 flush()
-                return true
+                true
             } else {
-                return super.awaitTermination(timeout, unit)
+                super.awaitTermination(timeout, unit)
             }
+        }
+    }
+
+    init {
+        filesystem.getPath("/nodes").createDirectory()
+        val notaryInfos = generateNotaryIdentities()
+        // The network parameters must be serialised before starting any of the nodes
+        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        notaryNodes = createNotaries()
+    }
+
+    private fun generateNotaryIdentities(): List<NotaryInfo> {
+        return notarySpecs.mapIndexed { index, spec ->
+            val identity = ServiceIdentityGenerator.generateToDisk(
+                    dirs = listOf(baseDirectory(nextNodeId + index)),
+                    serviceName = spec.name,
+                    serviceId = "identity")
+            NotaryInfo(identity, spec.validating)
+        }
+    }
+
+    private fun createNotaries(): List<StartedNode<MockNode>> {
+        return notarySpecs.map { spec ->
+            createNode(MockNodeParameters(legalName = spec.name, configOverrides = {
+                doReturn(NotaryConfig(spec.validating)).whenever(it).notary
+            }))
         }
     }
 
     open class MockNode(args: MockNodeArgs) : AbstractNode(
             args.config,
-            TestClock(),
+            TestClock(Clock.systemUTC()),
             MOCK_VERSION_INFO,
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
-            args.network.busyLatch) {
+            args.network.busyLatch
+    ) {
         val mockNet = args.network
         val id = args.id
-        internal val notaryIdentity = args.notaryIdentity
-        val entropyRoot = args.entropyRoot
+        private val entropyRoot = args.entropyRoot
         var counter = entropyRoot
+
         override val log: Logger = loggerFor<MockNode>()
+
         override val serverThread: AffinityExecutor =
-                if (mockNet.threadPerNode)
+                if (mockNet.threadPerNode) {
                     ServiceAffinityExecutor("Mock node $id thread", 1)
-                else {
+                } else {
                     mockNet.sharedUserCount.incrementAndGet()
                     mockNet.sharedServerThread
                 }
+
         override val started: StartedNode<MockNode>? get() = uncheckedCast(super.started)
-        override fun start(): StartedNode<MockNode> = uncheckedCast(super.start())
+
+        override fun start(): StartedNode<MockNode> {
+            mockNet.networkParameters.install(configuration.baseDirectory)
+            val started: StartedNode<MockNode> = uncheckedCast(super.start())
+            advertiseNodeToNetwork(started)
+            return started
+        }
+
+        private fun advertiseNodeToNetwork(newNode: StartedNode<MockNode>) {
+            mockNet.nodes
+                    .mapNotNull { it.started }
+                    .forEach { existingNode ->
+                        newNode.services.networkMapCache.addNode(existingNode.info)
+                        existingNode.services.networkMapCache.addNode(newNode.info)
+                    }
+        }
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService {
+        override fun makeMessagingService(): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
                     id,
                     serverThread,
-                    getNotaryIdentity(),
+                    myNotaryIdentity,
                     myLegalName,
-                    database)
-                    .start()
-                    .getOrThrow()
+                    database
+            ).start().getOrThrow()
         }
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
             network = messagingServiceSpy
         }
 
-        override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
-            return E2ETestKeyManagementService(identityService, partyKeys + (notaryIdentity?.let { setOf(it.second) } ?: emptySet()))
+        override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
+            return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {
             // Nothing to do
-        }
-
-        override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-            return InMemoryNetworkMapService()
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
@@ -231,7 +294,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
-        override fun myAddresses() = emptyList<NetworkHostAndPort>()
+        override fun myAddresses(): List<NetworkHostAndPort> = emptyList()
 
         // Allow unit tests to modify the serialization whitelist list before the node start,
         // so they don't have to ServiceLoad test whitelists into all unit tests.
@@ -253,9 +316,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             dbCloser = null
         }
 
-        fun hasDBConnection() = dbCloser != null
-
-        // You can change this from zero if you have custom [FlowLogic] that park themselves.  e.g. [StateMachineManagerTests]
         var acceptableLiveFiberCountOnStop: Int = 0
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
@@ -263,30 +323,33 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         override fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
             return object : BFTSMaRt.Cluster {
                 override fun waitUntilAllReplicasHaveInitialized() {
-                    val clusterNodes = mockNet.nodes.filter { notaryKey in it.started!!.info.legalIdentities.map { it.owningKey } }
+                    val clusterNodes = mockNet.nodes.map { it.started!! }.filter { notaryKey in it.info.legalIdentities.map { it.owningKey } }
                     if (clusterNodes.size != bftSMaRtConfig.clusterAddresses.size) {
                         throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
                     }
                     clusterNodes.forEach {
-                        val notaryService = it.findTokenizableService(BFTNonValidatingNotaryService::class.java)!!
-                        notaryService.waitUntilReplicaHasInitialized()
+                        (it.notaryService as BFTNonValidatingNotaryService).waitUntilReplicaHasInitialized()
                     }
                 }
             }
         }
     }
 
-    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()) = createUnstartedNode(parameters, defaultFactory)
+    fun createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters()): MockNode {
+        return createUnstartedNode(parameters, defaultFactory)
+    }
+
     fun <N : MockNode> createUnstartedNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): N {
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
-    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedNode<MockNode> = createNode(parameters, defaultFactory)
+    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedNode<MockNode> {
+        return createNode(parameters, defaultFactory)
+    }
+
     /** Like the other [createNode] but takes a [nodeFactory] and propagates its [MockNode] subtype. */
     fun <N : MockNode> createNode(parameters: MockNodeParameters = MockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
-        val node: StartedNode<N> = uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
-        ensureAllNetworkMapCachesHaveAllNodeInfos()
-        return node
+        return uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
     }
 
     private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
@@ -297,13 +360,12 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             parameters.configOverrides(it)
         }
-        return nodeFactory(MockNodeArgs(config, this, id, parameters.notaryIdentity, parameters.entropyRoot)).apply {
-            if (start) {
-                start()
-                ensureAllNetworkMapCachesHaveAllNodeInfos()
-            }
-            _nodes.add(this)
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot))
+        _nodes += node
+        if (start) {
+            node.start()
         }
+        return node
     }
 
     fun baseDirectory(nodeId: Int): Path = filesystem.getPath("/nodes/$nodeId")
@@ -316,7 +378,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
      */
     @JvmOverloads
     fun runNetwork(rounds: Int = -1) {
-        ensureAllNetworkMapCachesHaveAllNodeInfos()
         check(!networkSendManuallyPumped)
         fun pumpAll() = messagingNetwork.endpoints.map { it.pumpReceive(false) }
 
@@ -331,23 +392,9 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     }
 
     @JvmOverloads
-    fun createNotaryNode(parameters: MockNodeParameters = MockNodeParameters(legalName = DUMMY_NOTARY.name), validating: Boolean = true): StartedNode<MockNode> {
-        return createNotaryNode(parameters, validating, defaultFactory)
-    }
 
-    fun <N : MockNode> createNotaryNode(parameters: MockNodeParameters = MockNodeParameters(legalName = DUMMY_NOTARY.name),
-                                        validating: Boolean = true,
-                                        nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
-        return createNode(parameters.copy(configOverrides = {
-            doReturn(NotaryConfig(validating)).whenever(it).notary
-            parameters.configOverrides(it)
-        }), nodeFactory)
-    }
-
-    @JvmOverloads
-    fun createPartyNode(legalName: CordaX500Name? = null,
-                        notaryIdentity: Pair<ServiceInfo, KeyPair>? = null): StartedNode<MockNode> {
-        return createNode(MockNodeParameters(legalName = legalName, notaryIdentity = notaryIdentity))
+    fun createPartyNode(legalName: CordaX500Name? = null): StartedNode<MockNode> {
+        return createNode(MockNodeParameters(legalName = legalName))
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.
@@ -362,26 +409,14 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         }
     }
 
-    private fun ensureAllNetworkMapCachesHaveAllNodeInfos() {
-        val infos = nodes.mapNotNull { it.started?.info }
-        nodes.filter { it.hasDBConnection() }
-                .mapNotNull { it.started?.services?.networkMapCache }
-                .forEach {
-                    for (nodeInfo in infos) {
-                        it.addNode(nodeInfo)
-                    }
-                }
-    }
-
     fun startNodes() {
         require(nodes.isNotEmpty())
         nodes.forEach { it.started ?: it.start() }
-        ensureAllNetworkMapCachesHaveAllNodeInfos()
     }
 
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
-        serializationEnv.resetTestSerialization()
+        serializationEnv.unset()
     }
 
     // Test method to block until all scheduled activity, active flows
@@ -393,14 +428,16 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     override fun close() {
         stopNodes()
     }
+
+    data class NotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
+        constructor(name: CordaX500Name) : this(name, validating = true)
+    }
 }
 
-fun network(nodesCount: Int, action: MockNetwork.(nodes: List<StartedNode<MockNetwork.MockNode>>, notary: StartedNode<MockNetwork.MockNode>) -> Unit) {
-    MockNetwork().use {
-        it.runNetwork()
-        val notary = it.createNotaryNode()
-        val nodes = (1..nodesCount).map { _ -> it.createPartyNode() }
-        action(it, nodes, notary)
+fun network(nodesCount: Int, action: MockNetwork.(List<StartedNode<MockNetwork.MockNode>>) -> Unit) {
+    MockNetwork().use { mockNet ->
+        val nodes = (1..nodesCount).map { mockNet.createPartyNode() }
+        mockNet.action(nodes)
     }
 }
 

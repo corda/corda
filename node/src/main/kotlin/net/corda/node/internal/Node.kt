@@ -4,41 +4,32 @@ import com.codahale.metrics.JmxReporter
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
-import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.TestClock
-import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
-import org.apache.activemq.artemis.api.core.RoutingType
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Clock
@@ -52,7 +43,7 @@ import kotlin.system.exitProcess
  *
  * @param configuration This is typically loaded from a TypeSafe HOCON configuration file.
  */
-open class Node(override val configuration: NodeConfiguration,
+open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
@@ -75,7 +66,7 @@ open class Node(override val configuration: NodeConfiguration,
         }
 
         private fun createClock(configuration: NodeConfiguration): Clock {
-            return if (configuration.useTestClock) TestClock() else NodeClock()
+            return (if (configuration.useTestClock) ::DemoClock else ::SimpleClock)(Clock.systemUTC())
         }
 
         private val sameVmNodeCounter = AtomicInteger()
@@ -138,11 +129,11 @@ open class Node(override val configuration: NodeConfiguration,
 
     private lateinit var userService: RPCUserService
 
-    override fun makeMessagingService(legalIdentity: PartyAndCertificate): MessagingService {
+    override fun makeMessagingService(): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
-        val advertisedAddress = configuration.messagingServerAddress ?: getAdvertisedAddress()
+        val advertisedAddress = info.addresses.single()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
 
@@ -150,7 +141,7 @@ open class Node(override val configuration: NodeConfiguration,
                 configuration,
                 versionInfo,
                 serverAddress,
-                legalIdentity.owningKey,
+                info.legalIdentities[0].owningKey,
                 serverThread,
                 database,
                 services.monitoringService,
@@ -164,14 +155,18 @@ open class Node(override val configuration: NodeConfiguration,
         }
     }
 
+    override fun myAddresses(): List<NetworkHostAndPort> {
+        return listOf(configuration.messagingServerAddress ?: getAdvertisedAddress())
+    }
+
     private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {
-            val useHost = if (detectPublicIp) {
+            val host = if (detectPublicIp) {
                 tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
             } else {
                 p2pAddress.host
             }
-            NetworkHostAndPort(useHost, p2pAddress.port)
+            NetworkHostAndPort(host, p2pAddress.port)
         }
     }
 
@@ -201,15 +196,6 @@ open class Node(override val configuration: NodeConfiguration,
 
         // Start up the MQ client.
         (network as NodeMessagingClient).start(rpcOps, userService)
-    }
-
-    override fun myAddresses(): List<NetworkHostAndPort> {
-        val address = network.myAddress as ArtemisMessagingComponent.ArtemisPeerAddress
-        return listOf(address.hostAndPort)
-    }
-
-    override fun makeNetworkMapService(network: MessagingService, networkMapCache: NetworkMapCacheInternal): NetworkMapService {
-        return PersistentNetworkMapService()
     }
 
     /**
@@ -288,14 +274,15 @@ open class Node(override val configuration: NodeConfiguration,
 
     private fun initialiseSerialization() {
         val classloader = cordappLoader.appClassLoader
-        SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-            registerScheme(KryoServerSerializationScheme())
-            registerScheme(AMQPServerSerializationScheme())
-        }
-        SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
+        nodeSerializationEnv = SerializationEnvironmentImpl(
+                SerializationFactoryImpl().apply {
+                    registerScheme(KryoServerSerializationScheme())
+                    registerScheme(AMQPServerSerializationScheme())
+                },
+                KRYO_P2P_CONTEXT.withClassLoader(classloader),
+                rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
+                storageContext = KRYO_STORAGE_CONTEXT.withClassLoader(classloader),
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
     }
 
     /** Starts a blocking event loop for message dispatch. */

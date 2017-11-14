@@ -23,6 +23,10 @@ import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
+import net.corda.testing.internal.RPCDriverExposedDSLInterface
+import net.corda.testing.internal.rpcDriver
+import net.corda.testing.internal.rpcTestUser
+import net.corda.testing.internal.startRpcClient
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -33,22 +37,17 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ContractUpgradeFlowTest {
-    lateinit var mockNet: MockNetwork
-    lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
-    lateinit var bobNode: StartedNode<MockNetwork.MockNode>
-    lateinit var notary: Party
+    private lateinit var mockNet: MockNetwork
+    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var notary: Party
 
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
-        val notaryNode = mockNet.createNotaryNode()
         aliceNode = mockNet.createPartyNode(ALICE.name)
         bobNode = mockNet.createPartyNode(BOB.name)
-
-        // Process registration
-        mockNet.runNetwork()
-
-        notary = notaryNode.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
     }
 
     @After

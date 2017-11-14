@@ -13,31 +13,25 @@ import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.nodeapi.User
 import net.corda.testing.*
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockServices
 import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
-
     private class Services : MockServices() {
         private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
         private val cordapp get() = provider.cordapps.first()
@@ -53,20 +47,15 @@ class AttachmentLoadingTests {
 
         val bankAName = CordaX500Name("BankA", "Zurich", "CH")
         val bankBName = CordaX500Name("BankB", "Zurich", "CH")
-        val notaryName = CordaX500Name("Notary", "Zurich", "CH")
-        val flowInitiatorClass =
+        val flowInitiatorClass: Class<out FlowLogic<*>> =
                 Class.forName("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator", true, URLClassLoader(arrayOf(isolatedJAR)))
                         .asSubclass(FlowLogic::class.java)
 
-        private fun DriverDSLExposedInterface.createTwoNodesAndNotary(): List<NodeHandle> {
-            val adminUser = User("admin", "admin", permissions = setOf("ALL"))
-            val nodes = listOf(
-                    startNode(providedName = bankAName, rpcUsers = listOf(adminUser)),
-                    startNode(providedName = bankBName, rpcUsers = listOf(adminUser)),
-                    startNotaryNode(providedName = notaryName, rpcUsers = listOf(adminUser), validating = false)
-            ).transpose().getOrThrow()   // Wait for all nodes to start up.
-            nodes.forEach { it.rpc.waitUntilNetworkReady().getOrThrow() }
-            return nodes
+        private fun DriverDSLExposedInterface.createTwoNodes(): List<NodeHandle> {
+            return listOf(
+                    startNode(providedName = bankAName),
+                    startNode(providedName = bankBName)
+            ).transpose().getOrThrow()
         }
 
         private fun DriverDSLExposedInterface.installIsolatedCordappTo(nodeName: CordaX500Name) {
@@ -79,15 +68,6 @@ class AttachmentLoadingTests {
                 }
             }
         }
-
-        // Due to cluster instability after nodes been started it may take some time to all the nodes to become available
-        // *and* discover each other to reliably communicate. Hence, eventual nature of the test.
-        // TODO: Remove this method and usages of it once NetworkMap service been re-worked
-        private fun eventuallyPassingTest(block: () -> Unit) {
-            eventually<Throwable, Unit>(30.seconds) {
-                block()
-            }
-        }
     }
 
     private lateinit var services: Services
@@ -98,14 +78,13 @@ class AttachmentLoadingTests {
     }
 
     @Test
-    fun `test a wire transaction has loaded the correct attachment`() {
+    fun `test a wire transaction has loaded the correct attachment`() = withTestSerialization {
         val appClassLoader = services.appContext.classLoader
         val contractClass = appClassLoader.loadClass(ISOLATED_CONTRACT_ID).asSubclass(Contract::class.java)
         val generateInitialMethod = contractClass.getDeclaredMethod("generateInitial", PartyAndReference::class.java, Integer.TYPE, Party::class.java)
         val contract = contractClass.newInstance()
-        val txBuilder = generateInitialMethod.invoke(contract, PartyAndReference(DUMMY_BANK_A, OpaqueBytes(kotlin.ByteArray(1))), 1, DUMMY_NOTARY) as TransactionBuilder
-        val context = SerializationFactory.defaultFactory.defaultContext
-                .withClassLoader(appClassLoader)
+        val txBuilder = generateInitialMethod.invoke(contract, DUMMY_BANK_A.ref(1), 1, DUMMY_NOTARY) as TransactionBuilder
+        val context = SerializationFactory.defaultFactory.defaultContext.withClassLoader(appClassLoader)
         val ledgerTx = txBuilder.toLedgerTransaction(services, context)
         contract.verify(ledgerTx)
 
@@ -117,26 +96,22 @@ class AttachmentLoadingTests {
 
     @Test
     fun `test that attachments retrieved over the network are not used for code`() {
-        driver(initialiseSerialization = false) {
+        driver {
             installIsolatedCordappTo(bankAName)
-            val (bankA, bankB, _) = createTwoNodesAndNotary()
-            eventuallyPassingTest {
-                assertFailsWith<UnexpectedFlowEndException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
-                    bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
-                }
+            val (bankA, bankB) = createTwoNodes()
+            assertFailsWith<UnexpectedFlowEndException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
+                bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
             }
         }
     }
 
     @Test
     fun `tests that if the attachment is loaded on both sides already that a flow can run`() {
-        driver(initialiseSerialization = false) {
+        driver {
             installIsolatedCordappTo(bankAName)
             installIsolatedCordappTo(bankBName)
-            val (bankA, bankB, _) = createTwoNodesAndNotary()
-            eventuallyPassingTest {
-                bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
-            }
+            val (bankA, bankB) = createTwoNodes()
+            bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
         }
     }
 }

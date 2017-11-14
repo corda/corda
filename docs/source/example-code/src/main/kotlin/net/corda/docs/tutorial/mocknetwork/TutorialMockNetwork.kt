@@ -57,7 +57,6 @@ class TutorialMockNetwork {
     }
 
     lateinit private var mockNet: MockNetwork
-    lateinit private var notary: StartedNode<MockNetwork.MockNode>
     lateinit private var nodeA: StartedNode<MockNetwork.MockNode>
     lateinit private var nodeB: StartedNode<MockNetwork.MockNode>
 
@@ -68,13 +67,9 @@ class TutorialMockNetwork {
     @Before
     fun setUp() {
         mockNet = MockNetwork()
-        notary = mockNet.createNotaryNode()
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
-
         nodeB.registerInitiatedFlow(FlowB::class.java)
-
-        mockNet.runNetwork()
     }
 
     @After

@@ -8,7 +8,6 @@ description 'Testing utilities for Corda'
 
 dependencies {
     compile project(':test-common')
-    compile project(':core')
     compile project(':node')
     compile project(':client:mock')
 

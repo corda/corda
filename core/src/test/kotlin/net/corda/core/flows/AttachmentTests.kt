@@ -51,8 +51,6 @@ class AttachmentTests {
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
 
-        // Ensure that registration was successful before progressing any further
-        mockNet.runNetwork()
         val alice = aliceNode.info.singleIdentity()
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -88,15 +86,11 @@ class AttachmentTests {
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
 
-        // Ensure that registration was successful before progressing any further
-        mockNet.runNetwork()
-
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
-        mockNet.runNetwork()
         val alice = aliceNode.info.singleIdentity()
         val bobFlow = bobNode.startAttachmentFlow(setOf(hash), alice)
         mockNet.runNetwork()
@@ -107,13 +101,12 @@ class AttachmentTests {
     @Test
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val aliceNode = mockNet.createNotaryNode(MockNodeParameters(legalName = ALICE.name), nodeFactory = { args ->
+        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE.name), nodeFactory = { args ->
             object : MockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
             }
-        }, validating = false)
+        })
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name))
-        mockNet.runNetwork()
         val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)

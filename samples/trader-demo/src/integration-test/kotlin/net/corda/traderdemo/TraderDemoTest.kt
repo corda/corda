@@ -9,7 +9,10 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
-import net.corda.testing.*
+import net.corda.testing.BOC
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.poll
@@ -33,9 +36,8 @@ class TraderDemoTest {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A.name, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)),
-                    startNode(providedName = BOC.name, rpcUsers = listOf(bankUser)),
-                    startNotaryNode(DUMMY_NOTARY.name, validating = false))
-                    .map { (it.getOrThrow() as NodeHandle.InProcess).node }
+                    startNode(providedName = BOC.name, rpcUsers = listOf(bankUser))
+            ).map { (it.getOrThrow() as NodeHandle.InProcess).node }
 
             nodeA.internals.registerInitiatedFlow(BuyerFlow::class.java)
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {

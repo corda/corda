@@ -183,7 +183,6 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         // by having its password be an unknown securely random 128-bit value.
         clusterPassword = BigInteger(128, newSecureRandom()).toString(16)
         queueConfigurations = listOf(
-                queueConfig(NETWORK_MAP_QUEUE, durable = true),
                 queueConfig(P2P_QUEUE, durable = true),
                 // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
                 // clients must have authenticated. We could use a single consumer for everything and perhaps we should,

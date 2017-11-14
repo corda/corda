@@ -3,7 +3,8 @@ package net.corda.vega
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.*
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.vega.api.PortfolioApi
@@ -15,7 +16,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
 
-class SimmValuationTest : IntegrationTestCategory {
+class SimmValuationTest {
     private companion object {
         // SIMM demo can only currently handle one valuation date due to a lack of market data or a market data source.
         val valuationDate: LocalDate = LocalDate.parse("2016-06-06")
@@ -27,7 +28,6 @@ class SimmValuationTest : IntegrationTestCategory {
     @Test
     fun `runs SIMM valuation demo`() {
         driver(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.vega.contracts")) {
-            startNotaryNode(DUMMY_NOTARY.name, validating = false).getOrThrow()
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
