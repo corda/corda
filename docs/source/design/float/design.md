@@ -65,8 +65,7 @@ Allow connectivity in compliance with DMZ constraints commonly imposed by modern
 7. Communications in the DMZ should yse modern TLS, often with local-only certificates/keys that hold no value outside of use in predefined links.
 8. TLS is commonly terminated on the firewall which has an associated HSM for the private keys. This means that we do not necessarily have the certificates of the connection, but hopefully for now we can insist on receiving the connection directly onto the float proxy, although we have to ask how we might access an HSM.
 9. It is usually assumed that there is an HA/load balancing pair (or more) of proxies for resilience. Often the firewalls are also combined with hardware load balancer functionality.
-10. Any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised. I doubt we can finish end-to-end session encryption by March, but we should define our AMQP packet structure to be forward compatible with a switching flag so that we can leave encryption till later.
-
+10. Any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised.
 
 ## Design Decisions
 1. AMQP vs. custom P2p - see Alternatives section below
