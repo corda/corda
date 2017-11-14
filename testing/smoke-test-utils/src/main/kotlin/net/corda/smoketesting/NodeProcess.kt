@@ -8,8 +8,8 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.testing.common.internal.NetworkParametersCopier
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.testNetworkParameters
 import net.corda.testing.common.internal.asContextEnv
 import java.nio.file.Path
 import java.nio.file.Paths

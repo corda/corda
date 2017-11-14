@@ -37,8 +37,8 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.common.internal.NetworkParametersCopier
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.testNetworkParameters
 import net.corda.testing.setGlobalSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
