@@ -139,7 +139,6 @@ object RPCApi {
 
         companion object {
             fun fromClientMessage(message: ClientMessage): ClientToServer {
-
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
                     RPCApi.ClientToServer.Tag.RPC_REQUEST -> RpcRequest(
@@ -262,7 +261,6 @@ fun ClientMessage.sessionId(): SessionId {
 
     return sessionId(RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot extract the session id from client message.")
 }
-
 
 fun ClientMessage.externalTrace(): Trace? {
 

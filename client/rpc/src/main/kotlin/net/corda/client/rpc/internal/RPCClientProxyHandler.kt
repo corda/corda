@@ -271,14 +271,12 @@ class RPCClientProxyHandler(
                 }
             }
             is RPCApi.ServerToClient.Observation -> {
-                // TODO sollecitom Kryo writes to this map
                 val observable = observableContext.observableMap.getIfPresent(serverToClient.id)
                 if (observable == null) {
                     log.debug("Observation ${serverToClient.content} arrived to unknown Observable with ID ${serverToClient.id}. " +
                             "This may be due to an observation arriving before the server was " +
                             "notified of observable shutdown")
                 } else {
-                    // TODO sollecitom check that serverToClient.id is not duplicated
                     // We schedule the onNext() on an executor sticky-pooled based on the Observable ID.
                     observationExecutorPool.run(serverToClient.id) { executor ->
                         executor.submit {
@@ -407,7 +405,6 @@ private typealias CallSiteMap = ConcurrentHashMap<InvocationId, Throwable?>
  * @param hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
  */
 data class ObservableContext(
-        // TODO sollecitom ask Andras about callSiteMap vs observableMap
         val callSiteMap: CallSiteMap?,
         val observableMap: RpcObservableMap,
         val hardReferenceStore: MutableSet<Observable<*>>
