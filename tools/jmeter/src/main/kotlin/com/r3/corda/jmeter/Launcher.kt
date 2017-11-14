@@ -8,11 +8,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.streams.asSequence
 
-/**
- * A wrapper around JMeter to make it run without having a JMeter download installed locally.  One mode is used for
- * running on a remote cluster using an all-in-one bundle JAR using Capsule. The other is just used to run based on current
- * classpath, but with optional SSH tunnelling logic automatically invoked.
- */
 class Launcher {
     companion object {
         @JvmStatic
@@ -50,16 +45,11 @@ class Launcher {
                 }
                 jmeter.start(arrayOf("-s", "-p", (capsuleDirPath / "jmeter.properties").toString()) + extraArgs + args)
             } else {
-                val searchPath = Files.readAllLines(Paths.get(System.getProperty("search_paths_file"))).first()
-                logger.info("search_paths = $searchPath")
-                System.setProperty("search_paths", searchPath)
                 jmeter.start(maybeOpenSshTunnels(args))
             }
         }
 
         private fun maybeOpenSshTunnels(args: Array<String>): Array<String> {
-            // We trim the args at the point "-Xssh" appears in the array of args.  Anything after that is a host to
-            // SSH tunnel to.
             var index = 0
             for (arg in args) {
                 if (arg == "-Xssh") {
