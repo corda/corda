@@ -517,7 +517,7 @@ class FlowFrameworkTests {
         }.map { it.stateMachine }.map { uncheckedCast<FlowStateMachine<*>, FlowStateMachine<Any>>(it) }
         val waiterStx = bobNode.services.startFlow(WaitingFlows.Waiter(stx, alice)).resultFuture
         mockNet.runNetwork()
-        assertThat(waiterStx.getOrThrow()).isEqualTo(committerFiber.getOrThrow())
+        assertThat(waiterStx.getOrThrow()).isEqualTo(committerFiber.getOrThrow().resultFuture.getOrThrow())
     }
 
     @Test
