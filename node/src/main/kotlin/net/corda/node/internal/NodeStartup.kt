@@ -103,7 +103,7 @@ open class NodeStartup(val args: Array<String>) {
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
-            if (!cmdlineOptions.noLocalShell && System.console() != null) {
+            if (!cmdlineOptions.noLocalShell && System.console() != null && conf.devMode) {
                 startedNode.internals.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell(startedNode)

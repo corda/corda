@@ -29,6 +29,7 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
+import net.corda.node.utilities.ANSIProgressRenderer
 import net.corda.node.utilities.CordaPersistence
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
@@ -232,6 +233,25 @@ object InteractiveShell {
 
         val clazz: Class<FlowLogic<*>> = uncheckedCast(Class.forName(matches.single()))
         try {
+//
+//            // TODO Flow invocation should use startFlowDynamic.
+//            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell).getOrThrow() }, inputData, clazz)
+//            // Show the progress tracker on the console until the flow completes or is interrupted with a
+//            // Ctrl-C keypress.
+//            val latch = CountDownLatch(1)
+//            ANSIProgressRenderer.onDone = { latch.countDown() }
+//            ANSIProgressRenderer.progressTracker = (fsm as FlowStateMachineImpl).logic.progressTracker
+//            try {
+//                // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
+//                // the tracker is done with the screen.
+//                latch.await()
+//            } catch (e: InterruptedException) {
+//                ANSIProgressRenderer.progressTracker = null
+//                // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
+//            }
+
+
+
             val stateObservable = runFlowFromString({ clazz,args -> rpcOps.startTrackedFlowDynamic (clazz, *args) }, inputData, clazz)
 
             output.println("Flow ID ${stateObservable.id}")
@@ -426,6 +446,7 @@ object InteractiveShell {
         override fun onNext(t: Any?) {
             count++
             toStream.println("Observation $count: " + printerFun(t))
+            toStream.print("\u001b[1K")
             toStream.flush()
         }
 
