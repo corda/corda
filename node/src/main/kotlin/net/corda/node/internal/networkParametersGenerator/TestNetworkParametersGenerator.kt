@@ -2,6 +2,7 @@
 
 package net.corda.node.internal.networkParametersGenerator
 
+import net.corda.cordform.NetworkParametersGenerator
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -15,7 +16,7 @@ import java.nio.file.Path
 
 // This class is used by deployNodes task to generate NetworkParameters in [Cordformation].
 class TestNetworkParametersGenerator: NetworkParametersGenerator {
-    fun run(baseDirectory: Path, notaryMap: Map<String, Boolean>) {
+    override fun run(baseDirectory: Path, notaryMap: Map<String, Boolean>) {
         initialiseSerialization()
         val notaryInfos = gatherNotaryInfos(baseDirectory, notaryMap)
         val copier = NetworkParametersCopier(testNetworkParameters(notaryInfos))

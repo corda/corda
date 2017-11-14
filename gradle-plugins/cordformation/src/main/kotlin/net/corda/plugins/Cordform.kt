@@ -27,7 +27,7 @@ open class Cordform : DefaultTask() {
      */
     @Suppress("MemberVisibilityCanPrivate")
     var definitionClass: String? = null
-    var parametersClass: String? = null
+    var parametersClass: String? = "net.corda.node.internal.networkParametersGenerator.TestNetworkParametersGenerator"
     private var directory = Paths.get("build", "nodes")
     private val nodes = mutableListOf<Node>()
     private val notaryMap: HashMap<String, Boolean> = hashMapOf()
