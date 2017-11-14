@@ -47,14 +47,7 @@ class NetworkMapUpdaterTest {
         val differentNodeInfo = nodeInfo1.copy(addresses = listOf(NetworkHostAndPort("my.new.host.com", 1000)))
         val signedDifferentNodeInfo = TestNodeInfoFactory.sign(keyPair, differentNodeInfo)
 
-        val networkMapCache = mock<NetworkMapCacheInternal> {
-            val data = mutableMapOf<Party, NodeInfo>()
-            on { addNode(any()) }.then {
-                val nodeInfo = it.arguments.first() as NodeInfo
-                data.put(nodeInfo.legalIdentities.first(), nodeInfo)
-            }
-            on { getNodeByLegalIdentity(any()) }.then { data[it.arguments.first()] }
-        }
+        val networkMapCache = getMockNetworkMapCache()
 
         val networkMapClient = mock<NetworkMapClient>()
 
@@ -65,6 +58,7 @@ class NetworkMapUpdaterTest {
         // Publish node info for the first time.
         updater.updateNodeInfo(nodeInfo1) { signedNodeInfo }
         // Sleep as publish is asynchronous.
+        // TODO: Remove sleep in unit test
         Thread.sleep(200)
         verify(networkMapClient, times(1)).publish(any())
 
@@ -72,6 +66,7 @@ class NetworkMapUpdaterTest {
 
         // Publish the same node info, but with different serial.
         updater.updateNodeInfo(sameNodeInfoDifferentTime) { signedSameNodeInfoDifferentTime }
+        // TODO: Remove sleep in unit test.
         Thread.sleep(200)
 
         // Same node info should not publish twice
@@ -79,6 +74,7 @@ class NetworkMapUpdaterTest {
 
         // Publish different node info.
         updater.updateNodeInfo(differentNodeInfo) { signedDifferentNodeInfo }
+        // TODO: Remove sleep in unit test.
         Thread.sleep(200)
         verify(networkMapClient, times(1)).publish(signedDifferentNodeInfo)
 
@@ -86,7 +82,7 @@ class NetworkMapUpdaterTest {
     }
 
     @Test
-    fun `subscribe to network map, with additional node infos from dir`() {
+    fun `process add node updates from network map, with additional node infos from dir`() {
         val jimFs = Jimfs.newFileSystem(Configuration.unix())
         val baseDir = jimFs.getPath("/node")
 
@@ -95,17 +91,7 @@ class NetworkMapUpdaterTest {
         val nodeInfo3 = TestNodeInfoFactory.createNodeInfo("Info 3")
         val nodeInfo4 = TestNodeInfoFactory.createNodeInfo("Info 4")
         val fileNodeInfo = TestNodeInfoFactory.createNodeInfo("Info from file")
-        val networkMapCache = mock<NetworkMapCacheInternal> {
-            val data = mutableMapOf<Party, NodeInfo>()
-            on { addNode(any()) }.then {
-                val nodeInfo = it.arguments.first() as NodeInfo
-                data.put(nodeInfo.legalIdentities.first(), nodeInfo)
-            }
-            on { removeNode(any()) }.then { data.remove((it.arguments.first() as NodeInfo).legalIdentities.first()) }
-            on { getNodeByLegalIdentity(any()) }.then { data[it.arguments.first()] }
-            on { allNodeHashes }.then { data.values.map { it.serialize().hash } }
-            on { getNodeByHash(any()) }.then { mock -> data.values.single { it.serialize().hash == mock.arguments.first() } }
-        }
+        val networkMapCache = getMockNetworkMapCache()
 
         val nodeInfoMap = ConcurrentHashMap<SecureHash, SignedData<NodeInfo>>()
         val networkMapClient = mock<NetworkMapClient> {
@@ -129,6 +115,7 @@ class NetworkMapUpdaterTest {
         updater.subscribeToNetworkMap()
         networkMapClient.publish(nodeInfo2)
 
+        // TODO: Remove sleep in unit test.
         Thread.sleep(200)
         verify(networkMapCache, times(2)).addNode(any())
         verify(networkMapCache, times(1)).addNode(nodeInfo1.verified())
@@ -139,6 +126,7 @@ class NetworkMapUpdaterTest {
         networkMapClient.publish(nodeInfo4)
 
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        // TODO: Remove sleep in unit test.
         Thread.sleep(200)
 
         // 4 node info from network map, and 1 from file.
@@ -147,8 +135,55 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addNode(nodeInfo4.verified())
         verify(networkMapCache, times(1)).addNode(fileNodeInfo.verified())
 
+        updater.close()
+    }
+
+    @Test
+    fun `process remove node updates from network map, with additional node infos from dir`() {
+        val jimFs = Jimfs.newFileSystem(Configuration.unix())
+        val baseDir = jimFs.getPath("/node")
+
+        val nodeInfo1 = TestNodeInfoFactory.createNodeInfo("Info 1")
+        val nodeInfo2 = TestNodeInfoFactory.createNodeInfo("Info 2")
+        val nodeInfo3 = TestNodeInfoFactory.createNodeInfo("Info 3")
+        val nodeInfo4 = TestNodeInfoFactory.createNodeInfo("Info 4")
+        val fileNodeInfo = TestNodeInfoFactory.createNodeInfo("Info from file")
+        val networkMapCache = getMockNetworkMapCache()
+
+        val nodeInfoMap = ConcurrentHashMap<SecureHash, SignedData<NodeInfo>>()
+        val networkMapClient = mock<NetworkMapClient> {
+            on { publish(any()) }.then {
+                val signedNodeInfo: SignedData<NodeInfo> = uncheckedCast(it.arguments.first())
+                nodeInfoMap.put(signedNodeInfo.verified().serialize().hash, signedNodeInfo)
+            }
+            on { getNetworkMap() }.then { NetworkMapResponse(nodeInfoMap.keys.toList(), 100.millis) }
+            on { getNodeInfo(any()) }.then { nodeInfoMap[it.arguments.first()]?.verified() }
+        }
+
+        val scheduler = TestScheduler()
+        val fileWatcher = NodeInfoWatcher(baseDir,  scheduler = scheduler)
+        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient)
+
+        // Add all nodes.
+        NodeInfoWatcher.saveToFile(baseDir / CordformNode.NODE_INFO_DIRECTORY, fileNodeInfo)
+        networkMapClient.publish(nodeInfo1)
+        networkMapClient.publish(nodeInfo2)
+        networkMapClient.publish(nodeInfo3)
+        networkMapClient.publish(nodeInfo4)
+
+        updater.subscribeToNetworkMap()
+        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        // TODO: Remove sleep in unit test.
+        Thread.sleep(200)
+
+        // 4 node info from network map, and 1 from file.
+        assertEquals(4, nodeInfoMap.size)
+        verify(networkMapCache, times(5)).addNode(any())
+        verify(networkMapCache, times(1)).addNode(fileNodeInfo.verified())
+
         // Test remove node.
         nodeInfoMap.clear()
+        // TODO: Remove sleep in unit test.
         Thread.sleep(200)
         verify(networkMapCache, times(4)).removeNode(any())
         verify(networkMapCache, times(1)).removeNode(nodeInfo1.verified())
@@ -170,17 +205,7 @@ class NetworkMapUpdaterTest {
 
         val fileNodeInfo = TestNodeInfoFactory.createNodeInfo("Info from file")
 
-        val networkMapCache = mock<NetworkMapCacheInternal> {
-            val data = mutableMapOf<Party, NodeInfo>()
-            on { addNode(any()) }.then {
-                val nodeInfo = it.arguments.first() as NodeInfo
-                data.put(nodeInfo.legalIdentities.first(), nodeInfo)
-            }
-            on { removeNode(any()) }.then { data.remove((it.arguments.first() as NodeInfo).legalIdentities.first()) }
-            on { getNodeByLegalIdentity(any()) }.then { data[it.arguments.first()] }
-            on { allNodeHashes }.then { data.values.map { it.serialize().hash } }
-            on { getNodeByHash(any()) }.then { mock -> data.values.single { it.serialize().hash == mock.arguments.first() } }
-        }
+        val networkMapCache = getMockNetworkMapCache()
 
         val scheduler = TestScheduler()
         val fileWatcher = NodeInfoWatcher(baseDir,  scheduler = scheduler)
@@ -201,5 +226,17 @@ class NetworkMapUpdaterTest {
         assertEquals(fileNodeInfo.verified().serialize().hash, networkMapCache.allNodeHashes.first())
 
         updater.close()
+    }
+
+    private fun getMockNetworkMapCache() = mock<NetworkMapCacheInternal> {
+        val data = ConcurrentHashMap<Party, NodeInfo>()
+        on { addNode(any()) }.then {
+            val nodeInfo = it.arguments.first() as NodeInfo
+            data.put(nodeInfo.legalIdentities.first(), nodeInfo)
+        }
+        on { removeNode(any()) }.then { data.remove((it.arguments.first() as NodeInfo).legalIdentities.first()) }
+        on { getNodeByLegalIdentity(any()) }.then { data[it.arguments.first()] }
+        on { allNodeHashes }.then { data.values.map { it.serialize().hash } }
+        on { getNodeByHash(any()) }.then { mock -> data.values.single { it.serialize().hash == mock.arguments.first() } }
     }
 }
