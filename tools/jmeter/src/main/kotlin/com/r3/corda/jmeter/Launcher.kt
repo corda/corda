@@ -1,4 +1,4 @@
-package net.corda.jmeter
+package com.r3.corda.jmeter
 
 import net.corda.core.internal.div
 import org.apache.jmeter.JMeter

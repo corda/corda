@@ -1,4 +1,4 @@
-package net.corda.jmeter
+package com.r3.corda.jmeter
 
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
