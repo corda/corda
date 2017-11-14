@@ -64,7 +64,7 @@ data class StateMachineInfo @JvmOverloads constructor(
                 origin = Origin.Scheduled(initiator.scheduledState)
             }
         }
-        return InvocationContext(actor, origin)
+        return InvocationContext.newInstance(actor, origin)
     }
 
     fun copy(id: StateMachineRunId = this.id,

@@ -254,7 +254,7 @@ class NodeSchedulerService(private val clock: Clock,
                     if (scheduledFlow != null) {
                         flowName = scheduledFlow.javaClass.name
                         // TODO refactor the scheduler to propagate the original invocation context
-                        val context = InvocationContext(actor, Origin.Scheduled(scheduledState))
+                        val context = InvocationContext.newInstance(actor, Origin.Scheduled(scheduledState))
                         val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
                         future.then {
                             unfinishedSchedules.countDown()

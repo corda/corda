@@ -16,33 +16,39 @@ import java.security.Principal
  * @param impersonatedActor optional impersonated actor, used for logging but not for authorisation.
  */
 @CordaSerializable
-data class InvocationContext(val actor: Actor, val origin: Origin, val trace: Trace = Trace(), val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
+data class InvocationContext(val actor: Actor, val origin: Origin, val trace: Trace, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
 
     companion object {
+
+        /**
+         * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
+         */
+        fun newInstance(actor: Actor, origin: Origin, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(actor, origin, trace, externalTrace, impersonatedActor)
+
         /**
          * Creates an [InvocationContext] with [Origin.RPC] origin.
          */
-        fun rpc(actor: Actor, trace: Trace = Trace(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = InvocationContext(actor, Origin.RPC, trace, externalTrace, impersonatedActor)
+        fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = InvocationContext(actor, Origin.RPC, trace, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [Origin.PEER] origin.
          */
-        fun peer(actor: Actor, party: CordaX500Name, trace: Trace = Trace(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = InvocationContext(actor, Origin.Peer(party), trace, externalTrace, impersonatedActor)
+        fun peer(actor: Actor, party: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = InvocationContext(actor, Origin.Peer(party), trace, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [Origin.Service] origin.
          */
-        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace(), externalTrace: Trace? = null): InvocationContext = InvocationContext(Actor.service(serviceClassName, owningLegalIdentity), Origin.Service(serviceClassName), trace, externalTrace)
+        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(Actor.service(serviceClassName, owningLegalIdentity), Origin.Service(serviceClassName), trace, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [Origin.Scheduled] origin.
          */
-        fun scheduled(actor: Actor, scheduledState: ScheduledStateRef, trace: Trace = Trace(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Scheduled(scheduledState), trace, externalTrace)
+        fun scheduled(actor: Actor, scheduledState: ScheduledStateRef, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Scheduled(scheduledState), trace, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [Origin.Shell] origin.
          */
-        fun shell(actor: Actor, trace: Trace = Trace(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Shell, trace, externalTrace)
+        fun shell(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Shell, trace, externalTrace)
     }
 
     /**

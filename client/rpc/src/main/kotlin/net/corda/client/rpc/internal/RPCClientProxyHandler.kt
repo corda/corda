@@ -214,7 +214,7 @@ class RPCClientProxyHandler(
         if (sessionAndConsumer!!.session.isClosed) {
             throw RPCException("RPC Proxy is closed")
         }
-        val trace = Trace()
+        val trace = Trace.newInstance()
         callSiteMap?.set(trace.invocationId, Throwable("<Call site of root RPC '${method.name}'>"))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)

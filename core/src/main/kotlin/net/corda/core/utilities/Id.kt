@@ -3,7 +3,20 @@ package net.corda.core.utilities
 import java.time.Instant
 import java.time.Instant.now
 
-open class Id<out VALUE : Any>(val value: VALUE, val entityType: String? = null, val timestamp: Instant = now()) {
+/**
+ * Represents a unique, timestamped id.
+ * @param value unique value of the id.
+ * @param entityType optional id entity type.
+ * @param timestamp timestamp for the id.
+ */
+open class Id<out VALUE : Any>(val value: VALUE, val entityType: String?, val timestamp: Instant) {
+
+    companion object {
+        /**
+         * Creates an id using [Instant.now] as timestamp.
+         */
+        fun <V : Any> newInstance(value: V, entityType: String? = null, timestamp: Instant = now()) = Id(value, entityType, timestamp)
+    }
 
     final override fun equals(other: Any?): Boolean {
 
