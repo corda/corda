@@ -43,6 +43,7 @@ class NodeConfigurationImplTest {
             database = makeTestDatabaseProperties(),
             certificateSigningService = URL("http://localhost"),
             rpcUsers = emptyList(),
+            shiroPluginIni = null,
             verifierType = VerifierType.InMemory,
             useHTTPS = false,
             p2pAddress = NetworkHostAndPort("localhost", 0),

@@ -92,7 +92,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                              val rpcPort: Int?,
                              val networkMapCache: NetworkMapCache,
                              val rpcAuthenticator: Authenticator,
-                             val rpcUsers : Set<String>) : ArtemisMessagingComponent() {
+                             val rpcUsers : Set<String> = emptySet()) : ArtemisMessagingComponent() {
     companion object {
         private val log = loggerFor<ArtemisMessagingServer>()
         /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
@@ -236,11 +236,12 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
         // TODO remove the NODE_USER role once the webserver doesn't need it
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
-        for (username in rpcUsers) {
-            securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#"] = setOf(
+//       for (username in rpcUsers) {
+            securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#"] = setOf(
                     nodeInternalRole,
-                    restrictedRole("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username", consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true))
-        }
+                    restrictedRole(RPC_ROLE, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true))
+
+//           }
         securityRoles[VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, consume = true))
         securityRoles["${VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX}.#"] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, send = true))
     }

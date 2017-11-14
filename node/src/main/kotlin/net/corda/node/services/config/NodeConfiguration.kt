@@ -23,6 +23,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val dataSourceProperties: Properties
     val database: Properties?
     val rpcUsers: List<User>
+    val shiroPluginIni: String?
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
     val certificateSigningService: URL
@@ -87,6 +88,7 @@ data class NodeConfigurationImpl(
         override val database: Properties?,
         override val certificateSigningService: URL,
         override val rpcUsers: List<User>,
+        override val shiroPluginIni: String?,
         override val verifierType: VerifierType,
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
         // Then rename this to messageRedeliveryDelay and make it of type Duration
