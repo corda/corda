@@ -4,7 +4,6 @@ package net.corda.node.internal.networkParametersGenerator
 
 import joptsimple.OptionParser
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -36,7 +35,7 @@ class NetworkParametersGenerator {
             copier.install(baseDirectory) // Put the parameters just to this one node directory, the rest copy in gradle.
         }
 
-        // TODO Use JSON?
+        // TODO Use JSON
         // We need to know what are the notary node names and weather the notary is validating.
         private fun parseNotaries(option: String): Map<CordaX500Name, Boolean> {
             return option.split("#").map {
