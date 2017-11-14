@@ -51,9 +51,19 @@ Thus, HA is essential for enterprise Corda and providing help to administrators 
 ## Scope
 
 * Goals
-* Non-goals (eg. out of scope)
-* Reference(s) to similar or related work
-* For now DR is only supported where performant synchronous replication is feasible i.e. sites only a few miles apart.
+
+  * Be able to construct a Corda node that is resistant to individual machine failures or restarts.
+  * Be able to recover from temporary failure of any single component e.g. database, network access, machine, VM, Corda process.
+  * Be able to scale from low-cost, low availability nodes up to high-cost, high availability nodes.
+  * Be able to complete any previously halted flows without any loss, or duplication of data on the ledger.
+  * Be able to select the location of active instances of Corda to allow for activities such as software upgrade.
+
+* Non-goals
+
+  * Be able to distribute a node over more than two datacenters.
+  * Be able to distribute a node between datacenters that are very far apart latency-wise (unless you don't care about performance).
+  * Be able to tolerate arbitrary byzantine failures within a node cluster.
+  * For now DR is only supported where performant synchronous replication is feasible i.e. sites only a few miles apart.
 
 ## Timeline 
 
@@ -106,8 +116,8 @@ The current Corda is built to run as a fully contained single process with the F
 
 Based on this situation, I suggest the following minimum development tasks are required for a tested HA deployment:
 
-1. Complete and merge  JDBC support for an external clustered database. Azure SQL Server has been identified as the most likely Finastra. With this we should be able to point at an HA database instance for Ledger and Checkpoint data.
-2. I am suggesting that for the near term we just use the Azure Load Balancer to hide the multiple machine addresses. This does require allowing a health monitoring link to the Artemis broker, but so far testing indicates that this operates without issue. Longer term we need to ensure that the network map and configuration support exists for the system to work with multiple TCP/IP endpoints advertised to external nodes. Ideally this should be rolled into the work for AMPQ bridges and Floats.
+1. Complete and merge  JDBC support for an external clustered database. Azure SQL Server has been identified as the most likely initial deployment. With this we should be able to point at an HA database instance for Ledger and Checkpoint data.
+2. I am suggesting that for the near term we just use the Azure Load Balancer to hide the multiple machine addresses. This does require allowing a health monitoring link to the Artemis broker, but so far testing indicates that this operates without issue. Longer term we need to ensure that the network map and configuration support exists for the system to work with multiple TCP/IP endpoints advertised to external nodes. Ideally this should be rolled into the work for AMQP bridges and Floats.
 3. Implement a very simple mutual exclusion feature, so that an enterprise node cannot start if another is running onto the same database. This can be via a simple heartbeat update in the database, or possibly some other library. This feature should be enabled only when specified by configuration.
 4. The replication of the Artemis Message Queues will have to be via an external mechanism. On Azure we believe that the only practical solution is the 'Azure Files' approach which maps a virtual Samba drive. This we are testing in-case it is too slow to work. The mounting of separate Data Disks is possible, but they can only be mounted to one VM at a time, so they would not be compatible with the goal of no change requests for HA.
 5. Improve health monitoring to better indicate fault failure. Extending the existing JMX and logging support should achieve  this, although we probably need to create watchdog CordApp that verifies that the State Machine and Artemis messaging are able to process new work and to monitor flow latency.
