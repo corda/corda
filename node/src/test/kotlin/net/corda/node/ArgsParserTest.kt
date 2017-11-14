@@ -24,7 +24,8 @@ class ArgsParserTest {
                 isVersion = false,
                 noLocalShell = false,
                 sshdServer = false,
-                justGenerateNodeInfo = false))
+                justGenerateNodeInfo = false,
+                bootstrapRaftCluster = false))
     }
 
     @Test
@@ -123,5 +124,11 @@ class ArgsParserTest {
     fun `generate node infos`() {
         val cmdLineOptions = parser.parse("--just-generate-node-info")
         assertThat(cmdLineOptions.justGenerateNodeInfo).isTrue()
+    }
+
+    @Test
+    fun `bootstrap raft cluster`() {
+        val cmdLineOptions = parser.parse("--bootstrap-raft-cluster")
+        assertThat(cmdLineOptions.bootstrapRaftCluster).isTrue()
     }
 }
