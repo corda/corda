@@ -255,7 +255,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
         val checkPermissionEvent = FlowPermissionAuditEvent(
                 serviceHub.clock.instant(),
-                context.principal,
+                context,
                 "Flow Permission Required: $permissionName",
                 extraAuditData,
                 logic.javaClass,
@@ -273,13 +273,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
         val flowAuditEvent = FlowAppAuditEvent(
                 serviceHub.clock.instant(),
-                context.principal,
+                context,
                 comment,
                 extraAuditData,
                 logic.javaClass,
                 id,
                 eventType)
-        // TODO sollecitom here add context instead
         serviceHub.auditService.recordAuditEvent(flowAuditEvent)
     }
 

@@ -1,10 +1,10 @@
 package net.corda.node.services.api
 
+import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
-import java.security.Principal
 import java.time.Instant
 
 /**
@@ -17,9 +17,9 @@ sealed class AuditEvent {
      */
     abstract val timestamp: Instant
     /**
-     * The responsible individual, node, or subsystem to which the audit event can be mapped.
+     * The invocation context at the time the event was generated.
      */
-    abstract val principal: Principal
+    abstract val context: InvocationContext
     /**
      * A human readable description of audit event including any permission check results.
      */
@@ -36,7 +36,7 @@ sealed class AuditEvent {
  * Sealed data class to mark system related events as a distinct category.
  */
 data class SystemAuditEvent(override val timestamp: Instant,
-                            override val principal: Principal,
+                            override val context: InvocationContext,
                             override val description: String,
                             override val contextData: Map<String, String>) : AuditEvent()
 
@@ -60,7 +60,7 @@ interface FlowAuditInfo {
  */
 data class FlowAppAuditEvent(
         override val timestamp: Instant,
-        override val principal: Principal,
+        override val context: InvocationContext,
         override val description: String,
         override val contextData: Map<String, String>,
         override val flowType: Class<out FlowLogic<*>>,
@@ -73,7 +73,7 @@ data class FlowAppAuditEvent(
  */
 data class FlowStartEvent(
         override val timestamp: Instant,
-        override val principal: Principal,
+        override val context: InvocationContext,
         override val description: String,
         override val contextData: Map<String, String>,
         override val flowType: Class<out FlowLogic<*>>,
@@ -86,7 +86,7 @@ data class FlowStartEvent(
  */
 data class FlowProgressAuditEvent(
         override val timestamp: Instant,
-        override val principal: Principal,
+        override val context: InvocationContext,
         override val description: String,
         override val flowType: Class<out FlowLogic<*>>,
         override val flowId: StateMachineRunId,
@@ -98,7 +98,7 @@ data class FlowProgressAuditEvent(
  * Sealed data class to record any FlowExceptions, or other unexpected terminations of a Flow.
  */
 data class FlowErrorAuditEvent(override val timestamp: Instant,
-                               override val principal: Principal,
+                               override val context: InvocationContext,
                                override val description: String,
                                override val contextData: Map<String, String>,
                                override val flowType: Class<out FlowLogic<*>>,
@@ -111,7 +111,7 @@ data class FlowErrorAuditEvent(override val timestamp: Instant,
  * after recording the FlowPermissionAuditEvent. This may cause an extra FlowErrorAuditEvent to be recorded too.
  */
 data class FlowPermissionAuditEvent(override val timestamp: Instant,
-                                    override val principal: Principal,
+                                    override val context: InvocationContext,
                                     override val description: String,
                                     override val contextData: Map<String, String>,
                                     override val flowType: Class<out FlowLogic<*>>,
