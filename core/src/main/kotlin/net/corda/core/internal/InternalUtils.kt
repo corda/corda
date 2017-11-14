@@ -258,10 +258,12 @@ fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaCl
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
-/** creates a new instance if not a Kotlin object */
-fun <T : Any> KClass<T>.objectOrNewInstance(): T {
-    return this.objectInstance ?: this.createInstance()
+fun <T : Any> Any.invokeMethod(name: String, vararg args: Any?): T {
+    return uncheckedCast(javaClass.getDeclaredMethod(name).apply { isAccessible = true }.invoke(this, *args))
 }
+
+/** creates a new instance if not a Kotlin object */
+fun <T : Any> KClass<T>.objectOrNewInstance(): T = this.objectInstance ?: this.createInstance()
 
 /**
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
@@ -304,6 +306,6 @@ fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serial
 fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
 
 /** Convenience method to get the package name of a class literal. */
-val KClass<*>.packageName get() = java.`package`.name
+val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection

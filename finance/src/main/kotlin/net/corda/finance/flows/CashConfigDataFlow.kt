@@ -6,6 +6,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.div
+import net.corda.core.internal.invokeMethod
 import net.corda.core.internal.read
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
@@ -32,8 +33,8 @@ class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
     init {
         // Warning!! You are about to see a major hack!
         val baseDirectory = services.declaredField<Any>("serviceHub").value
-                .let { it.javaClass.getMethod("getConfiguration").apply { isAccessible = true }.invoke(it) }
-                .declaredField<Path>("baseDirectory").value
+                .invokeMethod<Any>("getConfiguration")
+                .invokeMethod<Path>("getBaseDirectory")
         val config = (baseDirectory / "node.conf").read { ConfigFactory.parseReader(it.reader()) }
         if (config.hasPath("issuableCurrencies")) {
             issuableCurrencies = config.getStringList("issuableCurrencies").map { Currency.getInstance(it) }
