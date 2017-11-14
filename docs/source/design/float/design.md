@@ -55,16 +55,17 @@ For delivery by end Q1 2018.
 
 ## Requirements
 Allow connectivity in compliance with DMZ constraints commonly imposed by modern financial institutions; namely: 
-1. There shall be a firewall between the internet and the DMZ machine and a further firewall between the DMZ and the internal network. Only identified IP's and ports are permitted to access the DMZ box. This include intra-DMZ communications.
-2. The DMZ box is typically multi-homed with a network card facing towards the institutional firewall and one facing the internet. (There is usually a further hidden management interface card accessed via a jump box for managing the box and shipping audit trail information). This requires that our software can bind listening ports to the correct network card not just to 0.0.0.0.
-3. It is best practice to allow no connections to be initiated by the DMZ box towards the internal network. Communications should be initiated by the internal network to form a bidirectional channel with the proxy process.
-4. It is usually required that no business data is persisted on the DMZ box.
-5. An audit log of all connection events is almost always required to track breaches. Ideally some latency information is also tracked to deal with connectivity issues.
-6. The processes on the DMZ box typically run as local accounts with no relationship to the internal permission systems, or ability to enumerate the internal network.
-7. Communications in the DMZ should be modern TLS, often with local only certificates/keys that are of no value outside of the predefined links.
-8. It is common to terminate the TLS on the firewall which has an associated HSM for the private keys. This means that we do not necessarily have the certificates of the connection, but hopefully for now we can insist on receiving the connection directly onto the float proxy, although we have to ask how we might access an HSM.
+1. Firewalls required between the internet and any device in the DMZ, and between the DMZ and the internal network.
+2. Only identified IPs and ports are permitted to access devices in the DMZ; this include communications between devices colocated in the DMZ.
+2. Any DMZ machine is typically multi-homed, with separate network cards handling traffic through the institutional firewall vs. to the Internet. (There is usually a further hidden management interface card accessed via a jump box for managing the box and shipping audit trail information). This requires that our software can bind listening ports to the correct network card not just to 0.0.0.0.
+3. No connections to be initiated by DMZ devices towards the internal network. Communications should be initiated from the internal network to form a bidirectional channel with the proxy process.
+4. No business data should be persisted on the DMZ box.
+5. An audit log of all connection events is required to track breaches. Latency information should also be tracked to facilitate management of connectivity issues.
+6. Processes on DMZ devices run as local accounts with no relationship to internal permission systems, or ability to enumerate devices on the internal network.
+7. Communications in the DMZ should yse modern TLS, often with local-only certificates/keys that hold no value outside of use in predefined links.
+8. TLS is commonly terminated on the firewall which has an associated HSM for the private keys. This means that we do not necessarily have the certificates of the connection, but hopefully for now we can insist on receiving the connection directly onto the float proxy, although we have to ask how we might access an HSM.
 9. It is usually assumed that there is an HA/load balancing pair (or more) of proxies for resilience. Often the firewalls are also combined with hardware load balancer functionality.
-10. Ideally any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised. I doubt we can finish end-to-end session encryption by March, but we should define our AMQP packet structure to be forward compatible with a switching flag so that we can leave encryption till later.
+10. Any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised. I doubt we can finish end-to-end session encryption by March, but we should define our AMQP packet structure to be forward compatible with a switching flag so that we can leave encryption till later.
 
 
 ## Design Decisions
