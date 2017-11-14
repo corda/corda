@@ -30,20 +30,6 @@ The role of the 'float' is to meet the requirements of organisations that will n
 
 ### Background
 
-
--- Below to be refactored into requirements
-Typical modern DMZ rules are:
-1. There shall be a firewall between the internet and the DMZ machine and a further firewall between the DMZ and the internal network. Only identified IP's and ports are permitted to access the DMZ box. This include intra-DMZ communications.
-2. The DMZ box is typically multi-homed with a network card facing towards the institutional firewall and one facing the internet. (There is usually a further hidden management interface card accessed via a jump box for managing the box and shipping audit trail information). This requires that our software can bind listening ports to the correct network card not just to 0.0.0.0.
-3. It is best practice to allow no connections to be initiated by the DMZ box towards the internal network. Communications should be initiated by the internal network to form a bidirectional channel with the proxy process.
-4. It is usually required that no business data is persisted on the DMZ box.
-5. An audit log of all connection events is almost always required to track breaches. Ideally some latency information is also tracked to deal with connectivity issues.
-6. The processes on the DMZ box typically run as local accounts with no relationship to the internal permission systems, or ability to enumerate the internal network.
-7. Communications in the DMZ should be modern TLS, often with local only certificates/keys that are of no value outside of the predefined links.
-8. It is common to terminate the TLS on the firewall which has an associated HSM for the private keys. This means that we do not necessarily have the certificates of the connection, but hopefully for now we can insist on receiving the connection directly onto the float proxy, although we have to ask how we might access an HSM.
-9. It is usually assumed that there is an HA/load balancing pair (or more) of proxies for resilience. Often the firewalls are also combined with hardware load balancer functionality.
-10. Ideally any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised. I doubt we can finish end-to-end session encryption by March, but we should define our AMQP packet structure to be forward compatible with a switching flag so that we can leave encryption till later.
-
 #### Current P2P State
 ![Current P2P State](./current-p2p-state.png)
 
@@ -68,7 +54,18 @@ Typical modern DMZ rules are:
 For delivery by end Q1 2018.
 
 ## Requirements
-Nick Arini to provide documented requirements.
+Allow connectivity in compliance with DMZ constraints commonly imposed by modern financial institutions; namely: 
+1. There shall be a firewall between the internet and the DMZ machine and a further firewall between the DMZ and the internal network. Only identified IP's and ports are permitted to access the DMZ box. This include intra-DMZ communications.
+2. The DMZ box is typically multi-homed with a network card facing towards the institutional firewall and one facing the internet. (There is usually a further hidden management interface card accessed via a jump box for managing the box and shipping audit trail information). This requires that our software can bind listening ports to the correct network card not just to 0.0.0.0.
+3. It is best practice to allow no connections to be initiated by the DMZ box towards the internal network. Communications should be initiated by the internal network to form a bidirectional channel with the proxy process.
+4. It is usually required that no business data is persisted on the DMZ box.
+5. An audit log of all connection events is almost always required to track breaches. Ideally some latency information is also tracked to deal with connectivity issues.
+6. The processes on the DMZ box typically run as local accounts with no relationship to the internal permission systems, or ability to enumerate the internal network.
+7. Communications in the DMZ should be modern TLS, often with local only certificates/keys that are of no value outside of the predefined links.
+8. It is common to terminate the TLS on the firewall which has an associated HSM for the private keys. This means that we do not necessarily have the certificates of the connection, but hopefully for now we can insist on receiving the connection directly onto the float proxy, although we have to ask how we might access an HSM.
+9. It is usually assumed that there is an HA/load balancing pair (or more) of proxies for resilience. Often the firewalls are also combined with hardware load balancer functionality.
+10. Ideally any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised. I doubt we can finish end-to-end session encryption by March, but we should define our AMQP packet structure to be forward compatible with a switching flag so that we can leave encryption till later.
+
 
 ## Design Decisions
 1. AMQP vs. custom P2p - see Alternatives section below
@@ -80,18 +77,19 @@ Nick Arini to provide documented requirements.
 
 ![Full Float Implementation](./full-float.png)
 
-1. The float implementation should be built upon the AMQP Bridge Manager code and should not be mandatory i.e. there should be interop with older nodes, even those using direct AMQP from bridges in the node.
-2. The link between the internal AMQP Bridge Manager and the DMZ Float process should be a single AMQP\TLS connection, which can contain multiple logical AMQP links. This link should be initiated at the socket level by the Bridge Manager towards the DMZ.
-3. The DMZ float only needs to receive incoming connections initiated remote peers. No state will be serialized, although suitably protected logs will be recorded of all float activities.
-4. The main role of the DMZ float is to forward incoming AMQP link packets from authenticated TLS links to the AMQP Bridge Manager then echo back the final delivery acknowledgements once the Bridge Manager has successfully inserted the messages. The bridge manager is responsible for rejecting inbound packets on queues that are not local inboxes e.g. no way of cheating messages onto management topics, or faking outgoing messages.
-5. Outgoing bridge formation and message sending should probably come directly from the internal Bridge Manager, possibly via a SOCKS 4/5 proxy, which is easy enough to enable in netty, or directly through the corporate firewall. It could be initiated from the float, but this just seems insecure.
-6. There is probably a need for end-to-end encryption of the payload, but that is for as later phase. At this point a header field indicating plaintext/encrypted payload should be sufficient.
-7. I have open questions about the management of the private key for the float certificate if the TLS terminated is directly onto the proxy. This is presumably stored in an HSM, but I am unclear on whether this would be allowed.
-8. If instead TLS terminates onto the external firewall, with self-signed certs for TLS in the DMZ this is more standard, but breaks our authentication checks. One solution for authentication checks might be to enable AMQP SASL checks e.g. using https://tools.ietf.org/html/rfc3163 to run challenge response against the node's legal identity certificates, but it needs discussion.
-9. HA should be built in from the start and should be easy as the bridge manager can choose which float to make active. Only fully connected DMZ floats should activate their listening port.
+1. The float is a listener only and does not enable outgoing bridges (see Design Decisions, above). The internal portion of the bridge is allowed to initiate through the firewall (possibly via a SOCKS proxy).
+2. Implementation is based on the AMQP Bridge Manager code.
+3. The float is not mandatory; interoperability with older nodes, even those using direct AMQP from bridges in the node, is supported.
+4. The link between the internal AMQP Bridge Manager and the DMZ Float process is a single AMQP/TLS connection, which can contain multiple logical AMQP links. This link is initiated at the socket level by the Bridge Manager towards the DMZ.
+5. The DMZ float only needs to receive incoming connections initiated remote peers. No state will be serialized, although suitably protected logs will be recorded of all float activities.
+6. The main role of the DMZ float is to forward incoming AMQP link packets from authenticated TLS links to the AMQP Bridge Manager then echoes back the final delivery acknowledgements once the Bridge Manager has successfully inserted the messages. The bridge manager is responsible for rejecting inbound packets on queues that are not local inboxes e.g. no way of cheating messages onto management topics, or faking outgoing messages.
+7. Outgoing bridge formation and message sending come directly from the internal Bridge Manager (possibly via a SOCKS 4/5 proxy, which is easy enough to enable in netty, or directly through the corporate firewall. It could be initiated from the float, but this just seems insecure.)
+8. End-to-end encryption of the payload is not delivered through this design (see Design Decisions, above). For current purposes, a header field indicating plaintext/encrypted payload is employed as a placeholder.
+9. HA is enabled (this should be easy as the bridge manager can choose which float to make active). Only fully connected DMZ floats should activate their listening port.
+
 
 ### Bridge Control Protocol
-My proposal is to make the bridge control as stateless as possible. Thus, nodes and bridges restarting must re-request/broadcast information to each other. The messages should be sent to a 'bridge.control' address in Artemis and be sent as non-persistent messages with a non-durable queue, each message should contain a duplicate message ID, which is also re-used as the correlation id in replies. The scenarios are:
+The bridge control is designed to be as stateless as possible. Thus, nodes and bridges restarting must re-request/broadcast information to each other. The messages should be sent to a 'bridge.control' address in Artemis and be sent as non-persistent messages with a non-durable queue. Each message should contain a duplicate message ID, which is also re-used as the correlation id in replies. The scenarios are:
 
 #### On bridge start-up, or reconnection to Artemis
 1. The bridge process should subscribe to the 'bridge.control'.
@@ -116,19 +114,17 @@ My proposal is to make the bridge control as stateless as possible. Thus, nodes 
 4. In parallel a BridgeRequest packet should be sent to activate a new connection outwards. This will contain the contain the legal X500Name and queue name of the new queue.
 5. Future QueueSnapshot requests should be responded to with the new queue included in the list.
 
-#### Behaviour with a Float portion in the DMZ
-1. With the Float in the DMZ there are potentially two options, either the float can initiate outgoing bridges, or we make it a listener only. After some discussion, it seems that there have been requests to separate in inbound and outbound paths, so for now I model the float as a listener only. The internal portion of the bridge being allowed to initiate through the firewall (possibly via a SOCKS proxy).
-2. On initial connection of the inbound bridge connection the Float should authenticate to the best of its ability the origin of the link. If this is a direct termination of the TLS connection then the client certificate must go back to the Corda trust root. Also, the X500 name of the certificate should be recorded and appended to any forwarded messages to the internal systems.
-3. If the connection to the Float is not direct, then the AMQP should be configured to run a SASL challenge response to revalidate the origin. The most likely SASL mechanism for this is using https://tools.ietf.org/html/rfc3163 as this allows reuse of our PKI certificates in the challenge response. This should allow us to confirm the client identity. Potentially we could forward some bridge control messages to cover the SASL exchange to the internal Bridge Controller. This would allow us to keep the private keys internal to the organisation, so we may also require a SASLAuth message type as part of the bridge control protocol.
-4. The float should restrict acceptable AMQP topics to the name space appropriate for inbound messages only i.e. there should be no way to tunnel messages to bridge control, or RPC topics on the bus.
-5. On receipt of a message from the external network the Float should append a header to link the source channel's X500 name, then create a Delivery for forwarding the message inwards.
-6. The internal Bridge Control Manager process should validate the message further to ensure that it is targeted at a legitimate inbox (i.e. not an outbound queue) and then forward to the bus. Once delivered to the broker the Delivery acknowledgements should be cascaded back.
-7. The Float on receiving Delivery notification from the internal side should acknowledge back the correlated original Delivery.
-8. The Float should protect against excessive inbound messages by AMQP flow control and refusing to accept excessive unacknowledged deliveries.
-9. The Float should only expose its inbound server socket when activated by a valid AMQP link from the Bridge Control Manager to allow for a simple HA pool of DMZ Float processes. We cannot run the Floats hot-hot as this would invalidate our message ordering guarantees.
+### Behaviour with a Float portion in the DMZ
+1. On initial connection of an inbound bridge, AMQP is configured to run a SASL challenge response to (re-)validate the origin and confirm the client identity. (The most likely SASL mechanism for this is using https://tools.ietf.org/html/rfc3163 as this allows reuse of our PKI certificates in the challenge response. Potentially we could forward some bridge control messages to cover the SASL exchange to the internal Bridge Controller. This would allow us to keep the private keys internal to the organisation, so we may also require a SASLAuth message type as part of the bridge control protocol.)
+2. The float restricts acceptable AMQP topics to the name space appropriate for inbound messages only. Hence, there should be no way to tunnel messages to bridge control, or RPC topics on the bus.
+3. On receipt of a message from the external network, the Float should append a header to link the source channel's X500 name, then create a Delivery for forwarding the message inwards.
+4. The internal Bridge Control Manager process validates the message further to ensure that it is targeted at a legitimate inbox (i.e. not an outbound queue) and then forwards it to the bus. Once delivered to the broker, the Delivery acknowledgements are cascaded back.
+5. On receiving Delivery notification from the internal side, the Float acknowledges back the correlated original Delivery.
+6. The Float should protect against excessive inbound messages by AMQP flow control and refusing to accept excessive unacknowledged deliveries.
+7. The Float only exposes its inbound server socket when activated by a valid AMQP link from the Bridge Control Manager to allow for a simple HA pool of DMZ Float processes. (Floats cannot run hot-hot as this would invalidate Corda's message ordering guarantees.)
 
 ## Alternative options considered
-### An Alternative Design Idea Using Direct P2P Communication
+### 1. Using Direct P2P Communication
 I do also have a completely different model of what to do instead of the float/AMQP work, but whilst I don’t think this is likely to be accepted, I do think it has a lot of merits and may be surprisingly fast to implement, at least for small semi-private networks.
 
 Essentially, I would discard the Artemis server/AMQP support for peer-to-peer communications. Instead I would write an implementation of our MessagingService which takes direct responsibility for message retries and stores the pending messages into our own DB. The wire level of this service would be built on top of a fully encrypted MIX network which would not require a fully connected graph, but rather send messages on randomly selected paths over the dynamically managed network graph topology.
