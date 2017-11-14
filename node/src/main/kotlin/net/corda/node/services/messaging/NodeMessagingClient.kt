@@ -212,13 +212,14 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
-            val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
-            // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
-            // would be the default and the two lines below can be deleted.
-            locator.connectionTTL = -1
-            locator.clientFailureCheckPeriod = -1
-            locator.minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
-            locator.isUseGlobalPools = nodeSerializationEnv != null
+            val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
+                // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
+                // would be the default and the two lines below can be deleted.
+                connectionTTL = -1
+                clientFailureCheckPeriod = -1
+                minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+                isUseGlobalPools = nodeSerializationEnv != null
+            }
             sessionFactory = locator.createSessionFactory()
 
             // Login using the node username. The broker will authentiate us as its node (as opposed to another peer)

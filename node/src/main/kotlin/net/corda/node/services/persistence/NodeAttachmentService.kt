@@ -7,19 +7,26 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
+import net.corda.core.contracts.*
 import net.corda.core.internal.AbstractAttachment
-import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.*
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
+import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.currentDBSession
 import java.io.*
+import java.lang.Exception
 import java.nio.file.Paths
+import java.time.Instant
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
+import javax.persistence.Column
 
 /**
  * Stores attachments using Hibernate to database.
@@ -37,7 +44,16 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
 
             @Column(name = "content")
             @Lob
-            var content: ByteArray
+            var content: ByteArray,
+
+            @Column(name = "insertion_date", nullable = false, updatable = false)
+            var insertionDate: Instant = Instant.now(),
+
+            @Column(name = "uploader", updatable = false)
+            var uploader: String? = null,
+
+            @Column(name = "filename", updatable = false)
+            var filename: String? = null
     ) : Serializable
 
     companion object {
@@ -147,8 +163,16 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         return null
     }
 
+    override fun importAttachment(jar: InputStream): AttachmentId {
+        return import(jar, null, null)
+    }
+
+    override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
+        return import(jar, uploader, filename)
+    }
+
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
-    override fun importAttachment(jar: InputStream): SecureHash {
+    private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         require(jar !is JarInputStream)
 
         // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
@@ -169,7 +193,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), id.toString()))
         val count = session.createQuery(criteriaQuery).singleResult
         if (count == 0L) {
-            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename)
             session.save(attachment)
 
             attachmentCount.inc()
@@ -178,6 +202,30 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
 
         return id
     }
+
+    override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
+        log.info("Attachment query criteria: $criteria, sorting: $sorting")
+
+        val session = DatabaseTransactionManager.current().session
+        val criteriaBuilder = session.criteriaBuilder
+
+        val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+        val root = criteriaQuery.from(DBAttachment::class.java)
+
+        val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
+
+        // parse criteria and build where predicates
+        criteriaParser.parse(criteria, sorting)
+
+        // prepare query for execution
+        val query = session.createQuery(criteriaQuery)
+
+        // execution
+        val results = query.resultList
+
+        return results.map { AttachmentId.parse(it.attId) }
+    }
+
 
     private fun checkIsAValidJAR(stream: InputStream) {
         // Just iterate over the entries with verification enabled: should be good enough to catch mistakes.

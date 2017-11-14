@@ -790,34 +790,25 @@ class VaultQueryTests {
                     .and(avgCriteria))
             // DOCEND VaultQueryExample22
 
-            assertThat(results.otherResults).hasSize(24)
+            assertThat(results.otherResults).hasSize(15)
             /** CHF */
             assertThat(results.otherResults[0]).isEqualTo(50000L)
-            assertThat(results.otherResults[1]).isEqualTo("CHF")
-            assertThat(results.otherResults[2]).isEqualTo(10274L)
-            assertThat(results.otherResults[3]).isEqualTo("CHF")
-            assertThat(results.otherResults[4]).isEqualTo(9481L)
-            assertThat(results.otherResults[5]).isEqualTo("CHF")
-            assertThat(results.otherResults[6]).isEqualTo(10000.0)
-            assertThat(results.otherResults[7]).isEqualTo("CHF")
+            assertThat(results.otherResults[1]).isEqualTo(10274L)
+            assertThat(results.otherResults[2]).isEqualTo(9481L)
+            assertThat(results.otherResults[3]).isEqualTo(10000.0)
+            assertThat(results.otherResults[4]).isEqualTo("CHF")
             /** GBP */
-            assertThat(results.otherResults[8]).isEqualTo(40000L)
+            assertThat(results.otherResults[5]).isEqualTo(40000L)
+            assertThat(results.otherResults[6]).isEqualTo(10343L)
+            assertThat(results.otherResults[7]).isEqualTo(9351L)
+            assertThat(results.otherResults[8]).isEqualTo(10000.0)
             assertThat(results.otherResults[9]).isEqualTo("GBP")
-            assertThat(results.otherResults[10]).isEqualTo(10343L)
-            assertThat(results.otherResults[11]).isEqualTo("GBP")
-            assertThat(results.otherResults[12]).isEqualTo(9351L)
-            assertThat(results.otherResults[13]).isEqualTo("GBP")
-            assertThat(results.otherResults[14]).isEqualTo(10000.0)
-            assertThat(results.otherResults[15]).isEqualTo("GBP")
             /** USD */
-            assertThat(results.otherResults[16]).isEqualTo(60000L)
-            assertThat(results.otherResults[17]).isEqualTo("USD")
-            assertThat(results.otherResults[18]).isEqualTo(11298L)
-            assertThat(results.otherResults[19]).isEqualTo("USD")
-            assertThat(results.otherResults[20]).isEqualTo(8702L)
-            assertThat(results.otherResults[21]).isEqualTo("USD")
-            assertThat(results.otherResults[22]).isEqualTo(10000.0)
-            assertThat(results.otherResults[23]).isEqualTo("USD")
+            assertThat(results.otherResults[10]).isEqualTo(60000L)
+            assertThat(results.otherResults[11]).isEqualTo(11298L)
+            assertThat(results.otherResults[12]).isEqualTo(8702L)
+            assertThat(results.otherResults[13]).isEqualTo(10000.0)
+            assertThat(results.otherResults[14]).isEqualTo("USD")
         }
     }
 

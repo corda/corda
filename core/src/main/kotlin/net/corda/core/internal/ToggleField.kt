@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import net.corda.core.utilities.loggerFor
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KProperty
 
@@ -44,14 +45,31 @@ class ThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {
 class ThreadLeakException : RuntimeException("Leaked thread detected: ${Thread.currentThread().name}")
 
 class InheritableThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {
+    companion object {
+        private val log = loggerFor<InheritableThreadLocalToggleField<*>>()
+        private fun ThreadLeakException.isProblematic(): Boolean {
+            stackTrace.forEach {
+                // A dying Netty thread's death event restarting the Netty global executor:
+                it.className == "io.netty.util.concurrent.GlobalEventExecutor" && it.methodName == "startThread" && return false
+            }
+            return true
+        }
+    }
+
     private class Holder<T>(value: T) : AtomicReference<T?>(value) {
         fun valueOrDeclareLeak() = get() ?: throw ThreadLeakException()
+        fun maybeFailFastIfCurrentThreadIsLeaked() {
+            get() != null && return // Current thread isn't leaked.
+            val e = ThreadLeakException()
+            e.isProblematic() && throw e
+            log.warn(e.message) // The exception on value retrieval is still enabled.
+        }
     }
 
     private val threadLocal = object : InheritableThreadLocal<Holder<T>?>() {
         override fun childValue(holder: Holder<T>?): Holder<T>? {
             // The Holder itself may be null due to prior events, a leak is not implied in that case:
-            holder?.valueOrDeclareLeak() // Fail fast.
+            holder?.maybeFailFastIfCurrentThreadIsLeaked()
             return holder // What super does.
         }
     }

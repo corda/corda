@@ -15,7 +15,9 @@ import net.corda.node.services.config.VerifierType
 import net.corda.testing.ALICE
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.node.NotarySpec
+import org.junit.Rule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -23,6 +25,10 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class VerifierTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+
     private fun generateTransactions(number: Int): List<LedgerTransaction> {
         var currentLedger = GeneratedLedger.empty
         val transactions = arrayListOf<WireTransaction>()

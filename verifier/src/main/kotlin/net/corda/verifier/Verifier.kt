@@ -53,6 +53,7 @@ class Verifier {
             require(args.isNotEmpty()) { "Usage: <binary> BASE_DIR_CONTAINING_VERIFIER_CONF" }
             val baseDirectory = Paths.get(args[0])
             val verifierConfig = loadConfiguration(baseDirectory, baseDirectory / "verifier.conf")
+            initialiseSerialization()
             val locator = ActiveMQClient.createServerLocatorWithHA(
                     tcpTransport(ConnectionDirection.Outbound(), verifierConfig.nodeHostAndPort, verifierConfig)
             )
@@ -65,7 +66,6 @@ class Verifier {
                 session.close()
                 sessionFactory.close()
             }
-            initialiseSerialization()
             val consumer = session.createConsumer(VERIFICATION_REQUESTS_QUEUE_NAME)
             val replyProducer = session.createProducer()
             consumer.setMessageHandler {

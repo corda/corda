@@ -14,19 +14,162 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
+import net.corda.node.services.persistence.NodeAttachmentService
 import org.hibernate.query.criteria.internal.expression.LiteralExpression
+import org.hibernate.query.criteria.internal.path.SingularAttributePath
 import org.hibernate.query.criteria.internal.predicate.ComparisonPredicate
 import org.hibernate.query.criteria.internal.predicate.InPredicate
+import java.time.Instant
 import java.util.*
 import javax.persistence.Tuple
 import javax.persistence.criteria.*
 
 
+abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: BaseQueryCriteriaParser<Q, P, S>, in S: BaseSort> : BaseQueryCriteriaParser<Q, P, S> {
+
+    abstract val criteriaBuilder: CriteriaBuilder
+
+    override fun parseOr(left: Q, right: Q): Collection<Predicate> {
+        val predicateSet = mutableSetOf<Predicate>()
+        val leftPredicates = parse(left)
+        val rightPredicates = parse(right)
+
+        val orPredicate = criteriaBuilder.or(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
+        predicateSet.add(orPredicate)
+
+        return predicateSet
+    }
+
+    override fun parseAnd(left: Q, right: Q): Collection<Predicate> {
+        val predicateSet = mutableSetOf<Predicate>()
+        val leftPredicates = parse(left)
+        val rightPredicates = parse(right)
+
+        val andPredicate = criteriaBuilder.and(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
+        predicateSet.add(andPredicate)
+
+        return predicateSet
+    }
+
+    protected fun columnPredicateToPredicate(column: Path<out Any?>, columnPredicate: ColumnPredicate<*>): Predicate {
+        return when (columnPredicate) {
+            is ColumnPredicate.EqualityComparison -> {
+                val literal = columnPredicate.rightLiteral
+                when (columnPredicate.operator) {
+                    EqualityComparisonOperator.EQUAL -> criteriaBuilder.equal(column, literal)
+                    EqualityComparisonOperator.NOT_EQUAL -> criteriaBuilder.notEqual(column, literal)
+                }
+            }
+            is ColumnPredicate.BinaryComparison -> {
+                val literal: Comparable<Any?>? = uncheckedCast(columnPredicate.rightLiteral)
+                @Suppress("UNCHECKED_CAST")
+                column as Path<Comparable<Any?>?>
+                when (columnPredicate.operator) {
+                    BinaryComparisonOperator.GREATER_THAN -> criteriaBuilder.greaterThan(column, literal)
+                    BinaryComparisonOperator.GREATER_THAN_OR_EQUAL -> criteriaBuilder.greaterThanOrEqualTo(column, literal)
+                    BinaryComparisonOperator.LESS_THAN -> criteriaBuilder.lessThan(column, literal)
+                    BinaryComparisonOperator.LESS_THAN_OR_EQUAL -> criteriaBuilder.lessThanOrEqualTo(column, literal)
+                }
+            }
+            is ColumnPredicate.Likeness -> {
+                @Suppress("UNCHECKED_CAST")
+                column as Path<String?>
+                when (columnPredicate.operator) {
+                    LikenessOperator.LIKE -> criteriaBuilder.like(column, columnPredicate.rightLiteral)
+                    LikenessOperator.NOT_LIKE -> criteriaBuilder.notLike(column, columnPredicate.rightLiteral)
+                }
+            }
+            is ColumnPredicate.CollectionExpression -> {
+                when (columnPredicate.operator) {
+                    CollectionOperator.IN -> column.`in`(columnPredicate.rightLiteral)
+                    CollectionOperator.NOT_IN -> criteriaBuilder.not(column.`in`(columnPredicate.rightLiteral))
+                }
+            }
+            is ColumnPredicate.Between -> {
+                @Suppress("UNCHECKED_CAST")
+                column as Path<Comparable<Any?>?>
+                val fromLiteral: Comparable<Any?>? = uncheckedCast(columnPredicate.rightFromLiteral)
+                val toLiteral: Comparable<Any?>? = uncheckedCast(columnPredicate.rightToLiteral)
+                criteriaBuilder.between(column, fromLiteral, toLiteral)
+            }
+            is ColumnPredicate.NullExpression -> {
+                when (columnPredicate.operator) {
+                    NullOperator.IS_NULL -> criteriaBuilder.isNull(column)
+                    NullOperator.NOT_NULL -> criteriaBuilder.isNotNull(column)
+                }
+            }
+            else -> throw VaultQueryException("Not expecting $columnPredicate")
+        }
+    }
+}
+
+class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: CriteriaBuilder,
+                                             private val criteriaQuery: CriteriaQuery<NodeAttachmentService.DBAttachment>, val root: Root<NodeAttachmentService.DBAttachment>) :
+        AbstractQueryCriteriaParser<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>(), AttachmentsQueryCriteriaParser {
+
+    private companion object {
+        val log = loggerFor<HibernateAttachmentQueryCriteriaParser>()
+    }
+
+    init {
+        criteriaQuery.select(root)
+    }
+
+    override fun parse(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): Collection<Predicate> {
+        val predicateSet = criteria.visit(this)
+
+        sorting?.let {
+            if (sorting.columns.isNotEmpty())
+                parse(sorting)
+        }
+
+        criteriaQuery.where(*predicateSet.toTypedArray())
+
+        return predicateSet
+    }
+
+    private fun parse(sorting: AttachmentSort) {
+        log.trace { "Parsing sorting specification: $sorting" }
+
+        val orderCriteria = mutableListOf<Order>()
+
+        sorting.columns.map { (sortAttribute, direction) ->
+            when (direction) {
+                Sort.Direction.ASC -> orderCriteria.add(criteriaBuilder.asc(root.get<String>(sortAttribute.columnName)))
+                Sort.Direction.DESC -> orderCriteria.add(criteriaBuilder.desc(root.get<String>(sortAttribute.columnName)))
+            }
+        }
+        if (orderCriteria.isNotEmpty()) {
+            criteriaQuery.orderBy(orderCriteria)
+        }
+    }
+
+    override fun parseCriteria(criteria: AttachmentQueryCriteria.AttachmentsQueryCriteria): Collection<Predicate> {
+        log.trace { "Parsing AttachmentsQueryCriteria: $criteria" }
+
+        val predicateSet = mutableSetOf<Predicate>()
+
+        criteria.filenameCondition?.let {
+            predicateSet.add(columnPredicateToPredicate(root.get<String>("filename"), it))
+        }
+
+        criteria.uploaderCondition?.let {
+            predicateSet.add(columnPredicateToPredicate(root.get<String>("uploader"), it))
+        }
+
+        criteria.uploadDateCondition?.let {
+            predicateSet.add(columnPredicateToPredicate(root.get<Instant>("upload_date"), it))
+        }
+
+        return predicateSet
+    }
+}
+
 class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractState>,
                                    val contractStateTypeMappings: Map<String, Set<String>>,
-                                   val criteriaBuilder: CriteriaBuilder,
+                                   override val criteriaBuilder: CriteriaBuilder,
                                    val criteriaQuery: CriteriaQuery<Tuple>,
-                                   val vaultStates: Root<VaultSchemaV1.VaultStates>) : IQueryCriteriaParser {
+                                   val vaultStates: Root<VaultSchemaV1.VaultStates>) : AbstractQueryCriteriaParser<QueryCriteria, IQueryCriteriaParser, Sort>(), IQueryCriteriaParser {
     private companion object {
         val log = loggerFor<HibernateQueryCriteriaParser>()
     }
@@ -102,56 +245,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
     }
 
-    private fun columnPredicateToPredicate(column: Path<out Any?>, columnPredicate: ColumnPredicate<*>): Predicate {
-        return when (columnPredicate) {
-            is ColumnPredicate.EqualityComparison -> {
-                val literal = columnPredicate.rightLiteral
-                when (columnPredicate.operator) {
-                    EqualityComparisonOperator.EQUAL -> criteriaBuilder.equal(column, literal)
-                    EqualityComparisonOperator.NOT_EQUAL -> criteriaBuilder.notEqual(column, literal)
-                }
-            }
-            is ColumnPredicate.BinaryComparison -> {
-                val literal: Comparable<Any?>? = uncheckedCast(columnPredicate.rightLiteral)
-                @Suppress("UNCHECKED_CAST")
-                column as Path<Comparable<Any?>?>
-                when (columnPredicate.operator) {
-                    BinaryComparisonOperator.GREATER_THAN -> criteriaBuilder.greaterThan(column, literal)
-                    BinaryComparisonOperator.GREATER_THAN_OR_EQUAL -> criteriaBuilder.greaterThanOrEqualTo(column, literal)
-                    BinaryComparisonOperator.LESS_THAN -> criteriaBuilder.lessThan(column, literal)
-                    BinaryComparisonOperator.LESS_THAN_OR_EQUAL -> criteriaBuilder.lessThanOrEqualTo(column, literal)
-                }
-            }
-            is ColumnPredicate.Likeness -> {
-                @Suppress("UNCHECKED_CAST")
-                column as Path<String?>
-                when (columnPredicate.operator) {
-                    LikenessOperator.LIKE -> criteriaBuilder.like(column, columnPredicate.rightLiteral)
-                    LikenessOperator.NOT_LIKE -> criteriaBuilder.notLike(column, columnPredicate.rightLiteral)
-                }
-            }
-            is ColumnPredicate.CollectionExpression -> {
-                when (columnPredicate.operator) {
-                    CollectionOperator.IN -> column.`in`(columnPredicate.rightLiteral)
-                    CollectionOperator.NOT_IN -> criteriaBuilder.not(column.`in`(columnPredicate.rightLiteral))
-                }
-            }
-            is ColumnPredicate.Between -> {
-                @Suppress("UNCHECKED_CAST")
-                column as Path<Comparable<Any?>?>
-                val fromLiteral: Comparable<Any?>? = uncheckedCast(columnPredicate.rightFromLiteral)
-                val toLiteral: Comparable<Any?>? = uncheckedCast(columnPredicate.rightToLiteral)
-                criteriaBuilder.between(column, fromLiteral, toLiteral)
-            }
-            is ColumnPredicate.NullExpression -> {
-                when (columnPredicate.operator) {
-                    NullOperator.IS_NULL -> criteriaBuilder.isNull(column)
-                    NullOperator.NOT_NULL -> criteriaBuilder.isNotNull(column)
-                }
-            }
-            else -> throw VaultQueryException("Not expecting $columnPredicate")
-        }
-    }
 
     private fun <O> parseExpression(entityRoot: Root<O>, expression: CriteriaExpression<O, Boolean>, predicateSet: MutableSet<Predicate>) {
         if (expression is CriteriaExpression.AggregateFunctionExpression<O, *>) {
@@ -195,6 +288,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                             AggregateFunctionType.MAX -> criteriaBuilder.max(column)
                             AggregateFunctionType.MIN -> criteriaBuilder.min(column)
                         }
+                //TODO investigate possibility to avoid producing redundant joins in SQL for multiple aggregate functions against the same table
                 aggregateExpressions.add(aggregateExpression)
                 // optionally order by this aggregate function
                 expression.orderBy?.let {
@@ -210,6 +304,10 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     val groupByExpressions =
                             columns.map { _column ->
                                 val path = root.get<Any?>(getColumnName(_column))
+                                if (path is SingularAttributePath) //remove the same columns from different joins to match the single column in 'group by' only (from the last join)
+                                    aggregateExpressions.removeAll {
+                                        elem -> if (elem is SingularAttributePath) elem.attribute.javaMember == path.attribute.javaMember else false
+                                    }
                                 aggregateExpressions.add(path)
                                 path
                             }
@@ -323,32 +421,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
             throw VaultQueryException("Parsing error: ${e.message}")
         }
-        return predicateSet
-    }
-
-    override fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
-        log.trace { "Parsing OR QueryCriteria composition: $left OR $right" }
-
-        val predicateSet = mutableSetOf<Predicate>()
-        val leftPredicates = parse(left)
-        val rightPredicates = parse(right)
-
-        val orPredicate = criteriaBuilder.or(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
-        predicateSet.add(orPredicate)
-
-        return predicateSet
-    }
-
-    override fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
-        log.trace { "Parsing AND QueryCriteria composition: $left AND $right" }
-
-        val predicateSet = mutableSetOf<Predicate>()
-        val leftPredicates = parse(left)
-        val rightPredicates = parse(right)
-
-        val andPredicate = criteriaBuilder.and(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
-        predicateSet.add(andPredicate)
-
         return predicateSet
     }
 
