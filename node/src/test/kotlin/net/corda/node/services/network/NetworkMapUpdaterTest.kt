@@ -30,12 +30,11 @@ class NetworkMapUpdaterTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
+    private val jimFs = Jimfs.newFileSystem(Configuration.unix())
+    private val baseDir = jimFs.getPath("/node")
 
     @Test
     fun `publish node info`() {
-        val jimFs = Jimfs.newFileSystem(Configuration.unix())
-        val baseDir = jimFs.getPath("/node")
-
         val keyPair = Crypto.generateKeyPair()
 
         val nodeInfo1 = TestNodeInfoFactory.createNodeInfo("Info 1").verified()
@@ -83,9 +82,6 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `process add node updates from network map, with additional node infos from dir`() {
-        val jimFs = Jimfs.newFileSystem(Configuration.unix())
-        val baseDir = jimFs.getPath("/node")
-
         val nodeInfo1 = TestNodeInfoFactory.createNodeInfo("Info 1")
         val nodeInfo2 = TestNodeInfoFactory.createNodeInfo("Info 2")
         val nodeInfo3 = TestNodeInfoFactory.createNodeInfo("Info 3")
@@ -140,9 +136,6 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `process remove node updates from network map, with additional node infos from dir`() {
-        val jimFs = Jimfs.newFileSystem(Configuration.unix())
-        val baseDir = jimFs.getPath("/node")
-
         val nodeInfo1 = TestNodeInfoFactory.createNodeInfo("Info 1")
         val nodeInfo2 = TestNodeInfoFactory.createNodeInfo("Info 2")
         val nodeInfo3 = TestNodeInfoFactory.createNodeInfo("Info 3")
@@ -200,9 +193,6 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `receive node infos from directory, without a network map`() {
-        val jimFs = Jimfs.newFileSystem(Configuration.unix())
-        val baseDir = jimFs.getPath("/node")
-
         val fileNodeInfo = TestNodeInfoFactory.createNodeInfo("Info from file")
 
         val networkMapCache = getMockNetworkMapCache()
