@@ -1,9 +1,14 @@
 package net.corda.core.internal
 
+import com.nhaarman.mockito_kotlin.argThat
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import org.slf4j.Logger
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -88,8 +93,16 @@ class ToggleFieldTest {
     }
 
     @Test
-    fun `inherited values are poisoned on clear`() {
-        val field = InheritableThreadLocalToggleField<String>("field")
+    fun `with default exception handler, inherited values are poisoned on clear`() {
+        `inherited values are poisoned on clear`(InheritableThreadLocalToggleField("field") { throw it })
+    }
+
+    @Test
+    fun `with lenient exception handler, inherited values are poisoned on clear`() {
+        `inherited values are poisoned on clear`(InheritableThreadLocalToggleField("field") {})
+    }
+
+    private fun `inherited values are poisoned on clear`(field: InheritableThreadLocalToggleField<String>) {
         field.set("hello")
         withSingleThreadExecutor {
             assertEquals("hello", fork(field::get).getOrThrow())
@@ -109,8 +122,8 @@ class ToggleFieldTest {
     }
 
     @Test
-    fun `leaked thread is detected as soon as it tries to create another`() {
-        val field = InheritableThreadLocalToggleField<String>("field")
+    fun `with default exception handler, leaked thread is detected as soon as it tries to create another`() {
+        val field = InheritableThreadLocalToggleField<String>("field") { throw it }
         field.set("hello")
         withSingleThreadExecutor {
             assertEquals("hello", fork(field::get).getOrThrow())
@@ -121,5 +134,26 @@ class ToggleFieldTest {
                     .isInstanceOf(ThreadLeakException::class.java)
                     .hasMessageContaining(threadName)
         }
+    }
+
+    @Test
+    fun `with lenient exception handler, leaked thread logs a warning and does not propagate the holder`() {
+        val log = mock<Logger>()
+        val field = InheritableThreadLocalToggleField<String>("field", log) {}
+        field.set("hello")
+        withSingleThreadExecutor {
+            assertEquals("hello", fork(field::get).getOrThrow())
+            field.set(null) // The executor thread is now considered leaked.
+            val threadName = fork { Thread.currentThread().name }.getOrThrow()
+            fork {
+                verifyNoMoreInteractions(log)
+                withSingleThreadExecutor {
+                    verify(log).warn(argThat { contains(threadName) })
+                    // In practice the new thread is for example a static thread we can't get rid of:
+                    assertNull(fork(field::get).getOrThrow())
+                }
+            }.getOrThrow()
+        }
+        verifyNoMoreInteractions(log)
     }
 }

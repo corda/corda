@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import net.corda.core.utilities.loggerFor
+import org.slf4j.Logger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KProperty
 
@@ -44,32 +45,30 @@ class ThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {
 /** The named thread has leaked from a previous test. */
 class ThreadLeakException : RuntimeException("Leaked thread detected: ${Thread.currentThread().name}")
 
-/** @param failFast should throw the exception, or may return normally to suppress inheritance. */
-class InheritableThreadLocalToggleField<T>(name: String, private val failFast: (ThreadLeakException) -> Unit = { throw it }) : ToggleField<T>(name) {
-    companion object {
-        private val log = loggerFor<InheritableThreadLocalToggleField<*>>()
-    }
-
-    private class Holder<T>(private val failFast: (ThreadLeakException) -> Any?, value: T) : AtomicReference<T?>(value) {
+/** @param exceptionHandler should throw the exception, or may return normally to suppress inheritance. */
+class InheritableThreadLocalToggleField<T>(name: String,
+                                           private val log: Logger = loggerFor<InheritableThreadLocalToggleField<*>>(),
+                                           private val exceptionHandler: (ThreadLeakException) -> Unit = { throw it }) : ToggleField<T>(name) {
+    private inner class Holder(value: T) : AtomicReference<T?>(value) {
         fun valueOrDeclareLeak() = get() ?: throw ThreadLeakException()
-        fun childValue(): Holder<T>? {
+        fun childValue(): Holder? {
             get() != null && return this // Current thread isn't leaked.
             val e = ThreadLeakException()
-            failFast(e)
+            exceptionHandler(e)
             log.warn(e.message)
             return null
         }
     }
 
-    private val threadLocal = object : InheritableThreadLocal<Holder<T>?>() {
-        override fun childValue(holder: Holder<T>?): Holder<T>? {
+    private val threadLocal = object : InheritableThreadLocal<Holder?>() {
+        override fun childValue(holder: InheritableThreadLocalToggleField<T>.Holder?): InheritableThreadLocalToggleField<T>.Holder? {
             // The Holder itself may be null due to prior events, a leak is not indicated in that case:
             return holder?.childValue()
         }
     }
 
     override fun get() = threadLocal.get()?.valueOrDeclareLeak()
-    override fun setImpl(value: T) = threadLocal.set(Holder(failFast, value))
+    override fun setImpl(value: T) = threadLocal.set(Holder(value))
     override fun clear() = threadLocal.run {
         val holder = get()!!
         remove()
