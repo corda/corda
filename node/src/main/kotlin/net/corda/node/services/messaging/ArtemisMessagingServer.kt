@@ -86,7 +86,7 @@ import javax.security.cert.CertificateException
  * a fully connected network, trusted network or on localhost.
  */
 @ThreadSafe
-class ArtemisMessagingServer(override val config: NodeConfiguration,
+class ArtemisMessagingServer(private val config: NodeConfiguration,
                              val p2pPort: Int,
                              val rpcPort: Int?,
                              val networkMapCache: NetworkMapCache,

@@ -1,5 +1,6 @@
 package net.corda.node.services.messaging
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
@@ -20,7 +21,6 @@ import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.RPCUserService
-import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.statemachine.StateMachineManagerImpl
@@ -72,13 +72,13 @@ import javax.persistence.Lob
  * If not provided, will default to [serverAddress].
  */
 @ThreadSafe
-class NodeMessagingClient(override val config: NodeConfiguration,
+class NodeMessagingClient(private val config: NodeConfiguration,
                           private val versionInfo: VersionInfo,
                           private val serverAddress: NetworkHostAndPort,
                           private val myIdentity: PublicKey,
                           private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
-                          val database: CordaPersistence,
-                          val monitoringService: MonitoringService,
+                          private val database: CordaPersistence,
+                          private val metrics: MetricRegistry,
                           advertisedAddress: NetworkHostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {
     companion object {
@@ -560,7 +560,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private fun createOutOfProcessVerifierService(): TransactionVerifierService {
-        return object : OutOfProcessTransactionVerifierService(monitoringService) {
+        return object : OutOfProcessTransactionVerifierService(metrics) {
             override fun sendRequest(nonce: Long, transaction: LedgerTransaction) {
                 messagingExecutor.fetchFrom {
                     state.locked {
