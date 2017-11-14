@@ -16,6 +16,7 @@ import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
 import net.corda.node.services.persistence.NodeAttachmentService
 import org.hibernate.query.criteria.internal.expression.LiteralExpression
+import org.hibernate.query.criteria.internal.path.SingularAttributePath
 import org.hibernate.query.criteria.internal.predicate.ComparisonPredicate
 import org.hibernate.query.criteria.internal.predicate.InPredicate
 import java.time.Instant
@@ -287,6 +288,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                             AggregateFunctionType.MAX -> criteriaBuilder.max(column)
                             AggregateFunctionType.MIN -> criteriaBuilder.min(column)
                         }
+                //TODO investigate possibility to avoid producing redundant joins in SQL for multiple aggregate functions against the same table
                 aggregateExpressions.add(aggregateExpression)
                 // optionally order by this aggregate function
                 expression.orderBy?.let {
@@ -302,6 +304,10 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     val groupByExpressions =
                             columns.map { _column ->
                                 val path = root.get<Any?>(getColumnName(_column))
+                                if (path is SingularAttributePath) //remove the same columns from different joins to match the single column in 'group by' only (from the last join)
+                                    aggregateExpressions.removeAll {
+                                        elem -> if (elem is SingularAttributePath) elem.attribute.javaMember == path.attribute.javaMember else false
+                                    }
                                 aggregateExpressions.add(path)
                                 path
                             }

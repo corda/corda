@@ -395,37 +395,28 @@ public class VaultQueryJavaTests {
                 Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, criteria);
                 // DOCEND VaultJavaQueryExample22
 
-                assertThat(results.getOtherResults()).hasSize(27);
+                assertThat(results.getOtherResults()).hasSize(18);
                 /** CHF */
                 assertThat(results.getOtherResults().get(0)).isEqualTo(500L);
-                assertThat(results.getOtherResults().get(1)).isEqualTo("CHF");
-                assertThat(results.getOtherResults().get(2)).isEqualTo(5L);
-                assertThat(results.getOtherResults().get(3)).isEqualTo(102L);
-                assertThat(results.getOtherResults().get(4)).isEqualTo("CHF");
-                assertThat(results.getOtherResults().get(5)).isEqualTo(94L);
-                assertThat(results.getOtherResults().get(6)).isEqualTo("CHF");
-                assertThat(results.getOtherResults().get(7)).isEqualTo(100.00);
-                assertThat(results.getOtherResults().get(8)).isEqualTo("CHF");
+                assertThat(results.getOtherResults().get(1)).isEqualTo(5L);
+                assertThat(results.getOtherResults().get(2)).isEqualTo(102L);
+                assertThat(results.getOtherResults().get(3)).isEqualTo(94L);
+                assertThat(results.getOtherResults().get(4)).isEqualTo(100.00);
+                assertThat(results.getOtherResults().get(5)).isEqualTo("CHF");
                 /** GBP */
-                assertThat(results.getOtherResults().get(9)).isEqualTo(400L);
-                assertThat(results.getOtherResults().get(10)).isEqualTo("GBP");
-                assertThat(results.getOtherResults().get(11)).isEqualTo(4L);
-                assertThat(results.getOtherResults().get(12)).isEqualTo(103L);
-                assertThat(results.getOtherResults().get(13)).isEqualTo("GBP");
-                assertThat(results.getOtherResults().get(14)).isEqualTo(93L);
-                assertThat(results.getOtherResults().get(15)).isEqualTo("GBP");
-                assertThat(results.getOtherResults().get(16)).isEqualTo(100.0);
-                assertThat(results.getOtherResults().get(17)).isEqualTo("GBP");
+                assertThat(results.getOtherResults().get(6)).isEqualTo(400L);
+                assertThat(results.getOtherResults().get(7)).isEqualTo(4L);
+                assertThat(results.getOtherResults().get(8)).isEqualTo(103L);
+                assertThat(results.getOtherResults().get(9)).isEqualTo(93L);
+                assertThat(results.getOtherResults().get(10)).isEqualTo(100.0);
+                assertThat(results.getOtherResults().get(11)).isEqualTo("GBP");
                 /** USD */
-                assertThat(results.getOtherResults().get(18)).isEqualTo(600L);
-                assertThat(results.getOtherResults().get(19)).isEqualTo("USD");
-                assertThat(results.getOtherResults().get(20)).isEqualTo(6L);
-                assertThat(results.getOtherResults().get(21)).isEqualTo(113L);
-                assertThat(results.getOtherResults().get(22)).isEqualTo("USD");
-                assertThat(results.getOtherResults().get(23)).isEqualTo(87L);
-                assertThat(results.getOtherResults().get(24)).isEqualTo("USD");
-                assertThat(results.getOtherResults().get(25)).isEqualTo(100.0);
-                assertThat(results.getOtherResults().get(26)).isEqualTo("USD");
+                assertThat(results.getOtherResults().get(12)).isEqualTo(600L);
+                assertThat(results.getOtherResults().get(13)).isEqualTo(6L);
+                assertThat(results.getOtherResults().get(14)).isEqualTo(113L);
+                assertThat(results.getOtherResults().get(15)).isEqualTo(87L);
+                assertThat(results.getOtherResults().get(16)).isEqualTo(100.0);
+                assertThat(results.getOtherResults().get(17)).isEqualTo("USD");
 
             } catch (NoSuchFieldException e) {
                 e.printStackTrace();
