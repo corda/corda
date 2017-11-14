@@ -47,7 +47,6 @@ import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import org.slf4j.Logger
-import sun.plugin.dom.DOMObjectFactory.createNode
 import java.io.Closeable
 import java.math.BigInteger
 import java.nio.file.Path
@@ -336,13 +335,13 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         override fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
             return object : BFTSMaRt.Cluster {
-                override fun waitUntilAllReplicasHaveInitialized(notaryService: BFTNonValidatingNotaryService) {
-                    val clusterNodes = mockNet.nodes.filter { notaryKey in it.started!!.info.legalIdentities.map { it.owningKey } }
+                override fun waitUntilAllReplicasHaveInitialized() {
+                    val clusterNodes = mockNet.nodes.map { it.started!! }.filter { notaryKey in it.info.legalIdentities.map { it.owningKey } }
                     if (clusterNodes.size != bftSMaRtConfig.clusterAddresses.size) {
                         throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
                     }
                     clusterNodes.forEach {
-                        notaryService.waitUntilReplicaHasInitialized()
+                        (it.notaryService as BFTNonValidatingNotaryService).waitUntilReplicaHasInitialized()
                     }
                 }
             }

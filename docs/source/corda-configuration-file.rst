@@ -45,8 +45,7 @@ Simple Notary configuration file.
     }
     useHTTPS : false
     devMode : true
-    // Certificate signing service will be hosted by R3 in the near future.
-    //certificateSigningService : "https://testnet.certificate.corda.net"
+    compatibilityZoneURL : "https://cz.corda.net"
 
 Fields
 ------
@@ -141,8 +140,8 @@ path to the node's base directory.
     attempt to discover its externally visible IP address first by looking for any public addresses on its network
     interfaces, and then by sending an IP discovery request to the network map service. Set to ``false`` to disable.
 
-:certificateSigningService: Certificate Signing Server address. It is used by the certificate signing request utility to
-    obtain SSL certificate. (See :doc:`permissioning` for more information.)
+:compatibilityZoneURL: The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and
+    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information.
 
 :jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
     only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
