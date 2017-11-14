@@ -8,6 +8,7 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sign
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -18,10 +19,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.*
 import net.corda.core.node.services.*
-import net.corda.core.serialization.SerializationWhitelist
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -44,9 +42,7 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.NetworkMapCacheImpl
-import net.corda.node.services.network.NodeInfoWatcher
-import net.corda.node.services.network.PersistentNetworkMapCache
+import net.corda.node.services.network.*
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -72,6 +68,7 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -135,6 +132,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     protected lateinit var database: CordaPersistence
     protected val _nodeReadyFuture = openFuture<Unit>()
+    protected val networkMapClient: NetworkMapClient? by lazy { configuration.compatibilityZoneURL?.let(::NetworkMapClient) }
+
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
     val nodeReadyFuture: CordaFuture<Unit>
@@ -170,7 +169,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         initCertificate()
-        initNodeInfo()
+        val keyPairs = initNodeInfo()
+        val identityKeypair = keyPairs.first { it.public == info.legalIdentities.first().owningKey }
+        val serialisedNodeInfo = info.serialize()
+        val signature = identityKeypair.sign(serialisedNodeInfo)
+        // TODO: Signed data might not be sufficient for multiple identities, as it only contains one signature.
+        NodeInfoWatcher.saveToFile(configuration.baseDirectory, SignedData(serialisedNodeInfo, signature))
     }
 
     open fun start(): StartedNode<AbstractNode> {
@@ -184,8 +188,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService) {
             val transactionStorage = makeTransactionStorage()
             val stateLoader = StateLoaderImpl(transactionStorage)
-            val services = makeServices(keyPairs, schemaService, transactionStorage, stateLoader)
-            val notaryService = makeNotaryService(services)
+            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader)
+            val notaryService = makeNotaryService(nodeServices)
             smm = makeStateMachineManager()
             val flowStarter = FlowStarterImpl(serverThread, smm)
             val schedulerService = NodeSchedulerService(
@@ -208,7 +212,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             startMessagingService(rpcOps)
             installCoreFlows()
             val cordaServices = installCordaServices(flowStarter)
-            tokenizableServices = services + cordaServices + schedulerService
+            tokenizableServices = nodeServices + cordaServices + schedulerService
             registerCordappFlows()
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
@@ -216,6 +220,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             runOnStop += network::stop
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
+
+        val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
+                NodeInfoWatcher(configuration.baseDirectory, Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
+                networkMapClient)
+        runOnStop += networkMapUpdater::close
+
+        networkMapUpdater.updateNodeInfo(services.myInfo) {
+            val serialisedNodeInfo = it.serialize()
+            val signature = services.keyManagementService.sign(serialisedNodeInfo.bytes, it.legalIdentities.first().owningKey)
+            SignedData(serialisedNodeInfo, signature)
+        }
+        networkMapUpdater.subscribeToNetworkMap()
+
         // If we successfully  loaded network data from database, we set this future to Unit.
         services.networkMapCache.addNode(info)
         _nodeReadyFuture.captureLater(services.networkMapCache.nodeReady.map { Unit })
@@ -245,16 +262,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 identity
             }
         }
-
         info = NodeInfo(
                 myAddresses(),
                 setOf(identity, myNotaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
                 platformClock.instant().toEpochMilli()
         )
-
-        NodeInfoWatcher.saveToFile(configuration.baseDirectory, info, identityKeyPair)
-
         return keyPairs
     }
 
@@ -727,7 +740,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             NetworkMapCacheImpl(
                     PersistentNetworkMapCache(
                             this@AbstractNode.database,
-                            this@AbstractNode.configuration,
                             networkParameters.notaries),
                     identityService)
         }
@@ -768,4 +780,4 @@ internal class FlowStarterImpl(private val serverThread: AffinityExecutor, priva
 /**
  * Thrown when a node is about to start and its network map cache doesn't contain any node.
  */
-internal class NetworkMapCacheEmptyException: Exception()
+internal class NetworkMapCacheEmptyException : Exception()

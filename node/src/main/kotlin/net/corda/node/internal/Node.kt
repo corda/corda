@@ -176,15 +176,21 @@ open class Node(configuration: NodeConfiguration,
      * TODO this code used to rely on the networkmap node, we might want to look at a different solution.
      */
     private fun tryDetectIfNotPublicHost(host: String): String? {
-        if (!AddressUtils.isPublic(host)) {
+        return if (!AddressUtils.isPublic(host)) {
             val foundPublicIP = AddressUtils.tryDetectPublicIP()
-
-            if (foundPublicIP != null) {
+            if (foundPublicIP == null) {
+                val retrievedHostName = networkMapClient?.myPublicHostname()
+                if (retrievedHostName != null) {
+                    log.info("Retrieved public IP from Network Map Service: $this. This will be used instead of the provided \"$host\" as the advertised address.")
+                }
+                retrievedHostName
+            } else {
                 log.info("Detected public IP: ${foundPublicIP.hostAddress}. This will be used instead of the provided \"$host\" as the advertised address.")
-                return foundPublicIP.hostAddress
+                foundPublicIP.hostAddress
             }
+        } else {
+            null
         }
-        return null
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {

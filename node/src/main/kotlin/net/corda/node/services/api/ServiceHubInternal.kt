@@ -30,6 +30,10 @@ import net.corda.node.utilities.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
 interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
+    val allNodeHashes: List<SecureHash>
+
+    fun getNodeByHash(nodeHash: SecureHash): NodeInfo?
+
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)
 

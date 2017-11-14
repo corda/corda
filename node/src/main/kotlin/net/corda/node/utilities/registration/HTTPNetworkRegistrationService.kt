@@ -1,6 +1,7 @@
 package net.corda.node.utilities.registration
 
 import com.google.common.net.MediaType
+import net.corda.core.internal.openHttpConnection
 import net.corda.node.utilities.CertificateStream
 import org.apache.commons.io.IOUtils
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -12,7 +13,9 @@ import java.security.cert.Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
 
-class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationService {
+class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistrationService {
+    private val registrationURL = URL("$compatibilityZoneURL/certificate")
+
     companion object {
         // TODO: Propagate version information from gradle
         val clientVersion = "1.0"
@@ -21,7 +24,7 @@ class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationServi
     @Throws(CertificateRequestException::class)
     override fun retrieveCertificates(requestId: String): Array<Certificate>? {
         // Poll server to download the signed certificate once request has been approved.
-        val url = URL("$server/api/certificate/$requestId")
+        val url = URL("$registrationURL/$requestId")
 
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
@@ -43,7 +46,7 @@ class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationServi
 
     override fun submitRequest(request: PKCS10CertificationRequest): String {
         // Post request to certificate signing server via http.
-        val conn = URL("$server/api/certificate").openConnection() as HttpURLConnection
+        val conn = URL("$registrationURL").openHttpConnection()
         conn.doOutput = true
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", "application/octet-stream")
