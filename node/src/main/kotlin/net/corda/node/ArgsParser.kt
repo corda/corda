@@ -4,6 +4,7 @@ import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
 import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import org.slf4j.event.Level
 import java.io.PrintStream
@@ -69,6 +70,11 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean) {
-    fun loadConfig() = ConfigHelper
-            .loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
+    fun loadConfig(): NodeConfiguration {
+        val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
+        if (isRegistration) {
+            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone Url must be provided in registration mode." }
+        }
+        return config
+    }
 }

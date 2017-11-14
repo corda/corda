@@ -141,14 +141,15 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     open protected fun maybeRegisterWithNetworkAndExit(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
-        if (!cmdlineOptions.isRegistration) return
+        val compatibilityZoneURL = conf.compatibilityZoneURL
+        if (!cmdlineOptions.isRegistration || compatibilityZoneURL == null) return
         println()
         println("******************************************************************")
         println("*                                                                *")
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(conf.certificateSigningService)).buildKeystore()
+        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
         exitProcess(0)
     }
 

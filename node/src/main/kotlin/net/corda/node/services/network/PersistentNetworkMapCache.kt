@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -16,11 +17,11 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
@@ -63,7 +64,6 @@ class NetworkMapCacheImpl(
 @ThreadSafe
 open class PersistentNetworkMapCache(
         private val database: CordaPersistence,
-        val configuration: NodeConfiguration,
         notaries: List<NotaryInfo>
 ) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
     companion object {
@@ -88,17 +88,33 @@ open class PersistentNetworkMapCache(
     override val notaryIdentities: List<Party> = notaries.map { it.identity }
     private val validatingNotaries = notaries.mapNotNullTo(HashSet()) { if (it.validating) it.identity else null }
 
-    private val nodeInfoSerializer = NodeInfoWatcher(configuration.baseDirectory,
-            configuration.additionalNodeInfoPollingFrequencyMsec)
-
     init {
-        loadFromFiles()
         database.transaction { loadFromDB(session) }
     }
 
-    private fun loadFromFiles() {
-        logger.info("Loading network map from files..")
-        nodeInfoSerializer.nodeInfoUpdates().subscribe { node -> addNode(node) }
+    override val allNodeHashes: List<SecureHash>
+        get() {
+            return database.transaction {
+                val builder = session.criteriaBuilder
+                val query = builder.createQuery(String::class.java).run {
+                    from(NodeInfoSchemaV1.PersistentNodeInfo::class.java).run {
+                        select(get<String>(NodeInfoSchemaV1.PersistentNodeInfo::hash.name))
+                    }
+                }
+                session.createQuery(query).resultList.map { SecureHash.sha256(it) }
+            }
+        }
+
+    override fun getNodeByHash(nodeHash: SecureHash): NodeInfo? {
+        return database.transaction {
+            val builder = session.criteriaBuilder
+            val query = builder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java).run {
+                from(NodeInfoSchemaV1.PersistentNodeInfo::class.java).run {
+                    where(builder.equal(get<String>(NodeInfoSchemaV1.PersistentNodeInfo::hash.name), nodeHash.toString()))
+                }
+            }
+            session.createQuery(query).resultList.singleOrNull()?.toNodeInfo()
+        }
     }
 
     override fun isValidatingNotary(party: Party): Boolean = party in validatingNotaries
@@ -277,10 +293,12 @@ open class PersistentNetworkMapCache(
         else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
     }
 
+
     /** Object Relational Mapping support. */
     private fun generateMappedObject(nodeInfo: NodeInfo): NodeInfoSchemaV1.PersistentNodeInfo {
         return NodeInfoSchemaV1.PersistentNodeInfo(
                 id = 0,
+                hash = nodeInfo.serialize().hash.toString(),
                 addresses = nodeInfo.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
                 legalIdentitiesAndCerts = nodeInfo.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
                     NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
