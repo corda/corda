@@ -24,10 +24,19 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.Node
+import net.corda.node.internal.StartedNode
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
+import net.corda.node.services.messaging.RpcContext
 import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.User
+import org.crsh.auth.AuthInfo
 import org.crsh.command.InvocationContext
+import org.crsh.console.jline.JLineProcessor
+import org.crsh.console.jline.TerminalFactory
+import org.crsh.console.jline.console.ConsoleReader
 import org.crsh.lang.impl.java.JavaLanguage
 import org.crsh.plugin.CRaSHPlugin
 import org.crsh.plugin.PluginContext
@@ -38,6 +47,7 @@ import org.crsh.shell.ShellFactory
 import org.crsh.shell.impl.command.ExternalResolver
 import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
+import org.crsh.util.InterruptHandler
 import org.crsh.util.Utils
 import org.crsh.vfs.FS
 import org.crsh.vfs.spi.file.FileMountFactory
@@ -52,6 +62,7 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import kotlin.concurrent.thread
 
 // TODO: Add command history.
 // TODO: Command completion.
@@ -75,6 +86,8 @@ object InteractiveShell {
 
     private var shell:Shell? = null
 
+    val SUPERUSER = User(ArtemisMessagingComponent.NODE_USER, "", setOf("ALL"))
+
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
@@ -85,28 +98,51 @@ object InteractiveShell {
         this.identityService = identityService
         this.database = database
         val dir = configuration.baseDirectory
-        val runSSH = configuration.sshd != null
-
-        if (!runSSH) {
-            return
-        }
+        val runSshDeamon = configuration.sshd != null
 
         val config = Properties()
-        val sshKeysDir = dir / "sshkey"
-        sshKeysDir.toFile().mkdirs()
+        if (runSshDeamon) {
+            val sshKeysDir = dir / "sshkey"
+            sshKeysDir.toFile().mkdirs()
 
-        // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
-        config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
-        config["crash.ssh.keygen"] = "true"
-        config["crash.ssh.port"] = configuration.sshd?.port.toString()
-        config["crash.auth"] = "corda"
+            // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
+            config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
+            config["crash.ssh.keygen"] = "true"
+            config["crash.ssh.port"] = configuration.sshd?.port.toString()
+            config["crash.auth"] = "corda"
+        }
 
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
         shell = ShellLifecycle(dir).start(config)
 
-        Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
+        if (runSshDeamon) {
+            Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
+        }
+    }
+
+    fun runLocalShell(node:StartedNode<Node>) {
+//        if (!runLocalShell)
+//            return
+        val terminal = TerminalFactory.create()
+        val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
+        val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
+        InterruptHandler { jlineProcessor.interrupt() }.install()
+        thread(name = "Command line shell processor", isDaemon = true) {
+            // Give whoever has local shell access administrator access to the node.
+            CURRENT_RPC_CONTEXT.set(RpcContext(SUPERUSER))
+            Emoji.renderIfSupported {
+                jlineProcessor.run()
+            }
+        }
+        thread(name = "Command line shell terminator", isDaemon = true) {
+            // Wait for the shell to finish.
+            jlineProcessor.closed()
+            log.info("Command shell has exited")
+            terminal.restore()
+            node.dispose()
+        }
     }
 
     class ShellLifecycle(val dir: Path) : PluginLifeCycle() {
@@ -144,7 +180,7 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null, null)
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, RPCOpsWithContext(rpcOps, SUPERUSER)))
         }
     }
 

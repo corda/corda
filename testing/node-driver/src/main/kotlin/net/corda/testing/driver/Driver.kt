@@ -999,7 +999,8 @@ class DriverDSL(
                         className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                         arguments = listOf(
                                 "--base-directory=${nodeConf.baseDirectory}",
-                                "--logging-level=$loggingLevel"
+                                "--logging-level=$loggingLevel",
+                                "--no-local-shell"
                         ),
                         jdwpPort = debugPort,
                         extraJvmArguments = extraJvmArguments,

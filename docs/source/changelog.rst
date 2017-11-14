@@ -6,8 +6,7 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
-* ``SSH Server`` - Local shell has been removed. Instead the node can now expose SSH server with proper authorization
-  and permissioning built in.
+* ``SSH Server`` - Instead the node can now expose SSH server with proper authorization and permissioning built in.
 
 * ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
 

@@ -101,6 +101,17 @@ open class NodeStartup(val args: Array<String>) {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
+
+            // Don't start the shell if there's no console attached.
+            if (!cmdlineOptions.noLocalShell && System.console() != null) {
+                startedNode.internals.startupComplete.then {
+                    try {
+                        InteractiveShell.runLocalShell(startedNode)
+                    } catch (e: Throwable) {
+                        logger.error("Shell failed to start", e)
+                    }
+                }
+            }
         },
                 { th ->
                     logger.error("Unexpected exception during registration", th)

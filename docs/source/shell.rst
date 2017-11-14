@@ -20,11 +20,12 @@ Some of its features include:
 
 It is based on the popular `CRaSH`_ shell used in various other projects and supports many of the same features.
 
+Local terminal shell runs only in development mode. It may be disabled by passing the ``--no-local-shell`` flag to the node.
+
 SSH server
 ----------
 
-Shell is only accessible via SSH. The main reason of this is the need for security and authentication. By default SSH server
-is *disabled*. To enable it port must be configured - in ``node.conf`` file
+Shell can also be accessible via SSH. By default SSH server is *disabled*. To enable it port must be configured - in ``node.conf`` file
 
 .. code:: bash
 
@@ -43,7 +44,9 @@ Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed`` while s
 Host key
 --------
 
-The host key is loaded from ``sshkey/hostkey.pem`` file. If the file does not exist, it will be generated randomly.
+The host key is loaded from ``sshkey/hostkey.pem`` file. If the file does not exist, it will be generated randomly, however
+in the development mode seed may be tuned to give the same results on the same computer - in order to avoid host checking
+errors.
 
 Connecting
 ----------
@@ -51,7 +54,7 @@ Connecting
 Linux and MacOS computers usually come with SSH client preinstalled. On Windows it usually require extra download.
 Usual connection syntax is ``ssh user@host -p 2222`` - where ``user`` is a RPC username, and ``-p`` specifies a port parameters -
 it's the same as setup in ``node.conf`` file. ``host`` should point to a node hostname, usually ``localhost`` if connecting and
-running node on the same computer. Password will be asked after estabilishing connection.
+running node on the same computer. Password will be asked after establishing connection.
 
 :note: While developing, checking multiple samples or simply restarting a node frequently host key may be regenerated. SSH usually
     saved once trusted hosts and will refuse to connect in case of a change. Then check may be disabled with extra options

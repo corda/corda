@@ -22,6 +22,7 @@ class ArgsParserTest {
                 loggingLevel = Level.INFO,
                 isRegistration = false,
                 isVersion = false,
+                noLocalShell = false,
                 sshdServer = false,
                 justGenerateNodeInfo = false))
     }
