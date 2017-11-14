@@ -31,6 +31,10 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').compileJava
             "$rootDir/config/dev/log4j2.xml"
     )
     from 'NOTICE' // Copy CDDL notice
+    from { project(':node').configurations.runtime.allDependencies.matching { // Include config library JAR.
+        it.group.equals("com.typesafe") && it.name.equals("config")
+    }.collect { zipTree(project(':node').configurations.runtime.files(it).first()) } }
+    from { "$rootDir/node/build/resources/main/reference.conf" }
 
     capsuleManifest {
         applicationVersion = corda_release_version
