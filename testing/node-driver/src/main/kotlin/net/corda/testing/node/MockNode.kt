@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
+import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -39,14 +40,15 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.setGlobalSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.setGlobalSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import java.io.Closeable
 import java.math.BigInteger
+import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
@@ -354,12 +356,15 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     private fun <N : MockNode> createNodeImpl(parameters: MockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
         val id = parameters.forcedID ?: nextNodeId++
+        val baseDirectory = baseDirectory(id).createDirectories()
         val config = testNodeConfiguration(
-                baseDirectory = baseDirectory(id).createDirectories(),
+                baseDirectory = baseDirectory,
                 myLegalName = parameters.legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             parameters.configOverrides(it)
         }
+        // TODO We can't generate the node.conf based on the config object, using Any.toConfig(), since it's mocked
+        Files.createFile(baseDirectory / "node.conf")
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot))
         _nodes += node
         if (start) {
