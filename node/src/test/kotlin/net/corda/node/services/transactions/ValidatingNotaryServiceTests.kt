@@ -15,13 +15,10 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.issueInvalidState
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.singleIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
