@@ -342,7 +342,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     private val CONTEXT_ACTOR_ID = SimpleString("context.actor.id")
     private val CONTEXT_ACTOR_STORE_ID = SimpleString("context.actor.store.id")
-    private val CONTEXT_OWNING_LEGAL_IDENTITY = SimpleString("context.owningLegalIdentity")
+    private val CONTEXT_ACTOR_OWNING_LEGAL_IDENTITY = SimpleString("context.actor.owningLegalIdentity")
     private val CONTEXT_INVOCATION_ID = SimpleString("context.invocation.id")
     private val CONTEXT_INVOCATION_TIMESTAMP = SimpleString("context.invocation.timestamp")
     private val CONTEXT_SESSION_ID = SimpleString("context.session.id")
@@ -351,17 +351,22 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     private val CONTEXT_EXTERNAL_INVOCATION_TIMESTAMP = SimpleString("context.external.invocation.timestamp")
     private val CONTEXT_EXTERNAL_SESSION_ID = SimpleString("context.external.session.id")
     private val CONTEXT_EXTERNAL_SESSION_TIMESTAMP = SimpleString("context.external.session.timestamp")
+    private val CONTEXT_IMPERSONATED__ACTOR_ID = SimpleString("context.actor.impersonating.id")
+    private val CONTEXT_IMPERSONATED__ACTOR_STORE_ID = SimpleString("context.actor.impersonating.store.id")
+    private val CONTEXT_IMPERSONATED__ACTOR_OWNING_LEGAL_IDENTITY = SimpleString("context.actor.impersonating.owningLegalIdentity")
 
     private fun ClientMessage.context(sender: CordaX500Name): InvocationContext {
 
         val actorId = required(CONTEXT_ACTOR_ID, { getStringProperty(it) })
         val storeId = required(CONTEXT_ACTOR_STORE_ID, { getStringProperty(it) })
-        val owningLegalIdentity = required(CONTEXT_OWNING_LEGAL_IDENTITY, { getStringProperty(it) })
+        val owningLegalIdentity = required(CONTEXT_ACTOR_OWNING_LEGAL_IDENTITY, { getStringProperty(it) })
+        val actor = Actor(Actor.Id(actorId), AuthServiceId(storeId), CordaX500Name.parse(owningLegalIdentity))
 
         val invocationId = required(CONTEXT_INVOCATION_ID, { getStringProperty(it) })
         val invocationIdTimestamp = required(CONTEXT_INVOCATION_TIMESTAMP, { getLongProperty(it) })
         val sessionId = required(CONTEXT_SESSION_ID, { getStringProperty(it) })
         val sessionIdTimestamp = required(CONTEXT_SESSION_TIMESTAMP, { getLongProperty(it) })
+        val trace = Trace(InvocationId(invocationId, Instant.ofEpochMilli(invocationIdTimestamp)), SessionId(sessionId, Instant.ofEpochMilli(sessionIdTimestamp)))
 
         val externalTrace = getStringProperty(CONTEXT_EXTERNAL_INVOCATION_ID)?.let {
             val externalInvocationIdTimestamp = required(CONTEXT_EXTERNAL_INVOCATION_TIMESTAMP, { getLongProperty(it) })
@@ -370,16 +375,20 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             Trace(InvocationId(it, Instant.ofEpochMilli(externalInvocationIdTimestamp)), SessionId(externalSessionId, Instant.ofEpochMilli(externalSessionIdTimestamp)))
         }
 
-        val actor = Actor(Actor.Id(actorId), AuthServiceId(storeId), CordaX500Name.parse(owningLegalIdentity))
-        val trace = Trace(InvocationId(invocationId, Instant.ofEpochMilli(invocationIdTimestamp)), SessionId(sessionId, Instant.ofEpochMilli(sessionIdTimestamp)))
-        return InvocationContext(actor, Origin.Peer(sender), trace, externalTrace)
+        val impersonatedActor = getStringProperty(CONTEXT_IMPERSONATED__ACTOR_ID)?.let {
+            val impersonatedStoreId = required(CONTEXT_IMPERSONATED__ACTOR_STORE_ID, { getStringProperty(it) })
+            val impersonatedOwningLegalIdentity = required(CONTEXT_IMPERSONATED__ACTOR_OWNING_LEGAL_IDENTITY, { getStringProperty(it) })
+            Actor(Actor.Id(it), AuthServiceId(impersonatedStoreId), CordaX500Name.parse(impersonatedOwningLegalIdentity))
+        }
+
+        return InvocationContext(actor, Origin.Peer(sender), trace, externalTrace, impersonatedActor)
     }
 
     private fun InvocationContext.mapTo(message: ClientMessage) {
 
         message.putStringProperty(CONTEXT_ACTOR_ID.toString(), actor.id.value)
         message.putStringProperty(CONTEXT_ACTOR_STORE_ID.toString(), actor.serviceId.value)
-        message.putStringProperty(CONTEXT_OWNING_LEGAL_IDENTITY.toString(), actor.owningLegalIdentity.toString())
+        message.putStringProperty(CONTEXT_ACTOR_OWNING_LEGAL_IDENTITY.toString(), actor.owningLegalIdentity.toString())
 
         message.putStringProperty(CONTEXT_INVOCATION_ID.toString(), trace.invocationId.value)
         message.putLongProperty(CONTEXT_INVOCATION_TIMESTAMP.toString(), trace.invocationId.timestamp.toEpochMilli())
@@ -391,6 +400,12 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             message.putLongProperty(CONTEXT_EXTERNAL_INVOCATION_TIMESTAMP.toString(), it.invocationId.timestamp.toEpochMilli())
             message.putLongProperty(CONTEXT_EXTERNAL_SESSION_ID.toString(), it.sessionId.timestamp.toEpochMilli())
             message.putLongProperty(CONTEXT_EXTERNAL_SESSION_TIMESTAMP.toString(), it.sessionId.timestamp.toEpochMilli())
+        }
+
+        impersonatedActor?.let {
+            message.putStringProperty(CONTEXT_IMPERSONATED__ACTOR_ID.toString(), it.id.value)
+            message.putStringProperty(CONTEXT_IMPERSONATED__ACTOR_STORE_ID.toString(), it.serviceId.value)
+            message.putStringProperty(CONTEXT_IMPERSONATED__ACTOR_OWNING_LEGAL_IDENTITY.toString(), it.owningLegalIdentity.toString())
         }
     }
 

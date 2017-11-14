@@ -362,7 +362,8 @@ class RPCServer(
         val trace = trace()
         val externalTrace = externalTrace()
         val rpcActor = actorFrom(this)
-        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace), rpcActor.second)
+        val impersonatedActor = impersonatedActor()
+        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor), rpcActor.second)
     }
 
     private fun actorFrom(message: ClientMessage): Pair<Actor, RpcPermissions> {
@@ -416,6 +417,11 @@ internal class CurrentRpcContext : ThreadLocal<RpcAuthContext>() {
             MDC.put("external_invocation_timestamp", it.invocationId.timestamp.toString())
             MDC.put("external_session_id", it.sessionId.value)
             MDC.put("external_session_timestamp", it.sessionId.timestamp.toString())
+        }
+        impersonatedActor?.let {
+            MDC.put("impersonating_actor_id", it.id.value)
+            MDC.put("impersonating_actor_store_id", it.serviceId.value)
+            MDC.put("impersonating_actor_owningIdentity", it.owningLegalIdentity.toString())
         }
     }
 }

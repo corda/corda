@@ -2,6 +2,7 @@ package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
+import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.logElapsedTime
@@ -101,7 +102,8 @@ class RPCClient<I : RPCOps>(
             rpcOpsClass: Class<I>,
             username: String,
             password: String,
-            externalTrace: Trace? = null
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null
     ): RPCConnection<I> {
         return log.logElapsedTime("Startup") {
             val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
@@ -114,7 +116,7 @@ class RPCClient<I : RPCOps>(
                 minLargeMessageSize = rpcConfiguration.maxFileSize
             }
 
-            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext, externalTrace)
+            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext, externalTrace, impersonatedActor)
             try {
                 proxyHandler.start()
                 val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))

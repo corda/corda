@@ -12,6 +12,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
+import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.internal.LazyPool
@@ -75,7 +76,8 @@ class RPCClientProxyHandler(
         private val clientAddress: SimpleString,
         private val rpcOpsClass: Class<out RPCOps>,
         serializationContext: SerializationContext,
-        private val externalTrace: Trace?
+        private val externalTrace: Trace?,
+        private val impersonatedActor: Actor?
 ) : InvocationHandler {
 
     private enum class State {
@@ -216,7 +218,7 @@ class RPCClientProxyHandler(
         callSiteMap?.set(trace.invocationId, Throwable("<Call site of root RPC '${method.name}'>"))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
-            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments.bytes, trace, externalTrace)
+            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments.bytes, trace, externalTrace, impersonatedActor)
             val replyFuture = SettableFuture.create<Any>()
             sessionAndProducerPool.run {
                 val message = it.session.createMessage(false)

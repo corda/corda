@@ -1,8 +1,11 @@
 package net.corda.nodeapi
 
+import net.corda.core.context.Actor
+import net.corda.core.context.AuthServiceId
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.context.Trace.SessionId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -104,7 +107,8 @@ object RPCApi {
                 val methodName: String,
                 val serialisedArguments: ByteArray,
                 val trace: Trace,
-                val externalTrace: Trace? = null
+                val externalTrace: Trace? = null,
+                val impersonatedActor: Actor? = null
         ) : ClientToServer() {
             fun writeToClientMessage(message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
@@ -112,6 +116,7 @@ object RPCApi {
 
                 trace.mapTo(message)
                 externalTrace?.mapToExternal(message)
+                impersonatedActor?.mapToImpersonated(message)
 
                 message.putStringProperty(METHOD_NAME_FIELD_NAME, methodName)
                 message.bodyBuffer.writeBytes(serialisedArguments)
@@ -138,7 +143,8 @@ object RPCApi {
                             methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
                             serialisedArguments = message.getBodyAsByteArray(),
                             trace = message.trace(),
-                            externalTrace = message.externalTrace()
+                            externalTrace = message.externalTrace(),
+                            impersonatedActor = message.impersonatedActor()
                     )
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
                         val ids = ArrayList<InvocationId>()
@@ -235,6 +241,9 @@ private val RPC_EXTERNAL_ID_FIELD_NAME = "rpc-external-id"
 private val RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME = "rpc-external-id-timestamp"
 private val RPC_EXTERNAL_SESSION_ID_FIELD_NAME = "rpc-external-session-id"
 private val RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-external-session-id-timestamp"
+private val RPC_IMPERSONATED_ACTOR_ID = "rpc-impersonated-actor-id"
+private val RPC_IMPERSONATED_ACTOR_STORE_ID = "rpc-impersonated-actor-store-id"
+private val RPC_IMPERSONATED_ACTOR_OWNING_LEGAL_IDENTITY = "rpc-impersonated-actor-owningLegalIdentity"
 private val OBSERVABLE_ID_FIELD_NAME = "observable-id"
 private val OBSERVABLE_ID_TIMESTAMP_FIELD_NAME = "observable-id-timestamp"
 private val METHOD_NAME_FIELD_NAME = "method-name"
@@ -261,6 +270,18 @@ fun ClientMessage.externalTrace(): Trace? {
     }
 }
 
+fun ClientMessage.impersonatedActor(): Actor? {
+
+    return getStringProperty(RPC_IMPERSONATED_ACTOR_ID)?.let {
+        val impersonatedStoreId = getStringProperty(RPC_IMPERSONATED_ACTOR_STORE_ID)
+        val impersonatingOwningLegalIdentity = getStringProperty(RPC_IMPERSONATED_ACTOR_OWNING_LEGAL_IDENTITY)
+        if (impersonatedStoreId == null || impersonatingOwningLegalIdentity == null) {
+            throw IllegalStateException("Cannot extract impersonated actor from client message.")
+        }
+        Actor(Actor.Id(it), AuthServiceId(impersonatedStoreId), CordaX500Name.parse(impersonatingOwningLegalIdentity))
+    }
+}
+
 private fun InvocationId.mapTo(message: ClientMessage, valueProperty: String, timestampProperty: String) {
 
     message.putStringProperty(valueProperty, value)
@@ -283,6 +304,13 @@ private fun ActiveMQBuffer.readInvocationId() : InvocationId {
 private fun Trace.mapTo(message: ClientMessage) = mapTo(message, RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME, RPC_SESSION_ID_FIELD_NAME, RPC_SESSION_ID_TIMESTAMP_FIELD_NAME)
 
 private fun Trace.mapToExternal(message: ClientMessage) = mapTo(message, RPC_EXTERNAL_ID_FIELD_NAME, RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_FIELD_NAME, RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME)
+
+private fun Actor.mapToImpersonated(message: ClientMessage) {
+
+    message.putStringProperty(RPC_IMPERSONATED_ACTOR_ID, this.id.value)
+    message.putStringProperty(RPC_IMPERSONATED_ACTOR_STORE_ID, this.serviceId.value)
+    message.putStringProperty(RPC_IMPERSONATED_ACTOR_OWNING_LEGAL_IDENTITY, this.owningLegalIdentity.toString())
+}
 
 private fun Trace.mapTo(message: ClientMessage, valueProperty: String, timestampProperty: String, sessionValueProperty: String, sessionTimestampProperty: String) = apply {
 
