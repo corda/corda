@@ -99,7 +99,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      *
      * @return a list of [Party]s
      */
-    fun loadAndGatherNotaryIdentities(notaries: Map<CordaX500Name, Boolean>): List<NotaryInfo> {
+    fun loadAndGatherNotaryIdentities(notaries: Map<String, Boolean>): List<NotaryInfo> {
         val nodeInfos = loadFromDirectory()
         // NodeInfos are currently stored in 2 places: in [CordformNode.NODE_INFO_DIRECTORY] and in baseDirectory of the node.
         val myFiles = Files.list(nodePath).filter { it.toString().contains("nodeInfo-") }.toList()
@@ -119,9 +119,9 @@ class NodeInfoWatcher(private val nodePath: Path,
         for (info in infosMap.values) {
             // Here the ugliness happens.
             // TODO Change Cordform definition so it specifies distributed notary identity.
-            if (info.legalIdentities[0].name in notaries.keys) {
+            if (info.legalIdentities[0].name.toString() in notaries.keys) {
                 val notaryId = if (info.legalIdentities.size == 2) info.legalIdentities[1] else info.legalIdentities[0]
-                notaryInfos.add(NotaryInfo(notaryId, notaries[info.legalIdentities[0].name]!!))
+                notaryInfos.add(NotaryInfo(notaryId, notaries[info.legalIdentities[0].name.toString()]!!))
             }
         }
         return notaryInfos.toList()

@@ -3,6 +3,7 @@ package net.corda.plugins
 import groovy.lang.Closure
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.cordform.NetworkParametersGenerator
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -26,6 +27,7 @@ open class Cordform : DefaultTask() {
      */
     @Suppress("MemberVisibilityCanPrivate")
     var definitionClass: String? = null
+    var parametersClass: String? = null
     private var directory = Paths.get("build", "nodes")
     private val nodes = mutableListOf<Node>()
     private val notaryMap: HashMap<String, Boolean> = hashMapOf()
@@ -99,6 +101,7 @@ open class Cordform : DefaultTask() {
         }
     }
 
+
     /**
      * The definitionClass needn't be compiled until just before our build method, so we load it manually via sourceSets.main.runtimeClasspath.
      */
@@ -109,6 +112,19 @@ open class Cordform : DefaultTask() {
         return URLClassLoader(urls, CordformDefinition::class.java.classLoader)
                 .loadClass(definitionClass)
                 .asSubclass(CordformDefinition::class.java)
+                .newInstance()
+    }
+
+    /**
+     * The parametersGenerator needn't be compiled until just before our build method, so we load it manually via sourceSets.main.runtimeClasspath.
+     */
+    private fun loadParametersGenerator(): NetworkParametersGenerator {
+        val plugin = project.convention.getPlugin(JavaPluginConvention::class.java)
+        val classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
+        val urls = classpath.files.map { it.toURI().toURL() }.toTypedArray()
+        return URLClassLoader(urls, NetworkParametersGenerator::class.java.classLoader)
+                .loadClass(parametersClass)
+                .asSubclass(NetworkParametersGenerator::class.java)
                 .newInstance()
     }
 
@@ -145,12 +161,8 @@ open class Cordform : DefaultTask() {
     private fun generateAndInstallNetworkParameters() {
         project.logger.info("Generating network parameters")
         gatherNotaries()
-        val networkParamsProcess = buildNetworkParamsProcess()
-        try {
-            validateParametersProcess(networkParamsProcess, nodes[0].logDirectory())
-        } finally {
-            networkParamsProcess.destroyForcibly()
-        }
+        val networkParamsGenerator = loadParametersGenerator()
+        networkParamsGenerator.run(nodes[0].fullPath(), notaryMap)
         project.logger.info("Installing network parameters")
         val sourcePath = nodes[0].fullPath().toString()
         for (destination in nodes.drop(1)) {
@@ -170,30 +182,6 @@ open class Cordform : DefaultTask() {
             notaryMap[it.name] = it.notary.getOrDefault("validating", false) as Boolean
         }
     }
-
-    private fun buildNetworkParamsProcess(): Process = buildProcess(nodes[0], generateParamsCommand(nodes[0]), "generate-params.log").second
-
-    private fun validateParametersProcess(process: Process, logsPath: Path) {
-        val generateTimeoutSeconds = 60L
-        if (!process.waitFor(generateTimeoutSeconds, TimeUnit.SECONDS)) {
-            throw GradleException("Network parameters generation process too more than $generateTimeoutSeconds seconds - see logs at $logsPath")
-        }
-        if (process.exitValue() != 0) {
-            throw GradleException("Network parameters generation process exited with ${process.exitValue()} - see logs at $logsPath")
-        }
-        project.logger.info("Generated network parameters")
-    }
-
-    private fun generateParamsCommand(node: Node): List<String> = listOf(
-            "java",
-            "-cp",
-            Node.cordaNodeJarName,
-            "net.corda.node.internal.networkParametersGenerator.NetworkParametersGenerator",
-            "--base-directory",
-            node.fullPath().toString(),
-            "--notaries",
-            notaryMap.map { (key, value) -> key + ":" + value.toString() }.joinToString("#")
-    )
 
     private fun generateAndInstallNodeInfos() {
         generateNodeInfos()
