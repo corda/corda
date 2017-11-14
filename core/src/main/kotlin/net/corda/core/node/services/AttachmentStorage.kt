@@ -3,6 +3,8 @@ package net.corda.core.node.services
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
@@ -33,5 +35,23 @@ interface AttachmentStorage {
      */
     @Throws(FileAlreadyExistsException::class, IOException::class)
     fun importAttachment(jar: InputStream): AttachmentId
+
+    /**
+     * Inserts the given attachment with additional metadata, see [importAttachment] for input stream handling
+     * Extra parameters:
+     * @param uploader Uploader name
+     * @param filename Name of the file
+     */
+    @Throws(FileAlreadyExistsException::class, IOException::class)
+    fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId
+
+    /**
+     * Searches attachment using given criteria and optional sort rules
+     * @param criteria Query criteria to use as a filter
+     * @param sorting Sorting definition, if not given, order is undefined
+     *
+     * @return List of AttachmentId of attachment matching criteria, sorted according to given sorting parameter
+     */
+    fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort? = null): List<AttachmentId>
 }
 
