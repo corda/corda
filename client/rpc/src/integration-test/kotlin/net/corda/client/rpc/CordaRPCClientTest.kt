@@ -24,7 +24,6 @@ import net.corda.nodeapi.User
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
 import net.corda.testing.internal.NodeBasedTest
-import net.corda.testing.testActor
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -147,7 +146,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
             }
         }
         val nodeIdentity = node.info.chooseIdentity()
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), InvocationContext.shell(testActor(nodeIdentity.name))).flatMap { it.resultFuture }.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
         proxy.startFlow(::CashIssueFlow,
                 123.DOLLARS,
                 OpaqueBytes.of(0),

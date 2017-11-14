@@ -199,7 +199,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     flowStarter,
                     stateLoader,
                     unfinishedSchedules = busyNodeLatch,
-                    serverThread = serverThread, ourIdentity = info.legalIdentities[0].name)
+                    serverThread = serverThread)
             if (serverThread is ExecutorService) {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the

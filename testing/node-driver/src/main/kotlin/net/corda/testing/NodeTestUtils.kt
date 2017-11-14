@@ -83,7 +83,7 @@ fun testNodeConfiguration(
 
 fun testActor(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = Actor(Actor.Id("Only For Testing"), AuthServiceId("TEST"), owningLegalIdentity)
 
-fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = InvocationContext.newInstance(testActor(owningLegalIdentity), Origin.RPC)
+fun testContext(owningLegalIdentity: CordaX500Name = CordaX500Name("Test Company Inc.", "London", "GB")) = InvocationContext.rpc(testActor(owningLegalIdentity))
 
 /**
  * Starts an already constructed flow. Note that you must be on the server thread to call this method. [InvocationContext]

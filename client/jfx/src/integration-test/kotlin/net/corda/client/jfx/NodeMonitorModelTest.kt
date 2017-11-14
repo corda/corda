@@ -149,7 +149,7 @@ class NodeMonitorModelTest {
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
                         val context = add.stateMachineInfo.context()
-                        require(context.origin is Origin.RPC && context.actor.id.value == "user1")
+                        require(context.origin is Origin.RPC && context.principal.name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -158,7 +158,7 @@ class NodeMonitorModelTest {
                     expect(match = { it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
                         val context = add.stateMachineInfo.context()
-                        require(context.origin is Origin.RPC && context.actor.id.value == "user1")
+                        require(context.origin is Origin.RPC && context.principal.name == "user1")
                     },
                     expect(match = { it is StateMachineUpdate.Removed && it.id == moveSmId }) {
                     }

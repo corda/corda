@@ -67,7 +67,7 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         override fun makeComplicatedListenableFuture() = complicatedListenableFuturee
         // do not remove Unit
         override fun addedLater(): Unit = throw IllegalStateException()
-        override fun captureUser(): String = rpcContext().invocation.actor.id.value
+        override fun captureUser(): String = rpcContext().invocation.principal.name
     }
 
     @Test

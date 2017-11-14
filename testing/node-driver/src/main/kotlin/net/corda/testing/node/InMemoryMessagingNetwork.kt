@@ -12,7 +12,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.context.InvocationContext
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -281,10 +280,9 @@ class InMemoryMessagingNetwork(
     }
 
     data class InMemoryMessage(override val topicSession: TopicSession,
-                               override val data: ByteArray,
-                               override val uniqueMessageId: UUID,
-                               override val context: InvocationContext,
-                               override val debugTimestamp: Instant = Instant.now()) : Message {
+                                       override val data: ByteArray,
+                                       override val uniqueMessageId: UUID,
+                                       override val debugTimestamp: Instant = Instant.now()) : Message {
         override fun toString() = "$topicSession#${String(data)}"
     }
 
@@ -293,8 +291,7 @@ class InMemoryMessagingNetwork(
                                                override val platformVersion: Int,
                                                override val uniqueMessageId: UUID,
                                                override val debugTimestamp: Instant,
-                                               override val peer: CordaX500Name,
-                                               override val context: InvocationContext) : ReceivedMessage
+                                               override val peer: CordaX500Name) : ReceivedMessage
 
     /**
      * An [InMemoryMessaging] provides a [MessagingService] that isn't backed by any kind of network or disk storage
@@ -394,8 +391,8 @@ class InMemoryMessagingNetwork(
         override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topicSession: TopicSession, data: ByteArray, context: InvocationContext, uuid: UUID): Message {
-            return InMemoryMessage(topicSession, data, uuid, context)
+        override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
+            return InMemoryMessage(topicSession, data, uuid)
         }
 
         /**
@@ -483,7 +480,6 @@ class InMemoryMessagingNetwork(
                 1,
                 message.uniqueMessageId,
                 message.debugTimestamp,
-                sender.description,
-                message.context)
+                sender.description)
     }
 }

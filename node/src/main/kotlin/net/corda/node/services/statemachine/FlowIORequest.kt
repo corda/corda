@@ -2,14 +2,12 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
-import net.corda.core.context.InvocationContext
 import java.time.Instant
 
 interface FlowIORequest {
     // This is used to identify where we suspended, in case of message mismatch errors and other things where we
     // don't have the original stack trace because it's in a suspended fiber.
     val stackTraceInCaseOfProblems: StackSnapshot
-    val context: InvocationContext
 }
 
 interface WaitingRequest : FlowIORequest {
@@ -34,21 +32,19 @@ interface ReceiveRequest<T : SessionMessage> : SessionedFlowIORequest, WaitingRe
 data class SendAndReceive<T : SessionMessage>(override val session: FlowSessionInternal,
                                               override val message: SessionMessage,
                                               override val receiveType: Class<T>,
-                                              override val userReceiveType: Class<*>?,
-                                              override val context: InvocationContext) : SendRequest, ReceiveRequest<T> {
+                                              override val userReceiveType: Class<*>?) : SendRequest, ReceiveRequest<T> {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
 
 data class ReceiveOnly<T : SessionMessage>(override val session: FlowSessionInternal,
                                            override val receiveType: Class<T>,
-                                           override val userReceiveType: Class<*>?,
-                                           override val context: InvocationContext) : ReceiveRequest<T> {
+                                           override val userReceiveType: Class<*>?) : ReceiveRequest<T> {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
 
-class ReceiveAll(val requests: List<ReceiveRequest<SessionData>>, override val context: InvocationContext) : WaitingRequest {
+class ReceiveAll(val requests: List<ReceiveRequest<SessionData>>) : WaitingRequest {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 
@@ -105,22 +101,19 @@ class ReceiveAll(val requests: List<ReceiveRequest<SessionData>>, override val c
     data class RequestMessage(val request: ReceiveRequest<SessionData>, val message: ReceivedSessionMessage<*>)
 }
 
-data class SendOnly(override val session: FlowSessionInternal, override val message: SessionMessage,
-                    override val context: InvocationContext) : SendRequest {
+data class SendOnly(override val session: FlowSessionInternal, override val message: SessionMessage) : SendRequest {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }
 
-data class WaitForLedgerCommit(val hash: SecureHash, val fiber: FlowStateMachineImpl<*>,
-                               override val context: InvocationContext) : WaitingRequest {
+data class WaitForLedgerCommit(val hash: SecureHash, val fiber: FlowStateMachineImpl<*>) : WaitingRequest {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 
     override fun shouldResume(message: ExistingSessionMessage, session: FlowSessionInternal): Boolean = message is ErrorSessionEnd
 }
 
-data class Sleep(val until: Instant, val fiber: FlowStateMachineImpl<*>,
-                 override val context: InvocationContext) : FlowIORequest {
+data class Sleep(val until: Instant, val fiber: FlowStateMachineImpl<*>) : FlowIORequest {
     @Transient
     override val stackTraceInCaseOfProblems: StackSnapshot = StackSnapshot()
 }

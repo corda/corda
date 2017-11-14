@@ -9,59 +9,53 @@ import java.security.Principal
  * Models the information needed to trace an invocation in Corda.
  * Includes initiating actor, origin, trace information, and optional external trace information to correlate clients' IDs.
  *
- * @param actor acting agent of the invocation, used to derive the security principal.
  * @param origin origin of the invocation.
  * @param trace Corda invocation trace.
+ * @param actor acting agent of the invocation, used to derive the security principal.
  * @param externalTrace optional external invocation trace for cross-system logs correlation.
  * @param impersonatedActor optional impersonated actor, used for logging but not for authorisation.
  */
 @CordaSerializable
-data class InvocationContext(val actor: Actor, val origin: Origin, val trace: Trace, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
+data class InvocationContext(val origin: Origin, val trace: Trace, val actor: Actor?, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
 
     companion object {
 
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
-        fun newInstance(actor: Actor, origin: Origin, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(actor, origin, trace, externalTrace, impersonatedActor)
+        fun newInstance(origin: Origin, trace: Trace = Trace.newInstance(), actor: Actor? = null, externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [Origin.RPC] origin.
          */
-        fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = InvocationContext(actor, Origin.RPC, trace, externalTrace, impersonatedActor)
+        fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(Origin.RPC(actor), trace, actor, externalTrace, impersonatedActor)
 
         /**
-         * Creates an [InvocationContext] with [Origin.PEER] origin.
+         * Creates an [InvocationContext] with [Origin.Peer] origin.
          */
-        fun peer(actor: Actor, party: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = InvocationContext(actor, Origin.Peer(party), trace, externalTrace, impersonatedActor)
+        fun peer(party: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(Origin.Peer(party), trace, null, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [Origin.Service] origin.
          */
-        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(Actor.service(serviceClassName, owningLegalIdentity), Origin.Service(serviceClassName), trace, externalTrace)
+        fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(Origin.Service(serviceClassName, owningLegalIdentity), trace, null, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [Origin.Scheduled] origin.
          */
-        fun scheduled(actor: Actor, scheduledState: ScheduledStateRef, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Scheduled(scheduledState), trace, externalTrace)
+        fun scheduled(scheduledState: ScheduledStateRef, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(Origin.Scheduled(scheduledState), trace, null, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [Origin.Shell] origin.
          */
-        fun shell(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(actor, Origin.Shell, trace, externalTrace)
+        fun shell(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(Origin.Shell, trace, null, externalTrace)
     }
 
     /**
      * Associated security principal.
      */
     val principal: Principal
-        get() = origin.principal(actor)
-
-    /**
-     * Actor's owning legal identity.
-     */
-    val owningLegalIdentity: CordaX500Name
-        get() = actor.owningLegalIdentity
+        get() = origin.principal
 }
 
 /**
@@ -91,14 +85,14 @@ sealed class Origin {
     /**
      * Returns the [Principal] for a given [Actor].
      */
-    abstract fun principal(actor: Actor): Principal
+    abstract val principal: Principal
 
     /**
      * Origin was an RPC call.
      */
-    object RPC : Origin() {
+    data class RPC(private val actor: Actor) : Origin() {
 
-        override fun principal(actor: Actor) = Principal { actor.id.value }
+        override val principal = Principal { actor.id.value }
     }
 
     /**
@@ -106,15 +100,15 @@ sealed class Origin {
      */
     data class Peer(val party: CordaX500Name) : Origin() {
 
-        override fun principal(actor: Actor) = Principal { party.toString() }
+        override val principal = Principal { party.toString() }
     }
 
     /**
      * Origin was a Corda Service.
      */
-    data class Service(val serviceClassName: String) : Origin() {
+    data class Service(val serviceClassName: String, val owningLegalIdentity: CordaX500Name) : Origin() {
 
-        override fun principal(actor: Actor) = Principal { serviceClassName }
+        override val principal = Principal { serviceClassName }
     }
 
     /**
@@ -122,7 +116,7 @@ sealed class Origin {
      */
     data class Scheduled(val scheduledState: ScheduledStateRef) : Origin() {
 
-        override fun principal(actor: Actor) = Principal { "Scheduler" }
+        override val principal = Principal { "Scheduler" }
     }
 
     // TODO When proper ssh access enabled, add username/use RPC?
@@ -131,6 +125,6 @@ sealed class Origin {
      */
     object Shell : Origin() {
 
-        override fun principal(actor: Actor) = Principal { "Shell User" }
+        override val principal = Principal { "Shell User" }
     }
 }

@@ -3,7 +3,6 @@ package net.corda.node
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.Origin
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
@@ -66,7 +65,7 @@ class CordaRPCOpsImplTest {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
         aliceNode = mockNet.createNode()
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
-        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.newInstance(testActor(), Origin.RPC), RpcPermissions.NONE))
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), RpcPermissions.NONE))
 
         mockNet.runNetwork()
         withPermissions(invokeRpc(CordaRPCOps::notaryIdentities)) {

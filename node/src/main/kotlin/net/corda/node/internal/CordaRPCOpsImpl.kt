@@ -285,7 +285,7 @@ internal class CordaRPCOpsImpl(
 
     private fun InvocationContext.toFlowInitiator(): FlowInitiator {
 
-        val principal = origin.principal(actor).name
+        val principal = origin.principal.name
         return when (origin) {
             is Origin.RPC -> FlowInitiator.RPC(principal)
             is Origin.Peer -> services.identityService.wellKnownPartyFromX500Name((origin as Origin.Peer).party)?.let { FlowInitiator.Peer(it) } ?: throw IllegalStateException("Unknown peer with name ${(origin as Origin.Peer).party}.")

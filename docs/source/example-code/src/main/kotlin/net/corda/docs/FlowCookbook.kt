@@ -597,7 +597,7 @@ class ResponderFlow(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
         -----------------------------**/
         progressTracker.currentStep = RECEIVING_AND_SENDING_DATA
 
-        // We need to respond to the messages sent by the context:
+        // We need to respond to the messages sent by the initiator:
         // 1. They sent us an ``Any`` instance
         // 2. They waited to receive an ``Integer`` instance back
         // 3. They sent a ``String`` instance and waited to receive a

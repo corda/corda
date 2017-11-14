@@ -23,6 +23,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DatabaseTransaction
@@ -224,7 +225,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>, maySkipCheckpoint: Boolean): SignedTransaction {
         logger.debug { "waitForLedgerCommit($hash) ..." }
-        suspend(WaitForLedgerCommit(hash, sessionFlow.stateMachine as FlowStateMachineImpl<*>, context))
+        suspend(WaitForLedgerCommit(hash, sessionFlow.stateMachine as FlowStateMachineImpl<*>))
         val stx = serviceHub.validatedTransactions.getTransaction(hash)
         if (stx != null) {
             logger.debug { "Transaction $hash committed to ledger" }
@@ -246,7 +247,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     // This checkpoints, since we cannot undo any database writes up to this point.
     @Suspendable
     override fun sleepUntil(until: Instant) {
-        suspend(Sleep(until, this, context))
+        suspend(Sleep(until, this))
     }
 
     // TODO Dummy implementation of access to application specific permission controls and audit logging
@@ -264,7 +265,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         serviceHub.auditService.recordAuditEvent(checkPermissionEvent)
         @Suppress("ConstantConditionIf")
         if (!permissionGranted) {
-            throw FlowPermissionException("User $context not permissioned for $permissionName on flow $id")
+            throw FlowPermissionException("User ${context.principal} not permissioned for $permissionName on flow $id")
         }
     }
 
@@ -278,6 +279,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 logic.javaClass,
                 id,
                 eventType)
+        // TODO sollecitom here add context instead
         serviceHub.auditService.recordAuditEvent(flowAuditEvent)
     }
 
@@ -295,9 +297,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val requests = ArrayList<ReceiveOnly<SessionData>>()
         for ((session, receiveType) in sessions) {
             val sessionInternal = getConfirmedSession(session.counterparty, sessionFlow)
-            requests.add(ReceiveOnly(sessionInternal, SessionData::class.java, receiveType, context))
+            requests.add(ReceiveOnly(sessionInternal, SessionData::class.java, receiveType))
         }
-        val receivedMessages = ReceiveAll(requests, context).suspendAndExpectReceive(suspend)
+        val receivedMessages = ReceiveAll(requests).suspendAndExpectReceive(suspend)
         val result = LinkedHashMap<FlowSession, UntrustworthyData<Any>>()
         for ((sessionInternal, requestAndMessage) in receivedMessages) {
             val message = requestAndMessage.message.confirmReceiveType(requestAndMessage.request)
@@ -305,6 +307,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
         return result
     }
+
+    internal fun pushToLoggingContext() = context.pushToLoggingContext()
 
     /**
      * This method will suspend the state machine and wait for incoming session init response from other party.
@@ -329,23 +333,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             is FlowSessionState.Initiated -> sessionState.peerSessionId
             else -> throw IllegalStateException("We've somehow held onto a non-initiated session: $session")
         }
-        return SessionData(peerSessionId, payload.serialize(context = SerializationDefaults.P2P_CONTEXT), context)
+        return SessionData(peerSessionId, payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
     }
 
     @Suspendable
-    private fun sendInternal(session: FlowSessionInternal, message: SessionMessage) = suspend(SendOnly(session, message, context))
+    private fun sendInternal(session: FlowSessionInternal, message: SessionMessage) = suspend(SendOnly(session, message))
 
     private inline fun <reified M : ExistingSessionMessage> receiveInternal(
             session: FlowSessionInternal,
             userReceiveType: Class<*>?): ReceivedSessionMessage<M> {
-        return waitForMessage(ReceiveOnly(session, M::class.java, userReceiveType, context))
+        return waitForMessage(ReceiveOnly(session, M::class.java, userReceiveType))
     }
 
     private inline fun <reified M : ExistingSessionMessage> sendAndReceiveInternal(
             session: FlowSessionInternal,
             message: SessionMessage,
             userReceiveType: Class<*>?): ReceivedSessionMessage<M> {
-        return waitForMessage(SendAndReceive(session, message, M::class.java, userReceiveType, context))
+        return waitForMessage(SendAndReceive(session, message, M::class.java, userReceiveType))
     }
 
     @Suspendable
@@ -392,7 +396,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         session.retryable = retryable
         val (version, initiatingFlowClass) = session.flow.javaClass.flowVersionAndInitiatingClass
         val payloadBytes = firstPayload?.serialize(context = SerializationDefaults.P2P_CONTEXT)
-        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, context, payloadBytes)
+        logger.info("Initiating flow session with party ${otherParty.name}. Session id for tracing purposes is ${session.ourSessionId}.")
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, payloadBytes)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
@@ -419,7 +424,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (this is SendAndReceive) {
                 // Since we've already received the message, we downgrade to a send only to get the payload out and not
                 // inadvertently block
-                suspend(SendOnly(session, message, context))
+                suspend(SendOnly(session, message))
             }
             polledMessage
         } else {

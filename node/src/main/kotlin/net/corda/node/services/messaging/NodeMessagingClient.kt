@@ -1,8 +1,5 @@
 package net.corda.node.services.messaging
 
-import net.corda.core.context.*
-import net.corda.core.context.Trace.InvocationId
-import net.corda.core.context.Trace.SessionId
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
@@ -135,7 +132,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             )
         }
 
-        private class NodeClientMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID, override val context: InvocationContext) : Message {
+        private class NodeClientMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID) : Message {
             override val debugTimestamp: Instant = Instant.now()
             override fun toString() = "$topicSession#${String(data)}"
         }
@@ -335,80 +332,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             val uuid = message.required(HDR_DUPLICATE_DETECTION_ID) { UUID.fromString(message.getStringProperty(it)) }
             log.trace { "Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid" }
 
-            val context = message.context(CordaX500Name.parse(user))
-            return ArtemisReceivedMessage(TopicSession(topic, sessionID), CordaX500Name.parse(user), context, platformVersion, uuid, message)
+            return ArtemisReceivedMessage(TopicSession(topic, sessionID), CordaX500Name.parse(user), platformVersion, uuid, message)
         } catch (e: Exception) {
             log.error("Unable to process message, ignoring it: $message", e)
             return null
-        }
-    }
-
-    private val CONTEXT_ACTOR_ID = SimpleString("context.actor.id")
-    private val CONTEXT_ACTOR_STORE_ID = SimpleString("context.actor.store.id")
-    private val CONTEXT_ACTOR_OWNING_LEGAL_IDENTITY = SimpleString("context.actor.owningLegalIdentity")
-    private val CONTEXT_INVOCATION_ID = SimpleString("context.invocation.id")
-    private val CONTEXT_INVOCATION_TIMESTAMP = SimpleString("context.invocation.timestamp")
-    private val CONTEXT_SESSION_ID = SimpleString("context.session.id")
-    private val CONTEXT_SESSION_TIMESTAMP = SimpleString("context.session.timestamp")
-    private val CONTEXT_EXTERNAL_INVOCATION_ID = SimpleString("context.external.invocation.id")
-    private val CONTEXT_EXTERNAL_INVOCATION_TIMESTAMP = SimpleString("context.external.invocation.timestamp")
-    private val CONTEXT_EXTERNAL_SESSION_ID = SimpleString("context.external.session.id")
-    private val CONTEXT_EXTERNAL_SESSION_TIMESTAMP = SimpleString("context.external.session.timestamp")
-    private val CONTEXT_IMPERSONATED__ACTOR_ID = SimpleString("context.actor.impersonating.id")
-    private val CONTEXT_IMPERSONATED__ACTOR_STORE_ID = SimpleString("context.actor.impersonating.store.id")
-    private val CONTEXT_IMPERSONATED__ACTOR_OWNING_LEGAL_IDENTITY = SimpleString("context.actor.impersonating.owningLegalIdentity")
-
-    private fun ClientMessage.context(sender: CordaX500Name): InvocationContext {
-
-        val actorId = required(CONTEXT_ACTOR_ID, { getStringProperty(it) })
-        val storeId = required(CONTEXT_ACTOR_STORE_ID, { getStringProperty(it) })
-        val owningLegalIdentity = required(CONTEXT_ACTOR_OWNING_LEGAL_IDENTITY, { getStringProperty(it) })
-        val actor = Actor(Actor.Id(actorId), AuthServiceId(storeId), CordaX500Name.parse(owningLegalIdentity))
-
-        val invocationId = required(CONTEXT_INVOCATION_ID, { getStringProperty(it) })
-        val invocationIdTimestamp = required(CONTEXT_INVOCATION_TIMESTAMP, { getLongProperty(it) })
-        val sessionId = required(CONTEXT_SESSION_ID, { getStringProperty(it) })
-        val sessionIdTimestamp = required(CONTEXT_SESSION_TIMESTAMP, { getLongProperty(it) })
-        val trace = Trace(InvocationId(invocationId, Instant.ofEpochMilli(invocationIdTimestamp)), SessionId(sessionId, Instant.ofEpochMilli(sessionIdTimestamp)))
-
-        val externalTrace = getStringProperty(CONTEXT_EXTERNAL_INVOCATION_ID)?.let {
-            val externalInvocationIdTimestamp = required(CONTEXT_EXTERNAL_INVOCATION_TIMESTAMP, { getLongProperty(it) })
-            val externalSessionId = required(CONTEXT_EXTERNAL_SESSION_ID, { getStringProperty(it) })
-            val externalSessionIdTimestamp = required(CONTEXT_EXTERNAL_SESSION_TIMESTAMP, { getLongProperty(it) })
-            Trace(InvocationId(it, Instant.ofEpochMilli(externalInvocationIdTimestamp)), SessionId(externalSessionId, Instant.ofEpochMilli(externalSessionIdTimestamp)))
-        }
-
-        val impersonatedActor = getStringProperty(CONTEXT_IMPERSONATED__ACTOR_ID)?.let {
-            val impersonatedStoreId = required(CONTEXT_IMPERSONATED__ACTOR_STORE_ID, { getStringProperty(it) })
-            val impersonatedOwningLegalIdentity = required(CONTEXT_IMPERSONATED__ACTOR_OWNING_LEGAL_IDENTITY, { getStringProperty(it) })
-            Actor(Actor.Id(it), AuthServiceId(impersonatedStoreId), CordaX500Name.parse(impersonatedOwningLegalIdentity))
-        }
-
-        return InvocationContext(actor, Origin.Peer(sender), trace, externalTrace, impersonatedActor)
-    }
-
-    private fun InvocationContext.mapTo(message: ClientMessage) {
-
-        message.putStringProperty(CONTEXT_ACTOR_ID.toString(), actor.id.value)
-        message.putStringProperty(CONTEXT_ACTOR_STORE_ID.toString(), actor.serviceId.value)
-        message.putStringProperty(CONTEXT_ACTOR_OWNING_LEGAL_IDENTITY.toString(), actor.owningLegalIdentity.toString())
-
-        message.putStringProperty(CONTEXT_INVOCATION_ID.toString(), trace.invocationId.value)
-        message.putLongProperty(CONTEXT_INVOCATION_TIMESTAMP.toString(), trace.invocationId.timestamp.toEpochMilli())
-        message.putLongProperty(CONTEXT_SESSION_ID.toString(), trace.sessionId.timestamp.toEpochMilli())
-        message.putLongProperty(CONTEXT_SESSION_TIMESTAMP.toString(), trace.sessionId.timestamp.toEpochMilli())
-
-        externalTrace?.let {
-            message.putStringProperty(CONTEXT_EXTERNAL_INVOCATION_ID.toString(), it.invocationId.value)
-            message.putLongProperty(CONTEXT_EXTERNAL_INVOCATION_TIMESTAMP.toString(), it.invocationId.timestamp.toEpochMilli())
-            message.putLongProperty(CONTEXT_EXTERNAL_SESSION_ID.toString(), it.sessionId.timestamp.toEpochMilli())
-            message.putLongProperty(CONTEXT_EXTERNAL_SESSION_TIMESTAMP.toString(), it.sessionId.timestamp.toEpochMilli())
-        }
-
-        impersonatedActor?.let {
-            message.putStringProperty(CONTEXT_IMPERSONATED__ACTOR_ID.toString(), it.id.value)
-            message.putStringProperty(CONTEXT_IMPERSONATED__ACTOR_STORE_ID.toString(), it.serviceId.value)
-            message.putStringProperty(CONTEXT_IMPERSONATED__ACTOR_OWNING_LEGAL_IDENTITY.toString(), it.owningLegalIdentity.toString())
         }
     }
 
@@ -419,7 +346,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     private class ArtemisReceivedMessage(override val topicSession: TopicSession,
                                          override val peer: CordaX500Name,
-                                         override val context: InvocationContext,
                                          override val platformVersion: Int,
                                          override val uniqueMessageId: UUID,
                                          private val message: ClientMessage) : ReceivedMessage {
@@ -515,7 +441,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     putIntProperty(platformVersionProperty, versionInfo.platformVersion)
                     putStringProperty(topicProperty, SimpleString(message.topicSession.topic))
                     putLongProperty(sessionIdProperty, message.topicSession.sessionID)
-                    message.context.mapTo(this)
                     writeBodyBufferBytes(message.data)
                     // Use the magic deduplication property built into Artemis as our message identity too
                     putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
@@ -629,9 +554,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         handlers.remove(registration)
     }
 
-    override fun createMessage(topicSession: TopicSession, data: ByteArray, context: InvocationContext, uuid: UUID): Message {
+    override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
-        return NodeClientMessage(topicSession, data, uuid, context)
+        return NodeClientMessage(topicSession, data, uuid)
     }
 
     private fun createOutOfProcessVerifierService(): TransactionVerifierService {

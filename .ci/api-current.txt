@@ -89,19 +89,18 @@ public static final class net.corda.core.context.Actor$Companion extends java.la
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.context.InvocationContext extends java.lang.Object
-  public <init>(net.corda.core.context.Actor, net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace component3()
+  public <init>(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin component1()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace component2()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.Actor component3()
   @org.jetbrains.annotations.Nullable public final net.corda.core.context.Trace component4()
   @org.jetbrains.annotations.Nullable public final net.corda.core.context.Actor component5()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext copy(net.corda.core.context.Actor, net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext copy(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
   public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor getActor()
+  @org.jetbrains.annotations.Nullable public final net.corda.core.context.Actor getActor()
   @org.jetbrains.annotations.Nullable public final net.corda.core.context.Trace getExternalTrace()
   @org.jetbrains.annotations.Nullable public final net.corda.core.context.Actor getImpersonatedActor()
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin getOrigin()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name getOwningLegalIdentity()
   @org.jetbrains.annotations.NotNull public final java.security.Principal getPrincipal()
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace getTrace()
   public int hashCode()
@@ -109,15 +108,15 @@ public static final class net.corda.core.context.Actor$Companion extends java.la
   public static final net.corda.core.context.InvocationContext$Companion Companion
 ##
 public static final class net.corda.core.context.InvocationContext$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext newInstance(net.corda.core.context.Actor, net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext peer(net.corda.core.context.Actor, net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext newInstance(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext peer(net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext rpc(net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext scheduled(net.corda.core.context.Actor, net.corda.core.contracts.ScheduledStateRef, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext scheduled(net.corda.core.contracts.ScheduledStateRef, net.corda.core.context.Trace, net.corda.core.context.Trace)
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext service(String, net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext shell(net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext shell(net.corda.core.context.Trace, net.corda.core.context.Trace)
 ##
 @net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.context.Origin extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public abstract java.security.Principal principal(net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public abstract java.security.Principal getPrincipal()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$Peer extends net.corda.core.context.Origin
   public <init>(net.corda.core.identity.CordaX500Name)
@@ -125,36 +124,42 @@ public static final class net.corda.core.context.InvocationContext$Companion ext
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$Peer copy(net.corda.core.identity.CordaX500Name)
   public boolean equals(Object)
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name getParty()
+  @org.jetbrains.annotations.NotNull public java.security.Principal getPrincipal()
   public int hashCode()
-  @org.jetbrains.annotations.NotNull public java.security.Principal principal(net.corda.core.context.Actor)
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$RPC extends net.corda.core.context.Origin
-  @org.jetbrains.annotations.NotNull public java.security.Principal principal(net.corda.core.context.Actor)
-  public static final net.corda.core.context.Origin$RPC INSTANCE
+  public <init>(net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$RPC copy(net.corda.core.context.Actor)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public java.security.Principal getPrincipal()
+  public int hashCode()
+  public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$Scheduled extends net.corda.core.context.Origin
   public <init>(net.corda.core.contracts.ScheduledStateRef)
   @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ScheduledStateRef component1()
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$Scheduled copy(net.corda.core.contracts.ScheduledStateRef)
   public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public java.security.Principal getPrincipal()
   @org.jetbrains.annotations.NotNull public final net.corda.core.contracts.ScheduledStateRef getScheduledState()
   public int hashCode()
-  @org.jetbrains.annotations.NotNull public java.security.Principal principal(net.corda.core.context.Actor)
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$Service extends net.corda.core.context.Origin
-  public <init>(String)
+  public <init>(String, net.corda.core.identity.CordaX500Name)
   @org.jetbrains.annotations.NotNull public final String component1()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$Service copy(String)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name component2()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin$Service copy(String, net.corda.core.identity.CordaX500Name)
   public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name getOwningLegalIdentity()
+  @org.jetbrains.annotations.NotNull public java.security.Principal getPrincipal()
   @org.jetbrains.annotations.NotNull public final String getServiceClassName()
   public int hashCode()
-  @org.jetbrains.annotations.NotNull public java.security.Principal principal(net.corda.core.context.Actor)
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Origin$Shell extends net.corda.core.context.Origin
-  @org.jetbrains.annotations.NotNull public java.security.Principal principal(net.corda.core.context.Actor)
+  @org.jetbrains.annotations.NotNull public java.security.Principal getPrincipal()
   public static final net.corda.core.context.Origin$Shell INSTANCE
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.context.Trace extends java.lang.Object

@@ -28,6 +28,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.RPCUserService
+import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.Message
@@ -274,6 +275,7 @@ class RPCServer(
                     clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                 }
                 val context = artemisMessage.context()
+                context.invocation.pushToLoggingContext()
                 when (arguments) {
                     is Try.Success -> {
                         rpcExecutor!!.submit {
@@ -283,7 +285,6 @@ class RPCServer(
                     }
                     is Try.Failure -> {
                         // We failed to deserialise the arguments, route back the error
-                        // TODO sollecitom try and log with context here as well.
                         log.warn("Inbound RPC failed", arguments.exception)
                         sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, arguments)
                     }
@@ -397,35 +398,13 @@ internal class CurrentRpcContext : ThreadLocal<RpcAuthContext>() {
         when {
             context != null -> {
                 super.set(context)
-                context.invocation.mapToMDC()
+                // this is needed here as well because the Shell sets the context without going through the RpcServer
+                context.invocation.pushToLoggingContext()
             }
             else -> remove()
         }
     }
-
-    private fun InvocationContext.mapToMDC() {
-
-        MDC.put("actor_id", actor.id.value)
-        MDC.put("actor_store_id", actor.serviceId.value)
-        MDC.put("actor_owningIdentity", actor.owningLegalIdentity.toString())
-        MDC.put("invocation_id", trace.invocationId.value)
-        MDC.put("invocation_timestamp", trace.invocationId.timestamp.toString())
-        MDC.put("session_id", trace.sessionId.value)
-        MDC.put("session_timestamp", trace.sessionId.timestamp.toString())
-        externalTrace?.let {
-            MDC.put("external_invocation_id", it.invocationId.value)
-            MDC.put("external_invocation_timestamp", it.invocationId.timestamp.toString())
-            MDC.put("external_session_id", it.sessionId.value)
-            MDC.put("external_session_timestamp", it.sessionId.timestamp.toString())
-        }
-        impersonatedActor?.let {
-            MDC.put("impersonating_actor_id", it.id.value)
-            MDC.put("impersonating_actor_store_id", it.serviceId.value)
-            MDC.put("impersonating_actor_owningIdentity", it.owningLegalIdentity.toString())
-        }
-    }
 }
-
 
 /**
  * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will

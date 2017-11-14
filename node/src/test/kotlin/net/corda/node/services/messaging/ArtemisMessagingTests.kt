@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.concurrent.doneFuture
@@ -14,7 +13,6 @@ import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
-import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
@@ -136,7 +134,7 @@ class ArtemisMessagingTests {
         val receivedMessages = LinkedBlockingQueue<Message>()
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
-        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray(), context = testContext())
+        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -152,7 +150,7 @@ class ArtemisMessagingTests {
         val receivedMessages = LinkedBlockingQueue<Message>()
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
-        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray(), context = testContext())
+        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
         settableFuture.set(Unit)
@@ -171,7 +169,7 @@ class ArtemisMessagingTests {
 
         val messagingClient = createAndStartClientAndServer(receivedMessages)
         for (iter in 1..iterations) {
-            val message = messagingClient.createMessage(TOPIC, data = "first msg $iter".toByteArray(), context = testContext())
+            val message = messagingClient.createMessage(TOPIC, data = "first msg $iter".toByteArray())
             messagingClient.send(message, messagingClient.myAddress)
         }
 

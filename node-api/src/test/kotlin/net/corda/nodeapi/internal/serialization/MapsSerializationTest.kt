@@ -10,7 +10,6 @@ import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import net.corda.testing.amqpSpecific
 import net.corda.testing.kryoSpecific
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.testContext
 import org.assertj.core.api.Assertions
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Assert.assertArrayEquals
@@ -42,7 +41,7 @@ class MapsSerializationTest {
 
     @Test
     fun `check list can be serialized as part of SessionData`() {
-        val sessionData = SessionData(123, smallMap.serialize(), testContext())
+        val sessionData = SessionData(123, smallMap.serialize())
         assertEqualAfterRoundTripSerialization(sessionData)
         assertEquals(smallMap, sessionData.payload.deserialize())
     }
