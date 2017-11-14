@@ -178,16 +178,12 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 }
 
-task standaloneJar(type: Jar) {
-    // Create a fat jar by packing all deps into the output
-    from {
-        configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    with jar
-    exclude("META-INF/*.DSA")
-    exclude("META-INF/*.RSA")
-    exclude("META-INF/*.SF")
-    archiveName "corda-node.jar"
+jar {
+    baseName 'corda-node'
+}
+
+publish {
+    name jar.baseName
 }
 
 task integrationTest(type: Test) {
@@ -195,13 +191,3 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
-artifacts {
-    publish standaloneJar {
-        classifier ""
-    }
-}
-
-publish {
-    disableDefaultJar = true
-    name 'corda-node'
-}
