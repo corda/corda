@@ -22,9 +22,7 @@ DOCUMENT MANAGEMENT
 
 ## Document History
 
---------------------------------------------
-HIGH LEVEL DESIGN
-============================================
+# HIGH LEVEL DESIGN
 
 ## Overview
 
@@ -32,6 +30,8 @@ The role of the 'float' is to meet the requirements of organisations that will n
 
 ### Background
 
+
+-- Below to be refactored into requirements
 Typical modern DMZ rules are:
 1. There shall be a firewall between the internet and the DMZ machine and a further firewall between the DMZ and the internal network. Only identified IP's and ports are permitted to access the DMZ box. This include intra-DMZ communications.
 2. The DMZ box is typically multi-homed with a network card facing towards the institutional firewall and one facing the internet. (There is usually a further hidden management interface card accessed via a jump box for managing the box and shipping audit trail information). This requires that our software can bind listening ports to the correct network card not just to 0.0.0.0.
@@ -43,21 +43,6 @@ Typical modern DMZ rules are:
 8. It is common to terminate the TLS on the firewall which has an associated HSM for the private keys. This means that we do not necessarily have the certificates of the connection, but hopefully for now we can insist on receiving the connection directly onto the float proxy, although we have to ask how we might access an HSM.
 9. It is usually assumed that there is an HA/load balancing pair (or more) of proxies for resilience. Often the firewalls are also combined with hardware load balancer functionality.
 10. Ideally any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised. I doubt we can finish end-to-end session encryption by March, but we should define our AMQP packet structure to be forward compatible with a switching flag so that we can leave encryption till later.
-
-## Scope
-
-* Goals
-* Non-goals (eg. out of scope)
-* Reference(s) to similar or related work
-
-## Timeline
-The proposed timeline is that we agree a model and deployment diagrams to be sent to Finestra before the end of November. We would not expect to have implemented this until March\April 2018.
-
-## Requirements
-
-## Proposed Solution
-
-### Float evolution
 
 #### Current P2P State
 ![Current P2P State](./current-p2p-state.png)
@@ -73,34 +58,26 @@ The proposed timeline is that we agree a model and deployment diagrams to be sen
 9. The queue name is used to lookup the remote connection details and a new bridge is registered.
 10. The client certificate of the peer is compared to the expected legal identity X500 Name. If this is ok message flow is as for a pre-existing link step 3.
 
-#### In-Process AMQP Bridging
-![In-Process AMQP Bridging](./in-process-amqp-bridging.png)
+## Scope
 
-1. In this phase of evolution we hook the same bridge creation code as before and use the same in-process data access to network map cache.
-2. However, we now implement AMQP sender clients using proton-j and netty for TLS layer and connection retry.
-3. This will also involve formalising the AMQP packet format of the Corda P2P protocol.
-4. Once a bridge makes a successful link to a remote node's Artemis broker it will subscribe to the associated local queue.
-5. The messages will be picked up from the local broker via an Artemis CORE consumer for simplicity of initial implementation.
-6. The queue consumer should be implemented with a simple generic interface as façade, to allow future replacement.
-7. The message will be sent across the AMQP protocol directly to the remote Artemis broker.
-8. Once acknowledgement of receipt is given with an AMQP Delivery notification the queue consumption will be acknowledged.
-9. This will remove the original item from the source queue.
-10. If delivery fails due to link loss the subscriber should be closed until a new link is established to ensure messages are not consumed.
-11. If delivery fails for other reasons there should be some for of periodic retry over the AMQP link.
-12. For authentication checks the client cert returned from the remote server will be checked and the link dropped if it doesn't match expectations.
+* Goals: Allow connection to a corda node wihout requiring direct incoming connections from external participants.
+* Non-goals (eg. out of scope)
+* Reference(s) to similar or related work
 
-#### Out of process Artemis Broker and Bridges
-![Out of process Artemis Broker and Bridges](./out-of-proc-artemis-broker-bridges.png)
+## Timeline
+For delivery by end Q1 2018.
 
-1. Move the Artemis broker and bridge formation logic out of the node. This requires formalising the bridge creation requests, but allows clustered brokers, standardised AMQP usage and ultimately pluggable brokers.
-2. We should implement a netty socket server on the bridge and forward authenticated packets to the local Artemis broker inbound queues. An AMQP server socket is required for the float, although it should be transparent whether a NodeInfo refers to a bridge socket address, or an Artemis broker.
-3. The queue names should use the sha-256 of the PublicKey not the full key. Also, the name should be used for in and out queues, so that multiple distinct nodes can coexist on the same broker. This will simplify development as developers just run a background broker and shouldn't need to restart it.
-4. To export the network map information and to initiate bridges a non-durable bridge control protocol will be needed (in blue). Essentially the messages declare the local queue names and target TLS link information. For in-bound messages only messages for known inbox targets will be acknowledged.
-5. It should not be hard to make the bridges active-passive HA as they contain no persisted message state and simple RPC can resync the state of the bridge.
-6. Queue creation will remain with the node as this must use non-AMQP mechanisms and because flows should be able to queue sent messages even if the bridge is temporarily down.
-7. In parallel work can start to upgrade the local links to Artemis (i.e. the node-Artemis link and the Bridge Manager-Artemis link) to be AMQP clients as much as possible.
+## Requirements
+Nick Arini to provide documented requirements.
 
-#### Full Float Implementation
+## Design Decisions
+1. AMQP vs. custom P2p - see Alternatives section below
+2. SSL termination (firewall vs. float)
+3. End-to-end encryption
+4. Prioritisation of pluggable broker support
+
+## Target Solution
+
 ![Full Float Implementation](./full-float.png)
 
 1. The float implementation should be built upon the AMQP Bridge Manager code and should not be mandatory i.e. there should be interop with older nodes, even those using direct AMQP from bridges in the node.
@@ -112,12 +89,6 @@ The proposed timeline is that we agree a model and deployment diagrams to be sen
 7. I have open questions about the management of the private key for the float certificate if the TLS terminated is directly onto the proxy. This is presumably stored in an HSM, but I am unclear on whether this would be allowed.
 8. If instead TLS terminates onto the external firewall, with self-signed certs for TLS in the DMZ this is more standard, but breaks our authentication checks. One solution for authentication checks might be to enable AMQP SASL checks e.g. using https://tools.ietf.org/html/rfc3163 to run challenge response against the node's legal identity certificates, but it needs discussion.
 9. HA should be built in from the start and should be easy as the bridge manager can choose which float to make active. Only fully connected DMZ floats should activate their listening port.
-
-### Challenges and Unanswered Questions
-
-The main uncertainty for the Float design is key management for the private key portion of the TLS certificate. This is likely to reside inside an HSM and it is unlikely to be accessible from the DMZ servers. It may be possible to tunnel the PrivateKey signing step to the internal Bridge Control Manager, but this makes things complicated. However, it is common for this to be configured inside the firewall, although we will have to see our non-standard PKI interacts with a typical firewall.zt
-
-The other uncertainty is if/how we should provide end-to-end encryption of the business data. I think it is inevitable that this will be desired, so we should allow for it in our wire format. However, to properly implement this with session keys and properly authenticated encryption is a significant design task. (At minimum, we would probably use some form of Ephemeral-Static Diffie Hellman against the remote Legal Identity to create the session secret and then AES-GCM, or similar AEAD for the message data. The AMQP headers would also need to be protected in this process, along with careful choice of IV to prevent any collisions.)
 
 ### Bridge Control Protocol
 My proposal is to make the bridge control as stateless as possible. Thus, nodes and bridges restarting must re-request/broadcast information to each other. The messages should be sent to a 'bridge.control' address in Artemis and be sent as non-persistent messages with a non-durable queue, each message should contain a duplicate message ID, which is also re-used as the correlation id in replies. The scenarios are:
@@ -156,10 +127,7 @@ My proposal is to make the bridge control as stateless as possible. Thus, nodes 
 8. The Float should protect against excessive inbound messages by AMQP flow control and refusing to accept excessive unacknowledged deliveries.
 9. The Float should only expose its inbound server socket when activated by a valid AMQP link from the Bridge Control Manager to allow for a simple HA pool of DMZ Float processes. We cannot run the Floats hot-hot as this would invalidate our message ordering guarantees.
 
-
-
-## Alternative Options
-
+## Alternative options considered
 ### An Alternative Design Idea Using Direct P2P Communication
 I do also have a completely different model of what to do instead of the float/AMQP work, but whilst I don’t think this is likely to be accepted, I do think it has a lot of merits and may be surprisingly fast to implement, at least for small semi-private networks.
 
@@ -176,11 +144,9 @@ Proceed direct to implementation
 Proceed to Technical Design stage
 Proposed Platform Technical team(s) to implement design (if not already decided)
 
---------------------------------------------
-IMPLEMENTATION PLAN
-============================================
+# IMPLEMENTATION PLAN
 
-# Proposed Incremental Steps Towards a Float
+## Proposed Incremental Steps Towards a Float
 1. First, I would like to more explicitly split the RPC and P2P MessagingService instances inside the Node. They can keep the same interface, but this would let us develop P2P and RPC at different rates if required.
 2. The current in-node design with Artemis Core bridges should first be replaced with an equivalent piece of code that initiates send only bridges using an in-house wrapper over the proton-j library. Thus, the current Artemis message objects will be picked up from existing queues using the CORE protocol via an abstraction interface to allow later pluggable replacement. The specific subscribed queues are controlled as before and bridges started by the existing code path. The only difference is the bridges will be the new AMQP client code. The remote Artemis broker should accept transferred packets directly onto its own inbox queue and acknowledge receipt via standard AMQP Delivery notifications. This in turn will be acknowledged back to the Artemis Subscriber to permanently remove the message from the source Artemis queue. The headers for deduplication, address names, etc will need to be mapped to the AMQP messages and we will have to take care about the message payload. This should be an envelope that is capable in the future of being end-to-end encrypted. Where possible we should stay close to the current Artemis mappings.
 3. We need to define a bridge control protocol, so that we can have an out of process float/bridge.  The current process is that on message send the node checks the target address to see if the target queue already exists. If the queue doesn't exist it creates a new queue which includes an encoding of the PublicKey in its name. This is picked up by a wrapper around the Artemis Server which is also hosted inside the node and can ask the network map cache for a translation to a target host and port. This in turn allows a new bridge to be provisioned. At node restart the re-population of the network map cache is followed to re-create the bridges to any unsent queues/messages.
@@ -193,3 +159,35 @@ IMPLEMENTATION PLAN
     2. An independent task is to look at making the Bridge process HA, probably using a similar hot-warm mastering solution as the node, or atomix.io. The inactive node should track the control messages, but obviously doesn't initiate any bridges.
     3. Another potentially parallel piece of development is to start to build a float, which is essentially just splitting the bridge in two and putting in an intermediate hop AMQP/TLS link. The thin proxy in the DMZ zone should be as stateless as possible in this.
     4. Finally, the node should use AMQP to talk to its local broker cluster, but this will have to remain partly tied to Artemis, as queue creation will require sending management messages to the Artemis core, but we should be able to abstract this. Bridge Management Protocol.
+    
+## Float evolution
+
+### In-Process AMQP Bridging
+![In-Process AMQP Bridging](./in-process-amqp-bridging.png)
+
+1. In this phase of evolution we hook the same bridge creation code as before and use the same in-process data access to network map cache.
+2. However, we now implement AMQP sender clients using proton-j and netty for TLS layer and connection retry.
+3. This will also involve formalising the AMQP packet format of the Corda P2P protocol.
+4. Once a bridge makes a successful link to a remote node's Artemis broker it will subscribe to the associated local queue.
+5. The messages will be picked up from the local broker via an Artemis CORE consumer for simplicity of initial implementation.
+6. The queue consumer should be implemented with a simple generic interface as façade, to allow future replacement.
+7. The message will be sent across the AMQP protocol directly to the remote Artemis broker.
+8. Once acknowledgement of receipt is given with an AMQP Delivery notification the queue consumption will be acknowledged.
+9. This will remove the original item from the source queue.
+10. If delivery fails due to link loss the subscriber should be closed until a new link is established to ensure messages are not consumed.
+11. If delivery fails for other reasons there should be some for of periodic retry over the AMQP link.
+12. For authentication checks the client cert returned from the remote server will be checked and the link dropped if it doesn't match expectations.
+
+### Out of process Artemis Broker and Bridges
+![Out of process Artemis Broker and Bridges](./out-of-proc-artemis-broker-bridges.png)
+
+1. Move the Artemis broker and bridge formation logic out of the node. This requires formalising the bridge creation requests, but allows clustered brokers, standardised AMQP usage and ultimately pluggable brokers.
+2. We should implement a netty socket server on the bridge and forward authenticated packets to the local Artemis broker inbound queues. An AMQP server socket is required for the float, although it should be transparent whether a NodeInfo refers to a bridge socket address, or an Artemis broker.
+3. The queue names should use the sha-256 of the PublicKey not the full key. Also, the name should be used for in and out queues, so that multiple distinct nodes can coexist on the same broker. This will simplify development as developers just run a background broker and shouldn't need to restart it.
+4. To export the network map information and to initiate bridges a non-durable bridge control protocol will be needed (in blue). Essentially the messages declare the local queue names and target TLS link information. For in-bound messages only messages for known inbox targets will be acknowledged.
+5. It should not be hard to make the bridges active-passive HA as they contain no persisted message state and simple RPC can resync the state of the bridge.
+6. Queue creation will remain with the node as this must use non-AMQP mechanisms and because flows should be able to queue sent messages even if the bridge is temporarily down.
+7. In parallel work can start to upgrade the local links to Artemis (i.e. the node-Artemis link and the Bridge Manager-Artemis link) to be AMQP clients as much as possible.
+
+### Full float implementation
+As described in the 'Target Solution' section, above.
