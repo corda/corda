@@ -110,7 +110,6 @@ class Node(private val project: Project) : CordformNode() {
     internal fun build() {
         configureProperties()
         installCordaJar()
-        installCordaNodeJar()
         if (config.hasPath("webAddress")) {
             installWebserverJar()
         }
@@ -161,20 +160,6 @@ class Node(private val project: Project) : CordformNode() {
                 into(nodeDir)
                 rename(cordaJar.name, nodeJarName)
                 fileMode = Cordformation.executableFileMode
-            }
-        }
-    }
-
-    /**
-     * Installs the corda node JAR to the node directory.
-     */
-    private fun installCordaNodeJar() {
-        val cordaNodeJar = verifyAndGetJar("corda-node")
-        project.copy {
-            it.apply {
-                from(cordaNodeJar)
-                into(nodeDir)
-                rename(cordaNodeJar.name, cordaNodeJarName)
             }
         }
     }
