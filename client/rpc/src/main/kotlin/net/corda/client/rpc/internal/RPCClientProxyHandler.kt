@@ -76,6 +76,7 @@ class RPCClientProxyHandler(
         private val clientAddress: SimpleString,
         private val rpcOpsClass: Class<out RPCOps>,
         serializationContext: SerializationContext,
+        private val sessionId: Trace.SessionId,
         private val externalTrace: Trace?,
         private val impersonatedActor: Actor?
 ) : InvocationHandler {
@@ -214,12 +215,12 @@ class RPCClientProxyHandler(
         if (sessionAndConsumer!!.session.isClosed) {
             throw RPCException("RPC Proxy is closed")
         }
-        // TODO sollecitom inspect
-        val trace = Trace.newInstance()
-        callSiteMap?.set(trace.invocationId, Throwable("<Call site of root RPC '${method.name}'>"))
+
+        val replyId = InvocationId.newInstance()
+        callSiteMap?.set(replyId, Throwable("<Call site of root RPC '${method.name}'>"))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
-            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments.bytes, trace, externalTrace, impersonatedActor)
+            val request = RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments.bytes, replyId, sessionId, externalTrace, impersonatedActor)
             val replyFuture = SettableFuture.create<Any>()
             sessionAndProducerPool.run {
                 val message = it.session.createMessage(false)
@@ -227,11 +228,11 @@ class RPCClientProxyHandler(
 
                 log.debug {
                     val argumentsString = arguments?.joinToString() ?: ""
-                    "-> RPC(${trace.invocationId.value}) -> ${method.name}($argumentsString): ${method.returnType}"
+                    "-> RPC(${replyId.value}) -> ${method.name}($argumentsString): ${method.returnType}"
                 }
 
-                require(rpcReplyMap.put(trace.invocationId, replyFuture) == null) {
-                    "Generated several RPC requests with same ID ${trace.invocationId}"
+                require(rpcReplyMap.put(replyId, replyFuture) == null) {
+                    "Generated several RPC requests with same ID $replyId"
                 }
                 it.producer.send(message)
                 it.session.commit()
@@ -244,7 +245,7 @@ class RPCClientProxyHandler(
             // This must be a checked exception, so wrap it
             throw RPCException(e.message ?: "", e)
         } finally {
-            callSiteMap?.remove(trace.invocationId)
+            callSiteMap?.remove(replyId)
         }
     }
 
@@ -270,12 +271,14 @@ class RPCClientProxyHandler(
                 }
             }
             is RPCApi.ServerToClient.Observation -> {
+                // TODO sollecitom Kryo writes to this map
                 val observable = observableContext.observableMap.getIfPresent(serverToClient.id)
                 if (observable == null) {
                     log.debug("Observation ${serverToClient.content} arrived to unknown Observable with ID ${serverToClient.id}. " +
                             "This may be due to an observation arriving before the server was " +
                             "notified of observable shutdown")
                 } else {
+                    // TODO sollecitom check that serverToClient.id is not duplicated
                     // We schedule the onNext() on an executor sticky-pooled based on the Observable ID.
                     observationExecutorPool.run(serverToClient.id) { executor ->
                         executor.submit {
@@ -404,6 +407,7 @@ private typealias CallSiteMap = ConcurrentHashMap<InvocationId, Throwable?>
  * @param hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
  */
 data class ObservableContext(
+        // TODO sollecitom ask Andras about callSiteMap vs observableMap
         val callSiteMap: CallSiteMap?,
         val observableMap: RpcObservableMap,
         val hardReferenceStore: MutableSet<Observable<*>>
@@ -444,6 +448,7 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
         observableContext.callSiteMap?.put(observableId, rpcCallSite)
         // We pin all Observables into a hard reference store (rooted in the RPC proxy) on subscription so that users
         // don't need to store a reference to the Observables themselves.
+        // TODO sollecitom ask Andras about this
         return pinInSubscriptions(observable, observableContext.hardReferenceStore).doOnUnsubscribe {
             // This causes Future completions to give warnings because the corresponding OnComplete sent from the server
             // will arrive after the client unsubscribes from the observable and consequently invalidates the mapping.

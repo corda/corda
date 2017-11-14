@@ -15,6 +15,7 @@ import net.corda.client.rpc.RPCException
 import net.corda.core.context.Actor
 import net.corda.core.context.Actor.Id
 import net.corda.core.context.InvocationContext
+import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
@@ -274,19 +275,20 @@ class RPCServer(
                 val arguments = Try.on {
                     clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                 }
-                val context = artemisMessage.context()
+                val context = artemisMessage.context(clientToServer.sessionId)
                 context.invocation.pushToLoggingContext()
                 when (arguments) {
                     is Try.Success -> {
                         rpcExecutor!!.submit {
+                            // TODO sollecitom maybe the context invocation id needs to match the replyId
                             val result = invokeRpc(context, clientToServer.methodName, arguments.value)
-                            sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, result)
+                            sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
                         }
                     }
                     is Try.Failure -> {
                         // We failed to deserialise the arguments, route back the error
                         log.warn("Inbound RPC failed", arguments.exception)
-                        sendReply(clientToServer.trace.invocationId, clientToServer.clientAddress, arguments)
+                        sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
                     }
                 }
             }
@@ -313,10 +315,10 @@ class RPCServer(
         }
     }
 
-    private fun sendReply(invocationId: InvocationId, clientAddress: SimpleString, result: Try<Any>) {
-        val reply = RPCApi.ServerToClient.RpcReply(invocationId, result)
+    private fun sendReply(replyId: InvocationId, clientAddress: SimpleString, result: Try<Any>) {
+        val reply = RPCApi.ServerToClient.RpcReply(replyId, result)
         val observableContext = ObservableContext(
-                invocationId,
+                replyId,
                 observableMap,
                 clientAddressToObservables,
                 clientAddress,
@@ -358,9 +360,8 @@ class RPCServer(
     // TODO remove this User once webserver doesn't need it
     private val nodeUser = User(NODE_USER, NODE_USER, setOf())
 
-    private fun ClientMessage.context(): RpcAuthContext {
-
-        val trace = trace()
+    private fun ClientMessage.context(sessionId: Trace.SessionId): RpcAuthContext {
+        val trace = Trace.newInstance(sessionId = sessionId)
         val externalTrace = externalTrace()
         val rpcActor = actorFrom(this)
         val impersonatedActor = impersonatedActor()
@@ -476,8 +477,8 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     }
 
     override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
+        val observableId = InvocationId.newInstance()
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
-        val observableId = observableContext.invocationId
         output.writeInvocationId(observableId)
         val observableWithSubscription = ObservableSubscription(
                 // We capture [observableContext] in the subscriber. Note that all synchronisation/kryo borrowing

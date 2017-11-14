@@ -117,8 +117,8 @@ class RPCClient<I : RPCOps>(
                 minLargeMessageSize = rpcConfiguration.maxFileSize
                 isUseGlobalPools = nodeSerializationEnv != null
             }
-
-            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext, externalTrace, impersonatedActor)
+            val sessionId = Trace.SessionId.newInstance()
+            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext, sessionId, externalTrace, impersonatedActor)
             try {
                 proxyHandler.start()
                 val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))
