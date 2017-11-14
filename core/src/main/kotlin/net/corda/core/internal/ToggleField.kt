@@ -44,38 +44,32 @@ class ThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {
 /** The named thread has leaked from a previous test. */
 class ThreadLeakException : RuntimeException("Leaked thread detected: ${Thread.currentThread().name}")
 
-class InheritableThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {
+/** @param failFast should throw the exception, or may return normally to suppress inheritance. */
+class InheritableThreadLocalToggleField<T>(name: String, private val failFast: (ThreadLeakException) -> Unit = { throw it }) : ToggleField<T>(name) {
     companion object {
         private val log = loggerFor<InheritableThreadLocalToggleField<*>>()
-        private fun ThreadLeakException.isProblematic(): Boolean {
-            stackTrace.forEach {
-                // A dying Netty thread's death event restarting the Netty global executor:
-                it.className == "io.netty.util.concurrent.GlobalEventExecutor" && it.methodName == "startThread" && return false
-            }
-            return true
-        }
     }
 
-    private class Holder<T>(value: T) : AtomicReference<T?>(value) {
+    private class Holder<T>(private val failFast: (ThreadLeakException) -> Any?, value: T) : AtomicReference<T?>(value) {
         fun valueOrDeclareLeak() = get() ?: throw ThreadLeakException()
-        fun maybeFailFastIfCurrentThreadIsLeaked() {
-            get() != null && return // Current thread isn't leaked.
+        fun childValue(): Holder<T>? {
+            get() != null && return this // Current thread isn't leaked.
             val e = ThreadLeakException()
-            e.isProblematic() && throw e
-            log.warn(e.message) // The exception on value retrieval is still enabled.
+            failFast(e)
+            log.warn(e.message)
+            return null
         }
     }
 
     private val threadLocal = object : InheritableThreadLocal<Holder<T>?>() {
         override fun childValue(holder: Holder<T>?): Holder<T>? {
-            // The Holder itself may be null due to prior events, a leak is not implied in that case:
-            holder?.maybeFailFastIfCurrentThreadIsLeaked()
-            return holder // What super does.
+            // The Holder itself may be null due to prior events, a leak is not indicated in that case:
+            return holder?.childValue()
         }
     }
 
     override fun get() = threadLocal.get()?.valueOrDeclareLeak()
-    override fun setImpl(value: T) = threadLocal.set(Holder(value))
+    override fun setImpl(value: T) = threadLocal.set(Holder(failFast, value))
     override fun clear() = threadLocal.run {
         val holder = get()!!
         remove()
