@@ -2,6 +2,7 @@ package net.corda.client.rpc.internal
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.ByteSequence
@@ -33,7 +34,11 @@ class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
     companion object {
         /** Call from main only. */
         fun initialiseSerialization() {
-            nodeSerializationEnv = SerializationEnvironmentImpl(
+            nodeSerializationEnv = createSerializationEnv()
+        }
+
+        fun createSerializationEnv(): SerializationEnvironment {
+            return SerializationEnvironmentImpl(
                     SerializationFactoryImpl().apply {
                         registerScheme(KryoClientSerializationScheme())
                         registerScheme(AMQPClientSerializationScheme())
