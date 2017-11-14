@@ -171,7 +171,7 @@ open class Cordform : DefaultTask() {
         }
     }
 
-    private fun buildNetworkParamsProcess(): Process = buildParamsProcess(generateParamsCommand(nodes[0]), nodes[0])
+    private fun buildNetworkParamsProcess(): Process = buildProcess(nodes[0], generateParamsCommand(nodes[0]), "generate-params.log").second
 
     private fun validateParametersProcess(process: Process, logsPath: Path) {
         val generateTimeoutSeconds = 60L
@@ -182,16 +182,6 @@ open class Cordform : DefaultTask() {
             throw GradleException("Network parameters generation process exited with ${process.exitValue()} - see logs at $logsPath")
         }
         project.logger.info("Generated network parameters")
-    }
-
-    private fun buildParamsProcess(command: List<String>, node: Node): Process {
-        return ProcessBuilder(command)
-                .directory(node.fullPath().toFile())
-                .redirectErrorStream(true)
-                // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
-                // Must redirect to output or logger (node log is still written, this is just startup banner)
-                .redirectOutput(node.logFile("generate-params.log").toFile())
-                .start()
     }
 
     private fun generateParamsCommand(node: Node): List<String> = listOf(
@@ -221,9 +211,10 @@ open class Cordform : DefaultTask() {
     }
 
     private fun buildNodeProcesses(): Map<Node, Process> {
-        return nodes
-                .map { buildNodeProcess(it) }
-                .toMap()
+        val command = generateNodeInfoCommand()
+        return nodes.map {
+                    it.makeLogDirectory()
+                    buildProcess(it, command, "generate-info.log") }.toMap()
     }
 
     private fun validateNodeProcessess(nodeProcesses: Map<Node, Process>) {
@@ -238,14 +229,13 @@ open class Cordform : DefaultTask() {
         }
     }
 
-    private fun buildNodeProcess(node: Node): Pair<Node, Process> {
-        node.makeLogDirectory()
-        val process = ProcessBuilder(generateNodeInfoCommand())
+    private fun buildProcess(node: Node, command: List<String>, logFile: String): Pair<Node, Process> {
+        val process = ProcessBuilder(command)
                 .directory(node.fullPath().toFile())
                 .redirectErrorStream(true)
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
                 // Must redirect to output or logger (node log is still written, this is just startup banner)
-                .redirectOutput(node.logFile("generate-info.log").toFile())
+                .redirectOutput(node.logFile(logFile).toFile())
                 .addEnvironment("CAPSULE_CACHE_DIR", Node.capsuleCacheDir)
                 .start()
         return Pair(node, process)

@@ -3,6 +3,7 @@ package net.corda.node.services.network
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
