@@ -24,6 +24,7 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
+import net.corda.node.services.security.RPCRealmFactory
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.Message
@@ -357,9 +358,9 @@ class RPCServer(
             ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
 
         return RpcContext(
-                authenticatedSubject = Subject.Builder()
+                authenticatedSubject = Subject.Builder(rpcSecurityManager)
                      .authenticated(true)
-                     .principals(SimplePrincipalCollection(username, "RPC"))
+                     .principals(SimplePrincipalCollection(username, RPCRealmFactory.DOMAIN))
                      .buildSubject())
     }
 }

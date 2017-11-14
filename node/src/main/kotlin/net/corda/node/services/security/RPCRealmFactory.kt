@@ -70,7 +70,7 @@ internal class InMemoryRealm : AuthorizingRealm {
      * for authentication/authorization data for a given user
      */
     override fun doGetAuthenticationInfo(token: AuthenticationToken) =
-            authenticationInfoByUser.getValue(token.credentials as String)
+            authenticationInfoByUser.getValue(token.principal as String)
 
 
     override fun doGetAuthorizationInfo(principals: PrincipalCollection) =
