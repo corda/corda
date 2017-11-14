@@ -15,13 +15,13 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
@@ -177,6 +177,25 @@ internal class CordaRPCOpsImpl(
         }
     }
 
+    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader:String, filename:String): SecureHash {
+        // TODO: this operation should not require an explicit transaction
+        return database.transaction {
+            services.attachments.importAttachment(jar, uploader, filename)
+        }
+    }
+
+    override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
+        try {
+            return database.transaction {
+                services.attachments.queryAttachments(query, sorting)
+            }
+        } catch (e: Exception) {
+            // log and rethrow exception so we keep a copy server side
+            log.error(e.message)
+            throw e.cause ?: e
+        }
+    }
+
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
 
     override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady
@@ -274,5 +293,9 @@ internal class CordaRPCOpsImpl(
             is Origin.Shell -> FlowInitiator.Shell
             is Origin.Scheduled -> FlowInitiator.Scheduled((origin as Origin.Scheduled).scheduledState)
         }
+    }
+
+    companion object {
+        private val log = loggerFor<CordaRPCOpsImpl>()
     }
 }

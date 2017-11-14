@@ -15,13 +15,38 @@ import java.time.Instant
 import java.util.*
 import javax.persistence.criteria.Predicate
 
+interface GenericQueryCriteria<Q : GenericQueryCriteria<Q, *>, in P : BaseQueryCriteriaParser<Q, *, *>> {
+    fun visit(parser: P): Collection<Predicate>
+
+    interface ChainableQueryCriteria<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, *>> {
+
+        interface AndVisitor<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, S>, in S : BaseSort> : GenericQueryCriteria<Q,P> {
+            val a:Q
+            val b:Q
+            override fun visit(parser: P): Collection<Predicate> {
+                return parser.parseAnd(this.a, this.b)
+            }
+        }
+
+        interface OrVisitor<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, S>, in S : BaseSort> : GenericQueryCriteria<Q,P> {
+            val a:Q
+            val b:Q
+            override fun visit(parser: P): Collection<Predicate> {
+                return parser.parseOr(this.a, this.b)
+            }
+        }
+
+        infix fun and(criteria: Q): Q
+        infix fun or(criteria: Q): Q
+    }
+}
+
 /**
  * Indexing assumptions:
  * QueryCriteria assumes underlying schema tables are correctly indexed for performance.
  */
 @CordaSerializable
-sealed class QueryCriteria {
-    abstract fun visit(parser: IQueryCriteriaParser): Collection<Predicate>
+sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaParser>, GenericQueryCriteria.ChainableQueryCriteria<QueryCriteria, IQueryCriteriaParser> {
 
     @CordaSerializable
     data class TimeCondition(val type: TimeInstantType, val predicate: ColumnPredicate<Instant>)
@@ -121,19 +146,6 @@ sealed class QueryCriteria {
         }
     }
 
-    // enable composition of [QueryCriteria]
-    private data class AndComposition(val a: QueryCriteria, val b: QueryCriteria) : QueryCriteria() {
-        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            return parser.parseAnd(this.a, this.b)
-        }
-    }
-
-    private data class OrComposition(val a: QueryCriteria, val b: QueryCriteria) : QueryCriteria() {
-        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            return parser.parseOr(this.a, this.b)
-        }
-    }
-
     // timestamps stored in the vault states table [VaultSchema.VaultStates]
     @CordaSerializable
     enum class TimeInstantType {
@@ -141,18 +153,47 @@ sealed class QueryCriteria {
         CONSUMED
     }
 
-    infix fun and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)
-    infix fun or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)
+    class AndComposition(override val a: QueryCriteria, override val b: QueryCriteria): QueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<QueryCriteria, IQueryCriteriaParser, Sort>
+    class OrComposition(override val a: QueryCriteria, override val b: QueryCriteria): QueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.OrVisitor<QueryCriteria, IQueryCriteriaParser, Sort>
+
+    override fun and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)
+    override fun or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)
+}
+@CordaSerializable
+sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser>, GenericQueryCriteria.ChainableQueryCriteria<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser> {
+    /**
+     * AttachmentsQueryCriteria:
+     */
+    data class AttachmentsQueryCriteria @JvmOverloads constructor (val uploaderCondition: ColumnPredicate<String>? = null,
+                                                                   val filenameCondition: ColumnPredicate<String>? = null,
+                                                                   val uploadDateCondition: ColumnPredicate<Instant>? = null) : AttachmentQueryCriteria() {
+        override fun visit(parser: AttachmentsQueryCriteriaParser): Collection<Predicate> {
+            return parser.parseCriteria(this)
+        }
+    }
+
+    class AndComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria): AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>
+    class OrComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria): AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.OrVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>
+
+    override fun and(criteria: AttachmentQueryCriteria): AttachmentQueryCriteria = AndComposition(this, criteria)
+    override fun or(criteria: AttachmentQueryCriteria): AttachmentQueryCriteria = OrComposition(this, criteria)
+}
+
+interface BaseQueryCriteriaParser<Q: GenericQueryCriteria<Q, P>, in P: BaseQueryCriteriaParser<Q,P,S>, in S : BaseSort> {
+    fun parseOr(left: Q, right: Q): Collection<Predicate>
+    fun parseAnd(left: Q, right: Q): Collection<Predicate>
+    fun parse(criteria: Q, sorting: S? = null): Collection<Predicate>
 }
 
 @DoNotImplement
-interface IQueryCriteriaParser {
+interface IQueryCriteriaParser : BaseQueryCriteriaParser<QueryCriteria, IQueryCriteriaParser, Sort> {
     fun parseCriteria(criteria: QueryCriteria.CommonQueryCriteria): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria): Collection<Predicate>
     fun <L : PersistentState> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate>
-    fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
-    fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
-    fun parse(criteria: QueryCriteria, sorting: Sort? = null): Collection<Predicate>
+}
+
+interface AttachmentsQueryCriteriaParser : BaseQueryCriteriaParser<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>{
+    fun parseCriteria(criteria: AttachmentQueryCriteria.AttachmentsQueryCriteria): Collection<Predicate>
 }

@@ -14,13 +14,11 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.context.Origin
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
-import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
@@ -265,6 +263,12 @@ interface CordaRPCOps : RPCOps {
 
     /** Uploads a jar to the node, returns it's hash. */
     fun uploadAttachment(jar: InputStream): SecureHash
+
+    /** Uploads a jar including metadata to the node, returns it's hash. */
+    fun uploadAttachmentWithMetadata(jar: InputStream, uploader:String, filename:String): SecureHash
+
+    /** Queries attachments metadata */
+    fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId>
 
     /** Returns the node's current time. */
     fun currentNodeTime(): Instant

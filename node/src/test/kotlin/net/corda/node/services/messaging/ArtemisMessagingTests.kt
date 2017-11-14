@@ -1,6 +1,7 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.concurrent.doneFuture
@@ -13,6 +14,7 @@ import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
+import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
@@ -30,6 +32,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.Mockito.mock
 import java.net.ServerSocket
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -79,7 +82,7 @@ class ArtemisMessagingTests {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
         networkMapRegistrationFuture = doneFuture(Unit)
-        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, config, emptyList()), rigorousMock())
+        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()), rigorousMock())
     }
 
     @After

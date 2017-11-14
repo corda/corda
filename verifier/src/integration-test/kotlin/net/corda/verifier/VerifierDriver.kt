@@ -8,6 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.*
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
@@ -96,7 +97,8 @@ fun <A> verifierDriver(
                 )
         ),
         coerce = { it },
-        dsl = dsl
+        dsl = dsl,
+        initialiseSerialization = false
 )
 
 /** A handle for a verifier */
@@ -210,8 +212,9 @@ data class VerifierDriverDSL(
         driverDSL.shutdownManager.registerShutdown(doneFuture {
             server.stop()
         })
-
-        val locator = ActiveMQClient.createServerLocatorWithoutHA()
+        val locator = ActiveMQClient.createServerLocatorWithoutHA().apply {
+            isUseGlobalPools = nodeSerializationEnv != null
+        }
         val transport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfig)
         val sessionFactory = locator.createSessionFactory(transport)
         val session = sessionFactory.createSession()

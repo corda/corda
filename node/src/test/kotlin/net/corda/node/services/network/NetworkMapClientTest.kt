@@ -8,6 +8,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
+import net.corda.node.services.network.TestNodeInfoFactory.createNodeInfo
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.X509Utilities
 import net.corda.testing.SerializationEnvironmentRule
@@ -28,6 +30,7 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.net.InetSocketAddress
+import java.net.URL
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
@@ -38,7 +41,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import kotlin.test.assertEquals
 
-class HTTPNetworkMapClientTest {
+class NetworkMapClientTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -61,7 +64,7 @@ class HTTPNetworkMapClientTest {
                         register(MockNetworkMapServer())
                     }
                     val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
-                    addServlet(jerseyServlet, "/api/*")
+                    addServlet(jerseyServlet, "/*")
                 })
             }
         }
@@ -72,7 +75,7 @@ class HTTPNetworkMapClientTest {
         }
 
         val hostAndPort = server.connectors.mapNotNull { it as? ServerConnector }.first()
-        networkMapClient = HTTPNetworkMapClient("http://${hostAndPort.host}:${hostAndPort.localPort}/api/network-map")
+        networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.localPort}"))
     }
 
     @After
@@ -90,7 +93,7 @@ class HTTPNetworkMapClientTest {
 
         val nodeInfoHash = nodeInfo.serialize().sha256()
 
-        assertThat(networkMapClient.getNetworkMap()).containsExactly(nodeInfoHash)
+        assertThat(networkMapClient.getNetworkMap().networkMap).containsExactly(nodeInfoHash)
         assertEquals(nodeInfo, networkMapClient.getNodeInfo(nodeInfoHash))
 
         val signedNodeInfo2 = createNodeInfo("Test2")
@@ -98,27 +101,21 @@ class HTTPNetworkMapClientTest {
         networkMapClient.publish(signedNodeInfo2)
 
         val nodeInfoHash2 = nodeInfo2.serialize().sha256()
-        assertThat(networkMapClient.getNetworkMap()).containsExactly(nodeInfoHash, nodeInfoHash2)
+        assertThat(networkMapClient.getNetworkMap().networkMap).containsExactly(nodeInfoHash, nodeInfoHash2)
+        assertEquals(100000.seconds, networkMapClient.getNetworkMap().cacheMaxAge)
         assertEquals(nodeInfo2, networkMapClient.getNodeInfo(nodeInfoHash2))
     }
 
-    private fun createNodeInfo(organisation: String): SignedData<NodeInfo> {
-        val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val clientCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisation, locality = "London", country = "GB"), keyPair.public)
-        val certPath = buildCertPath(clientCert.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
-        val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.$organisation.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
-
-        // Create digital signature.
-        val digitalSignature = DigitalSignature.WithKey(keyPair.public, Crypto.doSign(keyPair.private, nodeInfo.serialize().bytes))
-
-        return SignedData(nodeInfo.serialize(), digitalSignature)
+    @Test
+    fun `get hostname string from http response correctly`() {
+       assertEquals("test.host.name", networkMapClient.myPublicHostname())
     }
 }
 
 @Path("network-map")
 // This is a stub implementation of the network map rest API.
 internal class MockNetworkMapServer {
-    private val nodeInfos = mutableMapOf<SecureHash, NodeInfo>()
+    val nodeInfoMap = mutableMapOf<SecureHash, NodeInfo>()
     @POST
     @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
@@ -126,33 +123,31 @@ internal class MockNetworkMapServer {
         val registrationData = input.readBytes().deserialize<SignedData<NodeInfo>>()
         val nodeInfo = registrationData.verified()
         val nodeInfoHash = nodeInfo.serialize().sha256()
-        nodeInfos.put(nodeInfoHash, nodeInfo)
+        nodeInfoMap.put(nodeInfoHash, nodeInfo)
         return ok().build()
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     fun getNetworkMap(): Response {
-        return Response.ok(ObjectMapper().writeValueAsString(nodeInfos.keys.map { it.toString() })).build()
+        return Response.ok(ObjectMapper().writeValueAsString(nodeInfoMap.keys.map { it.toString() })).header("Cache-Control", "max-age=100000").build()
     }
 
     @GET
     @Path("{var}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
-        val nodeInfo = nodeInfos[SecureHash.parse(nodeInfoHash)]
+        val nodeInfo = nodeInfoMap[SecureHash.parse(nodeInfoHash)]
         return if (nodeInfo != null) {
             Response.ok(nodeInfo.serialize().bytes)
         } else {
             Response.status(Response.Status.NOT_FOUND)
         }.build()
     }
-}
 
-private fun buildCertPath(vararg certificates: Certificate): CertPath {
-    return CertificateFactory.getInstance("X509").generateCertPath(certificates.asList())
-}
-
-private fun X509CertificateHolder.toX509Certificate(): X509Certificate {
-    return CertificateFactory.getInstance("X509").generateCertificate(ByteArrayInputStream(encoded)) as X509Certificate
+    @GET
+    @Path("my-hostname")
+    fun getHostName(): Response {
+        return Response.ok("test.host.name").build()
+    }
 }

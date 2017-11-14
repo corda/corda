@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* ``AttachmentStorage`` now allows providing metadata on attachments upload - username and filename, currently as plain
+  strings. Those can be then used for querying, utilizing ``queryAttachments`` method of the same interface.
+
 * ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
 
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
@@ -76,6 +79,9 @@ UNRELEASED
   needed to allow new ``node_info_hash`` column to be added for the network map redesign work.
 
 * Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey``s.
+
+* Replaced node configuration parameter ``certificateSigningService`` with ``compatibilityZoneURL``, which is Corda
+  compatibility zone network management service's address.
 
 .. _changelog_v1:
 

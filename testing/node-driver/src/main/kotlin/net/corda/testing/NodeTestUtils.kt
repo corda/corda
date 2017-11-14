@@ -14,6 +14,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.CertChainPolicyConfig
@@ -23,7 +24,6 @@ import net.corda.nodeapi.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import java.net.URL
 import java.nio.file.Path
 
 /**
@@ -68,11 +68,11 @@ fun testNodeConfiguration(
         doReturn("").whenever(it).emailAddress
         doReturn("").whenever(it).exportJMXto
         doReturn(true).whenever(it).devMode
-        doReturn(URL("http://localhost")).whenever(it).certificateSigningService
+        doReturn(null).whenever(it).compatibilityZoneURL
         doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
         doReturn(VerifierType.InMemory).whenever(it).verifierType
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
-        doReturn(0L).whenever(it).additionalNodeInfoPollingFrequencyMsec
+        doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
         doCallRealMethod().whenever(it).certificatesDirectory
         doCallRealMethod().whenever(it).trustStoreFile
