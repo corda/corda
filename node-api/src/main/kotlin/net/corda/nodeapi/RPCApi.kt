@@ -107,8 +107,8 @@ object RPCApi {
                 val methodName: String,
                 val serialisedArguments: ByteArray,
                 val trace: Trace,
-                val externalTrace: Trace? = null,
-                val impersonatedActor: Actor? = null
+                val externalTrace: Trace?,
+                val impersonatedActor: Actor?
         ) : ClientToServer() {
             fun writeToClientMessage(message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
