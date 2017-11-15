@@ -148,9 +148,9 @@ open class MockServices(
         }
     }
 
-    private constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name = MEGA_CORP.name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), initialIdentityName = initialIdentityName, keys = *keys)
-    constructor(cordappPackages: List<String>, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), keys = *keys)
-    constructor(vararg keys: KeyPair) : this(emptyList(), *keys)
+    constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name = MEGA_CORP.name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), initialIdentityName = initialIdentityName, keys = *keys)
+    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name = MEGA_CORP.name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), initialIdentityName = initialIdentityName, keys = *keys)
+    constructor(vararg keys: KeyPair) : this(emptyList(), MEGA_CORP.name, *keys)
     constructor() : this(generateKeyPair())
 
     val key: KeyPair get() = keys.first()
