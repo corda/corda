@@ -604,8 +604,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     private fun readNetworkParameters() {
         val file = configuration.baseDirectory / "network-parameters"
-        networkParameters = if (configuration.devMode) { // TODO It is enabled only in dev mode, because of Cordformation networkParameters generation.
-            file.readAll().deserialize<NetworkParameters>()
+        networkParameters = if (configuration.devMode) {
+            try { // TODO It is enabled only in dev mode, because of Cordformation networkParameters generation.
+                file.readAll().deserialize<NetworkParameters>()
+            } catch (e: ClassCastException) {
+                file.readAll().deserialize<SignedData<NetworkParameters>>().verified()
+            }
         } else {
             file.readAll().deserialize<SignedData<NetworkParameters>>().verified()
         }

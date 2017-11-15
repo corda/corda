@@ -19,8 +19,6 @@ class Node(private val project: Project) : CordformNode() {
         val nodeJarName = "corda.jar"
         @JvmStatic
         val webJarName = "corda-webserver.jar"
-        @JvmStatic
-        val cordaNodeJarName = "corda-node.jar"
         private val configFileProperty = "configFile"
         val capsuleCacheDir: String = "./cache"
     }
