@@ -5,7 +5,8 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.NullKeys
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
