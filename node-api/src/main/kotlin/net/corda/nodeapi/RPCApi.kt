@@ -216,7 +216,8 @@ object RPCApi {
                     RPCApi.ServerToClient.Tag.OBSERVATION -> {
                         val observableId = message.invocationId(OBSERVABLE_ID_FIELD_NAME, OBSERVABLE_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot parse invocation id from client message.")
                         val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, observableId)
-                        Observation(observableId, message.getBodyAsByteArray().deserialize(context = poolWithIdContext))
+                        val payload = message.getBodyAsByteArray().deserialize<Notification<*>>(context = poolWithIdContext)
+                        Observation(observableId, payload)
                     }
                 }
             }

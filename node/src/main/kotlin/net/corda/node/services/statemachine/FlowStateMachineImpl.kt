@@ -265,7 +265,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         serviceHub.auditService.recordAuditEvent(checkPermissionEvent)
         @Suppress("ConstantConditionIf")
         if (!permissionGranted) {
-            throw FlowPermissionException("User ${context.principal} not permissioned for $permissionName on flow $id")
+            throw FlowPermissionException("User ${context.principal()} not permissioned for $permissionName on flow $id")
         }
     }
 

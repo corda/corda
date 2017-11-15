@@ -351,7 +351,8 @@ class RPCStabilityTests {
                     clientAddress = SimpleString(myQueue),
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
                     serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT).bytes,
-                    trace = Trace.newInstance()
+                    replyId = Trace.InvocationId.newInstance(),
+                    sessionId = Trace.SessionId.newInstance()
             )
             request.writeToClientMessage(message)
             producer.send(message)
