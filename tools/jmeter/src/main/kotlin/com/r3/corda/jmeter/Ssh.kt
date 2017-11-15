@@ -10,7 +10,9 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.*
 
-
+/**
+ * Creates SSH tunnels for remote controlling SSH servers/agents from the local host (via UI or headless).
+ */
 class Ssh {
     companion object {
         val log = LoggerFactory.getLogger(this::class.java)
@@ -28,7 +30,7 @@ class Ssh {
             val jmeterProps = loadProps("/jmeter.properties")
             // The port the JMeter remote agents call back to on this client host.
             val clientRmiLocalPort = jmeterProps.getProperty("client.rmi.localport").toInt()
-            // TODO: Where is this value used?  Just on the remote agent to set up the RMI registry?
+            // Remote RMI registry port.
             val serverRmiPort = jmeterProps.getProperty("server.rmi.port", "1099").toInt()
 
             // Where JMeter driver will try to connect for remote agents (should all be localhost so can ssh tunnel).
@@ -47,7 +49,6 @@ class Ssh {
                 val session = connectToHost(jsch, remoteHost, userName)
                 sessions += session
 
-                // TODO: maybe check the local host is actually "localhost"?
                 // For tunnelling the RMI registry on the remote agent
                 // ssh ${remoteHostAndPort.host} -L 0.0.0.0:${localHostAndPort.port}:localhost:$serverRmiPort -N
                 createOutboundTunnel(session, NetworkHostAndPort("0.0.0.0", localHostAndPort.port), NetworkHostAndPort("localhost", serverRmiPort))

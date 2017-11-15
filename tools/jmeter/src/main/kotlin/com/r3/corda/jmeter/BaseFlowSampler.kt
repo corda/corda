@@ -11,8 +11,10 @@ import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext
 import org.apache.jmeter.samplers.SampleResult
 
-
-abstract class FlowSampler() : AbstractJavaSamplerClient() {
+/**
+ * Do most of the work for firing flow start requests via RPC at a Corda node.
+ */
+abstract class BaseFlowSampler() : AbstractJavaSamplerClient() {
     companion object {
         val host = Argument("host", "localhost", "<meta>", "The remote network address (hostname or IP address) to connect to for RPC.")
         val port = Argument("port", "10000", "<meta>", "The remote port to connect to for RPC.")

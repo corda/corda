@@ -9,8 +9,10 @@ import net.corda.finance.flows.CashIssueFlow
 import org.apache.jmeter.config.Argument
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext
 
-
-abstract class AbstractSampler : FlowSampler() {
+/**
+ * A base sampler that looks up identities via RPC ready for starting flows, to be extended and specialised as required.
+ */
+abstract class AbstractSampler : BaseFlowSampler() {
     lateinit var notaryIdentity: Party
 
     companion object JMeterProperties {
@@ -26,6 +28,11 @@ abstract class AbstractSampler : FlowSampler() {
     }
 }
 
+/**
+ * A sampler for calling CashIssueFlow.
+ *
+ * TODO: add more configurable parameters (reference, amount etc) if there is a requirement.
+ */
 class CashIssueSampler : AbstractSampler() {
     override val additionalArgs: Set<Argument> = setOf(notary)
 

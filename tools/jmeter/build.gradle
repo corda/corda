@@ -31,6 +31,7 @@ dependencies {
     runtime group: 'org.apache.jmeter', name: 'jorphan', version: "$jmVersion"
 }
 
+// Run JMeter as server process/agent on current host.
 task(runServer, dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'com.r3.corda.jmeter.Launcher'
@@ -43,6 +44,7 @@ task(runServer, dependsOn: 'classes', type: JavaExec) {
              "-s" ]
 }
 
+// Just start ssh tunnels, without JMeter.
 task(runSsh, dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'com.r3.corda.jmeter.Ssh'
@@ -52,6 +54,12 @@ task(runSsh, dependsOn: 'classes', type: JavaExec) {
     standardInput = System.in
 }
 
+// Run JMeter (by default the UI).
+// Extra args can be passed by setting jmeterArgs (e.g. -n to run in non-UI mode).
+// e.g. .gradlew tools:jmeter:run -PjmeterArgs="['-n']"
+// ssh tunnels will be built from local host to remote hosts by specifying jmeterHosts
+// e.g. ./gradlew tools:jmeter:run -PjmeterHosts="['perf-notary.corda.r3cev.com', 'perf-node-1.corda.r3cev.com']"
+// Each host is paired with local host ports listed in remote_hosts of jmeter.properties
 run {
     systemProperty "search_paths", project(':tools:jmeter').configurations.runtime.files.join(";")
     systemProperty "java.rmi.server.hostname", "localhost"
@@ -59,6 +67,9 @@ run {
     // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
     args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
              "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
+    if ( project.hasProperty("jmeterArgs") ) {
+        args+= Eval.me(jmeterHosts)
+    }
     if ( project.hasProperty("jmeterHosts") ) {
         args+= "-Xssh"
         args+= Eval.me(jmeterHosts)
@@ -76,7 +87,7 @@ jar {
 }
 
 // For building a runnable jar with no other dependencies for remote JMeter slave server, that has Corda code on classpath.
-// Run with: java -jar corda-jmeter-<version>.jar
+// Run with: java -jar jmeter-corda-<version>.jar
 // No additional args required but will be passed if specified.
 task buildJMeterJAR(type: FatCapsule, dependsOn: 'jar') {
     applicationClass 'com.r3.corda.jmeter.Launcher'
