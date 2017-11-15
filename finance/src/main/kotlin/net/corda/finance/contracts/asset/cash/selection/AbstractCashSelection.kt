@@ -145,7 +145,7 @@ abstract class AbstractCashSelection {
                     // TODO: future implementation to retrieve contract states from a Vault BLOB store
                     stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
 
-                if (totalPennies >= amount.quantity) {
+                if (stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity) {
                     // we should have a minimum number of states to satisfy our selection `amount` criteria
                     log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
 
