@@ -94,7 +94,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_name", nullable = false)
             val name: String,
 
-            @Lob
             @Column(name = "owning_key_hash", length = MAX_HASH_HEX_SIZE)
             val owningKeyHash: String,
 
