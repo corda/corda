@@ -3,6 +3,7 @@ package net.corda.finance.schemas
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
@@ -33,8 +34,8 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             var faceValueIssuerPartyHash: String,
 
             @Column(name = "face_value_issuer_ref", columnDefinition = "varchar(16)")
-            @Type(type = "opaquebytes")
-            var faceValueIssuerRef: OpaqueBytes,
+            @Type(type = "bytes-as-hex")
+            var faceValueIssuerRef: ByteSequence,
 
             /** parent attributes */
             @Transient

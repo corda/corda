@@ -4,6 +4,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
@@ -39,7 +40,7 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
             var issuerPartyHash: String,
 
             @Column(name = "issuer_ref", columnDefinition = "varchar(16)")
-            @Type(type = "opaquebytes")
-            var issuerRef: OpaqueBytes
+            @Type(type = "bytes-as-hex")
+            var issuerRef: ByteSequence
     ) : PersistentState()
 }

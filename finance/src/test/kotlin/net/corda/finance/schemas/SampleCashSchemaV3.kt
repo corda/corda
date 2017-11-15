@@ -3,6 +3,7 @@ package net.corda.finance.schemas
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
 import javax.persistence.Column
@@ -40,7 +41,7 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             var issuer: AbstractParty,
 
             @Column(name = "issuer_ref", columnDefinition = "varchar(16)")
-            @Type(type = "opaquebytes")
-            var issuerRef: OpaqueBytes
+            @Type(type = "bytes-as-hex")
+            var issuerRef: ByteSequence
     ) : PersistentState()
 }

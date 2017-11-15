@@ -49,3 +49,24 @@ Signature verification is performed in two stages:
   2. The public keys corresponding to the signatures are matched against the leaves of the composite key tree in question,
      and the total combined weight of all children is calculated for every intermediary node. If all thresholds are satisfied,
      the composite key requirement is considered to be met.
+
+ByteSequence
+------------
+An abstraction of a byte array, with offset and size that does no copying of bytes unless asked to.
+The data of interest typically starts at position [offset] within the [bytes] and is [size] bytes long.
+
+OpaqueBytes
+-----------
+A simple class that wraps a ByteSequence and makes the equals/hashCode/toString methods work a value type.
+The bytes are always cloned so that this object becomes immutable. This has been done
+     * to prevent tampering with entities such as [SecureHash] and [PrivacySalt], as well as
+     * preserve the integrity of our hash constants [zeroHash] and [allOnesHash].
+This type has a number of helper methods fot conversion to/from [ByteArray] and [OpaqueBytes].
+
+.. container:: codeset
+
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
+        :language: kotlin
+        :start-after: DOCSTART 9
+        :end-before: DOCEND 9
+

@@ -161,7 +161,9 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
 @CordaSerializable
+// DOCSTART 9
 data class PartyAndReference(val party: AbstractParty, val reference: OpaqueBytes) {
+// DOCEND 9
     override fun toString() = "$party$reference"
 }
 

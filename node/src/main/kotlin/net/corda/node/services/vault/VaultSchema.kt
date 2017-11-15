@@ -8,6 +8,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
 import java.io.Serializable
@@ -127,8 +128,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var issuer: AbstractParty,
 
             @Column(name = "issuer_reference", columnDefinition = "varchar(16)")
-            @Type(type = "opaquebytes")
-            var issuerRef: OpaqueBytes
+            @Type(type = "bytes-as-hex")
+            var issuerRef: ByteSequence
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
                 this(owner = _owner,
