@@ -390,7 +390,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // DOCEND 29
         // We can also sign the transaction using a different public key:
         // DOCSTART 30
-        val otherKey: PublicKey = serviceHub.keyManagementService.freshKey()
+        val otherKey: PublicKey = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false).owningKey
         val onceSignedTx2: SignedTransaction = serviceHub.signInitialTransaction(txBuilder, otherKey)
         // DOCEND 30
 
@@ -401,7 +401,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         val twiceSignedTx: SignedTransaction = serviceHub.addSignature(onceSignedTx)
         // DOCEND 38
         // Or, if we wanted to use a different public key:
-        val otherKey2: PublicKey = serviceHub.keyManagementService.freshKey()
+        val otherKey2: PublicKey = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false).owningKey
         // DOCSTART 39
         val twiceSignedTx2: SignedTransaction = serviceHub.addSignature(onceSignedTx, otherKey2)
         // DOCEND 39
