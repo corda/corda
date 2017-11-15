@@ -3,14 +3,12 @@ package net.corda.testing.driver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.map
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -46,6 +44,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 registeredShutdowns
             }
         }
+
         val shutdowns = shutdownActionFutures.map { Try.on { it.getOrThrow(1.seconds) } }
         shutdowns.reversed().forEach {
             when (it) {
@@ -63,30 +62,26 @@ class ShutdownManager(private val executorService: ExecutorService) {
     fun registerShutdown(shutdown: CordaFuture<() -> Unit>) {
         state.locked {
             require(!isShutdown)
-            registeredShutdowns.add(shutdown)
+            registeredShutdowns += shutdown
         }
     }
 
     fun registerShutdown(shutdown: () -> Unit) = registerShutdown(doneFuture(shutdown))
 
-    fun registerProcessShutdown(processFuture: CordaFuture<Process>) {
-        val processShutdown = processFuture.map { process ->
-            {
-                process.destroy()
-                /** Wait 5 seconds, then [Process.destroyForcibly] */
-                val finishedFuture = executorService.submit {
-                    process.waitFor()
-                }
-                try {
-                    finishedFuture.get(5, TimeUnit.SECONDS)
-                } catch (exception: TimeoutException) {
-                    finishedFuture.cancel(true)
-                    process.destroyForcibly()
-                }
-                Unit
+    fun registerProcessShutdown(process: Process) {
+        registerShutdown {
+            process.destroy()
+            /** Wait 5 seconds, then [Process.destroyForcibly] */
+            val finishedFuture = executorService.submit {
+                process.waitFor()
+            }
+            try {
+                finishedFuture.getOrThrow(5.seconds)
+            } catch (timeout: TimeoutException) {
+                finishedFuture.cancel(true)
+                process.destroyForcibly()
             }
         }
-        registerShutdown(processShutdown)
     }
 
     interface Follower {

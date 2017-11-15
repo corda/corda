@@ -10,8 +10,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before

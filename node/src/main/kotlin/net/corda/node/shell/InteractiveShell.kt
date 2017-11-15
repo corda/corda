@@ -29,10 +29,12 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
+import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.node.services.messaging.RpcPermissions
+import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.utilities.ANSIProgressRenderer
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.utilities.CordaPersistence
-import net.corda.nodeapi.ArtemisMessagingComponent
-import net.corda.nodeapi.User
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
 import org.crsh.console.jline.TerminalFactory
@@ -131,7 +133,9 @@ object InteractiveShell {
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
             // Give whoever has local shell access administrator access to the node.
-            CURRENT_RPC_CONTEXT.set(RpcContext(SUPERUSER))
+            // TODO remove this after Shell switches to RPC
+            val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(), RpcPermissions.NONE)
+            CURRENT_RPC_CONTEXT.set(context)
             Emoji.renderIfSupported {
                 jlineProcessor.run()
             }

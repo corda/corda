@@ -6,11 +6,11 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.context.Origin
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
@@ -148,8 +148,8 @@ class NodeMonitorModelTest {
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
-                        val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.RPC && initiator.username == "user1")
+                        val context = add.stateMachineInfo.context()
+                        require(context.origin is Origin.RPC && context.principal().name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -157,8 +157,8 @@ class NodeMonitorModelTest {
                     // MOVE - N.B. There are other framework flows that happen in parallel for the remote resolve transactions flow
                     expect(match = { it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
-                        val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.RPC && initiator.username == "user1")
+                        val context = add.stateMachineInfo.context()
+                        require(context.origin is Origin.RPC && context.principal().name == "user1")
                     },
                     expect(match = { it is StateMachineUpdate.Removed && it.id == moveSmId }) {
                     }
@@ -169,8 +169,8 @@ class NodeMonitorModelTest {
             sequence(
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
-                        val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Peer && aliceNode.isLegalIdentity(initiator.party))
+                        val context = add.stateMachineInfo.context()
+                        require(context.origin is Origin.Peer && aliceNode.isLegalIdentity(aliceNode.identityFromX500Name((context.origin as Origin.Peer).party)))
                     }
             )
         }

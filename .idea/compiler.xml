@@ -16,6 +16,9 @@
       <module name="client_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="corda-core_integrationTest" target="1.8" />
+      <module name="corda-core_smokeTest" target="1.8" />
+      <module name="corda-finance_integrationTest" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
       <module name="corda-webserver_integrationTest" target="1.8" />
@@ -43,6 +46,8 @@
       <module name="example-code_integrationTest" target="1.8" />
       <module name="example-code_main" target="1.8" />
       <module name="example-code_test" target="1.8" />
+      <module name="experimental-kryo-hook_main" target="1.8" />
+      <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
       <module name="experimental_test" target="1.8" />
       <module name="explorer-capsule_main" target="1.6" />
@@ -54,8 +59,13 @@
       <module name="finance_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
+      <module name="irs-demo-cordapp_integrationTest" target="1.8" />
       <module name="irs-demo-cordapp_main" target="1.8" />
+      <module name="irs-demo-cordapp_main~1" target="1.8" />
       <module name="irs-demo-cordapp_test" target="1.8" />
+      <module name="irs-demo-cordapp_test~1" target="1.8" />
+      <module name="irs-demo-web_main" target="1.8" />
+      <module name="irs-demo-web_test" target="1.8" />
       <module name="irs-demo_integrationTest" target="1.8" />
       <module name="irs-demo_main" target="1.8" />
       <module name="irs-demo_test" target="1.8" />
@@ -106,6 +116,9 @@
       <module name="simm-valuation-demo_test" target="1.8" />
       <module name="smoke-test-utils_main" target="1.8" />
       <module name="smoke-test-utils_test" target="1.8" />
+      <module name="source-example-code_integrationTest" target="1.8" />
+      <module name="source-example-code_main" target="1.8" />
+      <module name="source-example-code_test" target="1.8" />
       <module name="test-common_main" target="1.8" />
       <module name="test-common_test" target="1.8" />
       <module name="test-utils_integrationTest" target="1.8" />

@@ -77,8 +77,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                           private val serverAddress: NetworkHostAndPort,
                           private val myIdentity: PublicKey,
                           private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
-                          val database: CordaPersistence,
-                          val monitoringService: MonitoringService,
+                          private val database: CordaPersistence,
+                          private val monitoringService: MonitoringService,
                           advertisedAddress: NetworkHostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {
     companion object {

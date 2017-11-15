@@ -2,6 +2,7 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
+import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
@@ -25,17 +26,14 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
-import net.corda.node.services.messaging.RpcContext
-import net.corda.nodeapi.User
-import net.corda.testing.chooseIdentity
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
+import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.node.services.messaging.RpcPermissions
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.sequence
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -62,14 +60,12 @@ class CordaRPCOpsImplTest {
     private lateinit var transactions: Observable<SignedTransaction>
     private lateinit var vaultTrackCash: Observable<Vault.Update<Cash.State>>
 
-    private val user = User("user", "pwd", permissions = emptySet())
-
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
         aliceNode = mockNet.createNode()
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
-        CURRENT_RPC_CONTEXT.set(RpcContext(user))
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), RpcPermissions.NONE))
 
         mockNet.runNetwork()
         withPermissions(invokeRpc(CordaRPCOps::notaryIdentities)) {
@@ -290,7 +286,7 @@ class CordaRPCOpsImplTest {
 
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
-            CURRENT_RPC_CONTEXT.set(RpcContext(user.copy(permissions = permissions.toSet())))
+            CURRENT_RPC_CONTEXT.set(previous.copy(grantedPermissions = RpcPermissions(permissions.toSet())))
             action.invoke()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)

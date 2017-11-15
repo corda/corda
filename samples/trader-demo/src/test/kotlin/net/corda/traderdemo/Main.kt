@@ -22,13 +22,12 @@ fun main(args: Array<String>) {
             startFlow<SellerFlow>(),
             all())
     val demoUser = listOf(User("demo", "demo", permissions))
-    driver(driverDirectory = "build" / "trader-demo-nodes", isDebug = true) {
+    driver(driverDirectory = "build" / "trader-demo-nodes", isDebug = true, waitForAllNodesToFinish = true) {
         val user = User("user1", "test", permissions = setOf(startFlow<CashIssueFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 startFlow<SellerFlow>()))
         startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser)
         startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser)
         startNode(providedName = BOC.name, rpcUsers = listOf(user))
-        waitForAllNodesToFinish()
     }
 }

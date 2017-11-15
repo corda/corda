@@ -33,7 +33,6 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
             @Column(name = "ccy_code", length = 3)
             var currency: String,
 
-            @Lob
             @Column(name = "issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var issuerPartyHash: String,
 

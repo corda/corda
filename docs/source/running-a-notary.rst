@@ -28,3 +28,6 @@ For ``ValidatingNotaryService``, it is:
 
 Setting up a Raft notary is currently slightly more involved and is not recommended for prototyping purposes. There is
 work in progress to simplify it. To see it in action, however, you can try out the :ref:`notary-demo`.
+
+Use the `--bootstrap-raft-cluster` command line argument when starting the first node of a notary cluster for the first
+time. When the flag is set, the node will act as a seed for the cluster that other members can join.
