@@ -9,7 +9,6 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
@@ -19,19 +18,15 @@ import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.utilities.*
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.ArtemisMessagingComponent.ArtemisAddress
 import net.corda.nodeapi.ArtemisMessagingComponent.NodeAddress
 import net.corda.nodeapi.ArtemisMessagingComponent.ServiceAddress
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -64,9 +59,9 @@ import javax.persistence.Lob
  * If not provided, will default to [serverAddress].
  */
 @ThreadSafe
-class P2PMessagingClient(private val config: NodeConfiguration,
+class P2PMessagingClient(config: NodeConfiguration,
                          private val versionInfo: VersionInfo,
-                         private val serverAddress: NetworkHostAndPort,
+                         serverAddress: NetworkHostAndPort,
                          private val myIdentity: PublicKey,
                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                          private val database: CordaPersistence,
@@ -127,12 +122,8 @@ class P2PMessagingClient(private val config: NodeConfiguration,
     }
 
     private class InnerState {
-        var started = false
         var running = false
-        var producer: ClientProducer? = null
         var p2pConsumer: ClientConsumer? = null
-        var session: ClientSession? = null
-        var sessionFactory: ClientSessionFactory? = null
     }
 
     private val messagesToRedeliver = database.transaction {
@@ -151,7 +142,8 @@ class P2PMessagingClient(private val config: NodeConfiguration,
     private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging", 1)
 
     override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
-
+    private val messageRedeliveryDelaySeconds = config.messageRedeliveryDelaySeconds.toLong()
+    private val artemis = ArtemisMessagingClient(config, serverAddress)
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
 
@@ -186,34 +178,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
     fun start() {
         state.locked {
-            check(!started) { "start can't be called twice" }
-            started = true
-
-            log.info("Connecting to message broker: $serverAddress")
-            // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
-            val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
-                // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
-                // would be the default and the two lines below can be deleted.
-                connectionTTL = -1
-                clientFailureCheckPeriod = -1
-                minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
-                isUseGlobalPools = nodeSerializationEnv != null
-            }
-            sessionFactory = locator.createSessionFactory()
-
-            // Login using the node username. The broker will authentiate us as its node (as opposed to another peer)
-            // using our TLS certificate.
-            // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
-            // size of 1MB is acknowledged.
-            val session = sessionFactory!!.createSession(NODE_USER, NODE_USER, false, true, true, locator.isPreAcknowledge, DEFAULT_ACK_BATCH_SIZE)
-            this.session = session
-            session.start()
-
-            // Create a general purpose producer.
-            val producer = session.createProducer()
-            this.producer = producer
-
+            val session = artemis.start().session
             // Create a queue, consumer and producer for handling P2P network messages.
             p2pConsumer = session.createConsumer(P2P_QUEUE)
         }
@@ -271,7 +236,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
     fun run() {
         try {
             val consumer = state.locked {
-                check(started) { "start must be called first" }
+                check(artemis.started != null) { "start must be called first" }
                 check(!running) { "run can't be called twice" }
                 running = true
                 // If it's null, it means we already called stop, so return immediately.
@@ -361,7 +326,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
     override fun stop() {
         val running = state.locked {
             // We allow stop() to be called without a run() in between, but it must have at least been started.
-            check(started)
+            check(artemis.started != null)
             val prevRunning = running
             running = false
             val c = p2pConsumer ?: throw IllegalStateException("stop can't be called twice")
@@ -380,13 +345,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         // Only first caller to gets running true to protect against double stop, which seems to happen in some integration tests.
         if (running) {
             state.locked {
-                producer?.close()
-                producer = null
-                // Ensure any trailing messages are committed to the journal
-                session!!.commit()
-                // Closing the factory closes all the sessions it produced as well.
-                sessionFactory!!.close()
-                sessionFactory = null
+                artemis.stop()
             }
         }
     }
@@ -397,7 +356,8 @@ class P2PMessagingClient(private val config: NodeConfiguration,
         messagingExecutor.fetchFrom {
             state.locked {
                 val mqAddress = getMQAddress(target)
-                val artemisMessage = session!!.createMessage(true).apply {
+                val artemis = artemis.started!!
+                val artemisMessage = artemis.session.createMessage(true).apply {
                     putStringProperty(cordaVendorProperty, cordaVendor)
                     putStringProperty(releaseVersionProperty, releaseVersion)
                     putIntProperty(platformVersionProperty, versionInfo.platformVersion)
@@ -416,15 +376,14 @@ class P2PMessagingClient(private val config: NodeConfiguration,
                     "Send to: $mqAddress topic: ${message.topicSession.topic} " +
                             "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}"
                 }
-                producer!!.send(mqAddress, artemisMessage)
-
+                artemis.producer.send(mqAddress, artemisMessage)
                 retryId?.let {
                     database.transaction {
                         messagesToRedeliver.computeIfAbsent(it, { Pair(message, target) })
                     }
                     scheduledMessageRedeliveries[it] = messagingExecutor.schedule({
                         sendWithRetry(0, mqAddress, artemisMessage, it)
-                    }, config.messageRedeliveryDelaySeconds.toLong(), TimeUnit.SECONDS)
+                    }, messageRedeliveryDelaySeconds, TimeUnit.SECONDS)
 
                 }
             }
@@ -455,12 +414,12 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
         state.locked {
             log.trace { "Retry #$retryCount sending message $message to $address for $retryId" }
-            producer!!.send(address, message)
+            artemis.started!!.producer.send(address, message)
         }
 
         scheduledMessageRedeliveries[retryId] = messagingExecutor.schedule({
             sendWithRetry(retryCount + 1, address, message, retryId)
-        }, config.messageRedeliveryDelaySeconds.toLong(), TimeUnit.SECONDS)
+        }, messageRedeliveryDelaySeconds, TimeUnit.SECONDS)
     }
 
     override fun cancelRedelivery(retryId: Long) {
@@ -490,10 +449,11 @@ class P2PMessagingClient(private val config: NodeConfiguration,
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
     private fun createQueueIfAbsent(queueName: String) {
         state.alreadyLocked {
-            val queueQuery = session!!.queueQuery(SimpleString(queueName))
+            val session = artemis.started!!.session
+            val queueQuery = session.queueQuery(SimpleString(queueName))
             if (!queueQuery.isExists) {
                 log.info("Create fresh queue $queueName bound on same address")
-                session!!.createQueue(queueName, RoutingType.MULTICAST, queueName, true)
+                session.createQueue(queueName, RoutingType.MULTICAST, queueName, true)
             }
         }
     }
