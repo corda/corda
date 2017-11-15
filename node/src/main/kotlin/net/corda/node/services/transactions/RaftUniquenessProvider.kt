@@ -49,16 +49,17 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
-        fun createMap(): AppendOnlyPersistentMap<String, Any, RaftState, String> =
+        fun createMap(): AppendOnlyPersistentMap<String, Pair<Long, Any>, RaftState, String> =
                 AppendOnlyPersistentMap(
                         toPersistentEntityKey = { it },
                         fromPersistentEntity = {
-                            Pair(it.key, it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
+                            Pair(it.key, Pair(it.index, it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)))
                         },
-                        toPersistentEntity = { k: String, v: Any ->
+                        toPersistentEntity = { k: String, v: Pair<Long, Any> ->
                             RaftState().apply {
                                 key = k
-                                value = v.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                                value = v.second.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                                index = v.first
                             }
                         },
                         persistentEntityClass = RaftState::class.java
@@ -74,7 +75,10 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
 
             @Lob
             @Column
-            var value: ByteArray = ByteArray(0)
+            var value: ByteArray = ByteArray(0),
+
+            @Column
+            var index: Long = 0
     )
 
     /** Directory storing the Raft log and state machine snapshots */
