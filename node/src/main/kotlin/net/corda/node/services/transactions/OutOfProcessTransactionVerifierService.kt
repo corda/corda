@@ -16,8 +16,9 @@ import net.corda.nodeapi.VerifierApi
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import java.util.concurrent.ConcurrentHashMap
 
-abstract class OutOfProcessTransactionVerifierService(
-        private val metrics: MetricRegistry
+class OutOfProcessTransactionVerifierService(
+        private val metrics: MetricRegistry,
+        private val sendRequest: (Long, LedgerTransaction) -> Unit
 ) : SingletonSerializeAsToken(), TransactionVerifierService {
     companion object {
         val log = loggerFor<OutOfProcessTransactionVerifierService>()
@@ -59,8 +60,6 @@ abstract class OutOfProcessTransactionVerifierService(
             }
         }
     }
-
-    abstract fun sendRequest(nonce: Long, transaction: LedgerTransaction)
 
     override fun verify(transaction: LedgerTransaction): CordaFuture<*> {
         log.info("Verifying ${transaction.id}")

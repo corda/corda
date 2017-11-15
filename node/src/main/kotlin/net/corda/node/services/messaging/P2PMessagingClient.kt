@@ -1,32 +1,23 @@
 package net.corda.node.services.messaging
 
-import com.codahale.metrics.MetricRegistry
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
-import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
-import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
-import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.VerifierType
 import net.corda.node.services.statemachine.StateMachineManagerImpl
-import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
 import net.corda.node.utilities.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
@@ -35,16 +26,12 @@ import net.corda.nodeapi.ArtemisMessagingComponent.NodeAddress
 import net.corda.nodeapi.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.VerifierApi
-import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
-import net.corda.nodeapi.VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
-import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -77,18 +64,16 @@ import javax.persistence.Lob
  * If not provided, will default to [serverAddress].
  */
 @ThreadSafe
-class NodeMessagingClient(private val config: NodeConfiguration,
-                          private val versionInfo: VersionInfo,
-                          private val serverAddress: NetworkHostAndPort,
-                          private val myIdentity: PublicKey,
-                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
-                          private val database: CordaPersistence,
-                          private val metrics: MetricRegistry,
-                          advertisedAddress: NetworkHostAndPort = serverAddress
+class P2PMessagingClient(private val config: NodeConfiguration,
+                         private val versionInfo: VersionInfo,
+                         private val serverAddress: NetworkHostAndPort,
+                         private val myIdentity: PublicKey,
+                         private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
+                         private val database: CordaPersistence,
+                         advertisedAddress: NetworkHostAndPort = serverAddress
 ) : SingletonSerializeAsToken(), MessagingService {
     companion object {
-        private val log = loggerFor<NodeMessagingClient>()
-
+        private val log = loggerFor<P2PMessagingClient>()
         // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
         // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
         // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
@@ -99,8 +84,6 @@ class NodeMessagingClient(private val config: NodeConfiguration,
         private val releaseVersionProperty = SimpleString("release-version")
         private val platformVersionProperty = SimpleString("platform-version")
         private val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
-        private val verifierResponseAddress = "$VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX.${random63BitValue()}"
-
         private val messageMaxRetryCount: Int = 3
 
         fun createProcessedMessage(): AppendOnlyPersistentMap<UUID, Instant, ProcessedMessage, String> {
@@ -150,9 +133,6 @@ class NodeMessagingClient(private val config: NodeConfiguration,
         var p2pConsumer: ClientConsumer? = null
         var session: ClientSession? = null
         var sessionFactory: ClientSessionFactory? = null
-        var rpcServer: RPCServer? = null
-        // Consumer for inbound client RPC messages.
-        var verificationResponseConsumer: ClientConsumer? = null
     }
 
     private val messagesToRedeliver = database.transaction {
@@ -160,11 +140,6 @@ class NodeMessagingClient(private val config: NodeConfiguration,
     }
 
     private val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
-
-    val verifierService = when (config.verifierType) {
-        VerifierType.InMemory -> InMemoryTransactionVerifierService(numberOfWorkers = 4)
-        VerifierType.OutOfProcess -> createOutOfProcessVerifierService()
-    }
 
     /** A registration to handle messages of different types */
     data class Handler(val topicSession: TopicSession,
@@ -209,7 +184,7 @@ class NodeMessagingClient(private val config: NodeConfiguration,
             var recipients: ByteArray = ByteArray(0)
     )
 
-    fun start(rpcOps: RPCOps, userService: RPCUserService) {
+    fun start() {
         state.locked {
             check(!started) { "start can't be called twice" }
             started = true
@@ -241,22 +216,6 @@ class NodeMessagingClient(private val config: NodeConfiguration,
 
             // Create a queue, consumer and producer for handling P2P network messages.
             p2pConsumer = session.createConsumer(P2P_QUEUE)
-
-            val myCert = loadKeyStore(config.sslKeystore, config.keyStorePassword).getX509Certificate(X509Utilities.CORDA_CLIENT_TLS)
-            rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, CordaX500Name.build(myCert.subjectX500Principal))
-
-            fun checkVerifierCount() {
-                if (session.queueQuery(SimpleString(VERIFICATION_REQUESTS_QUEUE_NAME)).consumerCount == 0) {
-                    log.warn("No connected verifier listening on $VERIFICATION_REQUESTS_QUEUE_NAME!")
-                }
-            }
-
-            if (config.verifierType == VerifierType.OutOfProcess) {
-                createQueueIfAbsent(VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME)
-                createQueueIfAbsent(verifierResponseAddress)
-                verificationResponseConsumer = session.createConsumer(verifierResponseAddress)
-                messagingExecutor.scheduleAtFixedRate(::checkVerifierCount, 0, 10, TimeUnit.SECONDS)
-            }
         }
 
         resumeMessageRedelivery()
@@ -309,14 +268,12 @@ class NodeMessagingClient(private val config: NodeConfiguration,
     /**
      * Starts the p2p event loop: this method only returns once [stop] has been called.
      */
-    fun run(serverControl: ActiveMQServerControl) {
+    fun run() {
         try {
             val consumer = state.locked {
                 check(started) { "start must be called first" }
                 check(!running) { "run can't be called twice" }
                 running = true
-                rpcServer!!.start(serverControl)
-                (verifierService as? OutOfProcessTransactionVerifierService)?.start(verificationResponseConsumer!!)
                 // If it's null, it means we already called stop, so return immediately.
                 p2pConsumer ?: return
             }
@@ -562,22 +519,6 @@ class NodeMessagingClient(private val config: NodeConfiguration,
     override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
         return NodeClientMessage(topicSession, data, uuid)
-    }
-
-    private fun createOutOfProcessVerifierService(): TransactionVerifierService {
-        return object : OutOfProcessTransactionVerifierService(metrics) {
-            override fun sendRequest(nonce: Long, transaction: LedgerTransaction) {
-                messagingExecutor.fetchFrom {
-                    state.locked {
-                        val message = session!!.createMessage(false)
-                        val request = VerifierApi.VerificationRequest(nonce, transaction, SimpleString(verifierResponseAddress))
-                        request.writeToClientMessage(message)
-                        producer!!.send(VERIFICATION_REQUESTS_QUEUE_NAME, message)
-                    }
-                }
-            }
-
-        }
     }
 
     // TODO Rethink PartyInfo idea and merging PeerAddress/ServiceAddress (the only difference is that Service address doesn't hold host and port)
