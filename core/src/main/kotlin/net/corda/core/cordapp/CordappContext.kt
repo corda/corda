@@ -1,8 +1,7 @@
 package net.corda.core.cordapp
 
+import com.typesafe.config.Config
 import net.corda.core.crypto.SecureHash
-
-// TODO: Add per app config
 
 /**
  * An app context provides information about where an app was loaded from, access to its classloader,
@@ -16,4 +15,4 @@ import net.corda.core.crypto.SecureHash
  * with the attachment containing those class files
  * @property classLoader the classloader used to load this cordapp's classes
  */
-class CordappContext(val cordapp: Cordapp, val attachmentId: SecureHash?, val classLoader: ClassLoader)
+class CordappContext(val cordapp: Cordapp, val attachmentId: SecureHash?, val classLoader: ClassLoader, val config: Config)

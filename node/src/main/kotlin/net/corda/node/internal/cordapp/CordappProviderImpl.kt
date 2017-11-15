@@ -1,10 +1,12 @@
 package net.corda.node.internal.cordapp
 
 import com.google.common.collect.HashBiMap
+import com.typesafe.config.Config
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.cordapp.CordappConfigProvider
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -14,7 +16,7 @@ import java.net.URL
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
+open class CordappProviderImpl(private val cordappLoader: CordappLoader, private val cordappConfigProvider: CordappConfigProvider, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
 
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
@@ -62,7 +64,12 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
      * @return A cordapp context for the given CorDapp
      */
     fun getAppContext(cordapp: Cordapp): CordappContext {
-        return CordappContext(cordapp, getCordappAttachmentId(cordapp), cordappLoader.appClassLoader)
+        return CordappContext(
+                cordapp,
+                getCordappAttachmentId(cordapp),
+                cordappLoader.appClassLoader,
+                cordappConfigProvider.getConfigByName(cordapp.name)
+        )
     }
 
     /**
