@@ -15,8 +15,9 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
-import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandle
@@ -29,11 +30,9 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
-import net.corda.node.utilities.ANSIProgressRenderer
 import net.corda.node.utilities.CordaPersistence
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
-import org.crsh.auth.AuthInfo
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
 import org.crsh.console.jline.TerminalFactory
@@ -257,20 +256,21 @@ object InteractiveShell {
             output.println("Flow ID ${stateObservable.id}")
 
             val result = maybeFollow(stateObservable.progress, { it as String }, output)
-            if (result is Future<*>) {
-                if (!result.isDone) {
-                    output.println("Waiting for completion or Ctrl-C ... ")
-                    output.flush()
-                }
-                try {
-                    result.get()
-                } catch (e: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                } catch (e: ExecutionException) {
-                    throw e.rootCause
-                } catch (e: InvocationTargetException) {
-                    throw e.rootCause
-                }
+            val result2 = maybeFollow(stateObservable.stepsTreeIndexFeed, { it.toString() }, output)
+            val result3 = maybeFollow(stateObservable.stepsTreeFeed, { it.toString() }, output)
+
+            if (!result.isDone || !result2.isDone || !!result3.isDone) {
+                output.println("Waiting for completion or Ctrl-C ... ")
+                output.flush()
+            }
+            try {
+                listOf(result, result2, result3).transpose().get()
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } catch (e: ExecutionException) {
+                throw e.rootCause
+            } catch (e: InvocationTargetException) {
+                throw e.rootCause
             }
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
@@ -419,7 +419,7 @@ object InteractiveShell {
         return result
     }
 
-    private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): CordaFuture<Unit>? {
+    private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): CordaFuture<Unit> {
         val printerFun = yamlMapper::writeValueAsString
         toStream.println(printerFun(response))
         toStream.flush()
@@ -445,8 +445,12 @@ object InteractiveShell {
         @Synchronized
         override fun onNext(t: Any?) {
             count++
+
             toStream.println("Observation $count: " + printerFun(t))
-            toStream.print("\u001b[1K")
+            toStream.append(27.toChar())
+            toStream.append('[')
+            toStream.append('0')
+            toStream.append('K')
             toStream.flush()
         }
 
@@ -458,17 +462,21 @@ object InteractiveShell {
         }
     }
 
-    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): OpenFuture<Unit>? {
+    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): CordaFuture<Unit> {
         // Match on a couple of common patterns for "important" observables. It's tough to do this in a generic
         // way because observables can be embedded anywhere in the object graph, and can emit other arbitrary
         // object graphs that contain yet more observables. So we just look for top level responses that follow
         // the standard "track" pattern, and print them until the user presses Ctrl-C
-        if (response == null) return null
+        if (response == null) return doneFuture(Unit)
 
         val observable: Observable<*> = when (response) {
             is Observable<*> -> response
-            is DataFeed<*, *> -> response.updates
-            else -> return null
+            is DataFeed<*, *> -> {
+                toStream.println("Snapshot")
+                toStream.println(response.snapshot)
+                response.updates
+            }
+            else -> return doneFuture(Unit)
         }
 
         val subscriber = PrintingSubscriber(printerFun, toStream)

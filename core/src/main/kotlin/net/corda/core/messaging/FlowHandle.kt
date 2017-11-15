@@ -31,6 +31,9 @@ interface FlowHandle<A> : AutoCloseable {
 interface FlowProgressHandle<A> : FlowHandle<A> {
     val progress: Observable<String>
 
+    val stepsTreeIndexFeed: DataFeed<Int, Int>?
+
+    val stepsTreeFeed: DataFeed<List<Pair<Int, String>>, List<Pair<Int, String>>>?
     /**
      * Use this function for flows whose returnValue and progress are not going to be used or tracked, so as to free up
      * server resources.
@@ -55,7 +58,9 @@ data class FlowHandleImpl<A>(
 data class FlowProgressHandleImpl<A>(
         override val id: StateMachineRunId,
         override val returnValue: CordaFuture<A>,
-        override val progress: Observable<String>) : FlowProgressHandle<A> {
+        override val progress: Observable<String>,
+        override val stepsTreeIndexFeed: DataFeed<Int, Int>? = null,
+        override val stepsTreeFeed: DataFeed<List<Pair<Int, String>>, List<Pair<Int, String>>>? = null) : FlowProgressHandle<A> {
 
     // Remember to add @Throws to FlowProgressHandle.close() if this throws an exception.
     override fun close() {

@@ -9,11 +9,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
@@ -27,6 +26,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
 class RPCOpsWithContext(val cordaRPCOps: CordaRPCOps, val user:User) : CordaRPCOps {
+
 
     class RPCContextRunner<T>(val user: User, val block:() -> T) : Thread() {
         private var result: CompletableFuture<T> = CompletableFuture()
@@ -45,6 +45,14 @@ class RPCOpsWithContext(val cordaRPCOps: CordaRPCOps, val user:User) : CordaRPCO
             join()
             return result
         }
+    }
+
+    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash {
+        return RPCContextRunner(user) { cordaRPCOps.uploadAttachmentWithMetadata(jar, uploader, filename) }.get().getOrThrow()
+    }
+
+    override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
+        return RPCContextRunner(user) { cordaRPCOps.queryAttachments(query, sorting) }.get().getOrThrow()
     }
 
     override fun nodeStateObservable(): Observable<NodeState> {
