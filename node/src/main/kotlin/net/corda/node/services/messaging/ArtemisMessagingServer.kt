@@ -236,6 +236,10 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
         // TODO remove the NODE_USER role once the webserver doesn't need it
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
+	/*
+ 	 * Changed here in order to start up Artemis without knowing upfront the list of RPC usernames.
+         * It seems working but not sure if entirely correct.
+	 */
 //       for (username in rpcUsers) {
             securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#"] = setOf(
                     nodeInternalRole,

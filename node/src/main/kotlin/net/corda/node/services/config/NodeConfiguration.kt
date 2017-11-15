@@ -23,6 +23,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val dataSourceProperties: Properties
     val database: Properties?
     val rpcUsers: List<User>
+    // Path to external Apache Shiro config file
     val shiroPluginIni: String?
     val devMode: Boolean
     val devModeOptions: DevModeOptions?

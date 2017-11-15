@@ -126,8 +126,7 @@ open class Node(configuration: NodeConfiguration,
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread-$sameVmNodeNumber", 1)
 
     /** Manage authentication and authorization of RPC calls*/
-    override val rpcSecurityManager = //DefaultSecurityManager(RPCRealmFactory.build(configuration))
-            RPCSecurityManagerFactory.build(configuration)
+    override val rpcSecurityManager = RPCSecurityManagerFactory.build(configuration)
 
     private var messageBroker: ArtemisMessagingServer? = null
 
