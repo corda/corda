@@ -99,10 +99,10 @@ The following design decisions are assumed by this design:
 
 1. [Near-term-target](./decisions/near-term-target.md): Hot-Cold HA (see below)
 2. [Medium-term target](./decisions/medium-term-target.md): Hot-Warm HA (see below)
-3. [External broker](./external-broker.md): Yes
-4. [Database message store](./db-msg-store.md): No
-5. [IP addressing mechanism](./ip-addressing.md): Load balancer
-6. [Crash shell start/stop](./crash-shell.md): No
+3. [External broker](./decisions/external-broker.md): Yes
+4. [Database message store](./decisions/db-msg-store.md): No
+5. [IP addressing mechanism](./decisions/ip-addressing.md): Load balancer
+6. [Crash shell start/stop](./decisions/crash-shell.md): No
 
 
 
