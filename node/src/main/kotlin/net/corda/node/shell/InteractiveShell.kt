@@ -14,6 +14,7 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
@@ -31,9 +32,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.node.services.messaging.RpcPermissions
-import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.ANSIProgressRenderer
-import net.corda.node.services.messaging.RpcContext
 import net.corda.node.utilities.CordaPersistence
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
@@ -88,17 +86,17 @@ object InteractiveShell {
 
     private var shell:Shell? = null
 
-    val SUPERUSER = User(ArtemisMessagingComponent.NODE_USER, "", setOf("ALL"))
+    private lateinit var nodeLegalName: CordaX500Name
 
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, userService: RPCUserService, identityService: IdentityService, database: CordaPersistence) {
+    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, userService: RPCUserService, identityService: IdentityService) {
         this.rpcOps = cordaRPCOps
         this.userService = userService
         this.identityService = identityService
-        this.database = database
+        this.nodeLegalName = configuration.myLegalName
         val dir = configuration.baseDirectory
         val runSshDeamon = configuration.sshd != null
 
@@ -133,8 +131,7 @@ object InteractiveShell {
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
             // Give whoever has local shell access administrator access to the node.
-            // TODO remove this after Shell switches to RPC
-            val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(), RpcPermissions.NONE)
+            val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(), RpcPermissions.ALL)
             CURRENT_RPC_CONTEXT.set(context)
             Emoji.renderIfSupported {
                 jlineProcessor.run()
@@ -173,7 +170,7 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, userService)
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, userService, nodeLegalName)
                 }
             }
             val attributes = mapOf(
@@ -184,7 +181,7 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, RPCOpsWithContext(rpcOps, SUPERUSER)))
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, RPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), RpcPermissions.ALL)))
         }
     }
 
