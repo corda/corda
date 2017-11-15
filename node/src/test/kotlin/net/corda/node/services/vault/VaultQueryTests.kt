@@ -95,26 +95,24 @@ class VaultQueryTests {
     }
 
     private fun setUpDb(_database: CordaPersistence, delay: Long = 0) {
-
-        _database.transaction {
-
-            // create new states
-            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 10, 10, Random(0L))
-            val linearStatesXYZ = services.fillWithSomeTestLinearStates(1, "XYZ")
-            val linearStatesJKL = services.fillWithSomeTestLinearStates(2, "JKL")
-            services.fillWithSomeTestLinearStates(3, "ABC")
-            val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-
-            // Total unconsumed states = 10 + 1 + 2 + 3 + 3 = 19
-
-            sleep(delay)
-
+        val (linearStatesJKL,linearStatesXYZ,dealStates) =
+            _database.transaction {
+                // create new states
+                services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 10, 10, Random(0L))
+                val linearStatesXYZ = services.fillWithSomeTestLinearStates(1, "XYZ")
+                val linearStatesJKL = services.fillWithSomeTestLinearStates(2, "JKL")
+                services.fillWithSomeTestLinearStates(3, "ABC")
+                val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+                // Total unconsumed states = 10 + 1 + 2 + 3 + 3 = 19
+                sleep(delay)
+                Triple(linearStatesJKL,linearStatesXYZ,dealStates)
+            }
+         _database.transaction {
             // consume some states
             services.consumeLinearStates(linearStatesXYZ.states.toList(), DUMMY_NOTARY)
             services.consumeLinearStates(linearStatesJKL.states.toList(), DUMMY_NOTARY)
             services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
             services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
-
             // Total unconsumed states = 4 + 3 + 2 + 1 (new cash change) = 10
             // Total consumed states = 6 + 1 + 2 + 1 = 10
         }
@@ -341,12 +339,15 @@ class VaultQueryTests {
 
     @Test
     fun `consumed states`() {
+        val (linearStates, dealStates) =
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             val linearStates = services.fillWithSomeTestLinearStates(2, "TEST") // create 2 states with same externalId
             services.fillWithSomeTestLinearStates(8)
             val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-
+            Pair(linearStates,dealStates)
+        }
+        database.transaction {
             services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
             services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
             services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
@@ -386,12 +387,15 @@ class VaultQueryTests {
 
     @Test
     fun `all states`() {
+        val (linearStates, dealStates) =
+            database.transaction {
+                services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+                val linearStates = services.fillWithSomeTestLinearStates(2, "TEST") // create 2 results with same UID
+                services.fillWithSomeTestLinearStates(8)
+                val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+                Pair(linearStates, dealStates)
+            }
         database.transaction {
-            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
-            val linearStates = services.fillWithSomeTestLinearStates(2, "TEST") // create 2 results with same UID
-            services.fillWithSomeTestLinearStates(8)
-            val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-
             services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
             services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
             services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY) // generates a new change state!
@@ -1205,12 +1209,15 @@ class VaultQueryTests {
 
     @Test
     fun `consumed linear heads`() {
+        val (linearStates, dealStates) =
+            database.transaction {
+                services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
+                val linearStates = services.fillWithSomeTestLinearStates(2, "TEST") // create 2 states with same externalId
+                services.fillWithSomeTestLinearStates(8)
+                val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+                Pair(linearStates,dealStates)
+            }
         database.transaction {
-            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
-            val linearStates = services.fillWithSomeTestLinearStates(2, "TEST") // create 2 states with same externalId
-            services.fillWithSomeTestLinearStates(8)
-            val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-
             services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
             services.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" }, DUMMY_NOTARY)
             services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
@@ -1376,15 +1383,19 @@ class VaultQueryTests {
 
     @Test
     fun `return consumed linear states for a given linear id`() {
-        val txns =
-                database.transaction {
-                    val txns = services.fillWithSomeTestLinearStates(1, "TEST")
-                    val linearState = txns.states.first()
-                    val linearState2 = services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
-                    val linearState3 = services.evolveLinearState(linearState2, DUMMY_NOTARY)  // consume current and produce new state reference
-                    services.evolveLinearState(linearState3, DUMMY_NOTARY)  // consume current and produce new state reference
-                    txns
-                }
+        val txns = database.transaction {
+            services.fillWithSomeTestLinearStates(1, "TEST")
+        }
+        val linearState2 = database.transaction {
+            val linearState = txns.states.first()
+            services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
+        }
+        val linearState3 = database.transaction {
+            services.evolveLinearState(linearState2, DUMMY_NOTARY)  // consume current and produce new state reference
+        }
+        database.transaction {
+            services.evolveLinearState(linearState3, DUMMY_NOTARY)  // consume current and produce new state reference
+        }
         database.transaction {
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
             val linearStateCriteria = LinearStateQueryCriteria(linearId = txns.states.map { it.state.data.linearId }, status = Vault.StateStatus.CONSUMED)
