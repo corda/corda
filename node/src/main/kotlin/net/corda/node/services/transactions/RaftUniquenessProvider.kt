@@ -29,6 +29,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
@@ -67,7 +68,7 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
     }
 
     @Entity
-    @Table(name = "notary_committed_states")
+    @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_states")
     class RaftState(
             @Id
             @Column(name = "id")
