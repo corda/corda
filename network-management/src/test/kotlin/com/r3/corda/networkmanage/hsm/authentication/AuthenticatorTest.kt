@@ -5,20 +5,19 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import org.junit.Before
 import org.junit.Test
-import java.io.Console
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AuthenticatorTest : TestBase() {
 
     private lateinit var provider: CryptoServerProvider
-    private lateinit var console: Console
+    private lateinit var inputReader: InputReader
 
     @Before
     fun setUp() {
         provider = mock()
         whenever(provider.cryptoServer).thenReturn(mock())
-        console = mock()
+        inputReader = mock()
     }
 
     @Test
@@ -28,7 +27,7 @@ class AuthenticatorTest : TestBase() {
         var executed = false
 
         // when
-        Authenticator(provider = provider, console = console).connectAndAuthenticate { _, _ -> executed = true }
+        Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _ -> executed = true }
 
         // then
         assertFalse(executed)
@@ -47,7 +46,7 @@ class AuthenticatorTest : TestBase() {
         var executed = false
 
         // when
-        Authenticator(provider = provider, console = console).connectAndAuthenticate { _, _ -> executed = true }
+        Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _ -> executed = true }
 
         // then
         verify(provider).loginPassword(username, password)
@@ -64,7 +63,7 @@ class AuthenticatorTest : TestBase() {
         var executed = false
 
         // when
-        Authenticator(provider = provider, console = console, mode = AuthMode.CARD_READER).connectAndAuthenticate { _, _ -> executed = true }
+        Authenticator(provider = provider, inputReader = inputReader, mode = AuthMode.CARD_READER).connectAndAuthenticate { _, _ -> executed = true }
 
         // then
         verify(provider).loginSign(username, ":cs2:cyb:USB0", null)
@@ -83,7 +82,7 @@ class AuthenticatorTest : TestBase() {
         var executed = false
 
         // when
-        Authenticator(provider = provider, console = console).connectAndAuthenticate { _, _ -> executed = true }
+        Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _ -> executed = true }
 
         // then
         verify(provider, times(3)).loginPassword(username, password)
@@ -99,11 +98,11 @@ class AuthenticatorTest : TestBase() {
     }
 
     private fun givenUserConsoleInputOnReadPassword(input: String) {
-        whenever(console.readPassword(any<String>())).thenReturn(input.toCharArray())
+        whenever(inputReader.readPassword(any<String>())).thenReturn(input)
     }
 
     private fun givenUserConsoleInputOnReadLine(input: String) {
-        whenever(console.readLine()).thenReturn(input)
+        whenever(inputReader.readLine()).thenReturn(input)
     }
 
 }

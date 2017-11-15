@@ -5,12 +5,12 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.HsmSimulator
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
+import com.r3.corda.networkmanage.hsm.authentication.InputReader
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
 import com.r3.corda.networkmanage.hsm.configuration.Parameters
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.io.Console
 import kotlin.test.assertTrue
 
 class HsmTest {
@@ -19,11 +19,11 @@ class HsmTest {
     @JvmField
     val hsmSimulator: HsmSimulator = HsmSimulator()
 
-    private var console: Console? = null
+    private lateinit var inputReader: InputReader
 
     @Before
     fun setUp() {
-        console = mock()
+        inputReader = mock()
     }
 
     @Test
@@ -35,9 +35,9 @@ class HsmTest {
                 keySpecifier = 1,
                 keyGroup = "*"
         )
-        whenever(console?.readLine()).thenReturn(hsmSimulator.cryptoUserCredentials().username)
-        whenever(console?.readPassword(any())).thenReturn(hsmSimulator.cryptoUserCredentials().password.toCharArray())
-        val authenticator = Authenticator(parameters.createProvider(), console = console)
+        whenever(inputReader.readLine()).thenReturn(hsmSimulator.cryptoUserCredentials().username)
+        whenever(inputReader.readPassword(any())).thenReturn(hsmSimulator.cryptoUserCredentials().password)
+        val authenticator = Authenticator(parameters.createProvider(), inputReader = inputReader)
         var executed = false
 
         // when

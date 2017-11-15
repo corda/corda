@@ -1,7 +1,6 @@
 package com.r3.corda.networkmanage.hsm.signer
 
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
-import com.r3.corda.networkmanage.hsm.authentication.readPassword
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.buildCertPath
@@ -36,7 +35,7 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
             // This should be changed once we allow for more certificates in the chain. Preferably we should use
             // keyStore.getCertificateChain(String) and assume entire chain is stored in the HSM (depending on the support).
             val caParentCertificate = keyStore.getCertificate(caParentCertificateName)
-            val caPrivateKeyPass = caPrivateKeyPass ?: readPassword("CA Private Key Password: ", authenticator.console)
+            val caPrivateKeyPass = caPrivateKeyPass ?: authenticator.readPassword("CA Private Key Password: ")
             val caCertAndKey = retrieveCertificateAndKeys(caCertificateName, caPrivateKeyPass, keyStore)
             toSign.forEach {
                 it.certPath = buildCertPath(createClientCertificate(caCertAndKey, it.request, validDays, provider), caParentCertificate)

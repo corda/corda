@@ -4,7 +4,6 @@ import CryptoServerJCE.CryptoServerProvider
 import com.r3.corda.networkmanage.hsm.configuration.Parameters
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.Console
 import java.nio.file.Path
 import kotlin.reflect.full.memberProperties
 
@@ -17,7 +16,7 @@ class Authenticator(private val provider: CryptoServerProvider,
                     private val authKeyFilePath: Path? = null,
                     private val authKeyFilePass: String? = null,
                     private val authStrengthThreshold: Int = 2,
-                    val console: Console? = System.console()) {
+                    inputReader: InputReader = ConsoleInputReader()) : InputReader by inputReader {
 
     /**
      * Interactively (using console) authenticates a user against the HSM. Once authentication is successful the
@@ -32,7 +31,7 @@ class Authenticator(private val provider: CryptoServerProvider,
             loop@ while (true) {
                 val user = if (autoUsername.isNullOrEmpty()) {
                     print("Enter User Name (or Q to quit): ")
-                    val input = readConsoleLine(console)
+                    val input = readLine()
                     if (input != null && "q" == input.toLowerCase()) {
                         authenticated.clear()
                         break
@@ -47,7 +46,7 @@ class Authenticator(private val provider: CryptoServerProvider,
                     AuthMode.KEY_FILE -> {
                         println("Authenticating using preconfigured key file")
                         val password = if (authKeyFilePass == null) {
-                            val input = readPassword("Enter key file password (or Q to quit): ", console)
+                            val input = readPassword("Enter key file password (or Q to quit): ")
                             if ("q" == input.toLowerCase()) {
                                 authenticated.clear()
                                 break@loop
@@ -60,7 +59,7 @@ class Authenticator(private val provider: CryptoServerProvider,
                         provider.loginSign(user, authKeyFilePath.toString(), password)
                     }
                     AuthMode.PASSWORD -> {
-                        val password = readPassword("Enter password (or Q to quit): ", console)
+                        val password = readPassword("Enter password (or Q to quit): ")
                         if ("q" == password.toLowerCase()) {
                             authenticated.clear()
                             break@loop
@@ -125,23 +124,4 @@ fun Parameters.createProvider(): CryptoServerProvider {
     val provider = CryptoServerProvider(cfg)
     cfg.close()
     return provider
-}
-
-/** Read password from console, do a readLine instead if console is null (e.g. when debugging in IDE). */
-internal fun readPassword(fmt: String, console: Console? = System.console()): String {
-    return if (console != null) {
-        String(console.readPassword(fmt))
-    } else {
-        print(fmt)
-        readLine()!!
-    }
-}
-
-/** Read console line */
-internal fun readConsoleLine(console: Console?): String? {
-    return if (console == null) {
-        readLine()
-    } else {
-        console.readLine()
-    }
 }
