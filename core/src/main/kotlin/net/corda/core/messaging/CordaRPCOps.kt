@@ -1,6 +1,10 @@
 package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.Actor
+import net.corda.core.context.AuthServiceId
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -23,13 +27,41 @@ import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
 
+private val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
+
 @CordaSerializable
-data class StateMachineInfo(
+data class StateMachineInfo @JvmOverloads constructor(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
         val initiator: FlowInitiator,
-        val progressTrackerStepAndUpdates: DataFeed<String, String>?
+        val progressTrackerStepAndUpdates: DataFeed<String, String>?,
+        val context: InvocationContext? = null
 ) {
+    fun context(): InvocationContext = context ?: contextFrom(initiator)
+
+    private fun contextFrom(initiator: FlowInitiator): InvocationContext {
+        var actor: Actor? = null
+        val origin: Origin
+        when (initiator) {
+            is FlowInitiator.RPC -> {
+                actor = Actor(Actor.Id(initiator.username), AuthServiceId("UNKNOWN"), unknownName)
+                origin = Origin.RPC(actor)
+            }
+            is FlowInitiator.Peer -> origin = Origin.Peer(initiator.party.name)
+            is FlowInitiator.Service -> origin = Origin.Service(initiator.serviceClassName, unknownName)
+            is FlowInitiator.Shell -> origin = Origin.Shell
+            is FlowInitiator.Scheduled -> origin = Origin.Scheduled(initiator.scheduledState)
+        }
+        return InvocationContext.newInstance(origin = origin, actor = actor)
+    }
+
+    fun copy(id: StateMachineRunId = this.id,
+             flowLogicClassName: String = this.flowLogicClassName,
+             initiator: FlowInitiator = this.initiator,
+             progressTrackerStepAndUpdates: DataFeed<String, String>? = this.progressTrackerStepAndUpdates): StateMachineInfo {
+        return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, context = context)
+    }
+
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
 }
 
@@ -221,7 +253,7 @@ interface CordaRPCOps : RPCOps {
     fun uploadAttachment(jar: InputStream): SecureHash
 
     /** Uploads a jar including metadata to the node, returns it's hash. */
-    fun uploadAttachmentWithMetadata(jar: InputStream, uploader:String, filename:String): SecureHash
+    fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash
 
     /** Queries attachments metadata */
     fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId>

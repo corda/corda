@@ -2,12 +2,10 @@ package net.corda.node.services.api
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.context.InvocationContext
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -18,7 +16,6 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
@@ -122,34 +119,28 @@ interface ServiceHubInternal : ServiceHub {
 }
 
 interface FlowStarter {
-    /**
-     * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
-     * defaults to [FlowInitiator.RPC] with username "Only For Testing".
-     */
-    @VisibleForTesting
-    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing")).getOrThrow()
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
-     * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
+     * @param context indicates who started the flow, see: [InvocationContext].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): CordaFuture<FlowStateMachine<T>>
+    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
-     * Note that you must be on the server thread to call this method. [flowInitiator] points how flow was started,
-     * See: [FlowInitiator].
+     * Note that you must be on the server thread to call this method. [context] points how flow was started,
+     * See: [InvocationContext].
      *
      * @throws net.corda.core.flows.IllegalFlowLogicException or IllegalArgumentException if there are problems with the
      * [logicType] or [args].
      */
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
-            flowInitiator: FlowInitiator,
+            context: InvocationContext,
             vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
         val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
         val logic: FlowLogic<T> = uncheckedCast(FlowLogicRefFactoryImpl.toFlowLogic(logicRef))
-        return startFlow(logic, flowInitiator, ourIdentity = null)
+        return startFlow(logic, context)
     }
 }
 

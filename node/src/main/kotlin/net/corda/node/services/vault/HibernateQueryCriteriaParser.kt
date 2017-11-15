@@ -12,7 +12,6 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
 import net.corda.node.services.persistence.NodeAttachmentService
 import org.hibernate.query.criteria.internal.expression.LiteralExpression
@@ -215,7 +214,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         // state references
         criteria.stateRefs?.let {
-            val persistentStateRefs = (criteria.stateRefs as List<StateRef>).map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
+            val persistentStateRefs = (criteria.stateRefs as List<StateRef>).map(::PersistentStateRef)
             val compositeKey = vaultStates.get<PersistentStateRef>("stateRef")
             predicateSet.add(criteriaBuilder.and(compositeKey.`in`(persistentStateRefs)))
         }

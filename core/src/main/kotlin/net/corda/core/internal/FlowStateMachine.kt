@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.context.InvocationContext
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
@@ -55,7 +56,7 @@ interface FlowStateMachine<R> {
     val logger: Logger
     val id: StateMachineRunId
     val resultFuture: CordaFuture<R>
-    val flowInitiator: FlowInitiator
+    val context: InvocationContext
     val ourIdentityAndCert: PartyAndCertificate
 
     @Suspendable

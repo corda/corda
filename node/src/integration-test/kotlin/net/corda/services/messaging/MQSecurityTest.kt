@@ -24,10 +24,7 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.chooseIdentity
-import net.corda.testing.configureTestSSL
+import net.corda.testing.*
 import net.corda.testing.internal.NodeBasedTest
 import net.corda.testing.messaging.SimpleMQClient
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException

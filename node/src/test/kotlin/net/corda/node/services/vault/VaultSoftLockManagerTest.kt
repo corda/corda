@@ -30,6 +30,7 @@ import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.rigorousMock
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Test
 import java.util.*

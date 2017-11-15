@@ -11,9 +11,13 @@ import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowInfo
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
@@ -262,26 +266,28 @@ class StateMachineManagerImpl(
     }
 
     private fun onSessionMessage(message: ReceivedMessage) {
+        val peer = message.peer
         val sessionMessage = try {
             message.data.deserialize<SessionMessage>()
         } catch (ex: Exception) {
-            logger.error("Received corrupt SessionMessage data from ${message.peer}")
+            logger.error("Received corrupt SessionMessage data from $peer")
             return
         }
-        val sender = serviceHub.networkMapCache.getPeerByLegalName(message.peer)
+        val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender)
                 is SessionInit -> onSessionInit(sessionMessage, message, sender)
             }
         } else {
-            logger.error("Unknown peer ${message.peer} in $sessionMessage")
+            logger.error("Unknown peer $peer in $sessionMessage")
         }
     }
 
     private fun onExistingSessionMessage(message: ExistingSessionMessage, sender: Party) {
         val session = openSessions[message.recipientSessionId]
         if (session != null) {
+            session.fiber.pushToLoggingContext()
             session.fiber.logger.trace { "Received $message on $session from $sender" }
             if (session.retryable) {
                 if (message is SessionConfirm && session.state is FlowSessionState.Initiated) {
@@ -327,6 +333,7 @@ class StateMachineManagerImpl(
     }
 
     private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
+
         logger.trace { "Received $sessionInit from $sender" }
         val senderSessionId = sessionInit.initiatorSessionId
 
@@ -350,9 +357,10 @@ class StateMachineManagerImpl(
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
             openSessions[session.ourSessionId] = session
-            // TODO Perhaps the session-init will specificy which of our multiple identies to use, which we would have to
-            // double-check is actually ours. However, what if we want to control how our identities gets used?
-            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
+            val context = InvocationContext.peer(sender.name)
+            val fiber = createFiber(flow, context)
+            fiber.pushToLoggingContext()
+            logger.info("Accepting flow session from party ${sender.name}. Session id for tracing purposes is ${sessionInit.initiatorSessionId}.")
             flowSession.sessionFlow = flow
             flowSession.stateMachine = fiber
             fiber.openSessions[Pair(flow, sender)] = session
@@ -407,13 +415,13 @@ class StateMachineManagerImpl(
         }
     }
 
-    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): FlowStateMachineImpl<T> {
+    private fun <T> createFiber(logic: FlowLogic<T>, context: InvocationContext, ourIdentity: Party? = null): FlowStateMachineImpl<T> {
         val fsm = FlowStateMachineImpl(
                 StateMachineRunId.createRandom(),
                 logic,
                 scheduler,
-                flowInitiator,
-                ourIdentity ?: serviceHub.myInfo.legalIdentities[0])
+                ourIdentity ?: serviceHub.myInfo.legalIdentities[0],
+                context)
         initFiber(fsm)
         return fsm
     }
@@ -423,7 +431,7 @@ class StateMachineManagerImpl(
         fiber.database = database
         fiber.serviceHub = serviceHub
         fiber.ourIdentityAndCert = serviceHub.myInfo.legalIdentitiesAndCerts.find { it.party == fiber.ourIdentity }
-                ?: throw IllegalStateException("Identity specified by ${fiber.id} (${fiber.ourIdentity}) is not one of ours!")
+                ?: throw IllegalStateException("Identity specified by ${fiber.id} (${fiber.ourIdentity.name}) is not one of ours!")
         fiber.actionOnSuspend = { ioRequest ->
             updateCheckpoint(fiber)
             // We commit on the fibers transaction that was copied across ThreadLocals during suspend
@@ -469,7 +477,7 @@ class StateMachineManagerImpl(
     private fun endAllFiberSessions(fiber: FlowStateMachineImpl<*>, result: Try<*>, propagated: Boolean) {
         openSessions.values.removeIf { session ->
             if (session.fiber == fiber) {
-                session.endSession((result as? Try.Failure)?.exception, propagated)
+                session.endSession(fiber.context, (result as? Try.Failure)?.exception, propagated)
                 true
             } else {
                 false
@@ -477,7 +485,7 @@ class StateMachineManagerImpl(
         }
     }
 
-    private fun FlowSessionInternal.endSession(exception: Throwable?, propagated: Boolean) {
+    private fun FlowSessionInternal.endSession(context: InvocationContext, exception: Throwable?, propagated: Boolean) {
         val initiatedState = state as? FlowSessionState.Initiated ?: return
         val sessionEnd = if (exception == null) {
             NormalSessionEnd(initiatedState.peerSessionId)
@@ -502,11 +510,11 @@ class StateMachineManagerImpl(
      *
      * Note that you must be on the [executor] thread.
      */
-    override fun <A> startFlow(flowLogic: FlowLogic<A>, flowInitiator: FlowInitiator, ourIdentity: Party?): CordaFuture<FlowStateMachine<A>> {
+    override fun <A> startFlow(flowLogic: FlowLogic<A>, context: InvocationContext): CordaFuture<FlowStateMachine<A>> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         val fiber = database.transaction {
-            val fiber = createFiber(flowLogic, flowInitiator, ourIdentity)
+            val fiber = createFiber(flowLogic, context)
             updateCheckpoint(fiber)
             fiber
         }

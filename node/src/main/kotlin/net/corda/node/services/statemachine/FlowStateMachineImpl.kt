@@ -15,6 +15,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
@@ -22,6 +23,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DatabaseTransaction
@@ -40,9 +42,8 @@ class FlowPermissionException(message: String) : FlowException(message)
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
-                              override val flowInitiator: FlowInitiator,
-        // Store the Party rather than the full cert path with PartyAndCertificate
-                              val ourIdentity: Party) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
+                              val ourIdentity: Party,
+                              override val context: InvocationContext) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
 
     companion object {
         // Used to work around a small limitation in Quasar.
@@ -254,7 +255,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
         val checkPermissionEvent = FlowPermissionAuditEvent(
                 serviceHub.clock.instant(),
-                flowInitiator,
+                context,
                 "Flow Permission Required: $permissionName",
                 extraAuditData,
                 logic.javaClass,
@@ -264,7 +265,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         serviceHub.auditService.recordAuditEvent(checkPermissionEvent)
         @Suppress("ConstantConditionIf")
         if (!permissionGranted) {
-            throw FlowPermissionException("User $flowInitiator not permissioned for $permissionName on flow $id")
+            throw FlowPermissionException("User ${context.principal()} not permissioned for $permissionName on flow $id")
         }
     }
 
@@ -272,7 +273,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
         val flowAuditEvent = FlowAppAuditEvent(
                 serviceHub.clock.instant(),
-                flowInitiator,
+                context,
                 comment,
                 extraAuditData,
                 logic.javaClass,
@@ -305,6 +306,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
         return result
     }
+
+    internal fun pushToLoggingContext() = context.pushToLoggingContext()
 
     /**
      * This method will suspend the state machine and wait for incoming session init response from other party.
@@ -392,6 +395,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         session.retryable = retryable
         val (version, initiatingFlowClass) = session.flow.javaClass.flowVersionAndInitiatingClass
         val payloadBytes = firstPayload?.serialize(context = SerializationDefaults.P2P_CONTEXT)
+        logger.info("Initiating flow session with party ${otherParty.name}. Session id for tracing purposes is ${session.ourSessionId}.")
         val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass.name, version, session.flow.javaClass.appName, payloadBytes)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {

@@ -4,7 +4,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.messaging.rpcContext
-import net.corda.node.services.messaging.requirePermission
 import net.corda.nodeapi.User
 import net.corda.testing.internal.RPCDriverExposedDSLInterface
 import net.corda.testing.internal.rpcDriver

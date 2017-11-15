@@ -13,6 +13,7 @@ import net.corda.testing.MINI_CORP
 import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
