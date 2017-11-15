@@ -1352,7 +1352,7 @@ class VaultQueryTests {
         val parties = listOf(MINI_CORP)
         database.transaction {
             services.fillWithSomeTestLinearStates(2, "TEST")
-            services.fillWithSomeTestDeals(listOf("456"), parties)
+            services.fillWithSomeTestDeals(listOf("456"), participants = parties)
             services.fillWithSomeTestDeals(listOf("123", "789"))
 
             // DOCSTART VaultQueryExample11

@@ -4,6 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
@@ -56,8 +57,7 @@ class VaultWithCashTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
-        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(DUMMY_CASH_ISSUER_KEY, DUMMY_NOTARY_KEY),
-                cordappPackages = cordappPackages)
+        val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = cordappPackages, keys = listOf(generateKeyPair(), DUMMY_NOTARY_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second
         issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
@@ -303,7 +303,7 @@ class VaultWithCashTest {
             cash.forEach { println(it.state.data.amount) }
         }
         database.transaction {
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
         }
         database.transaction {
             val deals = vaultService.queryBy<DummyDealContract.State>().states
@@ -333,7 +333,7 @@ class VaultWithCashTest {
         val freshKey = services.keyManagementService.freshKey()
         val freshIdentity = AnonymousParty(freshKey)
         database.transaction {
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
         }
         val deals =
                 database.transaction {
