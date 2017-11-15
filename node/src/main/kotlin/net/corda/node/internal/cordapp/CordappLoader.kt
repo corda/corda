@@ -69,7 +69,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getCordappsPath(baseDir)))
 
         // Cache for CordappLoaders to avoid costly classpath scanning
-        private val cordappLoadersCache = LRUMap<Any, CordappLoader>(1000)
+        private val cordappLoadersCache = LRUMap<List<*>, CordappLoader>(1000)
 
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
