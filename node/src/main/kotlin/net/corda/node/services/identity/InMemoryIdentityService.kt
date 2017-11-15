@@ -105,6 +105,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         val candidate = partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
         return if (candidate != null) {
+            require(party.nameOrNull() == null || party.nameOrNull() == candidate.name) { "Candidate party ${candidate} does not match expected ${party}" }
             wellKnownPartyFromX500Name(candidate.name)
         } else {
             null
