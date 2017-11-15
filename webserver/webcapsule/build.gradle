@@ -10,6 +10,12 @@ description 'Corda node web server capsule'
 
 configurations {
     runtimeArtifacts
+    capsuleRuntime
+}
+
+dependencies {
+    // TypeSafe Config: for simple and human friendly config files.
+    capsuleRuntime "com.typesafe:config:$typesafe_config_version"
 }
 
 // Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
@@ -28,9 +34,11 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').compileJava
             project(':webserver').jar,
             project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
             project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
-            "$rootDir/config/dev/log4j2.xml"
+            "$rootDir/config/dev/log4j2.xml",
+            "$rootDir/node/build/resources/main/reference.conf"
     )
     from 'NOTICE' // Copy CDDL notice
+    from configurations.capsuleRuntime.files.collect { zipTree(it) }
 
     capsuleManifest {
         applicationVersion = corda_release_version
