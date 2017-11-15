@@ -216,12 +216,12 @@ To move towards more automatic failover handling we need to ensure that the node
 
 To this end I would suggest packages of work that include:
 
-1.	Move the broker out of the node, which will require having a protocol that can be used to signal bridge creation and which decouples the network map. This is in line with the Flow work anyway.
-2.Create a mastering solution, probably using Atomix.IO although this might require a solution with a minimum of three nodes to avoid split brain issues. Ideally this service should be extensible in the future to lead towards an eventual state with Flow level sharding. Alternatively, we may be able to add a quick enterprise adaptor to ZooKeeper as master selector if time is tight. This will inevitably impact upon configuration and deployment support.
-3.Test the leakage when we repeated start-stop the Node class and fix any resource leaks, or deadlocks that occur at shutdown.
-4.Switch the Artemis client code to be able to use the HA mode connection type and thus take advantage of the rapid failover code. Also, ensure that we can support multiple public IP addresses reported in the network map.
-5.Implement proper detection and handling of disconnect from the external database and/or Artemis broker, which should immediately drop the master status of the node and flush any incomplete flows.
-6.We should start looking at how to make RPC proxies recover from disconnect/failover, although this is probably not a top priority. However, it would be good to capture the missed results of completed flows and ensure the API allows clients to unregister/re-register Observables.
+1. Move the broker out of the node, which will require having a protocol that can be used to signal bridge creation and which decouples the network map. This is in line with the Flow work anyway.
+2. Create a mastering solution, probably using Atomix.IO although this might require a solution with a minimum of three nodes to avoid split brain issues. Ideally this service should be extensible in the future to lead towards an eventual state with Flow level sharding. Alternatively, we may be able to add a quick enterprise adaptor to ZooKeeper as master selector if time is tight. This will inevitably impact upon configuration and deployment support.
+3. Test the leakage when we repeated start-stop the Node class and fix any resource leaks, or deadlocks that occur at shutdown.
+4. Switch the Artemis client code to be able to use the HA mode connection type and thus take advantage of the rapid failover code. Also, ensure that we can support multiple public IP addresses reported in the network map.
+5. Implement proper detection and handling of disconnect from the external database and/or Artemis broker, which should immediately drop the master status of the node and flush any incomplete flows.
+6. We should start looking at how to make RPC proxies recover from disconnect/failover, although this is probably not a top priority. However, it would be good to capture the missed results of completed flows and ensure the API allows clients to unregister/re-register Observables.
 
 ## The Future
 
