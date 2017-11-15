@@ -5,6 +5,7 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
@@ -51,6 +52,7 @@ open class MockServices(
         cordappLoader: CordappLoader,
         override val validatedTransactions: WritableTransactionStorage,
         protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions),
+        private val initialIdentityName: CordaX500Name = MEGA_CORP.name,
         vararg val keys: KeyPair
 ) : ServiceHub, StateLoader by stateLoader {
     companion object {
@@ -106,14 +108,28 @@ open class MockServices(
         @JvmStatic
         fun makeTestDatabaseAndMockServices(keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
                                             createIdentityService: () -> IdentityService = { makeTestIdentityService() },
-                                            cordappPackages: List<String> = emptyList()): Pair<CordaPersistence, MockServices> {
+                                            cordappPackages: List<String> = emptyList()): Pair<CordaPersistence, MockServices>
+            = makeTestDatabaseAndMockServices(keys, createIdentityService, cordappPackages, MEGA_CORP.name)
+
+        /**
+         * Makes database and mock services appropriate for unit tests.
+         * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
+         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defauts to [InMemoryIdentityService].
+         * @param initialIdentityName the name of the first (typically sole) identity the services will represent.
+         * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
+         */
+        @JvmStatic
+        fun makeTestDatabaseAndMockServices(keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
+                                            createIdentityService: () -> IdentityService = { makeTestIdentityService() },
+                                            cordappPackages: List<String> = emptyList(),
+                                            initialIdentityName: CordaX500Name): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val databaseProperties = makeTestDatabaseProperties()
             val identityServiceRef: IdentityService by lazy { createIdentityService() }
             val database = configureDatabase(dataSourceProps, databaseProperties, { identityServiceRef }, NodeSchemaService(cordappLoader))
             val mockService = database.transaction {
-                object : MockServices(cordappLoader, *(keys.toTypedArray())) {
+                object : MockServices(cordappLoader, initialIdentityName = initialIdentityName, keys = *(keys.toTypedArray())) {
                     override val identityService: IdentityService = database.transaction { identityServiceRef }
                     override val vaultService: VaultServiceInternal = makeVaultService(database.hibernateConfig)
 
@@ -132,7 +148,7 @@ open class MockServices(
         }
     }
 
-    private constructor(cordappLoader: CordappLoader, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), keys = *keys)
+    private constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name = MEGA_CORP.name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), initialIdentityName = initialIdentityName, keys = *keys)
     constructor(cordappPackages: List<String>, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), keys = *keys)
     constructor(vararg keys: KeyPair) : this(emptyList(), *keys)
     constructor() : this(generateKeyPair())
@@ -159,7 +175,7 @@ open class MockServices(
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo
         get() {
-            val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
+            val identity = getTestPartyAndCertificate(initialIdentityName, key.public)
             return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
         }
     override val myNodeStateObservable: Observable<NodeState>

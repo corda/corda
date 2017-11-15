@@ -54,11 +54,17 @@ class CashTests {
     lateinit var database: CordaPersistence
     private lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
 
+    private lateinit var miniCorpAnonymised: AnonymousParty
+    private val CHARLIE_ANONYMISED = CHARLIE_IDENTITY.party.anonymise()
+
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
         megaCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), MEGA_CORP_KEY)
-        val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = listOf("net.corda.finance.contracts.asset"), keys = listOf(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY))
+        val databaseAndServices = makeTestDatabaseAndMockServices(
+                cordappPackages = listOf("net.corda.finance.contracts.asset"),
+                initialIdentityName = MINI_CORP.name,
+                keys = listOf(OUR_KEY, MINI_CORP_KEY))
         database = databaseAndServices.first
         miniCorpServices = databaseAndServices.second
 
@@ -73,6 +79,7 @@ class CashTests {
             miniCorpServices.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
                     ownedBy = OUR_IDENTITY_1, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
         }
+        miniCorpAnonymised = miniCorpServices.myInfo.singleIdentityAndCert().party.anonymise()
         database.transaction {
             vaultStatesUnconsumed = miniCorpServices.vaultService.queryBy<Cash.State>().states
         }
@@ -477,9 +484,6 @@ class CashTests {
     private val OUR_IDENTITY_1: AbstractParty get() = AnonymousParty(OUR_KEY.public)
     private val OUR_IDENTITY_AND_CERT = getTestPartyAndCertificate(CordaX500Name(organisation = "Me", locality = "London", country = "GB"), OUR_KEY.public)
 
-    private val THEIR_IDENTITY_1 = AnonymousParty(MINI_CORP_PUBKEY)
-    private val THEIR_IDENTITY_2 = AnonymousParty(CHARLIE_PUBKEY)
-
     private fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
             StateAndRef(
                     TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), OUR_IDENTITY_1), Cash.PROGRAM_ID, DUMMY_NOTARY),
@@ -590,12 +594,12 @@ class CashTests {
     fun generateSimpleDirectSpend() {
         val wtx =
                 database.transaction {
-                    makeSpend(100.DOLLARS, THEIR_IDENTITY_1)
+                    makeSpend(100.DOLLARS, miniCorpAnonymised)
                 }
         database.transaction {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             assertEquals(vaultState.ref, wtx.inputs[0])
-            assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1), wtx.getOutput(0))
+            assertEquals(vaultState.state.data.copy(owner = miniCorpAnonymised), wtx.getOutput(0))
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
@@ -615,7 +619,7 @@ class CashTests {
     fun generateSimpleSpendWithChange() {
         val wtx =
                 database.transaction {
-                    makeSpend(10.DOLLARS, THEIR_IDENTITY_1)
+                    makeSpend(10.DOLLARS, miniCorpAnonymised)
                 }
         database.transaction {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
@@ -630,7 +634,7 @@ class CashTests {
             val changeOwner = (likelyChangeState as Cash.State).owner
             assertEquals(1, miniCorpServices.keyManagementService.filterMyKeys(setOf(changeOwner.owningKey)).toList().size)
             assertEquals(vaultState.ref, wtx.inputs[0])
-            assertEquals(vaultState.state.data.copy(owner = THEIR_IDENTITY_1, amount = 10.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
+            assertEquals(vaultState.state.data.copy(owner = miniCorpAnonymised, amount = 10.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
             assertEquals(vaultState.state.data.copy(amount = changeAmount, owner = changeOwner), wtx.outputs[1].data)
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
@@ -640,14 +644,14 @@ class CashTests {
     fun generateSpendWithTwoInputs() {
         val wtx =
                 database.transaction {
-                    makeSpend(500.DOLLARS, THEIR_IDENTITY_1)
+                    makeSpend(500.DOLLARS, miniCorpAnonymised)
                 }
         database.transaction {
             val vaultState0 = vaultStatesUnconsumed.elementAt(0)
             val vaultState1 = vaultStatesUnconsumed.elementAt(1)
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
-            assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.getOutput(0))
+            assertEquals(vaultState0.state.data.copy(owner = miniCorpAnonymised, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.getOutput(0))
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
@@ -656,7 +660,7 @@ class CashTests {
     fun generateSpendMixedDeposits() {
         val wtx =
                 database.transaction {
-                    val wtx = makeSpend(580.DOLLARS, THEIR_IDENTITY_1)
+                    val wtx = makeSpend(580.DOLLARS, miniCorpAnonymised)
                     assertEquals(3, wtx.inputs.size)
                     wtx
                 }
@@ -667,8 +671,8 @@ class CashTests {
             assertEquals(vaultState0.ref, wtx.inputs[0])
             assertEquals(vaultState1.ref, wtx.inputs[1])
             assertEquals(vaultState2.ref, wtx.inputs[2])
-            assertEquals(vaultState0.state.data.copy(owner = THEIR_IDENTITY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
-            assertEquals(vaultState2.state.data.copy(owner = THEIR_IDENTITY_1), wtx.outputs[0].data)
+            assertEquals(vaultState0.state.data.copy(owner = miniCorpAnonymised, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
+            assertEquals(vaultState2.state.data.copy(owner = miniCorpAnonymised), wtx.outputs[0].data)
             assertEquals(OUR_IDENTITY_1.owningKey, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
         }
     }
@@ -678,12 +682,12 @@ class CashTests {
         database.transaction {
 
             val e: InsufficientBalanceException = assertFailsWith("balance") {
-                makeSpend(1000.DOLLARS, THEIR_IDENTITY_1)
+                makeSpend(1000.DOLLARS, miniCorpAnonymised)
             }
             assertEquals((1000 - 580).DOLLARS, e.amountMissing)
 
             assertFailsWith(InsufficientBalanceException::class) {
-                makeSpend(81.SWISS_FRANCS, THEIR_IDENTITY_1)
+                makeSpend(81.SWISS_FRANCS, miniCorpAnonymised)
             }
         }
     }
@@ -815,13 +819,15 @@ class CashTests {
     fun multiSpend() {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         database.transaction {
+            val identity = miniCorpServices.myInfo.singleIdentityAndCert()
+            val changeIdentity = miniCorpServices.keyManagementService.freshKeyAndCert(identity, false)
             val payments = listOf(
-                    PartyAndAmount(THEIR_IDENTITY_1, 400.DOLLARS),
-                    PartyAndAmount(THEIR_IDENTITY_2, 150.DOLLARS)
+                    PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
+                    PartyAndAmount(CHARLIE_ANONYMISED, 150.DOLLARS)
             )
-            Cash.generateSpend(miniCorpServices, tx, payments)
+            Cash.generateSpend(miniCorpServices, tx, payments, changeIdentity)
         }
-        val wtx = tx.toWireTransaction(miniCorpServices)
+        val wtx = tx.toWireTransaction(megaCorpServices)
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
         assertEquals(4, wtx.outputs.size)
         assertEquals(80.DOLLARS, out(0).amount.withoutIssuer())
