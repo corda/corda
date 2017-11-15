@@ -34,7 +34,7 @@ import net.corda.testing.driver.driver
 import org.junit.Test
 import rx.Observable
 
-class NodeMonitorModelTest {
+class NodeMonitorModelTest : IntegrationTest() {
     private lateinit var aliceNode: NodeInfo
     private lateinit var bobNode: NodeInfo
     private lateinit var notaryParty: Party

@@ -26,6 +26,7 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.testing.IntegrationTest
 import net.corda.testing.chooseIdentity
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -41,7 +42,7 @@ import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class BFTNotaryServiceTests {
+class BFTNotaryServiceTests : IntegrationTest() {
     private lateinit var mockNet: MockNetwork
     private lateinit var notary: Party
     private lateinit var node: StartedNode<MockNode>

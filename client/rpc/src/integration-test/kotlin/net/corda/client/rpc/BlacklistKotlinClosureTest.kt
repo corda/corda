@@ -8,11 +8,12 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.ALICE
+import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 
-class BlacklistKotlinClosureTest {
+class BlacklistKotlinClosureTest : IntegrationTest() {
     companion object {
         const val EVIL: Long = 666
     }

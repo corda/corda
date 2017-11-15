@@ -24,7 +24,7 @@ import java.time.Duration
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 
-class RPCStabilityTests {
+class RPCStabilityTests : IntegrationTest() {
 
     object DummyOps : RPCOps {
         override val protocolVersion = 0

@@ -55,7 +55,6 @@ class NodePerformanceTests : IntegrationTest() {
     @Before
     fun before() {
         checkQuasarAgent()
-        super.setUp()
     }
 
     @Test

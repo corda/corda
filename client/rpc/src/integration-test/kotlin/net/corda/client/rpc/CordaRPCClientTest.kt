@@ -49,7 +49,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     }
 
     @Before
-    fun setUp() {
+    override fun setUp() {
+        super.setUp()
         node = startNode(ALICE.name, rpcUsers = listOf(rpcUser))
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }

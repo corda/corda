@@ -63,6 +63,7 @@ open class MockServices(
 
         private fun readDatabaseConfig(nodeName: String? = null, postifx: String? = null): Config {
             val standarizedNodeName = if (nodeName!= null) nodeName.replace(" ", "").replace("-", "_") else null
+            //in case of H2, the same db instance runs for all integration tests, so adding additional variable postfix to use unique db user/schema each time
             val h2InstanceName =  if (postifx != null) standarizedNodeName + "_" + postifx  else standarizedNodeName
             val parseOptions = ConfigParseOptions.defaults()
             val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider") + ".conf", parseOptions.setAllowMissing(true))
@@ -70,7 +71,7 @@ open class MockServices(
             val nodeOrganizationNameConfig = if (standarizedNodeName != null) configOf("nodeOrganizationName" to standarizedNodeName) else ConfigFactory.empty()
             val defaultProps = Properties()
             defaultProps.setProperty("dataSourceProperties.dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            defaultProps.setProperty("dataSourceProperties.dataSource.url", "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=100;DB_CLOSE_ON_EXIT=TRUE")//;TRACE_LEVEL_SYSTEM_OUT=4")
+            defaultProps.setProperty("dataSourceProperties.dataSource.url", "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
             defaultProps.setProperty("dataSourceProperties.dataSource.user", "sa")
             defaultProps.setProperty("dataSourceProperties.dataSource.password", "")
             val defaultConfig = ConfigFactory.parseProperties(defaultProps, parseOptions)
