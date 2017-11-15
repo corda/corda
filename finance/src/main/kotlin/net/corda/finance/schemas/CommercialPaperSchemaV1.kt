@@ -51,8 +51,8 @@ object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSche
             @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var faceValueIssuerPartyHash: String,
 
-            @Column(name = "face_value_issuer_ref", columnDefinition = "varchar(16)")
-            @Type(type = "bytes-as-hex")
-            var faceValueIssuerRef: ByteSequence
+            // TODO: store the raw issuer reference contents in a separate join table
+            @Column(name = "face_value_issuer_ref", length = MAX_HASH_HEX_SIZE)
+            var faceValueIssuerRef: String
     ) : PersistentState()
 }

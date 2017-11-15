@@ -3,6 +3,7 @@ package net.corda.finance.contracts
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys.NULL_PARTY
+import net.corda.core.crypto.toHashedString
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -83,7 +84,7 @@ class CommercialPaper : Contract {
                         faceValue = this.faceValue.quantity,
                         currency = this.faceValue.token.product.currencyCode,
                         faceValueIssuerPartyHash = this.faceValue.token.issuer.party.owningKey.toStringShort(),
-                        faceValueIssuerRef = this.faceValue.token.issuer.reference
+                        faceValueIssuerRef = this.faceValue.token.issuer.reference.toHashedString()
                 )
             /** Additional schema mappings would be added here (eg. CommercialPaperV2, ...) */
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")

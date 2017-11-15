@@ -39,8 +39,8 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
             @Column(name = "issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var issuerPartyHash: String,
 
-            @Column(name = "issuer_ref", columnDefinition = "varchar(16)")
-            @Type(type = "bytes-as-hex")
-            var issuerRef: ByteSequence
+            // TODO: store the raw issuer reference contents in a separate join table
+            @Column(name = "issuer_ref_hash", length = MAX_HASH_HEX_SIZE)
+            var issuerRefHash: String
     ) : PersistentState()
 }
