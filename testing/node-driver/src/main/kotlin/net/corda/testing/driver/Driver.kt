@@ -37,7 +37,6 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.setGlobalSerialization
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -61,9 +60,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
-
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
@@ -171,8 +168,6 @@ interface DriverDSLExposedInterface : CordformContext {
      * @param maximumHeapSize Argument for JVM -Xmx option e.g. "200m".
      */
     fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle>
-
-    fun waitForAllNodesToFinish()
 
     /**
      * Polls a function until it returns a non-null value. Note that there is no timeout on the polling.
@@ -338,6 +333,7 @@ fun <A> driver(
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
+        waitForAllNodesToFinish: Boolean = defaultParameters.waitForNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: DriverDSLExposedInterface.() -> A
@@ -351,6 +347,7 @@ fun <A> driver(
                     useTestClock = useTestClock,
                     isDebug = isDebug,
                     startNodesInProcess = startNodesInProcess,
+                    waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan
             ),
@@ -385,6 +382,7 @@ data class DriverParameters(
         val useTestClock: Boolean = false,
         val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
+        val waitForNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
         val extraCordappPackagesToScan: List<String> = emptyList()
 ) {
@@ -396,6 +394,7 @@ data class DriverParameters(
     fun setUseTestClock(useTestClock: Boolean) = copy(useTestClock = useTestClock)
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)
     fun setStartNodesInProcess(startNodesInProcess: Boolean) = copy(startNodesInProcess = startNodesInProcess)
+    fun setTerminateNodesOnShutdown(terminateNodesOnShutdown: Boolean) = copy(waitForNodesToFinish = terminateNodesOnShutdown)
     fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun setNotarySpecs(notarySpecs: List<NotarySpec>) = copy(notarySpecs = notarySpecs)
 }
@@ -446,6 +445,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
+        waitForNodesToFinish: Boolean = defaultParameters.waitForNodesToFinish,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
@@ -462,6 +462,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
                     useTestClock = useTestClock,
                     isDebug = isDebug,
                     startNodesInProcess = startNodesInProcess,
+                    waitForNodesToFinish = waitForNodesToFinish,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     notarySpecs = notarySpecs
             )
@@ -567,6 +568,7 @@ class DriverDSL(
         val useTestClock: Boolean,
         val isDebug: Boolean,
         val startNodesInProcess: Boolean,
+        val waitForNodesToFinish: Boolean,
         extraCordappPackagesToScan: List<String>,
         val notarySpecs: List<NotarySpec>
 ) : DriverDSLInternalInterface {
@@ -586,7 +588,7 @@ class DriverDSL(
     private lateinit var networkParameters: NetworkParametersCopier
 
     class State {
-        val processes = ArrayList<CordaFuture<Process>>()
+        val processes = ArrayList<Process>()
     }
 
     private val state = ThreadBox(State())
@@ -600,20 +602,12 @@ class DriverDSL(
         Paths.get(quasarFileUrl.toURI()).toString()
     }
 
-    fun registerProcess(process: CordaFuture<Process>) {
-        shutdownManager.registerProcessShutdown(process)
-        state.locked {
-            processes.add(process)
-        }
-    }
-
-    override fun waitForAllNodesToFinish() = state.locked {
-        processes.transpose().get().forEach {
-            it.waitFor()
-        }
-    }
-
     override fun shutdown() {
+        if (waitForNodesToFinish) {
+            state.locked {
+                processes.forEach { it.waitFor() }
+            }
+        }
         _shutdownManager?.shutdown()
         _executorService?.shutdownNow()
     }
@@ -708,9 +702,10 @@ class DriverDSL(
 
     override fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val processFuture = DriverDSL.startWebserver(executorService, handle, debugPort, maximumHeapSize)
-        registerProcess(processFuture)
-        return processFuture.map { queryWebserver(handle, it) }
+        val process = DriverDSL.startWebserver(handle, debugPort, maximumHeapSize)
+        shutdownManager.registerProcessShutdown(process)
+        val webReadyFuture = addressMustBeBoundFuture(executorService, handle.webAddress, process)
+        return webReadyFuture.map { queryWebserver(handle, process) }
     }
 
     override fun start() {
@@ -892,18 +887,22 @@ class DriverDSL(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val processFuture = startOutOfProcessNode(executorService, configuration, config, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize)
-            registerProcess(processFuture)
-            return processFuture.flatMap { process ->
+            val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize)
+            if (waitForNodesToFinish) {
+                state.locked {
+                    processes += process
+                }
+            } else {
+                shutdownManager.registerProcessShutdown(process)
+            }
+            val p2pReadyFuture = addressMustBeBoundFuture(executorService, configuration.p2pAddress, process)
+            return p2pReadyFuture.flatMap {
                 val processDeathFuture = poll(executorService, "process death") {
                     if (process.isAlive) null else process
                 }
                 establishRpc(configuration, processDeathFuture).flatMap { rpc ->
                     // Check for all nodes to have all other nodes in background in case RPC is failing over:
-                    val forked = executorService.fork {
-                        allNodesConnected(rpc)
-                    }
-                    val networkMapFuture = forked.flatMap { it }
+                    val networkMapFuture = executorService.fork { allNodesConnected(rpc) }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
                             throw ListenProcessDeathException(configuration.p2pAddress, process)
@@ -962,7 +961,6 @@ class DriverDSL(
         }
 
         private fun startOutOfProcessNode(
-                executorService: ScheduledExecutorService,
                 nodeConf: NodeConfiguration,
                 config: Config,
                 quasarJarPath: String,
@@ -970,70 +968,58 @@ class DriverDSL(
                 overriddenSystemProperties: Map<String, String>,
                 cordappPackages: List<String>,
                 maximumHeapSize: String
-        ): CordaFuture<Process> {
-            val processFuture = executorService.fork {
-                log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
-                // Write node.conf
-                writeConfig(nodeConf.baseDirectory, "node.conf", config)
+        ): Process {
+            log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
+            // Write node.conf
+            writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
-                val systemProperties = overriddenSystemProperties + mapOf(
-                        "name" to nodeConf.myLegalName,
-                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
-                        Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator),
-                        "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
-                )
-                // See experimental/quasar-hook/README.md for how to generate.
-                val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
-                        "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
-                        "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
-                        "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
-                        "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
-                        "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
-                        "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
-                val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
-                        "-javaagent:$quasarJarPath=$excludePattern"
-                val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
+            val systemProperties = overriddenSystemProperties + mapOf(
+                    "name" to nodeConf.myLegalName,
+                    "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
+                    Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator),
+                    "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
+            )
+            // See experimental/quasar-hook/README.md for how to generate.
+            val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
+                    "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
+                    "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
+                    "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
+                    "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
+                    "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
+                    "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
+            val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
+                    "-javaagent:$quasarJarPath=$excludePattern"
+            val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
-                ProcessUtilities.startCordaProcess(
-                        className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
-                        arguments = listOf(
-                                "--base-directory=${nodeConf.baseDirectory}",
-                                "--logging-level=$loggingLevel",
-                                "--no-local-shell"
-                        ),
-                        jdwpPort = debugPort,
-                        extraJvmArguments = extraJvmArguments,
-                        errorLogPath = nodeConf.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
-                        workingDirectory = nodeConf.baseDirectory,
-                        maximumHeapSize = maximumHeapSize
-                )
-            }
-            return processFuture.flatMap { process ->
-                addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process }
-            }
+            return ProcessUtilities.startCordaProcess(
+                    className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
+                    arguments = listOf(
+                            "--base-directory=${nodeConf.baseDirectory}",
+                            "--logging-level=$loggingLevel",
+                            "--no-local-shell"
+                    ),
+                    jdwpPort = debugPort,
+                    extraJvmArguments = extraJvmArguments,
+                    errorLogPath = nodeConf.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
+                    workingDirectory = nodeConf.baseDirectory,
+                    maximumHeapSize = maximumHeapSize
+            )
         }
 
-        private fun startWebserver(
-                executorService: ScheduledExecutorService,
-                handle: NodeHandle,
-                debugPort: Int?,
-                maximumHeapSize: String
-        ): CordaFuture<Process> {
-            return executorService.fork {
-                val className = "net.corda.webserver.WebServer"
-                ProcessUtilities.startCordaProcess(
-                        className = className, // cannot directly get class for this, so just use string
-                        arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
-                        jdwpPort = debugPort,
-                        extraJvmArguments = listOf(
-                                "-Dname=node-${handle.configuration.p2pAddress}-webserver",
-                                "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
-                        ),
-                        errorLogPath = Paths.get("error.$className.log"),
-                        workingDirectory = null,
-                        maximumHeapSize = maximumHeapSize
-                )
-            }.flatMap { process -> addressMustBeBoundFuture(executorService, handle.webAddress, process).map { process } }
+        private fun startWebserver(handle: NodeHandle, debugPort: Int?, maximumHeapSize: String): Process {
+            val className = "net.corda.webserver.WebServer"
+            return ProcessUtilities.startCordaProcess(
+                    className = className, // cannot directly get class for this, so just use string
+                    arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
+                    jdwpPort = debugPort,
+                    extraJvmArguments = listOf(
+                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
+                    ),
+                    errorLogPath = Paths.get("error.$className.log"),
+                    workingDirectory = null,
+                    maximumHeapSize = maximumHeapSize
+            )
         }
 
         private fun getCallerPackage(): String {

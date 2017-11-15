@@ -5,7 +5,10 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -79,6 +82,7 @@ fun <A> verifierDriver(
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
+        waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         dsl: VerifierExposedDSLInterface.() -> A
@@ -92,6 +96,7 @@ fun <A> verifierDriver(
                         useTestClock = useTestClock,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
+                        waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs
                 )
@@ -254,17 +259,15 @@ data class VerifierDriverDSL(
         log.info("Starting verifier connecting to address $address")
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
-        val processFuture = driverDSL.executorService.fork {
-            val verifierName = CordaX500Name(organisation = "Verifier$id", locality = "London", country = "GB")
-            val baseDirectory = (driverDSL.driverDirectory / verifierName.organisation).createDirectories()
-            val config = createConfiguration(baseDirectory, address)
-            val configFilename = "verifier.conf"
-            writeConfig(baseDirectory, configFilename, config)
-            Verifier.loadConfiguration(baseDirectory, baseDirectory / configFilename).configureDevKeyAndTrustStores(verifierName)
-            ProcessUtilities.startJavaProcess<Verifier>(listOf(baseDirectory.toString()), jdwpPort = jdwpPort)
-        }
-        driverDSL.shutdownManager.registerProcessShutdown(processFuture)
-        return processFuture.map(::VerifierHandle)
+        val verifierName = CordaX500Name(organisation = "Verifier$id", locality = "London", country = "GB")
+        val baseDirectory = (driverDSL.driverDirectory / verifierName.organisation).createDirectories()
+        val config = createConfiguration(baseDirectory, address)
+        val configFilename = "verifier.conf"
+        writeConfig(baseDirectory, configFilename, config)
+        Verifier.loadConfiguration(baseDirectory, baseDirectory / configFilename).configureDevKeyAndTrustStores(verifierName)
+        val process = ProcessUtilities.startJavaProcess<Verifier>(listOf(baseDirectory.toString()), jdwpPort = jdwpPort)
+        driverDSL.shutdownManager.registerProcessShutdown(process)
+        return doneFuture(VerifierHandle(process))
     }
 
     private fun <A> NodeHandle.connectToNode(closure: (ClientSession) -> A): A {

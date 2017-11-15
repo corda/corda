@@ -16,12 +16,9 @@ fun CordformDefinition.clean() {
  * Creates and starts all nodes required for the demo.
  */
 // TODO add notaries to cordform!
-fun CordformDefinition.runNodes() = driver(
-        isDebug = true,
-        driverDirectory = driverDirectory,
-        portAllocation = PortAllocation.Incremental(10001)
-) {
-    setup(this)
-    startNodes(nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } })
-    waitForAllNodesToFinish()
+fun CordformDefinition.runNodes() {
+    driver(isDebug = true, driverDirectory = driverDirectory, portAllocation = PortAllocation.Incremental(10001), waitForAllNodesToFinish = true) {
+        setup(this)
+        startNodes(nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } })
+    }
 }

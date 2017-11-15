@@ -7,6 +7,7 @@ import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
@@ -229,6 +230,7 @@ fun <A> rpcDriver(
         useTestClock: Boolean = false,
         initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = false,
+        waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         dsl: RPCDriverExposedDSLInterface.() -> A
@@ -242,6 +244,7 @@ fun <A> rpcDriver(
                         useTestClock = useTestClock,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
+                        waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs
                 )
@@ -404,11 +407,9 @@ data class RPCDriverDSL(
     }
 
     override fun <I : RPCOps> startRandomRpcClient(rpcOpsClass: Class<I>, rpcAddress: NetworkHostAndPort, username: String, password: String): CordaFuture<Process> {
-        val processFuture = driverDSL.executorService.fork {
-            ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
-        }
-        driverDSL.shutdownManager.registerProcessShutdown(processFuture)
-        return processFuture
+        val process = ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
+        driverDSL.shutdownManager.registerProcessShutdown(process)
+        return doneFuture(process)
     }
 
     override fun startArtemisSession(rpcAddress: NetworkHostAndPort, username: String, password: String): ClientSession {
