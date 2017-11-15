@@ -1,4 +1,4 @@
-package net.corda.nodeapi
+package net.corda.nodeapi.internal
 
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients

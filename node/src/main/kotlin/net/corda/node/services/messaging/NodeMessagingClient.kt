@@ -28,11 +28,11 @@ import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
 import net.corda.node.utilities.*
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
-import net.corda.nodeapi.ArtemisMessagingComponent.ArtemisAddress
-import net.corda.nodeapi.ArtemisMessagingComponent.NodeAddress
-import net.corda.nodeapi.ArtemisMessagingComponent.ServiceAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
