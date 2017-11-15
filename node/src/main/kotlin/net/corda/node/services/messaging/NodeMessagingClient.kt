@@ -11,6 +11,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
@@ -27,7 +28,11 @@ import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
 import net.corda.node.utilities.*
-import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.ArtemisMessagingComponent.ArtemisAddress
+import net.corda.nodeapi.ArtemisMessagingComponent.NodeAddress
+import net.corda.nodeapi.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
@@ -80,7 +85,7 @@ class NodeMessagingClient(private val config: NodeConfiguration,
                           private val database: CordaPersistence,
                           private val metrics: MetricRegistry,
                           advertisedAddress: NetworkHostAndPort = serverAddress
-) : ArtemisMessagingComponent(), MessagingService {
+) : SingletonSerializeAsToken(), MessagingService {
     companion object {
         private val log = loggerFor<NodeMessagingClient>()
 
