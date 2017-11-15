@@ -1,60 +1,100 @@
 ![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
 
 --------------------------------------------
-Design Decision: P2P Messaging Protocol
+Design Decision: TLS termination point
 ============================================
 
 ## Background / Context
 
-Corda requires messages to be exchanged between nodes via a well-defined protocol. 
-
-Determining this protocol is a critical upstream dependency for the design of key messaging components including the [float](../design.md).
+Design of the [float](../design.md) is critically influenced by the decision of where TLS connections to the node should be terminated.
 
 
 
 ## Options Analysis
 
-### 1. Use AMQP
+### 1. Terminate TLS on Firewall
 
-Under this option, P2P messaging will follow the [Advanced Message Queuing Protocol](https://www.amqp.org/).
 
-#### Advantages
-
-1.    As we have described in our marketing materials.
-2.    Well-defined standard.
-3.    Supportfor packet level flow control and explicit delivery acknowledgement.
-4.    Will allow eventual swap out of Artemis for other brokers.
-
-#### Disadvantages
-
-1.    AMQP is a complex protocol with many layered state machines, for which it may prove hard to verify security properties. 
-2.    No support for secure MAC in packets frames.
-3.    No defined encryption mode beyond creating custom payloadencryption and custom headers.
-4.    No standardised support for queue creation/enumeration, ordeletion.
-5.    Use of broker durable queues and autonomousbridge transfers does not align with checkpoint timing, so that independentreplication of the DB and Artemis data risks causing problems. (Writing to the DB doesn’t work currently and is probably also slow).
-
-### 2. Develop & implement a custom protocol
-
-Under this option, P2P messaging will follow a custom protocol designed and implemented by the development team.
 
 #### Advantages
 
-1. Can be defined with very small message surface area that isamenable to security analysis.
-2. Packet formats can follow best practice cryptography from thestart and be matched to Corda’s needs.
-3. Doesn’t require ‘Complete Graph’ structure for network if we haveintermediate routing. 
-4. More closely aligns checkpointing and message delivery handling atthe application level.
+1.    Common practice for DMZ web solutions, often with an HSM associated with the Firewall and should be familiar for banks to setup.
+2.    Doesn’t expose our private key in the less trusted DMZ context.
+3.    Bugs in the firewall TLS engine will be patched frequently.
+4.    The DMZ float server would only require a self-signed certificate/private key to enable secure communications, so theft of this key has no impact beyond the compromised machine.
 
 #### Disadvantages
 
-1. Inconsistent with previous design statements published to external stakeholders.
-2. Effort implications - starting from scratch
-3. Technical complexity in developing a P2P protocols which is attack tolerant.
+1.    May limit cryptography options to RSA, and prevent checking of X500 names (only the root certificate checked) - Corda certificates are not totally standard; 
+2.    Doesn’t allow identification of the message source.
+3.    May require additional work and SASL support code to validate theultimate origin of connections in the float.
 
+#### Variant option 1a: Include SASL connection checking
 
+##### Advantages
+
+1. Maintain authentication support
+2. Can authenticate against keys held internallye.g. Legal Identity not just TLS
+
+##### Disadvantages
+
+1. More work than the do-nothing approach
+
+2. More protocol to design for sending across the inner firewall.
+
+   ​
+
+### 2. Direct TLS Termination onto Float
+
+#### Advantages
+
+1. Validate our PKI certificates directly ourselves.
+2. Allow messages to be reliably tagged with source.
+
+#### Disadvantages
+
+1. We don’t currently use the identity to check incoming packets,only for connection authentication anyway.
+2. Management of Private Key a challenge requiring extra work and security implications. Options for this are presented below.
+
+#### Variant Option 2a: Float TLS certificate via direct HSM
+
+##### Advantages
+
+1. Key can’t be stolen (only access to signing operations)
+2. Audit trail of signings.
+
+##### Disadvantages
+
+1. Accessing HSM from DMZ probably not allowed.
+2. Breaks the inbound-connection-only rule of modern DMZ.
+
+#### Variant Option 2b: Tunnel signing requests to bridge manager
+
+##### Advantages
+
+1. No new connections involved from Float box.
+2. No access to actual private key from DMZ.
+
+##### Disadvantages
+
+1. Requires implementation of a message protocol, in addition to a key provider that can be passed to the standard SSLEngine, but proxies signing requests.
+
+#### Variant Option 2c: Store key on local file system
+
+##### Advantages
+
+1. Simple with minimal extra code required.
+2. Delegates access control to bank’s own systems.
+3. Risks losing only the TLS private key, which caneasily be revoked. This isn’t the legal identity key at all.
+
+##### Disadvantages
+
+1. Risks losing the TLS private key
+2. Probably not allowed.
 
 ## Recommendation and justification
 
-Proceed with Option 1
+Proceed with Variant option 1a: Include SASL connection checking
 
 
 
