@@ -48,22 +48,19 @@ In contrast, typical financial institutions maintain large, complex technology l
 
 Thus, HA is essential for enterprise Corda and providing help to administrators necessary for rapid fault diagnosis.
 
-## Scope
+## Requirements
 
-* Goals
+  * A logical Corda node should continue to function in the event of an individual component failure or (e.g.) restart.
+  * No loss, corruption or duplication of data on the ledger due to component outages
+  * Ensure continuity of flows throughout any disruption
+  * Support software upgrades in a live network
 
-  * Be able to construct a Corda node that is resistant to individual machine failures or restarts.
-  * Be able to recover from temporary failure of any single component e.g. database, network access, machine, VM, Corda process.
-  * Be able to scale from low-cost, low availability nodes up to high-cost, high availability nodes.
-  * Be able to complete any previously halted flows without any loss, or duplication of data on the ledger.
-  * Be able to select the location of active instances of Corda to allow for activities such as software upgrade.
-
-* Non-goals
+* Non-goals (out of scope for this design document)
 
   * Be able to distribute a node over more than two datacenters.
   * Be able to distribute a node between datacenters that are very far apart latency-wise (unless you don't care about performance).
   * Be able to tolerate arbitrary byzantine failures within a node cluster.
-  * For now DR is only supported where performant synchronous replication is feasible i.e. sites only a few miles apart.
+  * DR, specifically in the case of the complete failure of a site/datacentre/cluster or region will require a different solution to that specified here. For now DR is only supported where performant synchronous replication is feasible i.e. sites only a few miles apart.
 
 ## Timeline 
 
@@ -76,11 +73,6 @@ Instead, I suggest that we can only achieve the simplest state of a standby Cord
 For the March 31st timeline, I hope that we can achieve a more fully automatic node failover state, with the Artemis broker running as a cluster too. I include a diagram of a fully scaled Corda for completeness and so that I can discuss what work is re-usable/throw away.
 
 With regards to DR it is unclear how this would work where synchronous replication is not feasible. At this point we can only investigate approaches as an aside to the main thrust of work for HA support. In the synchronous replication mode it is assumed that the file and database replication can be used to ensure a cold DR backup.
-
-## Requirements
-
-* A node running Corda Enterprise should be Highly Available and resilient to component failures
-* Corda must enable effective recovery in the event of an unplanned outage
 
 ## Proposed Solution
 ### Current (single process)
