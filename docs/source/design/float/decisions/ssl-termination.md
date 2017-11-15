@@ -25,16 +25,16 @@ Design of the [float](../design.md) is critically influenced by the decision of 
 
 #### Disadvantages
 
-1.    May limit cryptography options to RSA, and prevent checking of X500 names (only the root certificate checked) - Corda certificates are not totally standard; 
+1.    May limit cryptography options to RSA, and prevent checking of X500 names (only the root certificate checked) - Corda certificates are not totally standard.
 2.    Doesn’t allow identification of the message source.
-3.    May require additional work and SASL support code to validate theultimate origin of connections in the float.
+3.    May require additional work and SASL support code to validate the ultimate origin of connections in the float.
 
 #### Variant option 1a: Include SASL connection checking
 
 ##### Advantages
 
 1. Maintain authentication support
-2. Can authenticate against keys held internallye.g. Legal Identity not just TLS
+2. Can authenticate against keys held internally e.g. Legal Identity not just TLS.
 
 ##### Disadvantages
 
@@ -53,7 +53,7 @@ Design of the [float](../design.md) is critically influenced by the decision of 
 
 #### Disadvantages
 
-1. We don’t currently use the identity to check incoming packets,only for connection authentication anyway.
+1. We don’t currently use the identity to check incoming packets, only for connection authentication anyway.
 2. Management of Private Key a challenge requiring extra work and security implications. Options for this are presented below.
 
 #### Variant Option 2a: Float TLS certificate via direct HSM
@@ -85,16 +85,16 @@ Design of the [float](../design.md) is critically influenced by the decision of 
 
 1. Simple with minimal extra code required.
 2. Delegates access control to bank’s own systems.
-3. Risks losing only the TLS private key, which caneasily be revoked. This isn’t the legal identity key at all.
+3. Risks losing only the TLS private key, which can easily be revoked. This isn’t the legal identity key at all.
 
 ##### Disadvantages
 
-1. Risks losing the TLS private key
+1. Risks losing the TLS private key.
 2. Probably not allowed.
 
 ## Recommendation and justification
 
-Proceed with Variant option 1a: Terminate on firewall; include SASL connection checking
+Proceed with Variant option 1a: Terminate on firewall; include SASL connection checking.
 
 
 
