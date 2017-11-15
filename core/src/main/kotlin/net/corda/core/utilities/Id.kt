@@ -15,6 +15,7 @@ open class Id<out VALUE : Any>(val value: VALUE, val entityType: String?, val ti
         /**
          * Creates an id using [Instant.now] as timestamp.
          */
+        @JvmStatic
         fun <V : Any> newInstance(value: V, entityType: String? = null, timestamp: Instant = now()) = Id(value, entityType, timestamp)
     }
 

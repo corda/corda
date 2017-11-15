@@ -347,6 +347,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val logicType = flow.javaClass
             require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
             // TODO check service permissions
+            // TODO switch from myInfo.legalIdentities[0].name to current node's identity as soon as available
             val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name)
             return flowStarter.startFlow(flow, context).getOrThrow()
         }

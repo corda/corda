@@ -23,31 +23,37 @@ data class InvocationContext(val origin: Origin, val trace: Trace, val actor: Ac
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
+        @JvmStatic
         fun newInstance(origin: Origin, trace: Trace = Trace.newInstance(), actor: Actor? = null, externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [Origin.RPC] origin.
          */
+        @JvmStatic
         fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(Origin.RPC(actor), trace, actor, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [Origin.Peer] origin.
          */
+        @JvmStatic
         fun peer(party: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(Origin.Peer(party), trace, null, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [Origin.Service] origin.
          */
+        @JvmStatic
         fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(Origin.Service(serviceClassName, owningLegalIdentity), trace, null, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [Origin.Scheduled] origin.
          */
+        @JvmStatic
         fun scheduled(scheduledState: ScheduledStateRef, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(Origin.Scheduled(scheduledState), trace, null, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [Origin.Shell] origin.
          */
+        @JvmStatic
         fun shell(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(Origin.Shell, trace, null, externalTrace)
     }
 
@@ -64,6 +70,7 @@ data class InvocationContext(val origin: Origin, val trace: Trace, val actor: Ac
 data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdentity: CordaX500Name) {
 
     companion object {
+        @JvmStatic
         fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name): Actor = Actor(Id(serviceClassName), AuthServiceId("SERVICE"), owningLegalIdentity)
     }
 

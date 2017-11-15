@@ -86,7 +86,7 @@ class StateMachineManagerImpl(
         val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
         fun notifyChangeObservers(change: StateMachineManager.Change) {
-             changesPublisher.bufferUntilDatabaseCommit().onNext(change)
+            changesPublisher.bufferUntilDatabaseCommit().onNext(change)
         }
     }
 

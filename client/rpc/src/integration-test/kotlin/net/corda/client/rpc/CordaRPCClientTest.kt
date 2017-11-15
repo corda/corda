@@ -144,16 +144,20 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
         proxy.startFlow(::CashIssueFlow, 123.DOLLARS, OpaqueBytes.of(0), nodeIdentity).returnValue.getOrThrow()
         proxy.startFlowDynamic(CashIssueFlow::class.java, 1000.DOLLARS, OpaqueBytes.of(0), nodeIdentity).returnValue.getOrThrow()
 
+        val historicalIds = mutableSetOf<Trace.InvocationId>()
+        var sessionId: Trace.SessionId? = null
         updates.expectEvents(isStrict = false) {
             sequence(
                     expect { update: StateMachineUpdate.Added ->
                         checkShellNotification(update.stateMachineInfo)
                     },
                     expect { update: StateMachineUpdate.Added ->
-                        checkRpcNotification(update.stateMachineInfo, rpcUser.username, externalTrace, impersonatedActor)
+                        checkRpcNotification(update.stateMachineInfo, rpcUser.username, historicalIds, externalTrace, impersonatedActor)
+                        sessionId = update.stateMachineInfo.context().trace.sessionId
                     },
                     expect { update: StateMachineUpdate.Added ->
-                        checkRpcNotification(update.stateMachineInfo, rpcUser.username, externalTrace, impersonatedActor)
+                        checkRpcNotification(update.stateMachineInfo, rpcUser.username, historicalIds, externalTrace, impersonatedActor)
+                        assertThat(update.stateMachineInfo.context().trace.sessionId).isEqualTo(sessionId)
                     }
             )
         }
@@ -166,11 +170,13 @@ private fun checkShellNotification(info: StateMachineInfo) {
     assertThat(context.origin).isInstanceOf(Origin.Shell::class.java)
 }
 
-private fun checkRpcNotification(info: StateMachineInfo, rpcUsername: String, externalTrace: Trace?, impersonatedActor: Actor?) {
+private fun checkRpcNotification(info: StateMachineInfo, rpcUsername: String, historicalIds: MutableSet<Trace.InvocationId>, externalTrace: Trace?, impersonatedActor: Actor?) {
 
     val context = info.context()
     assertThat(context.origin).isInstanceOf(Origin.RPC::class.java)
     assertThat(context.externalTrace).isEqualTo(externalTrace)
     assertThat(context.impersonatedActor).isEqualTo(impersonatedActor)
     assertThat(context.actor?.id?.value).isEqualTo(rpcUsername)
+    assertThat(historicalIds).doesNotContain(context.trace.invocationId)
+    historicalIds.add(context.trace.invocationId)
 }

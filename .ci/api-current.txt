@@ -64,11 +64,12 @@ public interface net.corda.core.concurrent.CordaFuture extends java.util.concurr
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.CordaX500Name getOwningLegalIdentity()
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.AuthServiceId getServiceId()
   public int hashCode()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Actor service(String, net.corda.core.identity.CordaX500Name)
   public String toString()
   public static final net.corda.core.context.Actor$Companion Companion
 ##
 public static final class net.corda.core.context.Actor$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor service(String, net.corda.core.identity.CordaX500Name)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Actor service(String, net.corda.core.identity.CordaX500Name)
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Actor$Id extends java.lang.Object
   public <init>(String)
@@ -103,17 +104,23 @@ public static final class net.corda.core.context.Actor$Companion extends java.la
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.Origin getOrigin()
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace getTrace()
   public int hashCode()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext newInstance(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext peer(net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
   @org.jetbrains.annotations.NotNull public final java.security.Principal principal()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext rpc(net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext scheduled(net.corda.core.contracts.ScheduledStateRef, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext service(String, net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.InvocationContext shell(net.corda.core.context.Trace, net.corda.core.context.Trace)
   public String toString()
   public static final net.corda.core.context.InvocationContext$Companion Companion
 ##
 public static final class net.corda.core.context.InvocationContext$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext newInstance(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext peer(net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext rpc(net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext scheduled(net.corda.core.contracts.ScheduledStateRef, net.corda.core.context.Trace, net.corda.core.context.Trace)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext service(String, net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext shell(net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext newInstance(net.corda.core.context.Origin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext peer(net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext rpc(net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext scheduled(net.corda.core.contracts.ScheduledStateRef, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext service(String, net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.InvocationContext shell(net.corda.core.context.Trace, net.corda.core.context.Trace)
 ##
 @net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.context.Origin extends java.lang.Object
   @org.jetbrains.annotations.NotNull public abstract java.security.Principal principal()
@@ -171,25 +178,28 @@ public static final class net.corda.core.context.InvocationContext$Companion ext
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$InvocationId getInvocationId()
   @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$SessionId getSessionId()
   public int hashCode()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Trace newInstance(net.corda.core.context.Trace$InvocationId, net.corda.core.context.Trace$SessionId)
   public String toString()
   public static final net.corda.core.context.Trace$Companion Companion
 ##
 public static final class net.corda.core.context.Trace$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace newInstance(net.corda.core.context.Trace$InvocationId, net.corda.core.context.Trace$SessionId)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace newInstance(net.corda.core.context.Trace$InvocationId, net.corda.core.context.Trace$SessionId)
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Trace$InvocationId extends net.corda.core.utilities.Id
   public <init>(String, java.time.Instant)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Trace$InvocationId newInstance(String, java.time.Instant)
   public static final net.corda.core.context.Trace$InvocationId$Companion Companion
 ##
 public static final class net.corda.core.context.Trace$InvocationId$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$InvocationId newInstance(String, java.time.Instant)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$InvocationId newInstance(String, java.time.Instant)
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.context.Trace$SessionId extends net.corda.core.utilities.Id
   public <init>(String, java.time.Instant)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.context.Trace$SessionId newInstance(String, java.time.Instant)
   public static final net.corda.core.context.Trace$SessionId$Companion Companion
 ##
 public static final class net.corda.core.context.Trace$SessionId$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$SessionId newInstance(String, java.time.Instant)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.context.Trace$SessionId newInstance(String, java.time.Instant)
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.contracts.AlwaysAcceptAttachmentConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
@@ -3162,11 +3172,12 @@ public class net.corda.core.utilities.Id extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final java.time.Instant getTimestamp()
   @org.jetbrains.annotations.NotNull public final Object getValue()
   public final int hashCode()
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public static final net.corda.core.utilities.Id newInstance(Object, String, java.time.Instant)
   @org.jetbrains.annotations.NotNull public final String toString()
   public static final net.corda.core.utilities.Id$Companion Companion
 ##
 public static final class net.corda.core.utilities.Id$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.Id newInstance(Object, String, java.time.Instant)
+  @kotlin.jvm.JvmStatic @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.Id newInstance(Object, String, java.time.Instant)
 ##
 public final class net.corda.core.utilities.KotlinUtilsKt extends java.lang.Object
   public static final void debug(org.slf4j.Logger, kotlin.jvm.functions.Function0)
