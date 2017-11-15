@@ -78,10 +78,13 @@ Allow connectivity in compliance with DMZ constraints commonly imposed by modern
 11. Any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised.
 
 ## Design Decisions
-1. [AMQP vs. custom P2P](./devisions/p2p-protocol.md)
-2. [SSL termination (firewall vs. float)](./decisions/ssl-termination.md)
-3. End-to-end encryption
-4. Prioritisation of pluggable broker support
+
+The following design decisions are assumed by  this design:
+
+1. [AMQP vs. custom P2P](./decisions/p2p-protocol.md): Use AMQP
+2. [SSL termination (firewall vs. float)](./decisions/ssl-termination.md): Terminate on firewall; include SASL connection checking
+3. [End-to-end encryption](./decisions/e2e-encryption.md): Include placeholder only
+4. [Prioritisation of pluggable broker support](./decisions/pluggable-broker): Defer pluggable brokers until later
 
 ## Target Solution
 
@@ -140,19 +143,7 @@ The bridge control is designed to be as stateless as possible. Thus, nodes and b
 6. The Float should protect against excessive inbound messages by AMQP flow control and refusing to accept excessive unacknowledged deliveries.
 7. The Float only exposes its inbound server socket when activated by a valid AMQP link from the Bridge Control Manager to allow for a simple HA pool of DMZ Float processes. (Floats cannot run hot-hot as this would invalidate Corda's message ordering guarantees.)
 
-## Alternative options considered
-### 1. Using Direct P2P Communication
-I do also have a completely different model of what to do instead of the float/AMQP work, but whilst I don’t think this is likely to be accepted, I do think it has a lot of merits and may be surprisingly fast to implement, at least for small semi-private networks.
 
-Essentially, I would discard the Artemis server/AMQP support for peer-to-peer communications. Instead I would write an implementation of our MessagingService which takes direct responsibility for message retries and stores the pending messages into our own DB. The wire level of this service would be built on top of a fully encrypted MIX network which would not require a fully connected graph, but rather send messages on randomly selected paths over the dynamically managed network graph topology.
-
-For packet format I would use the ![SPHINX packet format](http://www0.cs.ucl.ac.uk/staff/G.Danezis/papers/sphinx-eprint.pdf) although with the body encryption updated to a modern AEAD scheme as in https://www.cs.ru.nl/~bmennink/pubs/16cans.pdf . In this scheme, nodes would be identified in the overlay network solely by Curve25519 public key addresses and floats would be dumb nodes that only run the MIX network code and don’t act as message sources, or sinks. Intermediate traffic would not be readable except by the intended waypoint and only the final node can read the payload.
-
-The point to point links would be standard TLS and the network certificates would be whatever is acceptable to the host institutions e.g. standard Verisign certs. It is assumed institutions would select partners to connect to that they trust and permission them individually in their firewalls. Inside the MIX network the nodes would be connected mostly in a static way and use standard HELLO packets to determine the liveness of neighbour routes, then use tunnelled gossip to distribute the signed/versioned Link topology messages. The nodes will be allowed to advertise a Public IP as well, so some dynamic links and publicly visible nodes would exist. The network map addresses would then be mappings from Legal Identity to these overlay network addresses, not to physical network locations.
-
-## Final recommendation
-
-Implement the Target Solution described above according to the implementation plan described below.
 
 # IMPLEMENTATION PLAN
 

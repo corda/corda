@@ -94,7 +94,7 @@ Design of the [float](../design.md) is critically influenced by the decision of 
 
 ## Recommendation and justification
 
-Proceed with Variant option 1a: Include SASL connection checking
+Proceed with Variant option 1a: Terminate on firewall; include SASL connection checking
 
 
 
