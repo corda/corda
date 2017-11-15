@@ -35,7 +35,6 @@ dependencies {
     compile gradleApi()
     compile project(":cordapp")
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-
     noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     compile project(':cordform-common')

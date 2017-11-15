@@ -3,6 +3,7 @@
 package net.corda.node.internal.networkParametersGenerator
 
 import net.corda.cordform.NetworkParametersGenerator
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -18,17 +19,16 @@ import java.nio.file.Path
 class TestNetworkParametersGenerator: NetworkParametersGenerator {
     override fun run(baseDirectory: Path, notaryMap: Map<String, Boolean>) {
         initialiseSerialization()
-        val notaryInfos = gatherNotaryInfos(baseDirectory, notaryMap)
-        val copier = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+        val notaryInfos = gatherNotaryInfos(baseDirectory, notaryMap.mapKeys { CordaX500Name.parse(it.key) })
+        val copier = NetworkParametersCopier(testNetworkParameters(notaryInfos), false)
         copier.install(baseDirectory) // Put the parameters just to this one node directory, the rest copy in gradle.
     }
 
-    private fun gatherNotaryInfos(baseDirectory: Path, notaries: Map<String, Boolean>): List<NotaryInfo> {
+    private fun gatherNotaryInfos(baseDirectory: Path, notaries: Map<CordaX500Name, Boolean>): List<NotaryInfo> {
         val nodeInfoSerializer = NodeInfoWatcher(baseDirectory)
         return nodeInfoSerializer.loadAndGatherNotaryIdentities(notaries)
     }
 
-    // TODO check if I need it
     private fun initialiseSerialization() {
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
