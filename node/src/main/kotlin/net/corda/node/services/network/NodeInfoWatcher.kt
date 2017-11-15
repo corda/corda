@@ -95,15 +95,15 @@ class NodeInfoWatcher(private val nodePath: Path,
     /**
      * Loads all NodeInfo files stored in node's base directory and returns the [Party]s.
      * Scans main directory and [CordformNode.NODE_INFO_DIRECTORY].
-     * Signatures are checked before returning a value. The latest value stored for a given name is returned.
+     * Signatures are not checked before returning a value. The latest value stored for a given name is returned.
      *
      * @return a list of [Party]s
      */
-    fun loadAndGatherNotaryIdentities(notaries: Map<String, Boolean>): List<NotaryInfo> {
-        val nodeInfos = loadFromDirectory()
+    fun loadAndGatherNotaryIdentities(notaries: Map<CordaX500Name, Boolean>): List<NotaryInfo> {
+        val nodeInfos = loadFromDirectory(false)
         // NodeInfos are currently stored in 2 places: in [CordformNode.NODE_INFO_DIRECTORY] and in baseDirectory of the node.
         val myFiles = Files.list(nodePath).filter { it.toString().contains("nodeInfo-") }.toList()
-        val myNodeInfos = myFiles.mapNotNull { processFile(it) }
+        val myNodeInfos = myFiles.mapNotNull { processFile(it, false) }
         val infosMap = mutableMapOf<CordaX500Name, NodeInfo>()
         // Running deployNodes more than once produces new NodeInfos. We need to load the latest NodeInfos based on serial field.
         for (info in nodeInfos + myNodeInfos) {
@@ -119,9 +119,9 @@ class NodeInfoWatcher(private val nodePath: Path,
         for (info in infosMap.values) {
             // Here the ugliness happens.
             // TODO Change Cordform definition so it specifies distributed notary identity.
-            if (info.legalIdentities[0].name.toString() in notaries.keys) {
+            if (info.legalIdentities[0].name in notaries.keys) {
                 val notaryId = if (info.legalIdentities.size == 2) info.legalIdentities[1] else info.legalIdentities[0]
-                notaryInfos.add(NotaryInfo(notaryId, notaries[info.legalIdentities[0].name.toString()]!!))
+                notaryInfos.add(NotaryInfo(notaryId, notaries[info.legalIdentities[0].name]!!))
             }
         }
         return notaryInfos.toList()
@@ -133,7 +133,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      *
      * @return a list of [NodeInfo]s
      */
-    private fun loadFromDirectory(): List<NodeInfo> {
+    private fun loadFromDirectory(checkSignature: Boolean = true): List<NodeInfo> {
         if (!nodeInfoDirectory.isDirectory()) {
             return emptyList()
         }
@@ -141,7 +141,7 @@ class NodeInfoWatcher(private val nodePath: Path,
             paths.filter { it !in processedNodeInfoFiles }
                     .filter { it.isRegularFile() }
                     .map { path ->
-                        processFile(path)?.apply {
+                        processFile(path, checkSignature)?.apply {
                             processedNodeInfoFiles.add(path)
                             _processedNodeInfoHashes.add(this.serialize().hash)
                         }
@@ -155,11 +155,11 @@ class NodeInfoWatcher(private val nodePath: Path,
         return result
     }
 
-    private fun processFile(file: Path): NodeInfo? {
+    private fun processFile(file: Path, checkSignature: Boolean = true): NodeInfo? {
         return try {
             logger.info("Reading NodeInfo from file: $file")
             val signedData = file.readAll().deserialize<SignedData<NodeInfo>>()
-            signedData.verified()
+            if (checkSignature) signedData.verified() else signedData.raw.deserialize()
         } catch (e: Exception) {
             logger.warn("Exception parsing NodeInfo from file. $file", e)
             null
