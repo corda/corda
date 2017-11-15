@@ -19,7 +19,7 @@ fun CordformDefinition.clean() {
  * Deploy the nodes specified in the given [CordformDefinition]. This will block until all the nodes and webservers
  * have terminated.
  */
-fun CordformDefinition.deployNodes() {
+fun CordformDefinition.deployNodes(extraPackagesToScan: List<String> = emptyList()) {
     runNodes(waitForAllNodesToFinish = true) { }
 }
 
@@ -27,11 +27,11 @@ fun CordformDefinition.deployNodes() {
  * Deploy the nodes specified in the given [CordformDefinition] and then execute the given [block] once all the nodes
  * and webservers are up. After execution all these processes will be terminated.
  */
-fun CordformDefinition.deployNodesThen(block: () -> Unit) {
+fun CordformDefinition.deployNodesThen(extraPackagesToScan: List<String> = emptyList(), block: () -> Unit) {
     runNodes(waitForAllNodesToFinish = false, block = block)
 }
 
-private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block: () -> Unit) {
+private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, extraPackagesToScan: List<String> = emptyList(), block: () -> Unit) {
     clean()
     val nodes = nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } }
     val maxPort = nodes
@@ -42,7 +42,7 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             isDebug = true,
             jmxPolicy = JmxPolicy(true),
             driverDirectory = nodesDirectory,
-            extraCordappPackagesToScan = cordappPackages,
+            extraCordappPackagesToScan = extraPackagesToScan,
             // Notaries are manually specified in Cordform so we don't want the driver automatically starting any
             notarySpecs = emptyList(),
             // Start from after the largest port used to prevent port clash

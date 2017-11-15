@@ -3,6 +3,7 @@ package net.corda.plugins
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import java.io.File
+import java.io.InputStream
 
 /**
  * The Cordformation plugin deploys nodes to a directory in a state ready to be used by a developer for experimentation,
@@ -13,19 +14,19 @@ class Cordformation : Plugin<Project> {
         const val CORDFORMATION_TYPE = "cordformationInternal"
 
         /**
-         * Gets a resource file from this plugin's JAR file.
+         * Gets a resource file from this plugin's JAR file by creating an intermediate tmp dir
          *
-         * @param project The project environment this plugin executes in.
          * @param filePathInJar The file in the JAR, relative to root, you wish to access.
          * @return A file handle to the file in the JAR.
          */
         fun getPluginFile(project: Project, filePathInJar: String): File {
-            val archive = project.rootProject.buildscript.configurations
-                    .single { it.name == "classpath" }
-                    .first { it.name.contains("cordformation") }
-            return project.rootProject.resources.text
-                    .fromArchiveEntry(archive, filePathInJar)
-                    .asFile()
+            val tmpDir = File(project.buildDir, "tmp")
+            val outputFile = File(tmpDir, filePathInJar)
+            tmpDir.mkdir()
+            outputFile.outputStream().use {
+                Cordformation::class.java.getResourceAsStream(filePathInJar).copyTo(it)
+            }
+            return outputFile
         }
 
         /**
@@ -38,7 +39,7 @@ class Cordformation : Plugin<Project> {
         fun verifyAndGetRuntimeJar(project: Project, jarName: String): File {
             val releaseVersion = project.rootProject.ext<String>("corda_release_version")
             val maybeJar = project.configuration("runtime").filter {
-                "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-enterprise-$releaseVersion.jar" in it.toString()
+                "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-r3-$releaseVersion.jar" in it.toString()
             }
             if (maybeJar.isEmpty) {
                 throw IllegalStateException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")

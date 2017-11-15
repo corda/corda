@@ -635,7 +635,7 @@ public static final class net.corda.core.contracts.UniqueIdentifier$Companion ex
   @org.jetbrains.annotations.NotNull public abstract List getServices()
 ##
 public final class net.corda.core.cordapp.CordappContext extends java.lang.Object
-  public <init>(net.corda.core.cordapp.Cordapp, net.corda.core.crypto.SecureHash, ClassLoader)
+  public <init>(net.corda.node.internal.cordapp.CordappLoader, net.corda.core.node.services.AttachmentStorage, net.corda.testing.node.MockCordappConfigProvider)
   @org.jetbrains.annotations.Nullable public final net.corda.core.crypto.SecureHash getAttachmentId()
   @org.jetbrains.annotations.NotNull public final ClassLoader getClassLoader()
   @org.jetbrains.annotations.NotNull public final net.corda.core.cordapp.Cordapp getCordapp()
@@ -4667,7 +4667,7 @@ public static final class net.corda.testing.services.MockAttachmentStorage$openA
   @org.jetbrains.annotations.NotNull public net.corda.core.crypto.SecureHash getId()
 ##
 public final class net.corda.testing.services.MockCordappProvider extends net.corda.node.internal.cordapp.CordappProviderImpl
-  public <init>(net.corda.node.internal.cordapp.CordappLoader, net.corda.core.node.services.AttachmentStorage)
+  public <init>(net.corda.node.internal.cordapp.CordappLoader, net.corda.core.node.services.AttachmentStorage, net.corda.testing.node.MockCordappConfigProvider)
   public final void addMockCordapp(String, net.corda.testing.services.MockAttachmentStorage)
   @org.jetbrains.annotations.Nullable public net.corda.core.crypto.SecureHash getContractAttachmentID(String)
   @org.jetbrains.annotations.NotNull public final List getCordappRegistry()

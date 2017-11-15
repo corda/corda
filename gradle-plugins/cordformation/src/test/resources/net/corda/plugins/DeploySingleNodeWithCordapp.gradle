@@ -1,0 +1,33 @@
+buildscript {
+    ext {
+        corda_group = 'net.corda'
+        corda_release_version = '3.0-SNAPSHOT' // TODO: Set to 3.0.0 when Corda 3 is released
+        jolokia_version = '1.3.7'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'net.corda.plugins.cordformation'
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-dev' }
+}
+
+dependencies {
+    runtime "$corda_group:corda:$corda_release_version"
+    runtime "$corda_group:corda-node-api:$corda_release_version"
+    cordapp "$corda_group:corda-finance:$corda_release_version"
+}
+
+task deployNodes(type: net.corda.plugins.Cordform) {
+    node {
+        name 'O=Notary Service,L=Zurich,C=CH'
+        notary = [validating : true]
+        p2pPort 10002
+        rpcPort 10003
+        cordapps = ["$corda_group:corda-finance:$corda_release_version"]
+    }
+}
