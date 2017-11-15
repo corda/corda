@@ -43,7 +43,13 @@ val _globalSerializationEnv = SimpleToggleField<SerializationEnvironment>("globa
 @VisibleForTesting
 val _contextSerializationEnv = ThreadLocalToggleField<SerializationEnvironment>("contextSerializationEnv")
 @VisibleForTesting
-val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField<SerializationEnvironment>("inheritableContextSerializationEnv")
+val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField<SerializationEnvironment>("inheritableContextSerializationEnv") suppressInherit@ {
+    it.stackTrace.forEach {
+        // A dying Netty thread's death event restarting the Netty global executor:
+        it.className == "io.netty.util.concurrent.GlobalEventExecutor" && it.methodName == "startThread" && return@suppressInherit
+    }
+    throw it
+}
 private val serializationEnvProperties = listOf(_nodeSerializationEnv, _globalSerializationEnv, _contextSerializationEnv, _inheritableContextSerializationEnv)
 val effectiveSerializationEnv: SerializationEnvironment
     get() = serializationEnvProperties.map { Pair(it, it.get()) }.filter { it.second != null }.run {
