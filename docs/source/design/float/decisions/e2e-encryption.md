@@ -21,7 +21,7 @@ End-to-end encryption is a desirable potential design feature for the [float](..
 
 #### Disadvantages
 
-1.    With no placeholder, it is very hard to add support later and maintainwire stability.
+1.    With no placeholder, it is very hard to add support later and maintain wire stability.
 2.    May not get past security reviews of Float.
 
 ### 2. Placeholder only
@@ -29,8 +29,8 @@ End-to-end encryption is a desirable potential design feature for the [float](..
 #### Advantages
 
 1. Allows wire stability when we have agreed an encrypted approach
-2. Shows that we are serious about security, even if this isn’tavailable yet.
-3. Allows later encrypted version to be an enterprise feature thatcan interoperate with OS versions.
+2. Shows that we are serious about security, even if this isn’t available yet.
+3. Allows later encrypted version to be an enterprise feature that can interoperate with OS versions.
 
 #### Disadvantages
 
