@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.concurrent.doneFuture
@@ -14,7 +13,6 @@ import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
-import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor

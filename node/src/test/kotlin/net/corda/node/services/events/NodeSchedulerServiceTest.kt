@@ -77,6 +77,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     private lateinit var smmHasRemovedAllFlows: CountDownLatch
     private lateinit var kms: MockKeyManagementService
     private lateinit var mockSMM: StateMachineManager
+    private val ourIdentity = ALICE_NAME
     var calls: Int = 0
 
     /**

@@ -9,8 +9,10 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
@@ -505,7 +507,7 @@ class FlowFrameworkTests {
 
         val committerFiber = aliceNode.registerFlowFactory(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it)
-        }.map { it.stateMachine }
+        }.map { it.stateMachine }.map { uncheckedCast<FlowStateMachine<*>, FlowStateMachine<Any>>(it) }
         val waiterStx = bobNode.services.startFlow(WaitingFlows.Waiter(stx, alice)).resultFuture
         mockNet.runNetwork()
         assertThat(waiterStx.getOrThrow()).isEqualTo(committerFiber.getOrThrow().resultFuture.getOrThrow())

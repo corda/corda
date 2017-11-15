@@ -3,8 +3,12 @@ package net.corda.node.services.events
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
+import net.corda.core.context.Origin
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
@@ -20,6 +24,7 @@ import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -107,8 +112,8 @@ class ScheduledFlowTests {
         var countScheduledFlows = 0
         nodeA.smm.track().updates.subscribe {
             if (it is StateMachineManager.Change.Add) {
-                val initiator = it.logic.stateMachine.flowInitiator
-                if (initiator is FlowInitiator.Scheduled)
+                val context = it.logic.stateMachine.context
+                if (context.origin is Origin.Scheduled)
                     countScheduledFlows++
             }
         }

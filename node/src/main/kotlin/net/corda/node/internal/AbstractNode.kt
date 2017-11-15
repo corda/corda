@@ -7,6 +7,7 @@ import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
@@ -347,8 +348,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachine<T> {
             val logicType = flow.javaClass
             require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
-            val currentUser = FlowInitiator.Service(serviceInstance.javaClass.name)
-            return flowStarter.startFlow(flow, currentUser).getOrThrow()
+            // TODO check service permissions
+            // TODO switch from myInfo.legalIdentities[0].name to current node's identity as soon as available
+            val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name)
+            return flowStarter.startFlow(flow, context).getOrThrow()
         }
 
         override fun equals(other: Any?): Boolean {
@@ -766,8 +769,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 }
 
 internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager) : FlowStarter {
-    override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, ourIdentity: Party?): CordaFuture<FlowStateMachine<T>> {
-        return serverThread.fetchFrom { smm.startFlow(logic, flowInitiator, ourIdentity) }
+    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
+        return serverThread.fetchFrom { smm.startFlow(logic, context) }
     }
 }
 

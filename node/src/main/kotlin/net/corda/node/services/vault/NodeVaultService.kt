@@ -5,15 +5,12 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.StateLoader
-import net.corda.core.node.services.*
+import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
-import net.corda.core.node.services.vault.SortAttribute
-import net.corda.core.messaging.DataFeed
-import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
@@ -219,7 +216,7 @@ class NodeVaultService(
             val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
             val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
             val statusPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
-            val persistentStateRefs = refs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
+            val persistentStateRefs = refs.map(::PersistentStateRef)
             val compositeKey = vaultStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
             val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
             criteriaQuery.where(statusPredicate, stateRefsPredicate)

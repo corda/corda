@@ -12,7 +12,11 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.RPCException
-import net.corda.core.crypto.random63BitValue
+import net.corda.core.context.Actor
+import net.corda.core.context.Actor.Id
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Trace
+import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
@@ -25,6 +29,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.RPCUserService
+import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.Message
@@ -37,6 +42,7 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
+import org.slf4j.MDC
 import rx.Notification
 import rx.Observable
 import rx.Subscriber
@@ -106,7 +112,7 @@ class RPCServer(
     /** The observable subscription mapping. */
     private val observableMap = createObservableSubscriptionMap()
     /** A mapping from client addresses to IDs of associated Observables */
-    private val clientAddressToObservables = Multimaps.synchronizedSetMultimap(HashMultimap.create<SimpleString, RPCApi.ObservableId>())
+    private val clientAddressToObservables = Multimaps.synchronizedSetMultimap(HashMultimap.create<SimpleString, InvocationId>())
     /** The scheduled reaper handle. */
     private var reaperScheduledFuture: ScheduledFuture<*>? = null
 
@@ -138,7 +144,7 @@ class RPCServer(
     }
 
     private fun createObservableSubscriptionMap(): ObservableSubscriptionMap {
-        val onObservableRemove = RemovalListener<RPCApi.ObservableId, ObservableSubscription> {
+        val onObservableRemove = RemovalListener<InvocationId, ObservableSubscription> {
             log.debug { "Unsubscribing from Observable with id ${it.key} because of ${it.cause}" }
             it.value.subscription.unsubscribe()
         }
@@ -269,18 +275,19 @@ class RPCServer(
                 val arguments = Try.on {
                     clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                 }
+                val context = artemisMessage.context(clientToServer.sessionId)
+                context.invocation.pushToLoggingContext()
                 when (arguments) {
                     is Try.Success -> {
-                        val rpcContext = RpcContext(currentUser = getUser(artemisMessage))
                         rpcExecutor!!.submit {
-                            val result = invokeRpc(rpcContext, clientToServer.methodName, arguments.value)
-                            sendReply(clientToServer.id, clientToServer.clientAddress, result)
+                            val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                            sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
                         }
                     }
                     is Try.Failure -> {
                         // We failed to deserialise the arguments, route back the error
                         log.warn("Inbound RPC failed", arguments.exception)
-                        sendReply(clientToServer.id, clientToServer.clientAddress, arguments)
+                        sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
                     }
                 }
             }
@@ -291,10 +298,10 @@ class RPCServer(
         artemisMessage.acknowledge()
     }
 
-    private fun invokeRpc(rpcContext: RpcContext, methodName: String, arguments: List<Any?>): Try<Any> {
+    private fun invokeRpc(context: RpcAuthContext, methodName: String, arguments: List<Any?>): Try<Any> {
         return Try.on {
             try {
-                CURRENT_RPC_CONTEXT.set(rpcContext)
+                CURRENT_RPC_CONTEXT.set(context)
                 log.debug { "Calling $methodName" }
                 val method = methodTable[methodName] ?:
                         throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
@@ -307,10 +314,10 @@ class RPCServer(
         }
     }
 
-    private fun sendReply(requestId: RPCApi.RpcRequestId, clientAddress: SimpleString, result: Try<Any>) {
-        val reply = RPCApi.ServerToClient.RpcReply(requestId, result)
+    private fun sendReply(replyId: InvocationId, clientAddress: SimpleString, result: Try<Any>) {
+        val reply = RPCApi.ServerToClient.RpcReply(replyId, result)
         val observableContext = ObservableContext(
-                requestId,
+                replyId,
                 observableMap,
                 clientAddressToObservables,
                 clientAddress,
@@ -352,51 +359,83 @@ class RPCServer(
     // TODO remove this User once webserver doesn't need it
     private val nodeUser = User(NODE_USER, NODE_USER, setOf())
 
-    private fun getUser(message: ClientMessage): User {
+    private fun ClientMessage.context(sessionId: Trace.SessionId): RpcAuthContext {
+        val trace = Trace.newInstance(sessionId = sessionId)
+        val externalTrace = externalTrace()
+        val rpcActor = actorFrom(this)
+        val impersonatedActor = impersonatedActor()
+        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor), rpcActor.second)
+    }
+
+    private fun actorFrom(message: ClientMessage): Pair<Actor, RpcPermissions> {
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
+        val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
+        // TODO switch userService based on targetLegalIdentity
         val rpcUser = userService.getUser(validatedUser)
-        if (rpcUser != null) {
-            return rpcUser
+        return if (rpcUser != null) {
+            Actor(Id(rpcUser.username), userService.id, targetLegalIdentity) to RpcPermissions(rpcUser.permissions)
         } else if (CordaX500Name.parse(validatedUser) == nodeLegalName) {
-            return nodeUser
+            // TODO remove this after Shell and WebServer will no longer need it
+            Actor(Id(nodeUser.username), userService.id, targetLegalIdentity) to RpcPermissions(nodeUser.permissions)
         } else {
             throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")
         }
     }
 }
 
+// TODO replace this by creating a new CordaRPCImpl for each request, passing the context, after we fix Shell and WebServer
 @JvmField
-internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcContext> = ThreadLocal()
+internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcAuthContext> = CurrentRpcContext()
+
+internal class CurrentRpcContext : ThreadLocal<RpcAuthContext>() {
+
+    override fun remove() {
+        super.remove()
+        MDC.clear()
+    }
+
+    override fun set(context: RpcAuthContext?) {
+        when {
+            context != null -> {
+                super.set(context)
+                // this is needed here as well because the Shell sets the context without going through the RpcServer
+                context.invocation.pushToLoggingContext()
+            }
+            else -> remove()
+        }
+    }
+}
 
 /**
  * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
  * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
  * around explicitly.
+ * The [InvocationContext] does not include permissions.
  */
-fun rpcContext(): RpcContext = CURRENT_RPC_CONTEXT.get()
+internal fun context(): InvocationContext = rpcContext().invocation
 
 /**
- * @param currentUser This is available to RPC implementations to query the validated [User] that is calling it. Each
- *     user has a set of permissions they're entitled to which can be used to control access.
+ * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
+ * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
+ * around explicitly.
+ * The [RpcAuthContext] includes permissions.
  */
-data class RpcContext(
-        val currentUser: User
-)
+fun rpcContext(): RpcAuthContext = CURRENT_RPC_CONTEXT.get()
 
 class ObservableSubscription(
         val subscription: Subscription
 )
 
-typealias ObservableSubscriptionMap = Cache<RPCApi.ObservableId, ObservableSubscription>
+typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
 
 // We construct an observable context on each RPC request. If subsequently a nested Observable is
 // encountered this same context is propagated by the instrumented KryoPool. This way all
 // observations rooted in a single RPC will be muxed correctly. Note that the context construction
 // itself is quite cheap.
 class ObservableContext(
-        val rpcRequestId: RPCApi.RpcRequestId,
+        val invocationId: InvocationId,
         val observableMap: ObservableSubscriptionMap,
-        val clientAddressToObservables: SetMultimap<SimpleString, RPCApi.ObservableId>,
+        val clientAddressToObservables: SetMultimap<SimpleString, InvocationId>,
         val clientAddress: SimpleString,
         val serverControl: ActiveMQServerControl,
         val sessionAndProducerPool: LazyStickyPool<ArtemisProducer>,
@@ -410,7 +449,7 @@ class ObservableContext(
 
     fun sendMessage(serverToClient: RPCApi.ServerToClient) {
         try {
-            sessionAndProducerPool.run(rpcRequestId) {
+            sessionAndProducerPool.run(invocationId) {
                 val artemisMessage = it.session.createMessage(false)
                 serverToClient.writeToClientMessage(serializationContextWithObservableContext, artemisMessage)
                 it.producer.send(clientAddress, artemisMessage)
@@ -437,9 +476,9 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     }
 
     override fun write(kryo: Kryo, output: Output, observable: Observable<*>) {
-        val observableId = RPCApi.ObservableId(random63BitValue())
+        val observableId = InvocationId.newInstance()
         val observableContext = kryo.context[RpcObservableContextKey] as ObservableContext
-        output.writeLong(observableId.toLong, true)
+        output.writeInvocationId(observableId)
         val observableWithSubscription = ObservableSubscription(
                 // We capture [observableContext] in the subscriber. Note that all synchronisation/kryo borrowing
                 // must be done again within the subscriber
@@ -464,5 +503,11 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
         )
         observableContext.clientAddressToObservables.put(observableContext.clientAddress, observableId)
         observableContext.observableMap.put(observableId, observableWithSubscription)
+    }
+
+    private fun Output.writeInvocationId(id: InvocationId) {
+
+        writeString(id.value)
+        writeLong(id.timestamp.toEpochMilli())
     }
 }

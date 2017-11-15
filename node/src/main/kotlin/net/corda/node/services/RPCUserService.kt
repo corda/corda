@@ -1,5 +1,6 @@
 package net.corda.node.services
 
+import net.corda.core.context.AuthServiceId
 import net.corda.nodeapi.User
 
 /**
@@ -11,12 +12,17 @@ interface RPCUserService {
 
     fun getUser(username: String): User?
     val users: List<User>
+
+    val id: AuthServiceId
 }
 
 // TODO Store passwords as salted hashes
 // TODO Or ditch this and consider something like Apache Shiro
 // TODO Need access to permission checks from inside flows and at other point during audit checking.
 class RPCUserServiceImpl(override val users: List<User>) : RPCUserService {
+
+    override val id: AuthServiceId = AuthServiceId("NODE_FILE_CONFIGURATION")
+
     init {
         users.forEach {
             require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }

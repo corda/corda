@@ -12,6 +12,7 @@ import net.corda.testing.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

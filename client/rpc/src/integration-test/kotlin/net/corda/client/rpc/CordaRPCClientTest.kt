@@ -1,7 +1,7 @@
 package net.corda.client.rpc
 
+import net.corda.core.context.*
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.*
@@ -20,14 +20,15 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
-import net.corda.testing.ALICE
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -44,8 +45,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null
 
-    private fun login(username: String, password: String) {
-        connection = client.start(username, password)
+    private fun login(username: String, password: String, externalTrace: Trace? = null, impersonatedActor: Actor? = null) {
+        connection = client.start(username, password, externalTrace, impersonatedActor)
     }
 
     @Before
@@ -131,31 +132,51 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
 
     @Test
     fun `flow initiator via RPC`() {
-        login(rpcUser.username, rpcUser.password)
+        val externalTrace = Trace.newInstance()
+        val impersonatedActor = Actor(Actor.Id("Mark Dadada"), AuthServiceId("Test"), owningLegalIdentity = BOB.name)
+        login(rpcUser.username, rpcUser.password, externalTrace, impersonatedActor)
         val proxy = connection!!.proxy
-        var countRpcFlows = 0
-        var countShellFlows = 0
-        proxy.stateMachinesFeed().updates.subscribe {
-            if (it is StateMachineUpdate.Added) {
-                val initiator = it.stateMachineInfo.initiator
-                if (initiator is FlowInitiator.RPC)
-                    countRpcFlows++
-                if (initiator is FlowInitiator.Shell)
-                    countShellFlows++
-            }
-        }
         val nodeIdentity = node.info.chooseIdentity()
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), FlowInitiator.Shell).flatMap { it.resultFuture }.getOrThrow()
-        proxy.startFlow(::CashIssueFlow,
-                123.DOLLARS,
-                OpaqueBytes.of(0),
-                nodeIdentity
-        ).returnValue.getOrThrow()
-        proxy.startFlowDynamic(CashIssueFlow::class.java,
-                1000.DOLLARS,
-                OpaqueBytes.of(0),
-                nodeIdentity).returnValue.getOrThrow()
-        assertEquals(2, countRpcFlows)
-        assertEquals(1, countShellFlows)
+
+        val updates = proxy.stateMachinesFeed().updates
+
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
+        proxy.startFlow(::CashIssueFlow, 123.DOLLARS, OpaqueBytes.of(0), nodeIdentity).returnValue.getOrThrow()
+        proxy.startFlowDynamic(CashIssueFlow::class.java, 1000.DOLLARS, OpaqueBytes.of(0), nodeIdentity).returnValue.getOrThrow()
+
+        val historicalIds = mutableSetOf<Trace.InvocationId>()
+        var sessionId: Trace.SessionId? = null
+        updates.expectEvents(isStrict = false) {
+            sequence(
+                    expect { update: StateMachineUpdate.Added ->
+                        checkShellNotification(update.stateMachineInfo)
+                    },
+                    expect { update: StateMachineUpdate.Added ->
+                        checkRpcNotification(update.stateMachineInfo, rpcUser.username, historicalIds, externalTrace, impersonatedActor)
+                        sessionId = update.stateMachineInfo.context().trace.sessionId
+                    },
+                    expect { update: StateMachineUpdate.Added ->
+                        checkRpcNotification(update.stateMachineInfo, rpcUser.username, historicalIds, externalTrace, impersonatedActor)
+                        assertThat(update.stateMachineInfo.context().trace.sessionId).isEqualTo(sessionId)
+                    }
+            )
+        }
     }
+}
+
+private fun checkShellNotification(info: StateMachineInfo) {
+
+    val context = info.context()
+    assertThat(context.origin).isInstanceOf(Origin.Shell::class.java)
+}
+
+private fun checkRpcNotification(info: StateMachineInfo, rpcUsername: String, historicalIds: MutableSet<Trace.InvocationId>, externalTrace: Trace?, impersonatedActor: Actor?) {
+
+    val context = info.context()
+    assertThat(context.origin).isInstanceOf(Origin.RPC::class.java)
+    assertThat(context.externalTrace).isEqualTo(externalTrace)
+    assertThat(context.impersonatedActor).isEqualTo(impersonatedActor)
+    assertThat(context.actor?.id?.value).isEqualTo(rpcUsername)
+    assertThat(historicalIds).doesNotContain(context.trace.invocationId)
+    historicalIds.add(context.trace.invocationId)
 }

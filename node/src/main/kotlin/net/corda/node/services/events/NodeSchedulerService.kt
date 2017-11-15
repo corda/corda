@@ -2,17 +2,17 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.context.Origin
 import net.corda.core.internal.until
 import net.corda.core.node.StateLoader
 import net.corda.core.schemas.PersistentStateRef
@@ -247,7 +247,9 @@ class NodeSchedulerService(private val clock: Clock,
                     val scheduledFlow = getScheduledFlow(scheduledState)
                     if (scheduledFlow != null) {
                         flowName = scheduledFlow.javaClass.name
-                        val future = flowStarter.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).flatMap { it.resultFuture }
+                        // TODO refactor the scheduler to store and propagate the original invocation context
+                        val context = InvocationContext.newInstance(Origin.Scheduled(scheduledState))
+                        val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
                         future.then {
                             unfinishedSchedules.countDown()
                         }

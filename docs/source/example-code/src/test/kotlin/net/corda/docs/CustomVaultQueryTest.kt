@@ -10,6 +10,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
