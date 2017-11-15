@@ -78,8 +78,8 @@ Allow connectivity in compliance with DMZ constraints commonly imposed by modern
 11. Any business data passing through the proxy should be separately encrypted, so that no data is in the clear of the program memory if the DMZ box is compromised.
 
 ## Design Decisions
-1. AMQP vs. custom P2p - see Alternatives section below
-2. SSL termination (firewall vs. float)
+1. AMQP vs. custom P2P - see Alternatives section below
+2. [SSL termination (firewall vs. float)](./decisions/ssl-termination.md)
 3. End-to-end encryption
 4. Prioritisation of pluggable broker support
 
