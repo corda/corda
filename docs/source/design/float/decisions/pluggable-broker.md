@@ -18,7 +18,7 @@ A decision on when to prioritise implementation of a pluggable broker has implic
 
 1.    Meshes with business opportunities from HPE and Solace Systems.
 2.    Would allow us to interface to existing Bank middleware.
-3.    Would allow us to switch away from Artemis if we need higherperformance.
+3.    Would allow us to switch away from Artemis if we need higher performance.
 4.    Makes our AMQP story stronger.
 
 #### Disadvantages
@@ -35,7 +35,7 @@ A decision on when to prioritise implementation of a pluggable broker has implic
 
 #### Disadvantages
 
-1. Have to take care that we have sufficient abstractions that thingslike CORE connections can be replaced later.
+1. Have to take care that we have sufficient abstractions that things like CORE connections can be replaced later.
 2. Leaves HPE and Solace hanging even longer.
 
 
@@ -52,8 +52,6 @@ A decision on when to prioritise implementation of a pluggable broker has implic
 2. Not good for our relationship with HPE and Solace.
 
 3. Probably limits our maximum messaging performance longer term.
-
-   ​
 
 
 ## Recommendation and justification
