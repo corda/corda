@@ -401,7 +401,7 @@ public class FlowCookbookJava {
             // DOCEND 29
             // We can also sign the transaction using a different public key:
             // DOCSTART 30
-            PublicKey otherKey = getServiceHub().getKeyManagementService().freshKey();
+            PublicKey otherKey = getServiceHub().getKeyManagementService().freshKeyAndCert(getOurIdentityAndCert(), false).getOwningKey();
             SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(txBuilder, otherKey);
             // DOCEND 30
 
@@ -412,7 +412,7 @@ public class FlowCookbookJava {
             SignedTransaction twiceSignedTx = getServiceHub().addSignature(onceSignedTx);
             // DOCEND 38
             // Or, if we wanted to use a different public key:
-            PublicKey otherKey2 = getServiceHub().getKeyManagementService().freshKey();
+            PublicKey otherKey2 = getServiceHub().getKeyManagementService().freshKeyAndCert(getOurIdentityAndCert(), false).getOwningKey();
             // DOCSTART 39
             SignedTransaction twiceSignedTx2 = getServiceHub().addSignature(onceSignedTx, otherKey2);
             // DOCEND 39
