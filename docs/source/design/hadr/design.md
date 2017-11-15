@@ -50,9 +50,23 @@ Thus, HA is essential for enterprise Corda and providing help to administrators 
 
 ### Current node topology
 
-The diagram below illustrates Corda's current design in the context of messaging between peer nodes. No HA is currently supported by this topology.
-
 ![Current (single process)](./HA%20deployment%20-%20No%20HA.png)
+
+The current solution has a single integrated process running in one JVM including 
+Artemis, H2 database, Flow State Machine, P2P bridging. All storage is on the local file system. There is no HA capability other than manual restart of the node following failure.
+
+#### Limitations
+
+- All sub-systems must be started and stopped together.
+- Unable to handle partial failure e.g. Artemis.
+- Artemis cannot use its in-built HA capability (clustered slave mode) as it is embedded.
+- Cannot run the node with the flow state machine suspended.
+- Cannot use alternative message brokers.
+- Cannot run multiple nodes against the same broker.
+- Cannot use alternative databases to H2.
+- Cannot share the database across Corda nodes.
+- RPC clients do have automatic reconnect but there is no clear solution for resynchronising on reconnect.
+- The backup strategy is unclear.
 
 ## Requirements
 
@@ -94,14 +108,88 @@ The following design decisions are assumed by this design:
 
 ## Target Solution
 
-### Hot-Cold (near-term target)
+
+### Hot-Cold (minimum requirement)
 ![Hot-Cold (minimum requirement)](./HA%20deployment%20-%20Hot-Cold.png)
 
-### Hot-Warm (medium-term-target)
+The hot-cold design provides a backup VM and Corda deployment instance that can be manually started if the primary is stopped. The failed primary must be killed to ensure it is fully stopped.
+
+A load balancer determines which node is active and routes traffic to that node.
+The load balancer will need to monitor the health of the primary and secondary nodes and automatically route traffic from the public IP address to the only active end-point. An external solution is required for the load balancer and health monitor. In the case of Azure cloud deployments, no custom code needs to be developed to support the health monitor.
+
+An additional component will be written to prevent accidental dual running which is likely to make use of a database heartbeat table. Code size should be minimal.
+
+#### Advantages
+
+- This approach minimises the need for new code so can be deployed quickly.
+- Use of a load balancer in the short term avoids the need for new code and configuration management to support the alternative approach of multiple advertised addresses for a single legal identity.
+- Configuration of the inactive mode should be a simple mirror of the primary.
+- Assumes external monitoring and management of the nodes e.g. ability to identify node failure and that Corda watchdog code will not be required (customer developed).
+
+#### Limitations
+
+- Slow failover as this is manually controlled.
+- Requires external solutions for replication of database and Artemis journal data.
+- Replication mechanism on agent banks with real servers not tested.
+- Replication mechanism on Azure is under test but may prove to be too slow.
+- Compatibility with external load balancers not tested. Only Azure configuration tested.
+- Contingent on completion of database support and testing of replication.
+- Failure of database (loss of connection) may not be supported or may require additional code.
+- RPC clients assumed to make short lived RPC requests e.g. from Rest server so no support for long term clients operating across failover.
+- Replication time point of the database and Artemis message data are independent and may not fully synchronise (may work subject to testing) .
+- Health reporting and process controls need to be developed by the customer.
+
+### Hot-Warm (Medium-term solution)
 ![Hot-Warm (Medium-term solution)](./HA%20deployment%20-%20Hot-Warm.png)
 
-### Hot-Hot (Long-term target)
+Hot-warm aims to automate failover and provide failover of individual major components e.g. Artemis.
+
+It involves Two key changes to the hot-cold design: 
+1)	Separation and clustering of the Artemis broker.
+2)	Start and stop of flow processing without JVM exit.
+
+The consequences of these changes are that peer to peer bridging is separated from the node and a bridge control protocol must be developed.
+A leader election component is a pre-cursor to load balancing – likely to be a combination of custom code and standard library and, in the short term, is likely to be via the database.
+Cleaner handling of disconnects from the external components (Artemis and the database) will also be needed.
+
+#### Advantages
+
+- Faster failover as no manual intervention.
+- We can use Artemis replication protocol to replicate the message store.
+- The approach in integrated with preliminary steps for the float.
+- Able to handle loss of network connectivity to the database from one node.
+- Extraction of Artemis server allows a more standard Artemis deployment.
+- Provides protection against resource leakage in Artemis or Node from affecting the other component.
+- VMs can be tuned to address different work load patterns of broker and node.
+- Bridge work allows chance to support multiple IP addresses without a load balancer.
+
+#### Limitations
+
+- This approach will require careful testing of resource management on partial shutdown.
+- No horizontal scaling support.
+- Deployment of master and slave may not be completely symmetric.
+- Care must be taken with upgrades to ensure master/slave election operates across updates.
+- Artemis clustering does require a designated master at start-up of its cluster hence any restart involving changing the primary node will require configuration management.
+- The development effort is much more significant than the hot-cold configuration.
+
+### Hot-Hot (Long-term strategic solution)
 ![Hot-Hot (Long-term strategic solution)](./HA%20deployment%20-%20Hot-Hot.png)
+
+In this configuration, all nodes are actively processing work and share a clustered database. A mechanism for sharding or distributing the work load will need to be developed.
+
+#### Advantages
+
+- Faster failover as flows are picked up by other active nodes.
+- Rapid scaling by adding additional nodes.
+- Node deployment is symmetric.
+- Any broker that can support AMQP can be used.
+- RPC can gracefully handle failover because responsibility for the flow can be migrated across nodes without the client being aware.
+
+#### Limitations
+
+- Very significant work with many edge cases during failure.
+- Will require handling of more states than just checkpoints e.g. soft locks and RPC subscriptions.
+- Single flows will not be active on multiple nodes without future development work.
 
 --------------------------------------------
 IMPLEMENTATION PLAN
