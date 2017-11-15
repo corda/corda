@@ -54,7 +54,6 @@ open class MockServices(
         vararg val keys: KeyPair
 ) : ServiceHub, StateLoader by stateLoader {
     companion object {
-
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -91,15 +90,15 @@ open class MockServices(
         }
 
         /**
-         * Creates an instance of [InMemoryIdentityService] with [MOCK_IDENTITIES].
+         * Creates an instance of [InMemoryIdentityService].
          */
         @JvmStatic
-        fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
+        fun makeTestIdentityService() = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
 
         /**
          * Makes database and mock services appropriate for unit tests.
          * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
-         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defauts to [InMemoryIdentityService].
+         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defaults to [InMemoryIdentityService].
          *
          * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
@@ -128,6 +127,9 @@ open class MockServices(
                     override fun jdbcSession(): Connection = database.createSession()
                 }
             }
+            database.transaction {
+                mockService.myInfo.legalIdentitiesAndCerts.forEach { identity -> mockService.identityService.verifyAndRegisterIdentity(identity) }
+            }
             return Pair(database, mockService)
         }
     }
@@ -150,7 +152,7 @@ open class MockServices(
 
     final override val attachments = MockAttachmentStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
-    override val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
+    override val identityService: IdentityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()

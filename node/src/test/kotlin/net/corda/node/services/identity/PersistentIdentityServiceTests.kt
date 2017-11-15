@@ -37,7 +37,7 @@ class PersistentIdentityServiceTests {
 
     @Before
     fun setup() {
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), createIdentityService = { PersistentIdentityService(trustRoot = DEV_TRUST_ROOT) })
+        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(createIdentityService = { PersistentIdentityService(trustRoot = DEV_TRUST_ROOT) })
         database = databaseAndServices.first
         services = databaseAndServices.second
         identityService = services.identityService
@@ -50,17 +50,19 @@ class PersistentIdentityServiceTests {
 
     @Test
     fun `get all identities`() {
-        // Nothing registered, so empty set
+        val ourIdentity = services.myInfo.singleIdentityAndCert()
+        // Only our own identity is registered at this point
         database.transaction {
-            assertNull(identityService.getAllIdentities().firstOrNull())
+            val expected = ourIdentity
+            assertEquals(expected, identityService.getAllIdentities().singleOrNull())
         }
 
         database.transaction {
             identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
         }
-        var expected = setOf(ALICE)
+        var expected = setOf(ourIdentity.party, ALICE)
         var actual = database.transaction {
-            identityService.getAllIdentities().map { it.party }.toHashSet()
+            identityService.getAllIdentities().map(PartyAndCertificate::party).toHashSet()
         }
         assertEquals(expected, actual)
 
@@ -68,9 +70,9 @@ class PersistentIdentityServiceTests {
         database.transaction {
             identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
         }
-        expected = setOf(ALICE, BOB)
+        expected = setOf(ourIdentity.party, ALICE, BOB)
         actual = database.transaction {
-            identityService.getAllIdentities().map { it.party }.toHashSet()
+            identityService.getAllIdentities().map(PartyAndCertificate::party).toHashSet()
         }
         assertEquals(expected, actual)
     }
@@ -237,6 +239,12 @@ class PersistentIdentityServiceTests {
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = database.transaction {
             PersistentIdentityService(trustRoot = DEV_TRUST_ROOT)
+        }
+
+        database.transaction {
+            val expected = alice.party
+            val actual = newPersistentIdentityService.wellKnownPartyFromX500Name(alice.name)
+            assertEquals(expected, actual)
         }
 
         database.transaction {
