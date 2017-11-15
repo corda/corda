@@ -157,10 +157,12 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
                 OpaqueBytes.of(0),
                 nodeIdentity
         ).returnValue.getOrThrow()
+
         proxy.startFlowDynamic(CashIssueFlow::class.java,
                 1000.DOLLARS,
                 OpaqueBytes.of(0),
                 nodeIdentity).returnValue.getOrThrow()
+
         assertEquals(2, countRpcFlows)
         assertEquals(1, countShellFlows)
     }

@@ -12,7 +12,7 @@ data class RpcAuthContext(val invocation: InvocationContext, val grantedPermissi
     fun requireEitherPermission(permissions: Set<String>): RpcAuthContext {
 
         // TODO remove the NODE_USER condition once webserver and shell won't need it anymore
-        if (invocation.principal.name != ArtemisMessagingComponent.NODE_USER && !grantedPermissions.coverAny(permissions)) {
+        if (invocation.principal().name != ArtemisMessagingComponent.NODE_USER && !grantedPermissions.coverAny(permissions)) {
             throw PermissionException("User not permissioned with any of $permissions, permissions are ${this.grantedPermissions}.")
         }
         return this

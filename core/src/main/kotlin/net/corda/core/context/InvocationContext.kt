@@ -54,8 +54,7 @@ data class InvocationContext(val origin: Origin, val trace: Trace, val actor: Ac
     /**
      * Associated security principal.
      */
-    val principal: Principal
-        get() = origin.principal
+    fun principal(): Principal = origin.principal()
 }
 
 /**
@@ -85,14 +84,14 @@ sealed class Origin {
     /**
      * Returns the [Principal] for a given [Actor].
      */
-    abstract val principal: Principal
+    abstract fun principal(): Principal
 
     /**
      * Origin was an RPC call.
      */
     data class RPC(private val actor: Actor) : Origin() {
 
-        override val principal = Principal { actor.id.value }
+        override fun principal() = Principal { actor.id.value }
     }
 
     /**
@@ -100,7 +99,7 @@ sealed class Origin {
      */
     data class Peer(val party: CordaX500Name) : Origin() {
 
-        override val principal = Principal { party.toString() }
+        override fun principal() = Principal { party.toString() }
     }
 
     /**
@@ -108,7 +107,7 @@ sealed class Origin {
      */
     data class Service(val serviceClassName: String, val owningLegalIdentity: CordaX500Name) : Origin() {
 
-        override val principal = Principal { serviceClassName }
+        override fun principal() = Principal { serviceClassName }
     }
 
     /**
@@ -116,7 +115,7 @@ sealed class Origin {
      */
     data class Scheduled(val scheduledState: ScheduledStateRef) : Origin() {
 
-        override val principal = Principal { "Scheduler" }
+        override fun principal() = Principal { "Scheduler" }
     }
 
     // TODO When proper ssh access enabled, add username/use RPC?
@@ -125,6 +124,6 @@ sealed class Origin {
      */
     object Shell : Origin() {
 
-        override val principal = Principal { "Shell User" }
+        override fun principal() = Principal { "Shell User" }
     }
 }

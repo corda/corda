@@ -253,7 +253,6 @@ class RPCServer(
 
     private fun drainBuffer(buffer: BufferOrNone.Buffer) {
         buffer.container.forEach {
-            // TODO sollecitom debug here
             it.context.sendMessage(it.message)
         }
     }
@@ -281,7 +280,6 @@ class RPCServer(
                 when (arguments) {
                     is Try.Success -> {
                         rpcExecutor!!.submit {
-                            // TODO sollecitom maybe the context invocation id needs to match the replyId
                             val result = invokeRpc(context, clientToServer.methodName, arguments.value)
                             sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
                         }

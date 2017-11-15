@@ -106,7 +106,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
     }
 
     private fun formatInvocationContext(context: InvocationContext): String {
-        return context.principal.name
+        return context.principal().name
     }
 
     private fun formatFlowResult(flowResult: Try<*>): String {

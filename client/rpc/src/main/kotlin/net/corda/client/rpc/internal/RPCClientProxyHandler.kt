@@ -445,7 +445,6 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
         observableContext.callSiteMap?.put(observableId, rpcCallSite)
         // We pin all Observables into a hard reference store (rooted in the RPC proxy) on subscription so that users
         // don't need to store a reference to the Observables themselves.
-        // TODO sollecitom ask Andras about this
         return pinInSubscriptions(observable, observableContext.hardReferenceStore).doOnUnsubscribe {
             // This causes Future completions to give warnings because the corresponding OnComplete sent from the server
             // will arrive after the client unsubscribes from the observable and consequently invalidates the mapping.
