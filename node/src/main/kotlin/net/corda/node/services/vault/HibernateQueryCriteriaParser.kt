@@ -2,6 +2,7 @@ package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.toHashedString
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.Vault
@@ -349,8 +350,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         // issuer reference
         criteria.issuerRef?.let {
-            val issuerRefs = criteria.issuerRef as List<OpaqueBytes>
-            predicateSet.add(criteriaBuilder.and(vaultFungibleStates.get<OpaqueBytes>("issuerRef").`in`(issuerRefs)))
+            val issuerRefs = (criteria.issuerRef as List<OpaqueBytes>).map { it.toHashedString() }
+            predicateSet.add(criteriaBuilder.and(vaultFungibleStates.get<String>("issuerRefHash").`in`(issuerRefs)))
         }
 
         // participants

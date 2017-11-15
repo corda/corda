@@ -1,5 +1,6 @@
 package net.corda.finance.schemas
 
+import net.corda.core.crypto.toHashedString
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
@@ -34,5 +35,5 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             val _issuerParty: AbstractParty,
             @Transient
             val _issuerRef: OpaqueBytes
-    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef)
+    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.toHashedString())
 }

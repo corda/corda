@@ -1,6 +1,7 @@
 package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.toHashedString
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.Emoji
@@ -47,7 +48,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         issuerPartyHash = this.amount.token.issuer.party.owningKey.toStringShort(),
-                        issuerRef = this.amount.token.issuer.reference
+                        issuerRefHash = this.amount.token.issuer.reference.toHashedString()
                 )
                 is SampleCashSchemaV2 -> SampleCashSchemaV2.PersistentCashState(
                         _participants = this.participants.toMutableSet(),
@@ -63,7 +64,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         issuer = this.amount.token.issuer.party,
-                        issuerRef = this.amount.token.issuer.reference
+                        issuerRefHash = this.amount.token.issuer.reference.toHashedString()
                 )
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }

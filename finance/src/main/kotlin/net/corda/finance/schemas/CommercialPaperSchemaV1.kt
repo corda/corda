@@ -52,7 +52,7 @@ object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSche
             var faceValueIssuerPartyHash: String,
 
             // TODO: store the raw issuer reference contents in a separate join table
-            @Column(name = "face_value_issuer_ref", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "face_value_issuer_ref_hash", length = MAX_HASH_HEX_SIZE)
             var faceValueIssuerRef: String
     ) : PersistentState()
 }
