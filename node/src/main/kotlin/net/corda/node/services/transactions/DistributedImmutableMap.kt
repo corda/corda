@@ -3,10 +3,7 @@ package net.corda.node.services.transactions
 import io.atomix.copycat.Command
 import io.atomix.copycat.Query
 import io.atomix.copycat.server.Commit
-import io.atomix.copycat.server.Snapshottable
 import io.atomix.copycat.server.StateMachine
-import io.atomix.copycat.server.storage.snapshot.SnapshotReader
-import io.atomix.copycat.server.storage.snapshot.SnapshotWriter
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.*
 import java.util.LinkedHashMap
@@ -15,11 +12,10 @@ import java.util.LinkedHashMap
  * A distributed map state machine that doesn't allow overriding values. The state machine is replicated
  * across a Copycat Raft cluster.
  *
- * The map contents are backed by a JDBC table. State re-synchronisation is achieved by periodically persisting snapshots
- * to disk, and sharing them across the cluster. A new node joining the cluster will have to obtain and install a snapshot
- * containing the entire JDBC table contents.
+ * The map contents are backed by a JDBC table. State re-synchronisation is achieved by replaying the command log to the
+ * new (or re-joining) cluster member.
  */
-class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence, createMap: () -> AppendOnlyPersistentMap<K, V, E, EK>) : StateMachine() {
+class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence, createMap: () -> AppendOnlyPersistentMap<K, Pair<Long, V>, E, EK>) : StateMachine() {
     companion object {
         private val log = loggerFor<DistributedImmutableMap<*, *, *, *>>()
     }
@@ -50,7 +46,7 @@ class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence,
     fun get(commit: Commit<Commands.Get<K, V>>): V? {
         commit.use {
             val key = it.operation().key
-            return db.transaction { map[key] }
+            return db.transaction { map[key]?.second }
         }
     }
 
@@ -61,12 +57,13 @@ class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence,
      */
     fun put(commit: Commit<Commands.PutAll<K, V>>): Map<K, V> {
         commit.use {
+            val index = commit.index()
             val conflicts = LinkedHashMap<K, V>()
             db.transaction {
                 val entries = commit.operation().entries
                 log.debug("State machine commit: storing entries with keys (${entries.keys.joinToString()})")
-                for (key in entries.keys) map[key]?.let { conflicts[key] = it }
-                if (conflicts.isEmpty()) map.putAll(entries)
+                for (key in entries.keys) map[key]?.let { conflicts[key] = it.second }
+                if (conflicts.isEmpty()) map.putAll(entries.mapValues { Pair(index, it.value) })
             }
             return conflicts
         }

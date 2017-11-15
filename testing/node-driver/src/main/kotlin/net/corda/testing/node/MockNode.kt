@@ -35,6 +35,7 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.common.internal.NetworkParametersCopier
@@ -256,7 +257,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(): MessagingService {
+        override fun makeMessagingService(database: CordaPersistence): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
@@ -302,9 +303,9 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = testSerializationWhitelists
         private var dbCloser: (() -> Any?)? = null
-        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T) = super.initialiseDatabasePersistence(schemaService) {
+        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: (CordaPersistence) -> T) = super.initialiseDatabasePersistence(schemaService) { database ->
             dbCloser = database::close
-            insideTransaction()
+            insideTransaction(database)
         }
 
         fun disableDBCloseOnStop() {
