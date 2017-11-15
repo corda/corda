@@ -5,11 +5,11 @@ import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.OwnableState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
-import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
-import org.hibernate.annotations.Type
 import java.util.*
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.ElementCollection
+import javax.persistence.MappedSuperclass
 
 /**
  * JPA representation of the common schema entities
