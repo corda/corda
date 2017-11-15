@@ -15,6 +15,50 @@ This is an example of what a Doorman configuration file might look like:
 Invoke Doorman with ``-?`` for a full list of supported command-line arguments.
 
 
+Configuration parameters
+------------------------
+Allowed parameters are:
+
+:keystorePassword: the keystore password
+
+:caPrivateKeyPassword: the ca private key password
+
+:rootKeystorePassword: Password for the root store
+
+:rootPrivateKeyPassword: Password for the root private key
+
+:host: host on which doorman runs
+
+:port: port on which doorman runs
+
+:mode: must be one of: DOORMAN (default), CA_KEYGEN, ROOT_KEYGEN.
+
+:approveAll: Whether to approve all request (defaults to false), this is for debug only.
+
+:databaseProperties: database properties
+
+:dataSourceProperties: datasoruce properties
+
+:jiraConfig: The Jira configuration
+
+    :address: The URL to use to connect to Jira
+
+    :projectCode: The project code on Jira
+
+    :username: Username for Jira
+
+    :password: Password for Jira
+
+    :doneTransitionCode: Jira status to put approved tickets in
+
+:keystorePath: Path for the keystore
+
+:rootStorePath: Path for the root keystore
+
+:approveInterval: How often to process Jira approved requests in seconds
+
+:signInterval: How often to sign the network map in seconds
+
 Bootstrapping the network parameters
 ------------------------------------
 When Doorman is running it will serve the current network parameters. The first time Doorman is

@@ -46,6 +46,8 @@
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
+      <module name="gradle-plugins-cordform-common_main" target="1.8" />
+      <module name="gradle-plugins-cordform-common_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
       <module name="intellij-plugin_main" target="1.8" />
@@ -88,8 +90,12 @@
       <module name="notary-demo_test" target="1.8" />
       <module name="perftestcordapp_main" target="1.8" />
       <module name="perftestcordapp_test" target="1.8" />
+      <module name="publish-utils_main" target="1.8" />
+      <module name="publish-utils_test" target="1.8" />
       <module name="quasar-hook_main" target="1.8" />
       <module name="quasar-hook_test" target="1.8" />
+      <module name="quasar-utils_main" target="1.8" />
+      <module name="quasar-utils_test" target="1.8" />
       <module name="rpc_integrationTest" target="1.8" />
       <module name="rpc_main" target="1.8" />
       <module name="rpc_smokeTest" target="1.8" />

@@ -1,51 +1,52 @@
 package com.r3.corda.networkmanage.doorman
 
-import com.r3.corda.networkmanage.TestBase
+import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.typesafe.config.ConfigException
-import net.corda.core.utilities.seconds
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.io.File
-import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class DoormanParametersTest : TestBase() {
-    private val testDummyPath = ".${File.separator}testDummyPath.jks"
+class DoormanParametersTest {
     private val validInitialNetworkConfigPath = File(javaClass.getResource("/initial-network-parameters.conf").toURI()).absolutePath
     private val validConfigPath = File(javaClass.getResource("/doorman.conf").toURI()).absolutePath
     private val invalidConfigPath = File(javaClass.getResource("/doorman_fail.conf").toURI()).absolutePath
-
-    private val requiredArgs = arrayOf("--configFile", validConfigPath, "--initialNetworkParameters", validInitialNetworkConfigPath)
+    private val validArgs = arrayOf("--config-file", validConfigPath, "--initial-network-parameters", validInitialNetworkConfigPath)
 
     @Test
-    fun `parse mode flag arg correctly`() {
-        assertEquals(DoormanParameters.Mode.CA_KEYGEN, callParseParametersWithRequiredArgs("--mode", "CA_KEYGEN").mode)
-        assertEquals(DoormanParameters.Mode.ROOT_KEYGEN, callParseParametersWithRequiredArgs("--mode", "ROOT_KEYGEN").mode)
-        assertEquals(DoormanParameters.Mode.DOORMAN, callParseParametersWithRequiredArgs("--mode", "DOORMAN").mode)
+    fun `should fail when initial network parameters file is missing`() {
+        val message = assertFailsWith<IllegalStateException> {
+            parseCommandLine("--config-file", validConfigPath, "--initial-network-parameters", "not-here")
+        }.message
+        assertThat(message).contains("Initial network parameters file ")
     }
 
     @Test
-    fun `command line arg should override config file`() {
-        val params = callParseParametersWithRequiredArgs("--keystorePath", testDummyPath, "--port", "1000")
-        assertEquals(testDummyPath, params.keystorePath.toString())
-        assertEquals(1000, params.port)
+    fun `should fail when config file is missing`() {
+        val message = assertFailsWith<IllegalStateException> {
+            parseCommandLine("--config-file", "not-existing-file", "--initial-network-parameters", validInitialNetworkConfigPath)
+        }.message
+        assertThat(message).contains("Config file ")
+    }
 
-        val params2 = callParseParametersWithRequiredArgs()
-        assertEquals(Paths.get("/opt/doorman/certificates/caKeystore.jks"), params2.keystorePath)
-        assertEquals(8080, params2.port)
+    @Test
+    fun `should throw ShowHelpException when -? is on the command line`() {
+        assertFailsWith<ShowHelpException> {
+            parseCommandLine("-?")
+        }
     }
 
     @Test
     fun `should fail when config missing`() {
-        // dataSourceProperties is missing from node_fail.conf and it should fail during parsing, and shouldn't use default from reference.conf.
         assertFailsWith<ConfigException.Missing> {
-            parseParameters("--configFile", invalidConfigPath)
+            parseParameters(parseCommandLine("--config-file", invalidConfigPath, "--initial-network-parameters", validInitialNetworkConfigPath).configFile)
         }
     }
 
     @Test
     fun `should parse jira config correctly`() {
-        val parameter = callParseParametersWithRequiredArgs()
+        val parameter =  parseCommandLineAndGetParameters()
         assertEquals("https://doorman-jira-host.com/", parameter.jiraConfig?.address)
         assertEquals("TD", parameter.jiraConfig?.projectCode)
         assertEquals("username", parameter.jiraConfig?.username)
@@ -53,7 +54,7 @@ class DoormanParametersTest : TestBase() {
         assertEquals(41, parameter.jiraConfig?.doneTransitionCode)
     }
 
-    private fun callParseParametersWithRequiredArgs(vararg additionalArgs: String): DoormanParameters {
-        return parseParameters(*(requiredArgs + additionalArgs))
+    private fun parseCommandLineAndGetParameters(): DoormanParameters {
+        return parseParameters(parseCommandLine(*validArgs).configFile)
     }
 }

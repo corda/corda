@@ -245,8 +245,8 @@ private class ApproveAllCertificateRequestStorage(private val delegate: Certific
 
 fun main(args: Array<String>) {
     try {
-        // TODO : Remove config overrides and solely use config file after testnet is finalized.
-        parseParameters(*args).run {
+        val commandLineOptions = parseCommandLine(*args)
+        parseParameters(commandLineOptions.configFile).run {
             when (mode) {
                 DoormanParameters.Mode.ROOT_KEYGEN -> generateRootKeyPair(
                         rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
@@ -263,7 +263,7 @@ fun main(args: Array<String>) {
                     val database = configureDatabase(dataSourceProperties, databaseProperties, { throw UnsupportedOperationException() }, SchemaService())
                     val signer = buildLocalSigner(this)
 
-                    val networkParameters = parseNetworkParametersFrom(initialNetworkParameters)
+                    val networkParameters = parseNetworkParametersFrom(commandLineOptions.initialNetworkParameters)
                     startDoorman(NetworkHostAndPort(host, port), database, approveAll, networkParameters, signer, approveInterval, signInterval, jiraConfig)
                 }
             }
