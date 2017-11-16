@@ -50,7 +50,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
-@Ignore
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     companion object {
         private val myInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(DUMMY_IDENTITY_1), 1, serial = 1L)
@@ -75,7 +74,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     private lateinit var smmHasRemovedAllFlows: CountDownLatch
     private lateinit var kms: MockKeyManagementService
     private lateinit var mockSMM: StateMachineManager
-    private val ourIdentity = ALICE_NAME
     var calls: Int = 0
 
     /**
@@ -130,6 +128,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         }
     }
 
+    private var allowedUnsuspendedFiberCount = 0
     @After
     fun tearDown() {
         // We need to make sure the StateMachineManager is done before shutting down executors.
@@ -139,6 +138,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
         database.close()
+        mockSMM.stop(allowedUnsuspendedFiberCount)
     }
 
     // Ignore IntelliJ when it says these properties can be private, if they are we cannot serialise them
@@ -222,6 +222,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Test
     fun `test activity due in the future and schedule another later`() {
+        allowedUnsuspendedFiberCount = 1
         val time = stoppedClock.instant() + 1.days
         scheduleTX(time)
 
