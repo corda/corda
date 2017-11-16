@@ -82,6 +82,6 @@ class CordappProviderImplTests {
 
         val expected = provider.getAppContext(provider.cordapps.first()).config
 
-        assertThat(expected).isEqualTo(validConfig)
+        assertThat(expected.get<String>("key")).isEqualTo("value")
     }
 }

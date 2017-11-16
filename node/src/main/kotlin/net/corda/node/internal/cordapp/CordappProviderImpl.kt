@@ -7,6 +7,7 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.cordapp.CordappConfigProvider
+import net.corda.core.internal.cordapp.TypesafeCordappConfig
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -73,7 +74,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, private
                     cordapp,
                     getCordappAttachmentId(cordapp),
                     cordappLoader.appClassLoader,
-                    cordappConfigProvider.getConfigByName(cordapp.name)
+                    TypesafeCordappConfig(cordappConfigProvider.getConfigByName(cordapp.name))
             )
         })
     }
