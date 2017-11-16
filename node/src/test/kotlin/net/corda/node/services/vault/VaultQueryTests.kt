@@ -76,8 +76,10 @@ class VaultQueryTests {
         services = databaseAndServices.second
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
         identitySvc = services.identityService
-        identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
-        identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
+        // Register all of the identities we're going to use
+        (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
+            services.identityService.verifyAndRegisterIdentity(identity)
+        }
     }
 
     @After
@@ -1390,20 +1392,24 @@ class VaultQueryTests {
         // GBP issuer
         val gbpCashIssuerName = CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB")
         val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerName, generateKeyPair())
-        val gbpCashIssuer = gbpCashIssuerServices.myInfo.singleIdentity().ref(1)
+        val gbpCashIssuer = gbpCashIssuerServices.myInfo.singleIdentityAndCert()
         // USD issuer
         val usdCashIssuerName = CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US")
         val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerName, generateKeyPair())
-        val usdCashIssuer = usdCashIssuerServices.myInfo.singleIdentity().ref(1)
+        val usdCashIssuer = usdCashIssuerServices.myInfo.singleIdentityAndCert()
         // CHF issuer
         val chfCashIssuerName = CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH")
         val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerName, generateKeyPair())
-        val chfCashIssuer = chfCashIssuerServices.myInfo.singleIdentity().ref(1)
-
+        val chfCashIssuer = chfCashIssuerServices.myInfo.singleIdentityAndCert()
+        listOf(gbpCashIssuer, usdCashIssuer, chfCashIssuer).forEach { identity ->
+            services.identityService.verifyAndRegisterIdentity(identity)
+        }
         database.transaction {
-            services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = gbpCashIssuer)
-            services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = usdCashIssuer)
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = chfCashIssuer)
+            services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = gbpCashIssuer.party.ref(1))
+            services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = usdCashIssuer.party.ref(1))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = chfCashIssuer.party.ref(1))
+        }
+        database.transaction {
             val criteria = FungibleAssetQueryCriteria(issuer = listOf(gbpCashIssuer.party, usdCashIssuer.party))
             val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
