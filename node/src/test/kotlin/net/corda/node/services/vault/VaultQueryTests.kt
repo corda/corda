@@ -1413,8 +1413,9 @@ class VaultQueryTests {
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = BOC.ref(1))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MINI_CORP))
-
+                    issuedBy = MEGA_CORP.ref(0), owner = (MINI_CORP))
+        }
+        database.transaction {
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
             val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(1)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
@@ -1426,10 +1427,11 @@ class VaultQueryTests {
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MEGA_CORP))
+                    issuedBy = MEGA_CORP.ref(0), owner = (MEGA_CORP))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = BOC.ref(0), ownedBy = (MINI_CORP))  // irrelevant to this vault
-
+                    issuedBy = BOC.ref(0), owner = MINI_CORP)  // irrelevant to this vault
+        }
+        database.transaction {
             // DOCSTART VaultQueryExample5.2
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP, BOC))
             val results = vaultService.queryBy<ContractState>(criteria)

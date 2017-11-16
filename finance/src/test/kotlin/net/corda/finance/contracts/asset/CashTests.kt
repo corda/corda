@@ -3,7 +3,6 @@ package net.corda.finance.contracts.asset
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
@@ -84,13 +83,13 @@ class CashTests {
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
                 database.transaction {
             ourServices.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    ownedBy = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
+                    owner = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
             ourServices.fillWithSomeTestCash(howMuch = 400.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    ownedBy = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
+                    owner = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
             ourServices.fillWithSomeTestCash(howMuch = 80.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    ownedBy = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
+                    owner = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
             ourServices.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    ownedBy = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
+                    owner = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
         }
         database.transaction {
             vaultStatesUnconsumed = ourServices.vaultService.queryBy<Cash.State>().states
