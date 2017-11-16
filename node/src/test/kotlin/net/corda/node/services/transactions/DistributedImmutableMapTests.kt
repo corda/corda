@@ -17,14 +17,12 @@ import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Ignore
 class DistributedImmutableMapTests {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
