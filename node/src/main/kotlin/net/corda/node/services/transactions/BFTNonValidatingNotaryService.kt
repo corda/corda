@@ -95,7 +95,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
     }
 
     @Entity
-    @Table(name = "${NODE_DATABASE_PREFIX}bft_smart_notary_committed_states")
+    @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_states")
     class PersistedCommittedState(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
         : PersistentUniquenessProvider.PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
 

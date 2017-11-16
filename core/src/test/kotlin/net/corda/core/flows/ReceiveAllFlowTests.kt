@@ -7,6 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.network
+import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 

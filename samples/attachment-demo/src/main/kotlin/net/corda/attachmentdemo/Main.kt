@@ -12,9 +12,8 @@ import net.corda.testing.driver.driver
  */
 fun main(args: Array<String>) {
     val demoUser = listOf(User("demo", "demo", setOf("StartFlow.net.corda.flows.FinalityFlow")))
-    driver(isDebug = true, driverDirectory = "build" / "attachment-demo-nodes") {
+    driver(isDebug = true, driverDirectory = "build" / "attachment-demo-nodes", waitForAllNodesToFinish = true) {
         startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser)
         startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser)
-        waitForAllNodesToFinish()
     }
 }

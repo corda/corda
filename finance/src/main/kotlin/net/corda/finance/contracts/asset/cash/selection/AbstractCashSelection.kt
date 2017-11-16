@@ -131,17 +131,19 @@ abstract class AbstractCashSelection {
                 stateAndRefs.clear()
 
                 var totalPennies = 0L
+                val stateRefs = mutableSetOf<StateRef>()
                 while (rs.next()) {
                     val txHash = SecureHash.parse(rs.getString(1))
                     val index = rs.getInt(2)
-                    val stateRef = StateRef(txHash, index)
-                    val state = rs.getBlob(3).deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT)
-                    val pennies = rs.getLong(4)
-                    totalPennies = rs.getLong(5)
-                    val rowLockId = rs.getString(6)
-                    stateAndRefs.add(StateAndRef(state, stateRef))
-                    log.trace { "ROW: $rowLockId ($lockId): $stateRef : $pennies ($totalPennies)" }
+                    val pennies = rs.getLong(3)
+                    totalPennies = rs.getLong(4)
+                    val rowLockId = rs.getString(5)
+                    stateRefs.add(StateRef(txHash, index))
+                    log.trace { "ROW: $rowLockId ($lockId): ${StateRef(txHash, index)} : $pennies ($totalPennies)" }
                 }
+                if (stateRefs.isNotEmpty())
+                    // TODO: future implementation to retrieve contract states from a Vault BLOB store
+                    stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
 
                 if (stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity) {
                     // we should have a minimum number of states to satisfy our selection `amount` criteria

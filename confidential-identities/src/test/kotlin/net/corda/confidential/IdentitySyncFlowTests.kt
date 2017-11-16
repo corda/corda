@@ -14,11 +14,8 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB_NAME
-import net.corda.testing.CHARLIE_NAME
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.singleIdentity
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

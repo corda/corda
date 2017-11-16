@@ -20,6 +20,7 @@ import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.singleIdentity
+import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before

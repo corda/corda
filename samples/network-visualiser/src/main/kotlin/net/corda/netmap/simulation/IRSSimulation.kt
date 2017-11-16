@@ -25,6 +25,7 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.startFlow
 import rx.Observable
 import java.time.LocalDate
 import java.util.*

@@ -86,6 +86,7 @@ interface Scheduled {
  * This is effectively the input to a scheduler, which wakes up at that point in time and asks the contract state what
  * lifecycle processing needs to take place.  e.g. a fixing or a late payment etc.
  */
+@CordaSerializable
 data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instant) : Scheduled
 
 /**

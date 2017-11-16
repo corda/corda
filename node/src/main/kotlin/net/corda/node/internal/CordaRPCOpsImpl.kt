@@ -2,6 +2,8 @@ package net.corda.node.internal
 
 import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -22,7 +24,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.messaging.rpcContext
+import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
 import rx.Observable
@@ -151,9 +153,7 @@ internal class CordaRPCOpsImpl(
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
-        val currentUser = FlowInitiator.RPC(rpcContext().currentUser.username)
-        // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
-        return flowStarter.invokeFlowAsync(logicType, currentUser, *args).getOrThrow()
+        return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
@@ -192,7 +192,7 @@ internal class CordaRPCOpsImpl(
         } catch (e: Exception) {
             // log and rethrow exception so we keep a copy server side
             log.error(e.message)
-        throw e.cause ?: e
+            throw e.cause ?: e
         }
     }
 
@@ -272,17 +272,30 @@ internal class CordaRPCOpsImpl(
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
-    companion object {
-        private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
-            return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.flowInitiator, flowLogic.track())
-        }
+    private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
+        return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)
+    }
 
-        private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
-            return when (change) {
-                is StateMachineManager.Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.logic))
-                is StateMachineManager.Change.Removed -> StateMachineUpdate.Removed(change.logic.runId, change.result)
-            }
+    private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
+        return when (change) {
+            is StateMachineManager.Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.logic))
+            is StateMachineManager.Change.Removed -> StateMachineUpdate.Removed(change.logic.runId, change.result)
         }
+    }
+
+    private fun InvocationContext.toFlowInitiator(): FlowInitiator {
+
+        val principal = origin.principal().name
+        return when (origin) {
+            is Origin.RPC -> FlowInitiator.RPC(principal)
+            is Origin.Peer -> services.identityService.wellKnownPartyFromX500Name((origin as Origin.Peer).party)?.let { FlowInitiator.Peer(it) } ?: throw IllegalStateException("Unknown peer with name ${(origin as Origin.Peer).party}.")
+            is Origin.Service -> FlowInitiator.Service(principal)
+            is Origin.Shell -> FlowInitiator.Shell
+            is Origin.Scheduled -> FlowInitiator.Scheduled((origin as Origin.Scheduled).scheduledState)
+        }
+    }
+
+    companion object {
         private val log = loggerFor<CordaRPCOpsImpl>()
     }
 }

@@ -29,6 +29,9 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     @Table(name = "vault_states",
             indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
     class VaultStates(
+            /** NOTE: serialized transaction state (including contract state) is now resolved from transaction store */
+            // TODO: create a distinct table to hold serialized state data (once DBTransactionStore is encrypted)
+
             /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name")
             var notary: Party,
@@ -36,11 +39,6 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name")
             var contractStateClassName: String,
-
-            /** refers to serialized transaction Contract State */
-            @Lob
-            @Column(name = "contract_state")
-            var contractState: ByteArray,
 
             /** state lifecycle: unconsumed, consumed */
             @Column(name = "state_status")
@@ -73,6 +71,10 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** X500Name of participant parties **/
             @ElementCollection
+            @CollectionTable(name = "vault_linear_states_parts",
+                    joinColumns = arrayOf(
+                            JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                            JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             @Column(name = "participants")
             var participants: MutableSet<AbstractParty>? = null,
             // Reason for not using Set is described here:
@@ -100,6 +102,10 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** X500Name of participant parties **/
             @ElementCollection
+            @CollectionTable(name = "vault_fungible_states_parts",
+                    joinColumns = arrayOf(
+                            JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                            JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             @Column(name = "participants")
             var participants: MutableSet<AbstractParty>? = null,
 
@@ -138,8 +144,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
     @Entity
     @Table(name = "vault_transaction_notes",
-            indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
-                    Index(name = "transaction_id_index", columnList = "transaction_id")))
+            indexes = arrayOf(Index(name = "transaction_id_index", columnList = "transaction_id")))
     class VaultTxnNote(
             @Id
             @GeneratedValue

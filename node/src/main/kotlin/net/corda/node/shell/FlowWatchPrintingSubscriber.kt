@@ -1,8 +1,8 @@
 package net.corda.node.shell
 
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.StateMachineUpdate.Added
 import net.corda.core.messaging.StateMachineUpdate.Removed
@@ -72,7 +72,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
                 table.add(RowElement().add(
                         LabelElement(formatFlowId(smmUpdate.id)),
                         LabelElement(formatFlowName(smmUpdate.stateMachineInfo.flowLogicClassName)),
-                        LabelElement(formatFlowInitiator(smmUpdate.stateMachineInfo.initiator)),
+                        LabelElement(formatInvocationContext(smmUpdate.stateMachineInfo.context())),
                         LabelElement("In progress")
                 ).style(stateColor(smmUpdate).fg()))
                 indexMap[smmUpdate.id] = table.rows.size - 1
@@ -105,14 +105,8 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
         return flowId.toString().removeSurrounding("[", "]")
     }
 
-    private fun formatFlowInitiator(flowInitiator: FlowInitiator): String {
-        return when (flowInitiator) {
-            is FlowInitiator.Scheduled -> flowInitiator.scheduledState.ref.toString()
-            is FlowInitiator.Shell -> "Shell" // TODO Change when we will have more information on shell user.
-            is FlowInitiator.Peer -> flowInitiator.party.name.organisation
-            is FlowInitiator.RPC -> "RPC: " + flowInitiator.username
-            is FlowInitiator.Service -> "Service: " + flowInitiator.name
-        }
+    private fun formatInvocationContext(context: InvocationContext): String {
+        return context.principal().name
     }
 
     private fun formatFlowResult(flowResult: Try<*>): String {

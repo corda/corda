@@ -32,10 +32,10 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
     //       3) Currently (version 9.6), FOR UPDATE cannot be specified with window functions
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
                               onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>) : ResultSet {
-        val selectJoin = """SELECT nested.transaction_id, nested.output_index, nested.contract_state, nested.pennies,
+        val selectJoin = """SELECT nested.transaction_id, nested.output_index, nested.pennies,
                         nested.total+nested.pennies as total_pennies, nested.lock_id
                        FROM
-                       (SELECT vs.transaction_id, vs.output_index, vs.contract_state, ccs.pennies,
+                       (SELECT vs.transaction_id, vs.output_index, ccs.pennies,
                        coalesce((SUM(ccs.pennies) OVER (PARTITION BY 1 ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING)), 0)
                        AS total, vs.lock_id
                         FROM vault_states AS vs, contract_cash_states AS ccs
