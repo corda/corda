@@ -50,7 +50,7 @@ class NodeInterestRatesTest {
 
     private val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
     private val DUMMY_CASH_ISSUER = Party(CordaX500Name(organisation = "Cash issuer", locality = "London", country = "GB"), DUMMY_CASH_ISSUER_KEY.public)
-    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), DUMMY_CASH_ISSUER.name, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
 
     private lateinit var oracle: NodeInterestRates.Oracle
     private lateinit var database: CordaPersistence

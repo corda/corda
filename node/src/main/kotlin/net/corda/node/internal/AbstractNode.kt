@@ -774,6 +774,7 @@ internal class FlowStarterImpl(private val serverThread: AffinityExecutor, priva
     }
 }
 
+class ConfigurationException(message: String) : CordaException(message)
 /**
  * Thrown when a node is about to start and its network map cache doesn't contain any node.
  */

@@ -23,7 +23,6 @@ Classes get onto the whitelist via one of three mechanisms:
    class itself, on any of the super classes or on any interface implemented by the class or super classes or any
    interface extended by an interface implemented by the class or superclasses.
 #. By implementing the ``SerializationWhitelist`` interface and specifying a list of `whitelist` classes.
-   See :doc:`writing-cordapps`.
 #. Via the built in Corda whitelist (see the class ``DefaultWhitelist``).  Whilst this is not user editable, it does list
    common JDK classes that have been whitelisted for your convenience.
 
