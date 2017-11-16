@@ -12,6 +12,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
@@ -21,6 +22,9 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, private
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
     }
+
+    private val contextCache = ConcurrentHashMap<Cordapp, CordappContext>()
+
 
     override fun getAppContext(): CordappContext {
         // TODO: Use better supported APIs in Java 9
@@ -64,12 +68,14 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, private
      * @return A cordapp context for the given CorDapp
      */
     fun getAppContext(cordapp: Cordapp): CordappContext {
-        return CordappContext(
-                cordapp,
-                getCordappAttachmentId(cordapp),
-                cordappLoader.appClassLoader,
-                cordappConfigProvider.getConfigByName(cordapp.name)
-        )
+        return contextCache.computeIfAbsent(cordapp, {
+            CordappContext(
+                    cordapp,
+                    getCordappAttachmentId(cordapp),
+                    cordappLoader.appClassLoader,
+                    cordappConfigProvider.getConfigByName(cordapp.name)
+            )
+        })
     }
 
     /**
