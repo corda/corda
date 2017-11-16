@@ -112,9 +112,15 @@ The following design decisions are assumed by this design:
 ### Hot-Cold (minimum requirement)
 ![Hot-Cold (minimum requirement)](./HA%20deployment%20-%20Hot-Cold.png)
 
+Small scale software failures on a node are recovered from locally via restarting/re-setting the offending component by the external (to JVM) "Health Watchdog" (HW) process. The HW process (eg a shell script or similar) would monitor parameters for java processes by periodically query them (sleep period a few seconds). This may require introduction of a few monitoring 'hooks' into Corda codebase or a "health" CorDapp the HW script can interface with. There would be a back-off logic to prevent continues restarts in the case of persistent failure.
+
+We would provide a fully-functional sample HW script for Linux/Unix deployment platforms.
+
 The hot-cold design provides a backup VM and Corda deployment instance that can be manually started if the primary is stopped. The failed primary must be killed to ensure it is fully stopped.
 
-A load balancer determines which node is active and routes traffic to that node.
+For single-node deployment scenarios the simplest supported way to recover from failures is to re-start the entire set of Corda Node processes or reboot the node OS.
+
+For a 2-node HA deployment scenario a load balancer determines which node is active and routes traffic to that node.
 The load balancer will need to monitor the health of the primary and secondary nodes and automatically route traffic from the public IP address to the only active end-point. An external solution is required for the load balancer and health monitor. In the case of Azure cloud deployments, no custom code needs to be developed to support the health monitor.
 
 An additional component will be written to prevent accidental dual running which is likely to make use of a database heartbeat table. Code size should be minimal.
