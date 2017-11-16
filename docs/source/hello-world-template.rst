@@ -7,35 +7,42 @@
 The CorDapp Template
 ====================
 
-When writing a new CorDapp, you’ll generally want to base it on the
-`Java Cordapp Template <https://github.com/corda/cordapp-template-java>`_ or the equivalent
-`Kotlin Cordapp Template <https://github.com/corda/cordapp-template-kotlin>`_. The Cordapp Template allows you to
-quickly deploy your CorDapp onto a local test network of dummy nodes to evaluate its functionality.
+When writing a new CorDapp, you’ll generally want to base it on the standard templates:
 
-Note that there's no need to download and install Corda itself. As long as you're working from a stable Milestone
-branch, the required libraries will be downloaded automatically from an online repository.
+* The `Java Cordapp Template <https://github.com/corda/cordapp-template-java>`_
+* The `Kotlin Cordapp Template <https://github.com/corda/cordapp-template-kotlin>`_
 
-If you do wish to work from the latest snapshot, please follow the instructions
-`here <https://docs.corda.net/tutorial-cordapp.html#using-a-snapshot-release>`_.
+The Cordapp templates provide the required boilerplate for developing a CorDapp, and allow you to quickly deploy your
+CorDapp onto a local test network of dummy nodes to test its functionality.
+
+CorDapps can be written in both Java and Kotlin, and will be providing the code in both languages in this tutorial.
+
+Note that there's no need to download and install Corda itself. Corda V1.0's required libraries will be downloaded
+automatically from an online Maven repository.
 
 Downloading the template
 ------------------------
-Open a terminal window in the directory where you want to download the CorDapp template, and run the following commands:
+To download the template, open a terminal window in the directory where you want to download the CorDapp template, and
+run the following command:
 
 .. code-block:: bash
 
-    # Clone the template from GitHub:
     git clone https://github.com/corda/cordapp-template-java.git ; cd cordapp-template-java
 
     *or*
 
     git clone https://github.com/corda/cordapp-template-kotlin.git ; cd cordapp-template-kotlin
 
+Opening the template in IntelliJ
+--------------------------------
+
+Once the template is download, open it in IntelliJ by following the instructions here:
+https://docs.corda.net/tutorial-cordapp.html#opening-the-example-cordapp-in-intellij.
+
 Template structure
 ------------------
-We can write our CorDapp in either Java or Kotlin, and will be providing the code in both languages throughout. To
-implement our IOU CorDapp in Java, we'll need to modify three files. For Kotlin, we'll simply be modifying the
-``App.kt`` file:
+The template has a number of files, but we can ignore most of them. To implement our IOU CorDapp in Java, we'll only
+need to modify two files. For Kotlin, we'll simply be modifying the ``App.kt`` file:
 
 .. container:: codeset
 
@@ -44,23 +51,25 @@ implement our IOU CorDapp in Java, we'll need to modify three files. For Kotlin,
         // 1. The state
         src/main/java/com/template/TemplateState.java
 
-        // 2. The contract
-        src/main/java/com/template/TemplateContract.java
-
-        // 3. The flow
+        // 2. The flow
         src/main/java/com/template/TemplateFlow.java
 
     .. code-block:: kotlin
 
         src/main/kotlin/com/template/App.kt
 
-To prevent build errors later on, you should delete the following file:
+Clean up
+--------
+To prevent build errors later on, we should delete the following files before we begin:
 
-* Java: ``src/test/java/com/template/FlowTests.java``
-* Kotlin: ``src/test/kotlin/com/template/FlowTests.kt``
+* Java:
+    * ``src/main/java/com/template/TemplateClient.java``
+    * ``src/test/java/com/template/FlowTests.java``
+
+* Kotlin:
+    * ``src/main/kotlin/com/template/TemplateClient.kt``
+    * ``src/test/kotlin/com/template/FlowTests.kt``
 
 Progress so far
 ---------------
-We now have a template that we can build upon to define our IOU CorDapp.
-
-We'll begin writing the CorDapp proper by writing the definition of the ``IOUState``.
+We now have a template that we can build upon to define our IOU CorDapp. Let's start by defining the ``IOUState``.
