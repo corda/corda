@@ -583,6 +583,7 @@ class NodeVaultServiceTest {
         val initialCashState = StateAndRef(issueStx.tx.outputs.single(), StateRef(issueStx.id, 0))
 
         // Change notary
+        services.identityService.verifyAndRegisterIdentity(DUMMY_NOTARY_IDENTITY)
         val newNotary = DUMMY_NOTARY
         val changeNotaryTx = NotaryChangeWireTransaction(listOf(initialCashState.ref), issueStx.notary!!, newNotary)
         val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))

@@ -1,12 +1,10 @@
 package net.corda.node.services.persistence
 
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.Vault
@@ -14,8 +12,6 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.toBase58String
 import net.corda.finance.DOLLARS
@@ -110,7 +106,6 @@ class HibernateConfigurationTest {
         // Register all of the identities so persistence works
         val allServices = listOf(issuerServices, notaryServices, bankServices, services)
         val identites = allServices.flatMap { it.myInfo.legalIdentitiesAndCerts }.toSet()
-        println("Identities: ${identites.map { it.party.owningKey.toStringShort() }}")
         allServices.forEach { serviceHub ->
             identites.forEach { identity -> serviceHub.identityService.verifyAndRegisterIdentity(identity) }
         }
