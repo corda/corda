@@ -28,6 +28,7 @@ import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_NAME
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
@@ -70,8 +71,8 @@ class NodeVaultServiceTest {
         val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
-        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY)
-        bocServices = MockServices(cordappPackages, BOC_KEY)
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
+        bocServices = MockServices(cordappPackages, BOC_NAME, BOC_KEY)
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
     }
 
@@ -453,7 +454,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun addNoteToTransaction() {
-        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, MEGA_CORP_KEY)
         database.transaction {
             val freshKey = services.myInfo.chooseIdentity().owningKey
 
