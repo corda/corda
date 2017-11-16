@@ -4,8 +4,8 @@ Tutorials
 .. toctree::
    :maxdepth: 1
 
-   hello-world-index
-   tut-two-party-index
+   hello-world-introduction
+   tut-two-party-introduction
    tutorial-contract
    tutorial-test-dsl
    contract-upgrade
