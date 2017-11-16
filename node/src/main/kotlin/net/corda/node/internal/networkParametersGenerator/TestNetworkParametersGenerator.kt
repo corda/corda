@@ -30,11 +30,14 @@ class TestNetworkParametersGenerator: NetworkParametersGenerator {
     }
 
     private fun initialiseSerialization() {
+        val context = if (java.lang.Boolean.getBoolean("net.corda.testing.amqp.enable"))
+            AMQP_P2P_CONTEXT
+        else KRYO_P2P_CONTEXT
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoServerSerializationScheme())
                     registerScheme(AMQPServerSerializationScheme())
                 },
-                KRYO_P2P_CONTEXT)
+                context)
     }
 }
