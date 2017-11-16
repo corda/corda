@@ -36,6 +36,7 @@ dependencies {
     cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
+    cordaCompile project(':node')
     cordaCompile project(':webserver')
 
     // Javax is required for webapis

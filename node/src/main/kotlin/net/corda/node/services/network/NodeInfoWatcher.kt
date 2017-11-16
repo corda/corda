@@ -119,7 +119,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     private fun getAllNodeInfos(): Map<CordaX500Name, NodeInfo> {
         val nodeInfos = loadFromDirectory(false)
         // NodeInfos are currently stored in 2 places: in [CordformNode.NODE_INFO_DIRECTORY] and in baseDirectory of the node.
-        val myFiles = nodePath.list {it.filter { it.toString().contains("nodeInfo-") }.toList()  }
+        val myFiles = nodePath.list {it.filter { it.toString().contains("nodeInfo-") }.toList() }
         val myNodeInfos = myFiles.mapNotNull { processFile(it, false) }
         val infosMap = mutableMapOf<CordaX500Name, NodeInfo>()
         // Running deployNodes more than once produces new NodeInfos. We need to load the latest NodeInfos based on serial field.
