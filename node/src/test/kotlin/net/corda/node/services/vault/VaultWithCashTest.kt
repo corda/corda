@@ -4,6 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
@@ -19,6 +20,7 @@ import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_NAME
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.utilities.CordaPersistence
@@ -56,12 +58,11 @@ class VaultWithCashTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
-        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(DUMMY_CASH_ISSUER_KEY, DUMMY_NOTARY_KEY),
-                cordappPackages = cordappPackages)
+        val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = cordappPackages, keys = listOf(generateKeyPair(), DUMMY_NOTARY_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second
-        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY_KEY)
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
     }
 
     @After
@@ -91,7 +92,7 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, MEGA_CORP_KEY)
         val freshKey = services.keyManagementService.freshKey()
 
         val usefulTX =
@@ -303,7 +304,7 @@ class VaultWithCashTest {
             cash.forEach { println(it.state.data.amount) }
         }
         database.transaction {
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
         }
         database.transaction {
             val deals = vaultService.queryBy<DummyDealContract.State>().states
@@ -333,7 +334,7 @@ class VaultWithCashTest {
         val freshKey = services.keyManagementService.freshKey()
         val freshIdentity = AnonymousParty(freshKey)
         database.transaction {
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
         }
         val deals =
                 database.transaction {

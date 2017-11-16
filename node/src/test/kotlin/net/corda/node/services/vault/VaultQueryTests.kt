@@ -3,6 +3,7 @@ package net.corda.node.services.vault
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -74,7 +75,7 @@ class VaultQueryTests {
                 cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
-        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
     }
 
     @After
@@ -1352,7 +1353,7 @@ class VaultQueryTests {
         val parties = listOf(MINI_CORP)
         database.transaction {
             services.fillWithSomeTestLinearStates(2, "TEST")
-            services.fillWithSomeTestDeals(listOf("456"), parties)
+            services.fillWithSomeTestDeals(listOf("456"), participants = parties)
             services.fillWithSomeTestDeals(listOf("123", "789"))
 
             // DOCSTART VaultQueryExample11
@@ -1385,23 +1386,22 @@ class VaultQueryTests {
     @Test
     fun `unconsumed fungible assets for selected issuer parties`() {
         // GBP issuer
-        val gbpCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1001))
-        val gbpCashIssuer = Party(CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB"), gbpCashIssuerKey.public).ref(1)
-        val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerKey)
+        val gbpCashIssuerName = CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB")
+        val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerName, generateKeyPair())
+        val gbpCashIssuer = gbpCashIssuerServices.myInfo.singleIdentity().ref(1)
         // USD issuer
-        val usdCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1002))
-        val usdCashIssuer = Party(CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US"), usdCashIssuerKey.public).ref(1)
-        val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerKey)
+        val usdCashIssuerName = CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US")
+        val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerName, generateKeyPair())
+        val usdCashIssuer = usdCashIssuerServices.myInfo.singleIdentity().ref(1)
         // CHF issuer
-        val chfCashIssuerKey = entropyToKeyPair(BigInteger.valueOf(1003))
-        val chfCashIssuer = Party(CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH"), chfCashIssuerKey.public).ref(1)
-        val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerKey)
+        val chfCashIssuerName = CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH")
+        val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerName, generateKeyPair())
+        val chfCashIssuer = chfCashIssuerServices.myInfo.singleIdentity().ref(1)
 
         database.transaction {
-            services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (gbpCashIssuer))
-            services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (usdCashIssuer))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (chfCashIssuer))
-
+            services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = gbpCashIssuer)
+            services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = usdCashIssuer)
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = chfCashIssuer)
             val criteria = FungibleAssetQueryCriteria(issuer = listOf(gbpCashIssuer.party, usdCashIssuer.party))
             val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
