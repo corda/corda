@@ -57,8 +57,7 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit.MILLISECONDS
-import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeUnit.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -144,6 +143,22 @@ interface DriverDSLExposedInterface : CordformContext {
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize): CordaFuture<NodeHandle>
+
+    /**
+     * Start a node in registration mode as a separate process.
+     * The node will quit as part of the registration process.
+     *
+     * @param defaultParameters The default parameters for the node. Allows the node to be configured in builder style
+     *   when called from Java code.
+     * @param providedName Name of the node, which will be its legal name in [Party]. The expected use is that one first
+     *   starts a node in registration mode, the node registers and quits, and then a node with the same name is
+     *   started again.
+     * @param compatibilityZoneURL The URL for the compatibility zone, the node will look for a doorman registration
+     *   service on that URL.
+     */
+    fun registerNode(defaultParameters: NodeParameters = NodeParameters(),
+                     providedName: CordaX500Name,
+                     compatibilityZoneURL: String)
 
     /**
      * Helper function for starting a [Node] with custom parameters from Java.
@@ -665,6 +680,20 @@ class DriverDSL(
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
     }
 
+    override fun registerNode(defaultParameters: NodeParameters,
+                              providedName: CordaX500Name,
+                              compatibilityZoneURL: String) {
+        val config = ConfigHelper.loadConfig(
+                baseDirectory = baseDirectory(providedName),
+                allowMissingConfig = true,
+                configOverrides = configOf(
+                        "p2pAddress" to "localhost:1222",  // required argument, not really used
+                        "compatibilityZoneURL" to compatibilityZoneURL,
+                        "myLegalName" to providedName.toString())
+        )
+        startNodeForRegistration(config)
+    }
+
     override fun startNodes(nodes: List<CordformNode>, startInSameProcess: Boolean?, maximumHeapSize: String): List<CordaFuture<NodeHandle>> {
         return nodes.map { node ->
             portAllocation.nextHostAndPort() // rpcAddress
@@ -856,6 +885,17 @@ class DriverDSL(
         return future
     }
 
+    private fun startNodeForRegistration(config: Config) {
+        val maximumHeapSize = "200m"
+        val configuration = config.parseAsNodeConfiguration()
+
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
+        val processFuture = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,
+                systemProperties, cordappPackages, maximumHeapSize, initialRegistration = true)
+        // Wait for the process to complete.
+        processFuture.waitFor(1, MINUTES)
+    }
+
     private fun startNodeInternal(config: Config,
                                   webAddress: NetworkHostAndPort,
                                   startInProcess: Boolean?,
@@ -887,7 +927,8 @@ class DriverDSL(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize)
+            val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,
+                    systemProperties, cordappPackages, maximumHeapSize, initialRegistration = false)
             if (waitForNodesToFinish) {
                 state.locked {
                     processes += process
@@ -967,7 +1008,8 @@ class DriverDSL(
                 debugPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 cordappPackages: List<String>,
-                maximumHeapSize: String
+                maximumHeapSize: String,
+                initialRegistration: Boolean
         ): Process {
             log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
             // Write node.conf
@@ -991,13 +1033,18 @@ class DriverDSL(
                     "-javaagent:$quasarJarPath=$excludePattern"
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
-            return ProcessUtilities.startCordaProcess(
+            val arguments = mutableListOf<String>(
+                    "--base-directory=${nodeConf.baseDirectory}",
+                    "--logging-level=$loggingLevel",
+                    "--no-local-shell").also {
+                if (initialRegistration) {
+                    it += "--initial-registration"
+                }
+            }.toList()
+
+           return ProcessUtilities.startCordaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
-                    arguments = listOf(
-                            "--base-directory=${nodeConf.baseDirectory}",
-                            "--logging-level=$loggingLevel",
-                            "--no-local-shell"
-                    ),
+                    arguments = arguments,
                     jdwpPort = debugPort,
                     extraJvmArguments = extraJvmArguments,
                     errorLogPath = nodeConf.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
@@ -1042,6 +1089,7 @@ class DriverDSL(
 
 fun writeConfig(path: Path, filename: String, config: Config) {
     val configString = config.root().render(ConfigRenderOptions.defaults())
+    path.createDirectories()
     configString.byteInputStream().copyTo(path / filename, REPLACE_EXISTING)
 }
 

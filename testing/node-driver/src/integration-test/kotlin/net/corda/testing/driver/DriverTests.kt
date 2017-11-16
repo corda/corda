@@ -1,5 +1,8 @@
 package net.corda.testing.driver
 
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.list
@@ -13,6 +16,7 @@ import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
@@ -49,6 +53,37 @@ class DriverTests {
             nodeMustBeUp(nodeInfo)
         }
         nodeMustBeDown(nodeHandle)
+    }
+
+    @Test
+    fun `node registration`() {
+        // Very simple Http handler which counts the requests it has received and always returns the same payload.
+        val handler = object : HttpHandler {
+            var requests = 0
+                private set
+
+            override fun handle(exchange: HttpExchange) {
+                val response = "reply"
+                exchange.responseHeaders.set("Content-Type", "text/html; charset=" + Charsets.UTF_8)
+                exchange.sendResponseHeaders(200, response.length.toLong())
+                exchange.responseBody.use { it.write(response.toByteArray()) }
+                requests++
+            }
+        }
+
+        val inetSocketAddress = InetSocketAddress(0)
+        val server = HttpServer.create(inetSocketAddress,  /* backlog */0)
+        val port = server.address.port
+        server.createContext("/", handler)
+        server.executor = null // creates a default executor
+        server.start()
+
+        driver(portAllocation = PortAllocation.RandomFree) {
+            registerNode(providedName = DUMMY_BANK_A.name, compatibilityZoneURL = "http://localhost:${port}")
+        }
+
+        // We're getting a request to sign the certificate and one poll request to see if the request has been approved.
+        assertThat(handler.requests).isEqualTo(2)
     }
 
     @Test
