@@ -15,7 +15,7 @@ class CordappConfigFileProvider(val configDir: File = DEFAULT_CORDAPP_CONFIG_DIR
     }
 
     init {
-        configDir.mkdir()
+        configDir.mkdirs()
     }
 
     override fun getConfigByName(name: String): Config {
