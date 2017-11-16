@@ -17,6 +17,7 @@ import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.net.InetSocketAddress
+import java.net.URL
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
@@ -72,14 +73,14 @@ class DriverTests {
         }
 
         val inetSocketAddress = InetSocketAddress(0)
-        val server = HttpServer.create(inetSocketAddress,  /* backlog */0)
+        val server = HttpServer.create(inetSocketAddress, 0)
         val port = server.address.port
         server.createContext("/", handler)
         server.executor = null // creates a default executor
         server.start()
 
         driver(portAllocation = PortAllocation.RandomFree) {
-            registerNode(providedName = DUMMY_BANK_A.name, compatibilityZoneURL = "http://localhost:${port}")
+            startNode(providedName = DUMMY_BANK_A.name, compatibilityZoneURL = URL("http://localhost:${port}"))
         }
 
         // We're getting a request to sign the certificate and one poll request to see if the request has been approved.

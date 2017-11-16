@@ -133,6 +133,9 @@ interface DriverDSLExposedInterface : CordformContext {
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
      *     in. If null the Driver-level value will be used.
+     * @param compatibilityZoneURL if not null the node is started once in registration mode (which make the node quit
+     *     once registration is complete) and then re-starts the node with the given parameters.
+     *     Note that the registration part is always ran as a separate process regardless of settings.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available.
      */
     fun startNode(
@@ -142,23 +145,8 @@ interface DriverDSLExposedInterface : CordformContext {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize): CordaFuture<NodeHandle>
-
-    /**
-     * Start a node in registration mode as a separate process.
-     * The node will quit as part of the registration process.
-     *
-     * @param defaultParameters The default parameters for the node. Allows the node to be configured in builder style
-     *   when called from Java code.
-     * @param providedName Name of the node, which will be its legal name in [Party]. The expected use is that one first
-     *   starts a node in registration mode, the node registers and quits, and then a node with the same name is
-     *   started again.
-     * @param compatibilityZoneURL The URL for the compatibility zone, the node will look for a doorman registration
-     *   service on that URL.
-     */
-    fun registerNode(defaultParameters: NodeParameters = NodeParameters(),
-                     providedName: CordaX500Name,
-                     compatibilityZoneURL: String)
+            maximumHeapSize: String = defaultParameters.maximumHeapSize,
+            compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL): CordaFuture<NodeHandle>
 
     /**
      * Helper function for starting a [Node] with custom parameters from Java.
@@ -298,7 +286,8 @@ data class NodeParameters(
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "200m"
+        val maximumHeapSize: String = "200m",
+        val compatibilityZoneURL: URL? = null
 ) {
     fun setProvidedName(providedName: CordaX500Name?) = copy(providedName = providedName)
     fun setRpcUsers(rpcUsers: List<User>) = copy(rpcUsers = rpcUsers)
@@ -306,6 +295,7 @@ data class NodeParameters(
     fun setCustomerOverrides(customOverrides: Map<String, Any?>) = copy(customOverrides = customOverrides)
     fun setStartInSameProcess(startInSameProcess: Boolean?) = copy(startInSameProcess = startInSameProcess)
     fun setMaximumHeapSize(maximumHeapSize: String) = copy(maximumHeapSize = maximumHeapSize)
+    fun setCompatibilityZoneURL(compatibilityZoneURL: URL?) = copy(compatibilityZoneURL = compatibilityZoneURL)
 }
 
 /**
@@ -656,13 +646,15 @@ class DriverDSL(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
-            maximumHeapSize: String
+            maximumHeapSize: String,
+            compatibilityZoneURL: URL?
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
-        val rpcAddress = portAllocation.nextHostAndPort()
-        val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name(organisation = "${oneOf(names).organisation}-${p2pAddress.port}", locality = "London", country = "GB")
+        compatibilityZoneURL?.let { registerNode(name, it) }
+        val rpcAddress = portAllocation.nextHostAndPort()
+        val webAddress = portAllocation.nextHostAndPort()
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
@@ -680,15 +672,13 @@ class DriverDSL(
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
     }
 
-    override fun registerNode(defaultParameters: NodeParameters,
-                              providedName: CordaX500Name,
-                              compatibilityZoneURL: String) {
+    private fun registerNode(providedName: CordaX500Name, compatibilityZoneURL: URL) {
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(providedName),
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "p2pAddress" to "localhost:1222",  // required argument, not really used
-                        "compatibilityZoneURL" to compatibilityZoneURL,
+                        "compatibilityZoneURL" to compatibilityZoneURL.toString(),
                         "myLegalName" to providedName.toString())
         )
         startNodeForRegistration(config)
