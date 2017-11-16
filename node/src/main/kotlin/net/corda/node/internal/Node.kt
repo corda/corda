@@ -3,7 +3,6 @@ package net.corda.node.internal
 import com.codahale.metrics.JmxReporter
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
@@ -319,5 +318,3 @@ open class Node(configuration: NodeConfiguration,
 }
 
 class ConfigurationException(message: String) : CordaException(message)
-
-data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: CordaX500Name)
