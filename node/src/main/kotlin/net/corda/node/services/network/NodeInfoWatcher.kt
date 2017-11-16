@@ -100,18 +100,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      * @return a list of [Party]s
      */
     fun loadAndGatherNotaryIdentities(notaries: Map<CordaX500Name, Boolean>): List<NotaryInfo> {
-        val nodeInfos = loadFromDirectory(false)
-        // NodeInfos are currently stored in 2 places: in [CordformNode.NODE_INFO_DIRECTORY] and in baseDirectory of the node.
-        val myFiles = Files.list(nodePath).filter { it.toString().contains("nodeInfo-") }.toList()
-        val myNodeInfos = myFiles.mapNotNull { processFile(it, false) }
-        val infosMap = mutableMapOf<CordaX500Name, NodeInfo>()
-        // Running deployNodes more than once produces new NodeInfos. We need to load the latest NodeInfos based on serial field.
-        for (info in nodeInfos + myNodeInfos) {
-            val name = info.legalIdentities.first().name
-            val prevInfo = infosMap[name]
-            if(prevInfo == null || prevInfo.serial < info.serial)
-                infosMap.put(name, info)
-        }
+        val infosMap = getAllNodeInfos()
         // Now get the notary identities based on names passed from Cordform configs. There is one problem, for distributed notaries
         // Cordfom specifies in config only node's main name, the notary identity isn't passed there. It's read from keystore on
         // node startup, so we have to look it up from node info as a second identity, which is ugly.
@@ -125,6 +114,22 @@ class NodeInfoWatcher(private val nodePath: Path,
             }
         }
         return notaryInfos.toList()
+    }
+
+    private fun getAllNodeInfos(): Map<CordaX500Name, NodeInfo> {
+        val nodeInfos = loadFromDirectory(false)
+        // NodeInfos are currently stored in 2 places: in [CordformNode.NODE_INFO_DIRECTORY] and in baseDirectory of the node.
+        val myFiles = nodePath.list {it.filter { it.toString().contains("nodeInfo-") }.toList()  }
+        val myNodeInfos = myFiles.mapNotNull { processFile(it, false) }
+        val infosMap = mutableMapOf<CordaX500Name, NodeInfo>()
+        // Running deployNodes more than once produces new NodeInfos. We need to load the latest NodeInfos based on serial field.
+        for (info in nodeInfos + myNodeInfos) {
+            val name = info.legalIdentities.first().name
+            val prevInfo = infosMap[name]
+            if(prevInfo == null || prevInfo.serial < info.serial)
+                infosMap.put(name, info)
+        }
+        return infosMap
     }
 
     /**
