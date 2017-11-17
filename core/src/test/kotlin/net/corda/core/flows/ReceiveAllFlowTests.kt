@@ -14,7 +14,7 @@ import org.junit.Test
 
 class ReceiveMultipleFlowTests {
     private val mockNet = MockNetwork()
-    private val nodes = (1..3).map { mockNet.createPartyNode() }
+    private val nodes = (0..2).map { mockNet.createPartyNode() }
     @After
     fun stopNodes() {
         mockNet.stopNodes()
