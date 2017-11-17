@@ -7,17 +7,18 @@ import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
+import org.junit.runners.model.Statement
 import org.slf4j.Logger
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-private fun <T> withSingleThreadExecutor(name: String = UUID.randomUUID().toString(),
-                                         callable: ExecutorService.() -> T) = Executors.newSingleThreadExecutor { Thread(it, name) }.run {
+private fun <T> withSingleThreadExecutor(callable: ExecutorService.() -> T) = Executors.newSingleThreadExecutor().run {
     try {
         fork {}.getOrThrow() // Start the thread.
         callable()
@@ -30,9 +31,34 @@ private fun <T> withSingleThreadExecutor(name: String = UUID.randomUUID().toStri
 }
 
 class ToggleFieldTest {
+    companion object {
+        @Suppress("JAVA_CLASS_ON_COMPANION")
+        private val companionName = javaClass.name
+
+        private fun <T> globalThreadCreationMethod(task: () -> T) = task()
+    }
+
+    private val log = mock<Logger>()
+    @Rule
+    @JvmField
+    val verifyNoMoreInteractions = TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                base.evaluate()
+                verifyNoMoreInteractions(log) // Only on success.
+            }
+        }
+    }
+
+    private fun <T> inheritableThreadLocalToggleField() = InheritableThreadLocalToggleField<T>("inheritable", log) { stack ->
+        stack.fold(false) { isAGlobalThreadBeingCreated, e ->
+            isAGlobalThreadBeingCreated || (e.className == companionName && e.methodName == "globalThreadCreationMethod")
+        }
+    }
+
     @Test
     fun `toggle is enforced`() {
-        listOf(SimpleToggleField<String>("simple"), ThreadLocalToggleField<String>("local"), InheritableThreadLocalToggleField("inheritable") { false }).forEach { field ->
+        listOf(SimpleToggleField<String>("simple"), ThreadLocalToggleField<String>("local"), inheritableThreadLocalToggleField()).forEach { field ->
             assertNull(field.get())
             assertThatThrownBy { field.set(null) }.isInstanceOf(IllegalStateException::class.java)
             field.set("hello")
@@ -73,7 +99,7 @@ class ToggleFieldTest {
 
     @Test
     fun `inheritable thread local works`() {
-        val field = InheritableThreadLocalToggleField<String>("field") { false }
+        val field = inheritableThreadLocalToggleField<String>()
         assertNull(field.get())
         field.set("hello")
         assertEquals("hello", field.get())
@@ -86,7 +112,7 @@ class ToggleFieldTest {
 
     @Test
     fun `existing threads do not inherit`() {
-        val field = InheritableThreadLocalToggleField<String>("field") { false }
+        val field = inheritableThreadLocalToggleField<String>()
         withSingleThreadExecutor {
             field.set("hello")
             assertEquals("hello", field.get())
@@ -96,7 +122,7 @@ class ToggleFieldTest {
 
     @Test
     fun `inherited values are poisoned on clear`() {
-        val field = InheritableThreadLocalToggleField<String>("field") { false }
+        val field = inheritableThreadLocalToggleField<String>()
         field.set("hello")
         withSingleThreadExecutor {
             assertEquals("hello", fork(field::get).getOrThrow())
@@ -117,7 +143,7 @@ class ToggleFieldTest {
 
     @Test
     fun `leaked thread is detected as soon as it tries to create another`() {
-        val field = InheritableThreadLocalToggleField<String>("field") { false }
+        val field = inheritableThreadLocalToggleField<String>()
         field.set("hello")
         withSingleThreadExecutor {
             assertEquals("hello", fork(field::get).getOrThrow())
@@ -132,38 +158,38 @@ class ToggleFieldTest {
 
     @Test
     fun `leaked thread does not propagate holder to global thread, with warning`() {
-        val log = mock<Logger>()
-        // In practice the lambda will check the given stack, but it's easier for us to check the thread name:
-        val field = InheritableThreadLocalToggleField<String>("field", log) { Thread.currentThread().name == "globalThreadCreator" }
+        val field = inheritableThreadLocalToggleField<String>()
         field.set("hello")
-        withSingleThreadExecutor("globalThreadCreator") {
+        withSingleThreadExecutor {
             assertEquals("hello", fork(field::get).getOrThrow())
-            field.set(null) // The globalThreadCreator is now considered leaked.
+            field.set(null) // The executor thread is now considered leaked.
             fork {
-                verifyNoMoreInteractions(log)
-                withSingleThreadExecutor {
-                    verify(log).warn(argThat { contains("globalThreadCreator") })
-                    // In practice the new thread is for example a static thread we can't get rid of:
-                    assertNull(fork(field::get).getOrThrow())
+                val threadName = Thread.currentThread().name
+                globalThreadCreationMethod {
+                    verifyNoMoreInteractions(log)
+                    withSingleThreadExecutor {
+                        verify(log).warn(argThat { contains(threadName) })
+                        // In practice the new thread is for example a static thread we can't get rid of:
+                        assertNull(fork(field::get).getOrThrow())
+                    }
                 }
             }.getOrThrow()
         }
-        verifyNoMoreInteractions(log)
     }
 
     @Test
     fun `non-leaked thread does not propagate holder to global thread, without warning`() {
-        val log = mock<Logger>()
-        val field = InheritableThreadLocalToggleField<String>("field", log) { Thread.currentThread().name == "globalThreadCreator" }
+        val field = inheritableThreadLocalToggleField<String>()
         field.set("hello")
-        withSingleThreadExecutor("globalThreadCreator") {
-            assertEquals("hello", fork(field::get).getOrThrow())
+        withSingleThreadExecutor {
             fork {
-                withSingleThreadExecutor {
-                    assertNull(fork(field::get).getOrThrow())
+                assertEquals("hello", field.get())
+                globalThreadCreationMethod {
+                    withSingleThreadExecutor {
+                        assertNull(fork(field::get).getOrThrow())
+                    }
                 }
             }.getOrThrow()
         }
-        verifyNoMoreInteractions(log)
     }
 }
