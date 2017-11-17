@@ -14,6 +14,7 @@ import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.client.RecoveryStrategies
 import io.atomix.copycat.server.CopycatServer
+import io.atomix.copycat.server.cluster.Member
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.contracts.StateRef
@@ -185,6 +186,14 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
         })
         metrics.register("RaftCluster.Members", Gauge<List<String>> {
             server.cluster().members().map { it.address().toString() }
+        })
+
+        metrics.register("RaftCluster.AvailableMembers", Gauge<List<String>> {
+            server.cluster().members().filter { it.status() == Member.Status.AVAILABLE }.map { it.address().toString() }
+        })
+
+        metrics.register("RaftCluster.AvailableMembersCount", Gauge<Int> {
+            server.cluster().members().filter { it.status() == Member.Status.AVAILABLE }.size
         })
     }
 
