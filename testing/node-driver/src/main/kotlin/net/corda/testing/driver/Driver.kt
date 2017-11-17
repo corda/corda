@@ -30,6 +30,8 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
+import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
@@ -685,7 +687,16 @@ class DriverDSL(
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
                         "myLegalName" to providedName.toString())
         )
-        return startNodeForRegistration(config)
+        if (startNodesInProcess) {
+            // This is a bit cheating, we're not stating a full node, we're just calling the code nodes call
+            // when registering.
+            val configuration = config.parseAsNodeConfiguration()
+            NetworkRegistrationHelper(configuration, HTTPNetworkRegistrationService(compatibilityZoneURL))
+                    .buildKeystore()
+            return doneFuture(Unit)
+        } else {
+            return startNodeForRegistration(config)
+        }
     }
 
     override fun startNodes(nodes: List<CordformNode>, startInSameProcess: Boolean?, maximumHeapSize: String): List<CordaFuture<NodeHandle>> {
