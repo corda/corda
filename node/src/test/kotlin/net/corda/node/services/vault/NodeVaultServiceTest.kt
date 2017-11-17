@@ -5,7 +5,8 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.NullKeys
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -77,7 +78,9 @@ class NodeVaultServiceTest {
         identity = services.myInfo.singleIdentityAndCert()
         issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
         bocServices = MockServices(cordappPackages, BOC_NAME, BOC_KEY)
+
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
+        services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
 
     @After
@@ -511,10 +514,9 @@ class NodeVaultServiceTest {
 
     @Test
     fun `correct updates are generated for general transactions`() {
-        val service = vaultService
         val notary = identity.party
         val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {
-            service.updates.subscribe(this)
+            vaultService.updates.subscribe(this)
         }
 
         val identity = services.myInfo.singleIdentityAndCert()
@@ -533,15 +535,16 @@ class NodeVaultServiceTest {
         val signedIssuedTx = services.signInitialTransaction(issueBuilder)
         services.validatedTransactions.addTransaction(signedIssuedTx)
 
-        database.transaction { service.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
+        database.transaction { vaultService.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
 
         database.transaction {
             val moveBuilder = TransactionBuilder(notary).apply {
-                Cash.generateSpend(services, this, Amount(1000, GBP), thirdPartyIdentity)
+                val changeIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
+                Cash.generateSpend(services, this, Amount(1000, GBP), changeIdentity, thirdPartyIdentity)
             }
             val moveTx = moveBuilder.toWireTransaction(services)
-            service.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
+            vaultService.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
         }
         val expectedMoveUpdate = Vault.Update(setOf(cashState), emptySet(), null)
 
@@ -580,6 +583,7 @@ class NodeVaultServiceTest {
         val initialCashState = StateAndRef(issueStx.tx.outputs.single(), StateRef(issueStx.id, 0))
 
         // Change notary
+        services.identityService.verifyAndRegisterIdentity(DUMMY_NOTARY_IDENTITY)
         val newNotary = DUMMY_NOTARY
         val changeNotaryTx = NotaryChangeWireTransaction(listOf(initialCashState.ref), issueStx.notary!!, newNotary)
         val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
