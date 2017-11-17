@@ -11,6 +11,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -27,8 +28,14 @@ import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
 import net.corda.node.utilities.loadKeyStore
 import net.corda.nodeapi.*
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisPeerAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
@@ -86,19 +93,16 @@ import javax.security.cert.CertificateException
  * a fully connected network, trusted network or on localhost.
  */
 @ThreadSafe
-class ArtemisMessagingServer(override val config: NodeConfiguration,
-                             val p2pPort: Int,
+class ArtemisMessagingServer(private val config: NodeConfiguration,
+                             private val p2pPort: Int,
                              val rpcPort: Int?,
                              val networkMapCache: NetworkMapCache,
-                             val userService: RPCUserService) : ArtemisMessagingComponent() {
+                             val userService: RPCUserService) : SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<ArtemisMessagingServer>()
         /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
         @JvmStatic
         val MAX_FILE_SIZE = 10485760
-
-        val ipDetectRequestProperty = "ip-request-id"
-        val ipDetectResponseProperty = "ip-address"
     }
 
     private class InnerState {

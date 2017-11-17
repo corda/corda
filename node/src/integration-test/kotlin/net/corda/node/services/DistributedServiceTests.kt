@@ -13,6 +13,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
@@ -41,7 +42,7 @@ class DistributedServiceTests {
 
         driver(
                 extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name.copy(commonName = RaftValidatingNotaryService.id), rpcUsers = listOf(testUser), cluster = ClusterSpec.Raft(clusterSize = 3))))
         {
             alice = startNode(providedName = ALICE.name, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity

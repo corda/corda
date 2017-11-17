@@ -1,8 +1,6 @@
 package net.corda.testing.node
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
@@ -12,6 +10,8 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -32,6 +32,19 @@ import java.util.concurrent.LinkedBlockingQueue
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.concurrent.schedule
 import kotlin.concurrent.thread
+
+/**
+ * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods
+ * on the messaging service interface until you have successfully started up the system. One of these objects should
+ * be the only way to obtain a reference to a [MessagingService]. Startup may be a slow process: some implementations
+ * may let you cast the returned future to an object that lets you get status info.
+ *
+ * A specific implementation of the controller class will have extra features that let you customise it before starting
+ * it up.
+ */
+interface MessagingServiceBuilder<out T : MessagingService> {
+    fun start(): CordaFuture<out T>
+}
 
 /**
  * An in-memory network allows you to manufacture [InMemoryMessaging]s for a set of participants. Each
@@ -190,7 +203,7 @@ class InMemoryMessagingNetwork(
             val serviceHandles: List<ServiceHandle>,
             val executor: AffinityExecutor,
             val database: CordaPersistence) : MessagingServiceBuilder<InMemoryMessaging> {
-        override fun start(): ListenableFuture<InMemoryMessaging> {
+        override fun start(): CordaFuture<InMemoryMessaging> {
             synchronized(this@InMemoryMessagingNetwork) {
                 val node = InMemoryMessaging(manuallyPumped, id, executor, database)
                 handleEndpointMap[id] = node
@@ -198,7 +211,7 @@ class InMemoryMessagingNetwork(
                     serviceToPeersMapping.getOrPut(it) { LinkedHashSet<PeerHandle>() }.add(id)
                     Unit
                 }
-                return Futures.immediateFuture(node)
+                return doneFuture(node)
             }
         }
     }
@@ -244,7 +257,7 @@ class InMemoryMessagingNetwork(
         log.trace { transfer.toString() }
         val calc = latencyCalculator
         if (calc != null && transfer.recipients is SingleMessageRecipient) {
-            val messageSent = SettableFuture.create<Unit>()
+            val messageSent = openFuture<Unit>()
             // Inject some artificial latency.
             timer.schedule(calc.between(transfer.sender, transfer.recipients).toMillis()) {
                 pumpSendInternal(transfer)
