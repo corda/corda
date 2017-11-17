@@ -56,6 +56,8 @@ open class MockServices(
         vararg val keys: KeyPair
 ) : ServiceHub, StateLoader by stateLoader {
     companion object {
+        private val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)
+
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -92,10 +94,10 @@ open class MockServices(
         }
 
         /**
-         * Creates an instance of [InMemoryIdentityService].
+         * Creates an instance of [InMemoryIdentityService] with [MOCK_IDENTITIES].
          */
         @JvmStatic
-        fun makeTestIdentityService() = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
+        fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
 
         /**
          * Makes database and mock services appropriate for unit tests.
@@ -143,9 +145,6 @@ open class MockServices(
                     override fun jdbcSession(): Connection = database.createSession()
                 }
             }
-            database.transaction {
-                mockService.myInfo.legalIdentitiesAndCerts.forEach { identity -> mockService.identityService.verifyAndRegisterIdentity(identity) }
-            }
             return Pair(database, mockService)
         }
     }
@@ -168,7 +167,7 @@ open class MockServices(
 
     final override val attachments = MockAttachmentStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
-    override val identityService: IdentityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
+    override val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
