@@ -142,7 +142,7 @@ open class Node(configuration: NodeConfiguration,
                 info.legalIdentities[0].owningKey,
                 serverThread,
                 database,
-                services.monitoringService,
+                services.monitoringService.metrics,
                 advertisedAddress)
     }
 
