@@ -1,7 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Explorer - demo nodes (simulation)" type="JetRunConfigurationType" factoryName="Kotlin" singleton="true">
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
-    <extension name="krasa.grepconsole.plugin.runConfiguration.GrepRunConfigurationExtension" selectedProfileId="0" />
     <option name="MAIN_CLASS_NAME" value="net.corda.explorer.MainKt" />
     <option name="VM_PARAMETERS" value="" />
     <option name="PROGRAM_PARAMETERS" value="-S" />

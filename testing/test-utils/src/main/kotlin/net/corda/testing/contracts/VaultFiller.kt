@@ -31,6 +31,7 @@ import java.util.*
 
 @JvmOverloads
 fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
+                                     issuerServices: ServiceHub = this,
                                      participants: List<AbstractParty> = emptyList(),
                                      notary: Party = DUMMY_NOTARY): Vault<DealState> {
     val myKey: PublicKey = myInfo.chooseIdentity().owningKey
@@ -42,7 +43,7 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
             addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)), DUMMY_DEAL_PROGRAM_ID)
             addCommand(dummyCommand())
         }
-        val stx = signInitialTransaction(dummyIssue)
+        val stx = issuerServices.signInitialTransaction(dummyIssue)
         return@map addSignature(stx, notary.owningKey)
     }
 
@@ -112,7 +113,6 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     atLeastThisManyStates: Int = 3,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
-                                    ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
                                     ownedBy: AbstractParty? = null,
                                     issuedBy: PartyAndReference = DUMMY_CASH_ISSUER): Vault<Cash.State> {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
@@ -124,7 +124,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
     val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
         val issuance = TransactionBuilder(null as Party?)
-        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), anonParty, outputNotary)
+        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy, howMuch.token)), anonParty, outputNotary)
 
         return@map issuerServices.signInitialTransaction(issuance, issuedBy.party.owningKey)
     }

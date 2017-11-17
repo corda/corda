@@ -56,7 +56,7 @@ private class BankOfCordaDriver {
         try {
             when (role) {
                 Role.ISSUER -> {
-                    driver(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")) {
+                    driver(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset"), waitForAllNodesToFinish = true) {
                         val bankUser = User(
                                 BANK_USERNAME,
                                 "test",
@@ -76,7 +76,6 @@ private class BankOfCordaDriver {
                                         startFlow<CashConfigDataFlow>()))
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
-                        waitForAllNodesToFinish()
                     }
                 }
                 else -> {

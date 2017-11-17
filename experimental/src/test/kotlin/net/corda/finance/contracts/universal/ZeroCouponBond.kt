@@ -1,12 +1,16 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 
 class ZeroCouponBond {
-
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val contract = arrange {
         actions {
             (acmeCorp or highStreetBank) may {

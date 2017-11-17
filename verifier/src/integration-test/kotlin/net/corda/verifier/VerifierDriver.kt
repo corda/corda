@@ -5,20 +5,25 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.driver.*
+import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.NotarySpec
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -77,6 +82,7 @@ fun <A> verifierDriver(
         extraSystemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
+        waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         dsl: VerifierExposedDSLInterface.() -> A
@@ -90,12 +96,14 @@ fun <A> verifierDriver(
                         useTestClock = useTestClock,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
+                        waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs
                 )
         ),
         coerce = { it },
-        dsl = dsl
+        dsl = dsl,
+        initialiseSerialization = false
 )
 
 /** A handle for a verifier */
@@ -209,8 +217,9 @@ data class VerifierDriverDSL(
         driverDSL.shutdownManager.registerShutdown(doneFuture {
             server.stop()
         })
-
-        val locator = ActiveMQClient.createServerLocatorWithoutHA()
+        val locator = ActiveMQClient.createServerLocatorWithoutHA().apply {
+            isUseGlobalPools = nodeSerializationEnv != null
+        }
         val transport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfig)
         val sessionFactory = locator.createSessionFactory(transport)
         val session = sessionFactory.createSession()
@@ -250,17 +259,15 @@ data class VerifierDriverDSL(
         log.info("Starting verifier connecting to address $address")
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
-        val processFuture = driverDSL.executorService.fork {
-            val verifierName = CordaX500Name(organisation = "Verifier$id", locality = "London", country = "GB")
-            val baseDirectory = (driverDSL.driverDirectory / verifierName.organisation).createDirectories()
-            val config = createConfiguration(baseDirectory, address)
-            val configFilename = "verifier.conf"
-            writeConfig(baseDirectory, configFilename, config)
-            Verifier.loadConfiguration(baseDirectory, baseDirectory / configFilename).configureDevKeyAndTrustStores(verifierName)
-            ProcessUtilities.startJavaProcess<Verifier>(listOf(baseDirectory.toString()), jdwpPort = jdwpPort)
-        }
-        driverDSL.shutdownManager.registerProcessShutdown(processFuture)
-        return processFuture.map(::VerifierHandle)
+        val verifierName = CordaX500Name(organisation = "Verifier$id", locality = "London", country = "GB")
+        val baseDirectory = (driverDSL.driverDirectory / verifierName.organisation).createDirectories()
+        val config = createConfiguration(baseDirectory, address)
+        val configFilename = "verifier.conf"
+        writeConfig(baseDirectory, configFilename, config)
+        Verifier.loadConfiguration(baseDirectory, baseDirectory / configFilename).configureDevKeyAndTrustStores(verifierName)
+        val process = ProcessUtilities.startJavaProcess<Verifier>(listOf(baseDirectory.toString()), jdwpPort = jdwpPort)
+        driverDSL.shutdownManager.registerProcessShutdown(process)
+        return doneFuture(VerifierHandle(process))
     }
 
     private fun <A> NodeHandle.connectToNode(closure: (ClientSession) -> A): A {

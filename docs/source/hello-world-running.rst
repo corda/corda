@@ -9,15 +9,12 @@ Running our CorDapp
 
 Now that we've written a CorDapp, it's time to test it by running it on some real Corda nodes.
 
-Clean up
---------
-Before running our node, delete the ``client/TemplateClient.java`` (for Java) or ``client/TemplateClient.kt`` (for
-Kotlin) file. We won't be using it, and it will cause build errors unless we remove it.
-
 Deploying our CorDapp
 ---------------------
 Let's take a look at the nodes we're going to deploy. Open the project's ``build.gradle`` file and scroll down to the
-``task deployNodes`` section. This section defines three nodes - the Controller, PartyA, and PartyB:
+``task deployNodes`` section. This section defines three nodes. There are two standard nodes (``PartyA`` and
+``PartyB``), plus a special Controller node that is running the network map service and advertises a validating notary
+service.
 
 .. code:: bash
 
@@ -47,10 +44,6 @@ Let's take a look at the nodes we're going to deploy. Open the project's ``build
             rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
         }
     }
-
-We have three standard nodes, plus a special Controller node that is running the network map service, and is also
-advertising a validating notary service. Feel free to add additional node definitions here to expand the size of the
-test network.
 
 We can run this ``deployNodes`` task using Gradle. For each node definition, Gradle will:
 
@@ -114,11 +107,12 @@ We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
 
     start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
 
-PartyA and PartyB will automatically agree an IOU. If the flow worked, it should have led to the recording of a new IOU
-in the vaults of both PartyA and PartyB.
+This single command will cause PartyA and PartyB to automatically agree an IOU. This is one of the great advantages of
+the flow framework - it allows you to reduce complex negotiation and update processes into a single function call.
 
-We can check the flow has worked by using an RPC operation to check the contents of each node's vault. Typing ``run``
-will display a list of the available commands. We can examine the contents of a node's vault by running:
+If the flow worked, it should have recorded a new IOU in the vaults of both PartyA and PartyB. Let's check.
+
+We can check the contents of each node's vault by running:
 
 .. container:: codeset
 
@@ -166,31 +160,23 @@ The vaults of PartyA and PartyB should both display the following output:
     stateTypes: "UNCONSUMED"
     otherResults: []
 
+This is the transaction issuing our ``IOUState`` onto a ledger.
+
 Conclusion
 ----------
-We have written a simple CorDapp that allows IOUs to be issued onto the ledger. Like all CorDapps, our
-CorDapp is made up of three key parts:
+We have written a simple CorDapp that allows IOUs to be issued onto the ledger. Our CorDapp is made up of two key
+parts:
 
 * The ``IOUState``, representing IOUs on the ledger
-* The ``IOUContract``, controlling the evolution of IOUs over time
 * The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger
-
-Together, these three parts completely determine how IOUs are created and evolved on the ledger.
 
 Next steps
 ----------
 There are a number of improvements we could make to this CorDapp:
 
-* We could require signatures from the lender as well the borrower, to give both parties a say in the creation of a new
-  ``IOUState``
-* We should add unit tests, using the contract-test and flow-test frameworks
-* We should change ``IOUState.value`` from an integer to a proper amount of a given currency
+* We chould add unit tests, using the contract-test and flow-test frameworks
+* We chould change ``IOUState.value`` from an integer to a proper amount of a given currency
 * We could add an API, to make it easier to interact with the CorDapp
 
-We will explore some of these improvements in future tutorials. But you should now be ready to develop your own
-CorDapps. You can find a list of sample CorDapps `here <https://www.corda.net/samples/>`_.
-
-As you write CorDapps, you can learn more about the Corda API :doc:`here <corda-api>`.
-
-If you get stuck at any point, please reach out on `Slack <https://slack.corda.net/>`_,
-`Discourse <https://discourse.corda.net/>`_, or `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_.
+But for now, the biggest priority is to add an ``IOUContract`` imposing constraints on the evolution of each
+``IOUState`` over time. This will be the focus of our next tutorial.

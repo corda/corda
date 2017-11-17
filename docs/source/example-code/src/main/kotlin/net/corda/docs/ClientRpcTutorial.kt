@@ -48,7 +48,7 @@ fun main(args: Array<String>) {
             startFlow<CashExitFlow>(),
             invokeRpc(CordaRPCOps::nodeInfo)
     ))
-    driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance")) {
+    driver(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true) {
         val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user)).get()
         // END 1
 
@@ -96,7 +96,6 @@ fun main(args: Array<String>) {
                 graph.display()
             }
         }
-        waitForAllNodesToFinish()
         // END 5
     }
 }

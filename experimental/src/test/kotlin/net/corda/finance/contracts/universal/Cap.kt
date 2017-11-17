@@ -4,11 +4,9 @@ import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.EnforceVerifyOrFail
-import net.corda.testing.TransactionDSL
-import net.corda.testing.TransactionDSLInterpreter
+import net.corda.testing.*
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -18,7 +16,9 @@ fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceV
 }
 
 class Cap {
-
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
     val notional = 50.M

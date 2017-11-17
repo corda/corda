@@ -28,7 +28,6 @@ class NodeSchemaServiceTest {
     fun `registering custom schemas for testing with MockNode`() {
         val mockNet = MockNetwork(cordappPackages = listOf(DummyLinearStateSchemaV1::class.packageName))
         val mockNode = mockNet.createNode()
-        mockNet.runNetwork()
         val schemaService = mockNode.services.schemaService
         assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))
 
@@ -88,7 +87,7 @@ object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::clas
     @Table(name = "Children")
     class Child {
         @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @GeneratedValue
         @Column(name = "child_id", unique = true, nullable = false)
         var childId: Int? = null
 

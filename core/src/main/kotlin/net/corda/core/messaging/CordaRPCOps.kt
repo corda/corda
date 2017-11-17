@@ -1,6 +1,10 @@
 package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.Actor
+import net.corda.core.context.AuthServiceId
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -10,13 +14,11 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
-import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
@@ -25,13 +27,41 @@ import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
 
+private val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
+
 @CordaSerializable
-data class StateMachineInfo(
+data class StateMachineInfo @JvmOverloads constructor(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
         val initiator: FlowInitiator,
-        val progressTrackerStepAndUpdates: DataFeed<String, String>?
+        val progressTrackerStepAndUpdates: DataFeed<String, String>?,
+        val context: InvocationContext? = null
 ) {
+    fun context(): InvocationContext = context ?: contextFrom(initiator)
+
+    private fun contextFrom(initiator: FlowInitiator): InvocationContext {
+        var actor: Actor? = null
+        val origin: Origin
+        when (initiator) {
+            is FlowInitiator.RPC -> {
+                actor = Actor(Actor.Id(initiator.username), AuthServiceId("UNKNOWN"), unknownName)
+                origin = Origin.RPC(actor)
+            }
+            is FlowInitiator.Peer -> origin = Origin.Peer(initiator.party.name)
+            is FlowInitiator.Service -> origin = Origin.Service(initiator.serviceClassName, unknownName)
+            is FlowInitiator.Shell -> origin = Origin.Shell
+            is FlowInitiator.Scheduled -> origin = Origin.Scheduled(initiator.scheduledState)
+        }
+        return InvocationContext.newInstance(origin = origin, actor = actor)
+    }
+
+    fun copy(id: StateMachineRunId = this.id,
+             flowLogicClassName: String = this.flowLogicClassName,
+             initiator: FlowInitiator = this.initiator,
+             progressTrackerStepAndUpdates: DataFeed<String, String>? = this.progressTrackerStepAndUpdates): StateMachineInfo {
+        return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, context = context)
+    }
+
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
 }
 
@@ -196,6 +226,10 @@ interface CordaRPCOps : RPCOps {
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
 
+    /** Returns and [Observable] object with future states of the node. */
+    @RPCReturnsObservables
+    fun nodeStateObservable(): Observable<NodeState>
+
     /**
      * Returns network's notary identities, assuming this will not change while the node is running.
      *
@@ -217,6 +251,12 @@ interface CordaRPCOps : RPCOps {
 
     /** Uploads a jar to the node, returns it's hash. */
     fun uploadAttachment(jar: InputStream): SecureHash
+
+    /** Uploads a jar including metadata to the node, returns it's hash. */
+    fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash
+
+    /** Queries attachments metadata */
+    fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId>
 
     /** Returns the node's current time. */
     fun currentNodeTime(): Instant
@@ -428,3 +468,8 @@ inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startTrac
  */
 @CordaSerializable
 data class DataFeed<out A, B>(val snapshot: A, val updates: Observable<B>)
+
+@CordaSerializable
+enum class NodeState {
+    SHUTTING_DOWN
+}

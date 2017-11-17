@@ -91,7 +91,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         }
 
         // The signatures must be valid and the transaction must be valid.
-        partiallySignedTx.verifySignaturesExcept(*notSigned.toTypedArray())
+        partiallySignedTx.verifySignaturesExcept(notSigned)
         partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
         // Determine who still needs to sign.
@@ -251,7 +251,7 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
         val signed = stx.sigs.map { it.by }
         val allSigners = stx.tx.requiredSigningKeys
         val notSigned = allSigners - signed
-        stx.verifySignaturesExcept(*notSigned.toTypedArray())
+        stx.verifySignaturesExcept(notSigned)
     }
 
     /**

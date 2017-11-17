@@ -8,6 +8,7 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -62,7 +63,21 @@ open class NodeStartup(val args: Array<String>) {
 
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
-        val conf = loadConfigFile(cmdlineOptions)
+        val conf0 = loadConfigFile(cmdlineOptions)
+
+        val conf = if (cmdlineOptions.bootstrapRaftCluster) {
+            if (conf0 is NodeConfigurationImpl) {
+                println("Bootstrapping raft cluster (starting up as seed node).")
+                // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
+                conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
+            } else {
+                println("bootstrap-raft-notaries flag not recognized, exiting...")
+                exitProcess(1)
+            }
+        } else {
+            conf0
+        }
+
         banJavaSerialisation(conf)
         preNetworkRegistration(conf)
         maybeRegisterWithNetworkAndExit(cmdlineOptions, conf)
@@ -141,14 +156,15 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     open protected fun maybeRegisterWithNetworkAndExit(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
-        if (!cmdlineOptions.isRegistration) return
+        val compatibilityZoneURL = conf.compatibilityZoneURL
+        if (!cmdlineOptions.isRegistration || compatibilityZoneURL == null) return
         println()
         println("******************************************************************")
         println("*                                                                *")
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(conf.certificateSigningService)).buildKeystore()
+        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
         exitProcess(0)
     }
 

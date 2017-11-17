@@ -10,12 +10,9 @@ import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.testing.ALICE
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.BOB
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.singleIdentity
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -54,8 +51,6 @@ class AttachmentTests {
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
 
-        // Ensure that registration was successful before progressing any further
-        mockNet.runNetwork()
         val alice = aliceNode.info.singleIdentity()
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -91,15 +86,11 @@ class AttachmentTests {
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
 
-        // Ensure that registration was successful before progressing any further
-        mockNet.runNetwork()
-
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
 
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
-        mockNet.runNetwork()
         val alice = aliceNode.info.singleIdentity()
         val bobFlow = bobNode.startAttachmentFlow(setOf(hash), alice)
         mockNet.runNetwork()
@@ -116,7 +107,6 @@ class AttachmentTests {
             }
         })
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name))
-        mockNet.runNetwork()
         val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
 
         aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)

@@ -12,7 +12,6 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -178,8 +177,6 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  * Extract a single identity from the node info. Throws an error if the node has multiple identities.
  */
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
-/** Returns the identity of the first notary found on the network */
-fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
 
 /**
  * A method on a mock was called, but no behaviour was previously specified for that method.

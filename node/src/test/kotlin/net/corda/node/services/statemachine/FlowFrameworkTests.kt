@@ -9,8 +9,10 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
@@ -84,7 +86,7 @@ class FlowFrameworkTests {
         // Extract identities
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()
-        notaryIdentity = aliceNode.services.getDefaultNotary()
+        notaryIdentity = mockNet.defaultNotaryIdentity
     }
 
     @After
@@ -209,7 +211,6 @@ class FlowFrameworkTests {
     @Test
     fun `sending to multiple parties`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
         bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         charlieNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
@@ -242,7 +243,6 @@ class FlowFrameworkTests {
     @Test
     fun `receiving from multiple parties`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
         val bobPayload = "Test 1"
         val charliePayload = "Test 2"
@@ -396,7 +396,6 @@ class FlowFrameworkTests {
     @Test
     fun `FlowException propagated in invocation chain`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
         charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
@@ -411,7 +410,6 @@ class FlowFrameworkTests {
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
         val charlieNode = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
-        mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
         // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
@@ -509,7 +507,7 @@ class FlowFrameworkTests {
 
         val committerFiber = aliceNode.registerFlowFactory(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it)
-        }.map { it.stateMachine }
+        }.map { it.stateMachine }.map { uncheckedCast<FlowStateMachine<*>, FlowStateMachine<Any>>(it) }
         val waiterStx = bobNode.services.startFlow(WaitingFlows.Waiter(stx, alice)).resultFuture
         mockNet.runNetwork()
         assertThat(waiterStx.getOrThrow()).isEqualTo(committerFiber.getOrThrow().resultFuture.getOrThrow())
@@ -662,7 +660,7 @@ class FlowFrameworkTests {
         val newNode = mockNet.createNode(MockNodeParameters(id))
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         manuallyCloseDB()
-        mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
+        mockNet.runNetwork()
         newNode.getSingleFlow<P>().first
     }
 

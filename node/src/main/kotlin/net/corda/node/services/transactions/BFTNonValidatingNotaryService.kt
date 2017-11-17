@@ -60,7 +60,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
             }
-            BFTSMaRt.Client(it, replicaId, cluster)
+            BFTSMaRt.Client(it, replicaId, cluster, this)
         }
     }
 
@@ -95,7 +95,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
     }
 
     @Entity
-    @Table(name = "${NODE_DATABASE_PREFIX}bft_smart_notary_committed_states")
+    @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_states")
     class PersistedCommittedState(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
         : PersistentUniquenessProvider.PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
 

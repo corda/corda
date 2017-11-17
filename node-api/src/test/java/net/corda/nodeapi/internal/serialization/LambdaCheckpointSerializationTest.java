@@ -19,13 +19,13 @@ import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
 public final class LambdaCheckpointSerializationTest {
     @Rule
-    public SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
+    public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private SerializationFactory factory;
     private SerializationContext context;
 
     @Before
     public void setup() {
-        factory = testSerialization.env.getSERIALIZATION_FACTORY();
+        factory = testSerialization.getEnv().getSerializationFactory();
         context = new SerializationContextImpl(KryoSerializationSchemeKt.getKryoHeaderV0_1(), this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, SerializationContext.UseCase.Checkpoint);
     }
 

@@ -1,12 +1,15 @@
-package net.corda.testing
+package net.corda.testing.internal
 
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.AuthServiceId
+import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
@@ -48,7 +51,6 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
-import javax.security.cert.X509Certificate
 
 interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
     /**
@@ -230,8 +232,10 @@ fun <A> rpcDriver(
         useTestClock: Boolean = false,
         initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = false,
+        waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
+        externalTrace: Trace? = null,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -243,9 +247,10 @@ fun <A> rpcDriver(
                         useTestClock = useTestClock,
                         isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
+                        waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs
-                )
+                ), externalTrace
         ),
         coerce = { it },
         dsl = dsl,
@@ -255,10 +260,9 @@ fun <A> rpcDriver(
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = isValid(user, password)
-    override fun validateUser(user: String?, password: String?, certificates: Array<out X509Certificate>?): String? {
+    override fun validateUser(user: String?, password: String?, remotingConnection: RemotingConnection?): String? {
         return validate(user, password)
     }
-
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
         return validate(user, password)
     }
@@ -273,7 +277,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
 }
 
 data class RPCDriverDSL(
-        val driverDSL: DriverDSL
+        private val driverDSL: DriverDSL, private val externalTrace: Trace?
 ) : DriverDSLInternalInterface by driverDSL, RPCDriverInternalDSLInterface {
     private companion object {
         val notificationAddress = "notifications"
@@ -353,7 +357,7 @@ data class RPCDriverDSL(
     override fun <I : RPCOps> startInVmRpcClient(rpcOpsClass: Class<I>, username: String, password: String, configuration: RPCClientConfiguration): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(inVmClientTransportConfiguration, configuration)
-            val connection = client.start(rpcOpsClass, username, password)
+            val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
             }
@@ -397,7 +401,7 @@ data class RPCDriverDSL(
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)
-            val connection = client.start(rpcOpsClass, username, password)
+            val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
             }
@@ -406,11 +410,9 @@ data class RPCDriverDSL(
     }
 
     override fun <I : RPCOps> startRandomRpcClient(rpcOpsClass: Class<I>, rpcAddress: NetworkHostAndPort, username: String, password: String): CordaFuture<Process> {
-        val processFuture = driverDSL.executorService.fork {
-            ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
-        }
-        driverDSL.shutdownManager.registerProcessShutdown(processFuture)
-        return processFuture
+        val process = ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
+        driverDSL.shutdownManager.registerProcessShutdown(process)
+        return doneFuture(process)
     }
 
     override fun startArtemisSession(rpcAddress: NetworkHostAndPort, username: String, password: String): ClientSession {
@@ -479,10 +481,12 @@ data class RPCDriverDSL(
     ): RpcServerHandle {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            isUseGlobalPools = false
         }
         val userService = object : RPCUserService {
             override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
             override val users: List<User> get() = listOf(rpcUser)
+            override val id: AuthServiceId = AuthServiceId("RPC_DRIVER")
         }
         val rpcServer = RPCServer(
                 ops,

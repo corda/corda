@@ -60,7 +60,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
                 database.transaction {
-                    findTokenizableService(NodeInterestRates.Oracle::class.java)!!.uploadFixes(it.reader().readText())
+                    services.cordaService(NodeInterestRates.Oracle::class.java).uploadFixes(it.reader().readText())
                 }
             }
         }
@@ -69,7 +69,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val mockNet = MockNetwork(
             networkSendManuallyPumped = networkSendManuallyPumped,
             threadPerNode = runAsync,
-            cordappPackages = listOf("net.corda.irs.contract", "net.corda.finance.contract", "net.corda.irs"))
+            cordappPackages = listOf("net.corda.finance.contract", "net.corda.irs"))
     // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
     //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
     //       But that's fine for visualisation purposes.

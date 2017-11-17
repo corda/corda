@@ -9,6 +9,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
@@ -387,8 +388,8 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // DOCEND 29
         // We can also sign the transaction using a different public key:
         // DOCSTART 30
-        val otherKey: PublicKey = serviceHub.keyManagementService.freshKey()
-        val onceSignedTx2: SignedTransaction = serviceHub.signInitialTransaction(txBuilder, otherKey)
+        val otherIdentity: PartyAndCertificate = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
+        val onceSignedTx2: SignedTransaction = serviceHub.signInitialTransaction(txBuilder, otherIdentity.owningKey)
         // DOCEND 30
 
         // If instead this was a ``SignedTransaction`` that we'd received
@@ -398,9 +399,9 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         val twiceSignedTx: SignedTransaction = serviceHub.addSignature(onceSignedTx)
         // DOCEND 38
         // Or, if we wanted to use a different public key:
-        val otherKey2: PublicKey = serviceHub.keyManagementService.freshKey()
+        val otherIdentity2: PartyAndCertificate = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
         // DOCSTART 39
-        val twiceSignedTx2: SignedTransaction = serviceHub.addSignature(onceSignedTx, otherKey2)
+        val twiceSignedTx2: SignedTransaction = serviceHub.addSignature(onceSignedTx, otherIdentity2.owningKey)
         // DOCEND 39
 
         // We can also generate a signature over the transaction without
@@ -414,7 +415,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // DOCEND 40
         // And again, if we wanted to use a different public key:
         // DOCSTART 41
-        val sig2: TransactionSignature = serviceHub.createSignature(onceSignedTx, otherKey2)
+        val sig2: TransactionSignature = serviceHub.createSignature(onceSignedTx, otherIdentity2.owningKey)
         // DOCEND 41
 
         // In practice, however, the process of gathering every signature

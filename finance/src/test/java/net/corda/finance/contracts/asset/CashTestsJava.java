@@ -4,6 +4,8 @@ import net.corda.core.contracts.PartyAndReference;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.utilities.OpaqueBytes;
 import net.corda.testing.DummyCommandData;
+import net.corda.testing.SerializationEnvironmentRule;
+import org.junit.Rule;
 import org.junit.Test;
 
 import static net.corda.finance.Currencies.DOLLARS;
@@ -19,6 +21,8 @@ public class CashTestsJava {
     private final PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
     private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), new AnonymousParty(getMEGA_CORP_PUBKEY()));
     private final Cash.State outState = new Cash.State(inState.getAmount(), new AnonymousParty(getMINI_CORP_PUBKEY()));
+    @Rule
+    public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
 
     @Test
     public void trivial() {

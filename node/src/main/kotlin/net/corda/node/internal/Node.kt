@@ -1,17 +1,17 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -24,8 +24,8 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DemoClock
-import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.serialization.*
@@ -128,8 +128,7 @@ open class Node(configuration: NodeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     private lateinit var userService: RPCUserService
-
-    override fun makeMessagingService(): MessagingService {
+    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
@@ -144,7 +143,7 @@ open class Node(configuration: NodeConfiguration,
                 info.legalIdentities[0].owningKey,
                 serverThread,
                 database,
-                services.monitoringService,
+                services.monitoringService.metrics,
                 advertisedAddress)
     }
 
@@ -180,15 +179,21 @@ open class Node(configuration: NodeConfiguration,
      * TODO this code used to rely on the networkmap node, we might want to look at a different solution.
      */
     private fun tryDetectIfNotPublicHost(host: String): String? {
-        if (!AddressUtils.isPublic(host)) {
+        return if (!AddressUtils.isPublic(host)) {
             val foundPublicIP = AddressUtils.tryDetectPublicIP()
-
-            if (foundPublicIP != null) {
+            if (foundPublicIP == null) {
+                val retrievedHostName = networkMapClient?.myPublicHostname()
+                if (retrievedHostName != null) {
+                    log.info("Retrieved public IP from Network Map Service: $this. This will be used instead of the provided \"$host\" as the advertised address.")
+                }
+                retrievedHostName
+            } else {
                 log.info("Detected public IP: ${foundPublicIP.hostAddress}. This will be used instead of the provided \"$host\" as the advertised address.")
-                return foundPublicIP.hostAddress
+                foundPublicIP.hostAddress
             }
+        } else {
+            null
         }
-        return null
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {
@@ -212,7 +217,7 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: () -> T): T {
+    override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: (CordaPersistence) -> T): T {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -278,14 +283,15 @@ open class Node(configuration: NodeConfiguration,
 
     private fun initialiseSerialization() {
         val classloader = cordappLoader.appClassLoader
-        SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-            registerScheme(KryoServerSerializationScheme())
-            registerScheme(AMQPServerSerializationScheme())
-        }
-        SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT.withClassLoader(classloader)
-        SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
+        nodeSerializationEnv = SerializationEnvironmentImpl(
+                SerializationFactoryImpl().apply {
+                    registerScheme(KryoServerSerializationScheme())
+                    registerScheme(AMQPServerSerializationScheme())
+                },
+                KRYO_P2P_CONTEXT.withClassLoader(classloader),
+                rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
+                storageContext = KRYO_STORAGE_CONTEXT.withClassLoader(classloader),
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
     }
 
     /** Starts a blocking event loop for message dispatch. */
@@ -314,7 +320,3 @@ open class Node(configuration: NodeConfiguration,
         log.info("Shutdown complete")
     }
 }
-
-class ConfigurationException(message: String) : CordaException(message)
-
-data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: CordaX500Name)

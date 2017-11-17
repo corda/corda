@@ -2,8 +2,12 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.Origin
 import net.corda.core.contracts.*
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -16,11 +20,10 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.dummyCommand
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeParameters
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -34,9 +37,12 @@ class ScheduledFlowTests {
         val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
     }
 
-    lateinit var mockNet: MockNetwork
-    lateinit var nodeA: StartedNode<MockNetwork.MockNode>
-    lateinit var nodeB: StartedNode<MockNetwork.MockNode>
+    private lateinit var mockNet: MockNetwork
+    private lateinit var aliceNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var bobNode: StartedNode<MockNetwork.MockNode>
+    private lateinit var notary: Party
+    private lateinit var alice: Party
+    private lateinit var bob: Party
 
     data class ScheduledState(val creationTime: Instant,
                               val source: Party,
@@ -55,11 +61,10 @@ class ScheduledFlowTests {
         override val participants: List<Party> get() = listOf(source, destination)
     }
 
-    class InsertInitialStateFlow(private val destination: Party) : FlowLogic<Unit>() {
+    class InsertInitialStateFlow(private val destination: Party, private val notary: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val scheduledState = ScheduledState(serviceHub.clock.instant(), ourIdentity, destination)
-            val notary = serviceHub.getDefaultNotary()
             val builder = TransactionBuilder(notary)
                     .addOutputState(scheduledState, DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
@@ -93,12 +98,11 @@ class ScheduledFlowTests {
     @Before
     fun setup() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.testing.contracts"))
-        val a = mockNet.createUnstartedNode()
-        val b = mockNet.createUnstartedNode()
-
-        mockNet.startNodes()
-        nodeA = a.started!!
-        nodeB = b.started!!
+        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        notary = mockNet.defaultNotaryIdentity
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
     }
 
     @After
@@ -109,20 +113,20 @@ class ScheduledFlowTests {
     @Test
     fun `create and run scheduled flow then wait for result`() {
         var countScheduledFlows = 0
-        nodeA.smm.track().updates.subscribe {
+        aliceNode.smm.track().updates.subscribe {
             if (it is StateMachineManager.Change.Add) {
-                val initiator = it.logic.stateMachine.flowInitiator
-                if (initiator is FlowInitiator.Scheduled)
+                val context = it.logic.stateMachine.context
+                if (context.origin is Origin.Scheduled)
                     countScheduledFlows++
             }
         }
-        nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity()))
+        aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary))
         mockNet.waitQuiescent()
-        val stateFromA = nodeA.database.transaction {
-            nodeA.services.vaultService.queryBy<ScheduledState>().states.single()
+        val stateFromA = aliceNode.database.transaction {
+            aliceNode.services.vaultService.queryBy<ScheduledState>().states.single()
         }
-        val stateFromB = nodeB.database.transaction {
-            nodeB.services.vaultService.queryBy<ScheduledState>().states.single()
+        val stateFromB = bobNode.database.transaction {
+            bobNode.services.vaultService.queryBy<ScheduledState>().states.single()
         }
         assertEquals(1, countScheduledFlows)
         assertEquals("Must be same copy on both nodes", stateFromA, stateFromB)
@@ -134,8 +138,8 @@ class ScheduledFlowTests {
         val N = 100
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {
-            futures.add(nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.chooseIdentity())).resultFuture)
-            futures.add(nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.chooseIdentity())).resultFuture)
+            futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)).resultFuture)
+            futures.add(bobNode.services.startFlow(InsertInitialStateFlow(alice, notary)).resultFuture)
         }
         mockNet.waitQuiescent()
 
@@ -143,11 +147,11 @@ class ScheduledFlowTests {
         futures.forEach { it.getOrThrow() }
 
         // Convert the states into maps to make error reporting easier
-        val statesFromA: List<StateAndRef<ScheduledState>> = nodeA.database.transaction {
-            queryStatesWithPaging(nodeA.services.vaultService)
+        val statesFromA: List<StateAndRef<ScheduledState>> = aliceNode.database.transaction {
+            queryStatesWithPaging(aliceNode.services.vaultService)
         }
-        val statesFromB: List<StateAndRef<ScheduledState>> = nodeB.database.transaction {
-            queryStatesWithPaging(nodeB.services.vaultService)
+        val statesFromB: List<StateAndRef<ScheduledState>> = bobNode.database.transaction {
+            queryStatesWithPaging(bobNode.services.vaultService)
         }
         assertEquals("Expect all states to be present", 2 * N, statesFromA.count())
         statesFromA.forEach { ref ->

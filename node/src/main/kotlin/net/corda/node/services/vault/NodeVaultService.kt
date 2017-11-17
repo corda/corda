@@ -5,22 +5,13 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
-import net.corda.core.node.StateLoader
-import net.corda.core.node.services.*
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
-import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.StateLoader
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
@@ -92,7 +83,6 @@ class NodeVaultService(
                 val state = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
-                        contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
                         recordedTime = clock.instant())
                 state.stateRef = PersistentStateRef(stateAndRef.key)
@@ -172,7 +162,7 @@ class NodeVaultService(
                 return Vault.NoUpdate
             }
 
-            return Vault.Update(consumedStates, ourNewStates.toHashSet())
+            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet())
         }
 
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn) }
@@ -210,28 +200,10 @@ class NodeVaultService(
         processAndNotify(netDelta)
     }
 
-    // TODO: replace this method in favour of a VaultQuery query
-    private fun loadStates(refs: Collection<StateRef>): HashSet<StateAndRef<ContractState>> {
-        val states = HashSet<StateAndRef<ContractState>>()
-        if (refs.isNotEmpty()) {
-            val session = currentDBSession()
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
-            val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-            val statusPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
-            val persistentStateRefs = refs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
-            val compositeKey = vaultStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
-            val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
-            criteriaQuery.where(statusPredicate, stateRefsPredicate)
-            val results = session.createQuery(criteriaQuery).resultList
-            results.asSequence().forEach {
-                val txHash = SecureHash.parse(it.stateRef?.txId!!)
-                val index = it.stateRef?.index!!
-                val state = it.contractState.deserialize<TransactionState<ContractState>>(context = STORAGE_CONTEXT)
-                states.add(StateAndRef(state, StateRef(txHash, index)))
-            }
-        }
-        return states
+    private fun loadStates(refs: Collection<StateRef>): Collection<StateAndRef<ContractState>> {
+        return if (refs.isNotEmpty())
+            queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refs.toList())).states
+        else emptySet()
     }
 
     private fun processAndNotify(update: Vault.Update<ContractState>) {
@@ -431,70 +403,70 @@ class NodeVaultService(
 
         val session = getSession()
 
-        session.use {
-            val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
-            val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+        val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
+        val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
 
-            // TODO: revisit (use single instance of parser for all queries)
-            val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
+        // TODO: revisit (use single instance of parser for all queries)
+        val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
-            try {
-                // parse criteria and build where predicates
-                criteriaParser.parse(criteria, sorting)
+        try {
+            // parse criteria and build where predicates
+            criteriaParser.parse(criteria, sorting)
 
-                // prepare query for execution
-                val query = session.createQuery(criteriaQuery)
+            // prepare query for execution
+            val query = session.createQuery(criteriaQuery)
 
-                // pagination checks
-                if (!paging.isDefault) {
-                    // pagination
-                    if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
-                    if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
-                }
-
-                query.firstResult = (paging.pageNumber - 1) * paging.pageSize
-                query.maxResults = paging.pageSize + 1  // detection too many results
-
-                // execution
-                val results = query.resultList
-
-                // final pagination check (fail-fast on too many results when no pagination specified)
-                if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
-                    throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
-
-                val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
-                val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
-                val otherResults: MutableList<Any> = mutableListOf()
-
-                results.asSequence()
-                        .forEachIndexed { index, result ->
-                            if (result[0] is VaultSchemaV1.VaultStates) {
-                                if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
-                                    return@forEachIndexed
-                                val vaultState = result[0] as VaultSchemaV1.VaultStates
-                                val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
-                                val state = vaultState.contractState.deserialize<TransactionState<T>>(context = STORAGE_CONTEXT)
-                                statesMeta.add(Vault.StateMetadata(stateRef,
-                                        vaultState.contractStateClassName,
-                                        vaultState.recordedTime,
-                                        vaultState.consumedTime,
-                                        vaultState.stateStatus,
-                                        vaultState.notary,
-                                        vaultState.lockId,
-                                        vaultState.lockUpdateTime))
-                                statesAndRefs.add(StateAndRef(state, stateRef))
-                            } else {
-                                // TODO: improve typing of returned other results
-                                log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
-                                otherResults.addAll(result.toArray().asList())
-                            }
-                        }
-
-                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
-            } catch (e: java.lang.Exception) {
-                log.error(e.message)
-                throw e.cause ?: e
+            // pagination checks
+            if (!paging.isDefault) {
+                // pagination
+                if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
+                if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
             }
+
+            query.firstResult = (paging.pageNumber - 1) * paging.pageSize
+            query.maxResults = paging.pageSize + 1  // detection too many results
+
+            // execution
+            val results = query.resultList
+
+            // final pagination check (fail-fast on too many results when no pagination specified)
+            if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
+                throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
+
+            val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
+            val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
+            val otherResults: MutableList<Any> = mutableListOf()
+            val stateRefs = mutableSetOf<StateRef>()
+
+            results.asSequence()
+                    .forEachIndexed { index, result ->
+                        if (result[0] is VaultSchemaV1.VaultStates) {
+                            if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
+                                return@forEachIndexed
+                            val vaultState = result[0] as VaultSchemaV1.VaultStates
+                            val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
+                            stateRefs.add(stateRef)
+                            statesMeta.add(Vault.StateMetadata(stateRef,
+                                    vaultState.contractStateClassName,
+                                    vaultState.recordedTime,
+                                    vaultState.consumedTime,
+                                    vaultState.stateStatus,
+                                    vaultState.notary,
+                                    vaultState.lockId,
+                                    vaultState.lockUpdateTime))
+                        } else {
+                            // TODO: improve typing of returned other results
+                            log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
+                            otherResults.addAll(result.toArray().asList())
+                        }
+                    }
+            if (stateRefs.isNotEmpty())
+                statesAndRefs.addAll(stateLoader.loadStates(stateRefs) as Collection<StateAndRef<T>>)
+
+            return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
+        } catch (e: java.lang.Exception) {
+            log.error(e.message)
+            throw e.cause ?: e
         }
     }
 
@@ -507,11 +479,7 @@ class NodeVaultService(
         }
     }
 
-    private fun getSession(): Session {
-        return sessionFactory.withOptions().
-                connection(DatabaseTransactionManager.current().connection).
-                openSession()
-    }
+    private fun getSession() = DatabaseTransactionManager.currentOrNew().session
 
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
@@ -521,22 +489,21 @@ class NodeVaultService(
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
         val session = getSession()
-        session.use {
-            val query = session.createQuery(criteria)
-            val results = query.resultList
-            val distinctTypes = results.map { it }
 
-            val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
-            distinctTypes.forEach { type ->
-                val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
-                val contractInterfaces = deriveContractInterfaces(concreteType)
-                contractInterfaces.map {
-                    val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
-                    contractInterface.add(concreteType.name)
-                }
+        val query = session.createQuery(criteria)
+        val results = query.resultList
+        val distinctTypes = results.map { it }
+
+        val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
+        distinctTypes.forEach { type ->
+            val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
+            val contractInterfaces = deriveContractInterfaces(concreteType)
+            contractInterfaces.map {
+                val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
+                contractInterface.add(concreteType.name)
             }
-            return contractInterfaceToConcreteTypes
         }
+        return contractInterfaceToConcreteTypes
     }
 
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
