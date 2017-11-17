@@ -96,8 +96,9 @@ open class NodeStartup(val args: Array<String>) {
                 if (e.message?.startsWith("Unknown named curve:") == true) {
                     logger.error("Exception during node startup - ${e.message}. " +
                             "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-                } else
+                } else {
                     logger.error("Exception during node startup", e)
+                }
                 return 1
             }
 
