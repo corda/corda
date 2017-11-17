@@ -36,6 +36,7 @@ import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
+import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.*
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -55,6 +56,7 @@ import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
+import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -129,6 +131,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
     protected val networkMapClient: NetworkMapClient? by lazy { configuration.compatibilityZoneURL?.let(::NetworkMapClient) }
+
+    lateinit var userService: RPCUserService get
 
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
@@ -213,6 +217,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
 
             runOnStop += network::stop
+
+            startShell(rpcOps)
+
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
 
@@ -241,6 +248,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
             _started = this
         }
+    }
+
+    open fun startShell(rpcOps: CordaRPCOps) {
+        InteractiveShell.startShell(configuration, rpcOps, userService, _services.identityService, _services.database)
     }
 
     private fun initNodeInfo(): Pair<Set<KeyPair>, NodeInfo> {
