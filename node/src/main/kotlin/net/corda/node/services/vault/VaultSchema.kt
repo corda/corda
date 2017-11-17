@@ -1,16 +1,14 @@
 package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.toHashedString
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.ByteSequence
-import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
 import java.io.Serializable
@@ -129,15 +127,15 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            // TODO: store the raw issuer reference contents in a separate join table
-            @Column(name = "issuer_ref_hash", length = MAX_HASH_HEX_SIZE)
-            var issuerRefHash: String
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
+            var issuerRef: ByteArray
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
                 this(owner = _owner,
                         quantity = _quantity,
                         issuer = _issuerParty,
-                        issuerRefHash = _issuerRef.toHashedString(),
+                        issuerRef = _issuerRef.bytes,
                         participants = _participants.toMutableSet())
     }
 

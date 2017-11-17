@@ -15,18 +15,14 @@ import org.hibernate.boot.model.naming.Identifier
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
-import org.hibernate.dialect.Dialect
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
-import org.hibernate.type.DiscriminatorType
-import org.hibernate.type.descriptor.WrapperOptions
-import org.hibernate.type.descriptor.java.AbstractTypeDescriptor
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
-import org.hibernate.type.descriptor.sql.VarcharTypeDescriptor
+import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -89,6 +85,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
+            applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
             build()
         }
 
@@ -143,6 +140,17 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                     return "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
                 }
             }
+        }
+    }
+
+    // A tweaked version of `org.hibernate.type.WrapperBinaryType` that deals with ByteArray (java primitive byte[] type).
+    private object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
+        override fun getRegistrationKeys(): Array<String> {
+            return arrayOf(name, "ByteArray", ByteArray::class.java.name)
+        }
+
+        override fun getName(): String {
+            return "corda-wrapper-binary"
         }
     }
 }

@@ -6,8 +6,9 @@ package net.corda.finance.contracts.asset
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Amount.Companion.sumOrThrow
-import net.corda.core.crypto.*
 import net.corda.core.crypto.NullKeys.NULL_PARTY
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -19,8 +20,6 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.toBase58
-import net.corda.core.utilities.toHex
 import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
@@ -85,7 +84,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         issuerPartyHash = this.amount.token.issuer.party.owningKey.toStringShort(),
-                        issuerRefHash = this.amount.token.issuer.reference.toHashedString()
+                        issuerRef = this.amount.token.issuer.reference.bytes
                 )
             /** Additional schema mappings would be added here (eg. CashSchemaV2, CashSchemaV3, ...) */
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")

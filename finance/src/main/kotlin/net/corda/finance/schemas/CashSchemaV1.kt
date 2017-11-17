@@ -4,9 +4,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
-import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import org.hibernate.annotations.Type
 import javax.persistence.*
 
@@ -39,8 +38,8 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
             @Column(name = "issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var issuerPartyHash: String,
 
-            // TODO: store the raw issuer reference contents in a separate join table
-            @Column(name = "issuer_ref_hash", length = MAX_HASH_HEX_SIZE)
-            var issuerRefHash: String
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
+            var issuerRef: ByteArray
     ) : PersistentState()
 }

@@ -45,8 +45,16 @@ interface NamedByHash {
  */
 @CordaSerializable
 data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
+    init {
+        require(issuer.reference.bytes.size <= MAX_ISSUER_REF_SIZE) { "Maximum issuer reference size is $MAX_ISSUER_REF_SIZE." }
+    }
     override fun toString() = "$product issued by $issuer"
 }
+
+/**
+ * The maximum permissible size of an issuer reference.
+ */
+const val MAX_ISSUER_REF_SIZE = 512
 
 /**
  * Strips the issuer and returns an [Amount] of the raw token directly. This is useful when you are mixing code that

@@ -84,7 +84,7 @@ class CommercialPaper : Contract {
                         faceValue = this.faceValue.quantity,
                         currency = this.faceValue.token.product.currencyCode,
                         faceValueIssuerPartyHash = this.faceValue.token.issuer.party.owningKey.toStringShort(),
-                        faceValueIssuerRef = this.faceValue.token.issuer.reference.toHashedString()
+                        faceValueIssuerRef = this.faceValue.token.issuer.reference.bytes
                 )
             /** Additional schema mappings would be added here (eg. CommercialPaperV2, ...) */
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")

@@ -1,11 +1,12 @@
 package net.corda.finance.schemas
 
-import net.corda.core.crypto.toHashedString
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.OpaqueBytes
+import org.hibernate.annotations.Type
 import java.time.Instant
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -32,9 +33,9 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var faceValueIssuerPartyHash: String,
 
-            // TODO: store the raw issuer reference contents in a separate join table
-            @Column(name = "face_value_issuer_ref_hash", length = MAX_HASH_HEX_SIZE)
-            var faceValueIssuerRefHash: String,
+            @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
+            var faceValueIssuerRef: ByteArray,
 
             /** parent attributes */
             @Transient
@@ -48,5 +49,5 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             val _issuerParty: AbstractParty,
             @Transient
             val _issuerRef: OpaqueBytes
-    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.toHashedString())
+    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.bytes)
 }

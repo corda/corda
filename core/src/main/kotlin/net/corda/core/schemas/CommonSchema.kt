@@ -1,11 +1,8 @@
 package net.corda.core.schemas
 
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.FungibleAsset
-import net.corda.core.contracts.OwnableState
-import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
-import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import org.hibernate.annotations.Type
 import java.util.*
 import javax.persistence.Column
 import javax.persistence.ElementCollection
@@ -77,8 +74,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            // TODO: store the raw issuer reference contents in a separate join table
-            @Column(name = "issuer_ref_hash", length = MAX_HASH_HEX_SIZE)
-            var issuerRefHash: String
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
+            var issuerRef: ByteArray
     ) : PersistentState()
 }
