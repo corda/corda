@@ -6,6 +6,8 @@ import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
+import net.corda.core.internal.concurrent.asCordaFuture
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.utilities.CordaPersistence
@@ -17,10 +19,7 @@ import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -44,10 +43,8 @@ class DistributedImmutableMapTests {
     @After
     fun tearDown() {
         LogHelper.reset("org.apache.activemq")
-        cluster.forEach {
-            it.client.close()
-            it.server.shutdown()
-        }
+        cluster.map { it.client.close().asCordaFuture() }.transpose().getOrThrow()
+        cluster.map { it.server.shutdown().asCordaFuture() }.transpose().getOrThrow()
         databases.forEach { it.close() }
     }
 

@@ -57,6 +57,9 @@ fun <V, W> CordaFuture<out V>.flatMap(transform: (V) -> CordaFuture<out W>): Cor
     })
 }
 
+/** Wrap a CompletableFuture, for example one that was returned by some API. */
+fun <V> CompletableFuture<V>.asCordaFuture(): CordaFuture<V> = CordaFutureImpl(this)
+
 /**
  * If all of the given futures succeed, the returned future's outcome is a list of all their values.
  * The values are in the same order as the futures in the collection, not the order of completion.
