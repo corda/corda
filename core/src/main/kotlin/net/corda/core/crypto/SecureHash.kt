@@ -3,7 +3,6 @@ package net.corda.core.crypto
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
-import net.corda.core.utilities.toBase58
 import net.corda.core.utilities.toHexString
 import java.security.MessageDigest
 
@@ -105,9 +104,4 @@ fun ByteArray.sha256(): SecureHash.SHA256 = SecureHash.sha256(this)
  */
 fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bytes)
 
-/**
- * Compute the SHA-256 hash for the contents of the [OpaqueBytes] and convert to
- * a Base58 encoded [String]
- */
-fun OpaqueBytes.toHashedString(): String = this.sha256().bytes.toBase58()
 

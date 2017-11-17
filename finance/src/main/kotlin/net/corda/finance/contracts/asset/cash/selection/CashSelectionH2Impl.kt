@@ -1,11 +1,12 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import net.corda.core.contracts.Amount
-import net.corda.core.crypto.toHashedString
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
@@ -48,7 +49,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
                 (if (onlyFromIssuerParties.isNotEmpty())
                     " AND ccs.issuer_key_hash IN (?)" else "") +
                 (if (withIssuerRefs.isNotEmpty())
-                    " AND ccs.issuer_ref_hash IN (?)" else "")
+                    " AND ccs.issuer_ref IN (?)" else "")
 
         // Use prepared statement for protection against SQL Injection (http://www.h2database.com/html/advanced.html#sql_injection)
         val psSelectJoin = connection.prepareStatement(selectJoin)
@@ -61,7 +62,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
         if (onlyFromIssuerParties.isNotEmpty())
             psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any}.toTypedArray() )
         if (withIssuerRefs.isNotEmpty())
-            psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.toHashedString() as Any }.toTypedArray())
+            psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes as Any }.toTypedArray())
         log.debug { psSelectJoin.toString() }
 
         return psSelectJoin.executeQuery()

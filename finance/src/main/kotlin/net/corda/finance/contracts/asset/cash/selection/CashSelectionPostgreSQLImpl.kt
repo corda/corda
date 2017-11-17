@@ -1,7 +1,6 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import net.corda.core.contracts.Amount
-import net.corda.core.crypto.toHashedString
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
@@ -50,7 +49,7 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
                 (if (onlyFromIssuerParties.isNotEmpty())
                     " AND ccs.issuer_key = ANY (?)" else "") +
                 (if (withIssuerRefs.isNotEmpty())
-                    " AND ccs.issuer_ref_hash = ANY (?)" else "") +
+                    " AND ccs.issuer_ref = ANY (?)" else "") +
                 """)
                         nested WHERE nested.total < ?
                      """
@@ -64,14 +63,14 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
             paramOffset += 1
         }
         if (onlyFromIssuerParties.isNotEmpty()) {
-            val issuerKeys = connection.createArrayOf("VARCHAR", onlyFromIssuerParties.map
+            val issuerKeys = connection.createArrayOf("BYTEA", onlyFromIssuerParties.map
             { it.owningKey.toBase58String() }.toTypedArray())
             statement.setArray(3 + paramOffset, issuerKeys)
             paramOffset += 1
         }
         if (withIssuerRefs.isNotEmpty()) {
             val issuerRefs = connection.createArrayOf("VARCHAR", withIssuerRefs.map
-            { it.toHashedString() }.toTypedArray())
+            { it.bytes }.toTypedArray())
             statement.setArray(3 + paramOffset, issuerRefs)
             paramOffset += 1
         }
