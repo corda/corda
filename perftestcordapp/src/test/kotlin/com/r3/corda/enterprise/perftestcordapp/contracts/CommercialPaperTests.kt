@@ -1,5 +1,8 @@
 package com.r3.corda.enterprise.perftestcordapp.contracts
 
+import com.r3.corda.enterprise.perftestcordapp.DOLLARS
+import com.r3.corda.enterprise.perftestcordapp.`issued by`
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.*
 import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -9,13 +12,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
-import com.r3.corda.enterprise.perftestcordapp.DOLLARS
-import com.r3.corda.enterprise.perftestcordapp.`issued by`
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.*
 import net.corda.testing.*
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
