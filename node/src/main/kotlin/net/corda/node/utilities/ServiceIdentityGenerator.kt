@@ -20,12 +20,11 @@ object ServiceIdentityGenerator {
      * This method should be called *before* any of the nodes are started.
      *
      * @param dirs List of node directories to place the generated identity and key pairs in.
-     * @param serviceName The legal name of the distributed service.
+     * @param serviceName The legal name of the distributed service, with service id as CN.
      * @param threshold The threshold for the generated group [CompositeKey].
      */
     fun generateToDisk(dirs: List<Path>,
                        serviceName: CordaX500Name,
-                       serviceId: String,
                        threshold: Int = 1): Party {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
@@ -40,6 +39,7 @@ object ServiceIdentityGenerator {
             val compositeKeyCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)
             val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
             val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
+            val serviceId = serviceName.commonName
             keystore.setCertificateEntry("$serviceId-composite-key", compositeKeyCert.cert)
             keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
             keystore.save(certPath, "cordacadevpass")

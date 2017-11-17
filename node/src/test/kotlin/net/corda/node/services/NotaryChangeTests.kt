@@ -27,6 +27,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
+    companion object {
+        private val DUMMY_NOTARY_SERVICE_NAME: CordaX500Name = DUMMY_NOTARY.name.copy(commonName = "corda.notary.validating")
+    }
+
     private lateinit var mockNet: MockNetwork
     private lateinit var oldNotaryNode: StartedNode<MockNetwork.MockNode>
     private lateinit var clientNodeA: StartedNode<MockNetwork.MockNode>
@@ -36,7 +40,7 @@ class NotaryChangeTests {
 
     @Before
     fun setUp() {
-        val oldNotaryName = DUMMY_REGULATOR.name
+        val oldNotaryName = DUMMY_NOTARY.name.copy(organisation = "Old Dummy Notary")
         mockNet = MockNetwork(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name), NotarySpec(oldNotaryName)),
                 cordappPackages = listOf("net.corda.testing.contracts")
@@ -44,8 +48,8 @@ class NotaryChangeTests {
         clientNodeA = mockNet.createNode()
         clientNodeB = mockNet.createNode()
         oldNotaryNode = mockNet.notaryNodes[1]
-        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY.name)!!
-        oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(oldNotaryName)!!
+        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
+        oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME.copy(organisation = "Old Dummy Notary"))!!
     }
 
     @After
