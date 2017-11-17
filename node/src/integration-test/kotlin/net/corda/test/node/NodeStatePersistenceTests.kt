@@ -20,7 +20,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.driver
 import org.junit.Assume.assumeFalse
@@ -41,13 +40,13 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        var stateAndRef: StateAndRef<MessageState>? = null
-        driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                // Ensure the notary node has finished starting up, before starting a flow that needs a notary
+                defaultNotaryNode.getOrThrow()
                 nodeHandle.rpcClientToNode().start(user.username, user.password).use {
-                    // TODO: Wait until notaries have registered
                     it.proxy.startFlow(::SendMessageFlow, message).returnValue.getOrThrow()
                 }
                 nodeHandle.stop()
@@ -55,11 +54,12 @@ class NodeStatePersistenceTests {
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-            stateAndRef = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+            val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
                 page.states.singleOrNull()
             }
             nodeHandle.stop()
+            result
         }
         assertNotNull(stateAndRef)
         val retrievedMessage = stateAndRef!!.state.data.message
@@ -146,8 +146,7 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-        // We fall back to the expected notary identity, but shouldn't start the flow until notaries are registered
-        val notary = serviceHub.networkMapCache.notaryIdentities.firstOrNull() ?: DUMMY_NOTARY
+        val notary = serviceHub.networkMapCache.notaryIdentities.firstOrNull() ?: throw IllegalStateException("No registered notaries")
 
         progressTracker.currentStep = GENERATING_TRANSACTION
 
