@@ -74,7 +74,7 @@ class NodeVaultServiceTest {
         database = databaseAndServices.first
         services = databaseAndServices.second
         // This is safe because MockServices only ever have a single identity
-        identity = services.myInfo.chooseIdentity()
+        identity = services.myInfo.singleIdentityAndCert()
         issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
         bocServices = MockServices(cordappPackages, BOC_NAME, BOC_KEY)
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
