@@ -6,6 +6,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
@@ -127,7 +128,7 @@ open class Node(configuration: NodeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     private lateinit var userService: RPCUserService
-    override fun makeMessagingService(database: CordaPersistence): MessagingService {
+    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()

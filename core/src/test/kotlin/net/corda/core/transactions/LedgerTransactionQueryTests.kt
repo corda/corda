@@ -2,9 +2,13 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
-import net.corda.testing.*
+import net.corda.core.identity.Party
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockServices
+import net.corda.testing.singleIdentity
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -18,6 +22,7 @@ class LedgerTransactionQueryTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val services: MockServices = MockServices()
+    private val identity: Party = services.myInfo.singleIdentity()
 
     @Before
     fun setup() {
@@ -66,8 +71,8 @@ class LedgerTransactionQueryTests {
             tx.addInputState(makeDummyStateAndRef(i.toString()))
             tx.addOutputState(makeDummyState(i), DummyContract.PROGRAM_ID)
             tx.addOutputState(makeDummyState(i.toString()), DummyContract.PROGRAM_ID)
-            tx.addCommand(Commands.Cmd1(i), listOf(services.myInfo.chooseIdentity().owningKey))
-            tx.addCommand(Commands.Cmd2(i), listOf(services.myInfo.chooseIdentity().owningKey))
+            tx.addCommand(Commands.Cmd1(i), listOf(identity.owningKey))
+            tx.addCommand(Commands.Cmd2(i), listOf(identity.owningKey))
         }
         return tx.toLedgerTransaction(services)
     }
