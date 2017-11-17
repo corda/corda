@@ -42,7 +42,6 @@ import net.corda.testing.setGlobalSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
-import java.io.Closeable
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
@@ -119,7 +118,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                   private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
+                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
 
@@ -407,19 +406,8 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         busyLatch.await()
     }
 
-    override fun close() {
-        stopNodes()
-    }
-
     data class NotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
         constructor(name: CordaX500Name) : this(name, validating = true)
-    }
-}
-
-fun network(nodesCount: Int, action: MockNetwork.(List<StartedNode<MockNetwork.MockNode>>) -> Unit) {
-    MockNetwork().use { mockNet ->
-        val nodes = (1..nodesCount).map { mockNet.createPartyNode() }
-        mockNet.action(nodes)
     }
 }
 

@@ -6,45 +6,44 @@ import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.chooseIdentity
-import net.corda.testing.node.network
+import net.corda.testing.node.MockNetwork
 import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
 import org.junit.Test
 
 class ReceiveMultipleFlowTests {
+    private val mockNet = MockNetwork()
+    private val nodes = (1..3).map { mockNet.createPartyNode() }
+    @After
+    fun stopNodes() {
+        mockNet.stopNodes()
+    }
+
     @Test
     fun `receive all messages in parallel using map style`() {
-        network(3) { nodes ->
-            val doubleValue = 5.0
-            nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
-            val stringValue = "Thriller"
-            nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
-
-            val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
-            runNetwork()
-
-            val result = flow.resultFuture.getOrThrow()
-
-            assertThat(result).isEqualTo(doubleValue * stringValue.length)
-        }
+        val doubleValue = 5.0
+        nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
+        val stringValue = "Thriller"
+        nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
+        val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
+        mockNet.runNetwork()
+        val result = flow.resultFuture.getOrThrow()
+        assertThat(result).isEqualTo(doubleValue * stringValue.length)
     }
 
     @Test
     fun `receive all messages in parallel using list style`() {
-        network(3) { nodes ->
-            val value1 = 5.0
-            nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
-            val value2 = 6.0
-            nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
-
-            val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
-            runNetwork()
-            val data = flow.resultFuture.getOrThrow()
-
-            assertThat(data[0]).isEqualTo(value1)
-            assertThat(data[1]).isEqualTo(value2)
-            assertThat(data.fold(1.0) { a, b -> a * b }).isEqualTo(value1 * value2)
-        }
+        val value1 = 5.0
+        nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
+        val value2 = 6.0
+        nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
+        val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.chooseIdentity(), nodes[2].info.chooseIdentity()))
+        mockNet.runNetwork()
+        val data = flow.resultFuture.getOrThrow()
+        assertThat(data[0]).isEqualTo(value1)
+        assertThat(data[1]).isEqualTo(value2)
+        assertThat(data.fold(1.0) { a, b -> a * b }).isEqualTo(value1 * value2)
     }
 
     class ParallelAlgorithmMap(doubleMember: Party, stringMember: Party) : AlgorithmDefinition(doubleMember, stringMember) {
