@@ -72,11 +72,11 @@ MH viewed the use-case for extra encryption as the consumer/SME market, where us
 
 MH advised against offering clients support for their own firewall since it would likely require R3 effort to test support and help with customisations.
 
-MN described option 2b to tunnel through to the internal trusted portion of the float over a connection initiated from inside the internal network; this would require a bit more code. 
+MN described option 2b to tunnel through to the internal trusted portion of the float over a connection initiated from inside the internal network in order for the key to be loaded into memory at run-time; this would require a bit more code. 
 
 MH advocated option 2c - just to accept risk and store on file system – on the basis of time constraints, maintaining that TLS handshakes are complicated to code and hard to proxy. MH suggested upgrading to 2b or 2a later if needed. MH described how keys were managed at Google.
 
-**DECISION CONFIRMED**: Accept option 2c - Terminate on float, leave keys on file system  (RGB, JC, MH agreed) 
+**DECISION CONFIRMED**: Accept option 2b - Terminate on float, inject key from internal portion of the float  (RGB, JC, MH agreed) 
 
 ### [E2E encryption](./e2e-encryption.md)
 
