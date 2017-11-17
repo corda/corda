@@ -18,10 +18,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.finance.contracts.asset.DummyFungibleContract
+import net.corda.finance.contracts.asset.*
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
@@ -74,13 +71,13 @@ class HibernateConfigurationTest {
     @Before
     fun setUp() {
         val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
-        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, BOB_KEY, BOC_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
         database = configureDatabase(dataSourceProps, defaultDatabaseProperties, ::makeTestIdentityService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
-            services = object : MockServices(cordappPackages, BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
+            services = object : MockServices(cordappPackages, BOB_NAME, BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService = makeVaultService(database.hibernateConfig)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -139,7 +136,9 @@ class HibernateConfigurationTest {
 
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
-        val coins = queryResults.map { it.contractState.deserialize<TransactionState<Cash.State>>(context = SerializationDefaults.STORAGE_CONTEXT).data }.sumCash()
+        val coins = queryResults.map {
+            (services.loadState(toStateRef(it.stateRef!!)) as TransactionState<Cash.State>).data
+        }.sumCash()
         assertThat(coins.toDecimal() >= BigDecimal("50.00"))
     }
 
@@ -657,8 +656,7 @@ class HibernateConfigurationTest {
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
 
         queryResults.forEach {
-            val contractState = it.contractState.deserialize<TransactionState<ContractState>>(context = SerializationDefaults.STORAGE_CONTEXT)
-            val cashState = contractState.data as Cash.State
+            val cashState = (services.loadState(toStateRef(it.stateRef!!)) as TransactionState<Cash.State>).data
             println("${it.stateRef} with owner: ${cashState.owner.owningKey.toBase58String()}")
         }
 
@@ -742,8 +740,7 @@ class HibernateConfigurationTest {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         queryResults.forEach {
-            val contractState = it.contractState.deserialize<TransactionState<ContractState>>(context = SerializationDefaults.STORAGE_CONTEXT)
-            val cashState = contractState.data as Cash.State
+            val cashState = (services.loadState(toStateRef(it.stateRef!!)) as TransactionState<Cash.State>).data
             println("${it.stateRef} with owner ${cashState.owner.owningKey.toBase58String()} and participants ${cashState.participants.map { it.owningKey.toBase58String() }}")
         }
 
@@ -879,5 +876,9 @@ class HibernateConfigurationTest {
             }
             Assert.assertEquals(cashStates.count(), count)
         }
+    }
+
+    private fun toStateRef(pStateRef: PersistentStateRef): StateRef {
+        return StateRef(SecureHash.parse(pStateRef.txId!!), pStateRef.index!!)
     }
 }

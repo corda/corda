@@ -1,13 +1,12 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.utilities.NetworkHostAndPort
@@ -133,7 +132,7 @@ open class Node(configuration: NodeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     private lateinit var userService: RPCUserService
-    override fun makeMessagingService(database: CordaPersistence): MessagingService {
+    override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
@@ -329,7 +328,3 @@ open class Node(configuration: NodeConfiguration,
         log.info("Shutdown complete")
     }
 }
-
-class ConfigurationException(message: String) : CordaException(message)
-
-data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: CordaX500Name)

@@ -14,6 +14,7 @@ import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.client.RecoveryStrategies
 import io.atomix.copycat.server.CopycatServer
+import io.atomix.copycat.server.cluster.Member
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.contracts.StateRef
@@ -29,6 +30,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
@@ -67,7 +69,7 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
     }
 
     @Entity
-    @Table(name = "notary_committed_states")
+    @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_states")
     class RaftState(
             @Id
             @Column(name = "id")
@@ -184,6 +186,14 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
         })
         metrics.register("RaftCluster.Members", Gauge<List<String>> {
             server.cluster().members().map { it.address().toString() }
+        })
+
+        metrics.register("RaftCluster.AvailableMembers", Gauge<List<String>> {
+            server.cluster().members().filter { it.status() == Member.Status.AVAILABLE }.map { it.address().toString() }
+        })
+
+        metrics.register("RaftCluster.AvailableMembersCount", Gauge<Int> {
+            server.cluster().members().filter { it.status() == Member.Status.AVAILABLE }.size
         })
     }
 

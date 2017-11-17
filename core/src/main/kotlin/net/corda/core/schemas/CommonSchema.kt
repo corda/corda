@@ -1,12 +1,12 @@
 package net.corda.core.schemas
 
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.FungibleAsset
-import net.corda.core.contracts.OwnableState
-import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
+import org.hibernate.annotations.Type
 import java.util.*
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.ElementCollection
+import javax.persistence.MappedSuperclass
 
 /**
  * JPA representation of the common schema entities
@@ -74,7 +74,8 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            @Column(name = "issuer_reference")
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
     ) : PersistentState()
 }

@@ -31,6 +31,7 @@ import java.util.*
 
 @JvmOverloads
 fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
+                                     issuerServices: ServiceHub = this,
                                      participants: List<AbstractParty> = emptyList(),
                                      notary: Party = DUMMY_NOTARY): Vault<DealState> {
     val myKey: PublicKey = myInfo.chooseIdentity().owningKey
@@ -42,7 +43,7 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
             addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)), DUMMY_DEAL_PROGRAM_ID)
             addCommand(dummyCommand())
         }
-        val stx = signInitialTransaction(dummyIssue)
+        val stx = issuerServices.signInitialTransaction(dummyIssue)
         return@map addSignature(stx, notary.owningKey)
     }
 

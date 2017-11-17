@@ -1,9 +1,11 @@
 package net.corda.finance.schemas
 
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import org.hibernate.annotations.Type
 import java.time.Instant
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -48,7 +50,8 @@ object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSche
             @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var faceValueIssuerPartyHash: String,
 
-            @Column(name = "face_value_issuer_ref")
+            @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
             var faceValueIssuerRef: ByteArray
     ) : PersistentState()
 }

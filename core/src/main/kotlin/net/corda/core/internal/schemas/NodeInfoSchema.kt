@@ -32,6 +32,7 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             @Column(name = "addresses")
             @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
+            @JoinColumn(name = "node_info_id")
             val addresses: List<NodeInfoSchemaV1.DBHostAndPort>,
 
             @Column(name = "legal_identities_certs")
@@ -69,6 +70,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     ) : Serializable
 
     @Entity
+    @Table(name = "node_info_hosts")
     data class DBHostAndPort(
             @EmbeddedId
             private val pk: PKHostAndPort

@@ -4,7 +4,9 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.packageName
@@ -19,6 +21,7 @@ import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_NAME
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.utilities.CordaPersistence
@@ -51,17 +54,18 @@ class VaultWithCashTest {
     lateinit var issuerServices: MockServices
     val vaultService: VaultService get() = services.vaultService
     lateinit var database: CordaPersistence
-    lateinit var notaryServices: MockServices
+    private lateinit var notaryServices: MockServices
+    private lateinit var notary: Party
 
     @Before
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
-        val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(DUMMY_CASH_ISSUER_KEY, DUMMY_NOTARY_KEY),
-                cordappPackages = cordappPackages)
+        val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = cordappPackages, keys = listOf(generateKeyPair(), DUMMY_NOTARY_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second
-        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY_KEY)
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 
     @After
@@ -91,7 +95,7 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, MEGA_CORP_KEY)
         val freshKey = services.keyManagementService.freshKey()
 
         val usefulTX =
@@ -236,10 +240,10 @@ class VaultWithCashTest {
             val linearId = UniqueIdentifier()
 
             // Issue a linear state
-            val dummyIssueBuilder = TransactionBuilder(notary = DUMMY_NOTARY).apply {
+            val dummyIssueBuilder = TransactionBuilder(notary = notary).apply {
                 addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
                 addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
-                addCommand(dummyCommand(notaryServices.myInfo.chooseIdentity().owningKey))
+                addCommand(dummyCommand(notary!!.owningKey))
             }
             val dummyIssue = notaryServices.signInitialTransaction(dummyIssueBuilder)
 
@@ -260,7 +264,7 @@ class VaultWithCashTest {
                     // Issue a linear state
                     val dummyIssueBuilder = TransactionBuilder(notary = DUMMY_NOTARY)
                             .addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
-                            .addCommand(dummyCommand(notaryServices.myInfo.chooseIdentity().owningKey))
+                            .addCommand(dummyCommand(notary.owningKey))
                     val dummyIssuePtx = notaryServices.signInitialTransaction(dummyIssueBuilder)
                     val dummyIssue = services.addSignature(dummyIssuePtx)
 
@@ -276,7 +280,7 @@ class VaultWithCashTest {
             val dummyMoveBuilder = TransactionBuilder(notary = DUMMY_NOTARY)
                     .addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
                     .addInputState(dummyIssue.tx.outRef<LinearState>(0))
-                    .addCommand(dummyCommand(notaryServices.myInfo.chooseIdentity().owningKey))
+                    .addCommand(dummyCommand(notary.owningKey))
 
             val dummyMove = notaryServices.signInitialTransaction(dummyMoveBuilder)
 
@@ -303,7 +307,7 @@ class VaultWithCashTest {
             cash.forEach { println(it.state.data.amount) }
         }
         database.transaction {
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
         }
         database.transaction {
             val deals = vaultService.queryBy<DummyDealContract.State>().states
@@ -333,7 +337,7 @@ class VaultWithCashTest {
         val freshKey = services.keyManagementService.freshKey()
         val freshIdentity = AnonymousParty(freshKey)
         database.transaction {
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
         }
         val deals =
                 database.transaction {
@@ -347,12 +351,12 @@ class VaultWithCashTest {
             linearStates.forEach { println(it.state.data.linearId) }
 
             // Create a txn consuming different contract types
-            val dummyMoveBuilder = TransactionBuilder(notary = DUMMY_NOTARY).apply {
+            val dummyMoveBuilder = TransactionBuilder(notary = notary).apply {
                 addOutputState(DummyLinearContract.State(participants = listOf(freshIdentity)), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
                 addOutputState(DummyDealContract.State(ref = "999", participants = listOf(freshIdentity)), DUMMY_DEAL_PROGRAM_ID)
                 addInputState(linearStates.first())
                 addInputState(deals.first())
-                addCommand(dummyCommand(notaryServices.myInfo.chooseIdentity().owningKey))
+                addCommand(dummyCommand(notary!!.owningKey))
             }
 
             val dummyMove = notaryServices.signInitialTransaction(dummyMoveBuilder)

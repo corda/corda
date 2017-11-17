@@ -1684,27 +1684,6 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.FlowHandle startFlow(net.corda.core.flows.FlowLogic)
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.FlowProgressHandle startTrackedFlow(net.corda.core.flows.FlowLogic)
 ##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.NetworkParameters extends java.lang.Object
-  public <init>(int, List, java.time.Duration, int, int, java.time.Instant, int)
-  public final int component1()
-  @org.jetbrains.annotations.NotNull public final List component2()
-  @org.jetbrains.annotations.NotNull public final java.time.Duration component3()
-  public final int component4()
-  public final int component5()
-  @org.jetbrains.annotations.NotNull public final java.time.Instant component6()
-  public final int component7()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NetworkParameters copy(int, List, java.time.Duration, int, int, java.time.Instant, int)
-  public boolean equals(Object)
-  public final int getEpoch()
-  @org.jetbrains.annotations.NotNull public final java.time.Duration getEventHorizon()
-  public final int getMaxMessageSize()
-  public final int getMaxTransactionSize()
-  public final int getMinimumPlatformVersion()
-  @org.jetbrains.annotations.NotNull public final java.time.Instant getModifiedTime()
-  @org.jetbrains.annotations.NotNull public final List getNotaries()
-  public int hashCode()
-  public String toString()
-##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.NodeInfo extends java.lang.Object
   public <init>(List, List, int, long)
   @org.jetbrains.annotations.NotNull public final List component1()
@@ -1721,17 +1700,6 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   public int hashCode()
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party identityFromX500Name(net.corda.core.identity.CordaX500Name)
   public final boolean isLegalIdentity(net.corda.core.identity.Party)
-  public String toString()
-##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.NotaryInfo extends java.lang.Object
-  public <init>(net.corda.core.identity.Party, boolean)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party component1()
-  public final boolean component2()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.node.NotaryInfo copy(net.corda.core.identity.Party, boolean)
-  public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.Party getIdentity()
-  public final boolean getValidating()
-  public int hashCode()
   public String toString()
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.node.ServiceHub extends net.corda.core.node.ServicesForResolution

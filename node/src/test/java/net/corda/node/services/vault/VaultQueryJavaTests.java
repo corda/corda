@@ -50,7 +50,7 @@ public class VaultQueryJavaTests {
         IdentityService identitySvc = makeTestIdentityService();
         @SuppressWarnings("unchecked")
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(keys, () -> identitySvc, cordappPackages);
-        issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
+        issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
         vaultService = services.getVaultService();

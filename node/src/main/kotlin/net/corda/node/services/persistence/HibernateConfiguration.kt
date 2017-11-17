@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.internal.castIfPossible
 import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.api.SchemaService
@@ -21,6 +22,7 @@ import org.hibernate.type.AbstractSingleColumnStandardBasicType
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
+import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -83,6 +85,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
+            applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
             build()
         }
 
@@ -137,6 +140,17 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                     return "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
                 }
             }
+        }
+    }
+
+    // A tweaked version of `org.hibernate.type.WrapperBinaryType` that deals with ByteArray (java primitive byte[] type).
+    private object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
+        override fun getRegistrationKeys(): Array<String> {
+            return arrayOf(name, "ByteArray", ByteArray::class.java.name)
+        }
+
+        override fun getName(): String {
+            return "corda-wrapper-binary"
         }
     }
 }

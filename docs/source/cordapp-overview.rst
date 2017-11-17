@@ -1,25 +1,30 @@
 What is a CorDapp?
 ==================
 
-Corda is a platform. Its functionality is extended by developers through the writing of Corda distributed
-applications (CorDapps). CorDapps are installed at the level of the individual node, rather than on the network
-itself.
-
-Each CorDapp allows a node to handle new business processes, for example asset trading (see :ref:`irs-demo`).
-It does so by defining new flows on the node that, once started by the node owner, conduct the process of negotiating
-a specific ledger update with other nodes on the network. The node's owner can then start these flows as required,
-either through remote procedure calls (RPC) or HTTP requests that leverage the RPC interface.
+CorDapps (Corda Distributed Applications) are distributed applications that run on the Corda platform. The goal of a
+CorDapp is to allow nodes to reach agreement on updates to the ledger. They achieve this goal by defining flows that
+Corda node owners can invoke through RPC calls:
 
 .. image:: resources/node-diagram.png
 
-CorDapp developers will usually define not only these flows, but also any states and contracts that these flows use.
-They will also have to define any web APIs that will run on the node's standalone web server, any static web content,
-and any new services that they want their CorDapp to offer.
+CorDapps are made up of the following key components:
 
-CorDapps are made up of definitions for the following components:
+* States, defining the facts over which agreement is reached (see :doc:`Key Concepts - States <key-concepts-states>`)
+* Contracts, defining what constitutes a valid ledger update (see
+  :doc:`Key Concepts - Contracts <key-concepts-contracts>`)
+* Services, providing long-lived utilities within the node
+* Serialisation whitelists, restricting what types your node will receive off the wire
 
-* States
-* Contracts
-* Flows
-* Web APIs and static web content
-* Services
+Each CorDapp is installed at the level of the individual node, rather than on the network itself. For example, a node
+owner may choose to install the Bond Trading CorDapp, with the following components:
+
+* A ``BondState``, used to represent bonds as shared facts on the ledger
+* A ``BondContract``, used to govern which ledger updates involving ``BondState`` states are valid
+* Three flows:
+
+    * An ``IssueBondFlow``, allowing new ``BondState`` states to be issued onto the ledger
+    * A ``TradeBondFlow``, allowing existing ``BondState`` states to be bought and sold on the ledger
+    * An ``ExitBondFlow``, allowing existing ``BondState`` states to be exited from the ledger
+
+After installing this CorDapp, the node owner will be able to use the flows defined by the CorDapp to agree ledger
+updates related to issuance, sale, purchase and exit of bonds.

@@ -16,14 +16,11 @@ import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.services.config.plus
 import net.corda.nodeapi.User
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.common.internal.NetworkParametersCopier
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import net.corda.testing.node.MockServices
 import org.apache.logging.log4j.Level
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
@@ -43,17 +40,11 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    private lateinit var defaultNetworkParameters: NetworkParametersCopier
     private val nodes = mutableListOf<StartedNode<Node>>()
     private val nodeInfos = mutableListOf<NodeInfo>()
 
     init {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
-    }
-
-    @Before
-    fun init() {
-        defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters(emptyList()))
     }
 
     /**
@@ -99,7 +90,6 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         )
 
         val parsedConfig = config.parseAsNodeConfiguration()
-        defaultNetworkParameters.install(baseDirectory)
         val node = Node(
                 parsedConfig,
                 MockServices.MOCK_VERSION_INFO.copy(platformVersion = platformVersion),

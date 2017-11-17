@@ -18,10 +18,10 @@ import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.utilities.*
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
-import net.corda.nodeapi.ArtemisMessagingComponent.ArtemisAddress
-import net.corda.nodeapi.ArtemisMessagingComponent.NodeAddress
-import net.corda.nodeapi.ArtemisMessagingComponent.ServiceAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.RoutingType

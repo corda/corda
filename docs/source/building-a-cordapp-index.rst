@@ -1,12 +1,13 @@
-Building a CorDapp
-==================
+CorDapps
+========
 
 .. toctree::
    :maxdepth: 1
 
    cordapp-overview
-   writing-cordapps
+   writing-a-cordapp
    cordapp-build-systems
+   building-against-master
    corda-api
    flow-cookbook
    cheat-sheet
