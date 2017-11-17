@@ -52,13 +52,13 @@ class NodeStatePersistenceTests {
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-            nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+            val stateAndRef = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
-                val stateAndRef = page.states.singleOrNull()
-                assertNotNull(stateAndRef)
-                val retrievedMessage = stateAndRef!!.state.data.message
-                assertEquals(message, retrievedMessage)
+                page.states.singleOrNull()
             }
+            assertNotNull(stateAndRef)
+            val retrievedMessage = stateAndRef!!.state.data.message
+            assertEquals(message, retrievedMessage)
         }
     }
 }
@@ -142,7 +142,7 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val notary = serviceHub.networkMapCache.notaryIdentities.first()
+        val notary = serviceHub.networkMapCache.notaryIdentities.firstOrNull() ?: throw IllegalStateException("No registered notaries")
 
         progressTracker.currentStep = GENERATING_TRANSACTION
 
