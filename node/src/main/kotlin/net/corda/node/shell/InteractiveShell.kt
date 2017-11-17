@@ -18,7 +18,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandle
@@ -32,6 +31,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.node.services.messaging.RpcPermissions
+import net.corda.node.utilities.ANSIProgressRenderer
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -61,6 +61,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import kotlin.concurrent.thread
@@ -125,8 +126,6 @@ object InteractiveShell {
     }
 
     fun runLocalShell(node:StartedNode<Node>) {
-//        if (!runLocalShell)
-//            return
         val terminal = TerminalFactory.create()
         val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
         val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
@@ -222,7 +221,7 @@ object InteractiveShell {
      * the [runFlowFromString] method and starts the requested flow. Ctrl-C can be used to cancel.
      */
     @JvmStatic
-    fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps) {
+    fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer) {
         val matches = rpcOps.registeredFlows().filter { nameFragment in it }
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
@@ -235,46 +234,20 @@ object InteractiveShell {
 
         val clazz: Class<FlowLogic<*>> = uncheckedCast(Class.forName(matches.single()))
         try {
-//
-//            // TODO Flow invocation should use startFlowDynamic.
-//            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell).getOrThrow() }, inputData, clazz)
-//            // Show the progress tracker on the console until the flow completes or is interrupted with a
-//            // Ctrl-C keypress.
-//            val latch = CountDownLatch(1)
-//            ANSIProgressRenderer.onDone = { latch.countDown() }
-//            ANSIProgressRenderer.progressTracker = (fsm as FlowStateMachineImpl).logic.progressTracker
-//            try {
-//                // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
-//                // the tracker is done with the screen.
-//                latch.await()
-//            } catch (e: InterruptedException) {
-//                ANSIProgressRenderer.progressTracker = null
-//                // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
-//            }
-
-
-
+            // Show the progress tracker on the console until the flow completes or is interrupted with a
+            // Ctrl-C keypress.
             val stateObservable = runFlowFromString({ clazz,args -> rpcOps.startTrackedFlowDynamic (clazz, *args) }, inputData, clazz)
 
-            output.println("Flow ID ${stateObservable.id}")
-
-            val result = maybeFollow(stateObservable.progress, { it as String }, output)
-            val result2 = maybeFollow(stateObservable.stepsTreeIndexFeed, { it.toString() }, output)
-            val result3 = maybeFollow(stateObservable.stepsTreeFeed, { it.toString() }, output)
-
-            if (!result.isDone || !result2.isDone || !!result3.isDone) {
-                output.println("Waiting for completion or Ctrl-C ... ")
-                output.flush()
-            }
+            val latch = CountDownLatch(1)
+            ansiProgressRenderer.render(stateObservable, { latch.countDown() })
             try {
-                listOf(result, result2, result3).transpose().get()
+                // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
+                // the tracker is done with the screen.
+                latch.await()
             } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
-            } catch (e: ExecutionException) {
-                throw e.rootCause
-            } catch (e: InvocationTargetException) {
-                throw e.rootCause
+                // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
+
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
@@ -448,13 +421,7 @@ object InteractiveShell {
         @Synchronized
         override fun onNext(t: Any?) {
             count++
-
             toStream.println("Observation $count: " + printerFun(t))
-            toStream.append(27.toChar())
-            toStream.append('[')
-            toStream.append('0')
-            toStream.append('K')
-            toStream.flush()
         }
 
         @Synchronized

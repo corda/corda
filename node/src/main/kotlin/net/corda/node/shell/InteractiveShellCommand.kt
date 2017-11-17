@@ -11,6 +11,7 @@ import org.crsh.shell.impl.command.CRaSHSession
  */
 open class InteractiveShellCommand : BaseCommand() {
     fun ops() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).rpcOps
+    fun ansiProgressRenderer() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).ansiProgressRenderer
     fun services() = context.attributes["services"] as ServiceHubInternal
     fun objectMapper() = context.attributes["mapper"] as ObjectMapper
 }
