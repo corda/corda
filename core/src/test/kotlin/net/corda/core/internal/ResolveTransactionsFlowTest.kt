@@ -10,9 +10,9 @@ import net.corda.core.utilities.sequence
 import net.corda.node.internal.StartedNode
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
-import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
 import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Before
@@ -45,8 +45,8 @@ class ResolveTransactionsFlowTest {
         megaCorpNode.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         miniCorpNode.internals.registerInitiatedFlow(TestResponseFlow::class.java)
         notary = mockNet.defaultNotaryIdentity
-        megaCorp = megaCorpNode.info.chooseIdentity()
-        miniCorp = miniCorpNode.info.chooseIdentity()
+        megaCorp = megaCorpNode.info.singleIdentity()
+        miniCorp = miniCorpNode.info.singleIdentity()
     }
 
     @After
