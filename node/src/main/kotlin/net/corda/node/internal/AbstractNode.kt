@@ -260,7 +260,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     open fun startShell(rpcOps: CordaRPCOps) {
-        InteractiveShell.startShell(configuration, rpcOps, userService, _services.identityService)
+        InteractiveShell.startShell(configuration, rpcOps, userService, _services.identityService, _services.database)
     }
 
     private fun initNodeInfo(): Set<KeyPair> {

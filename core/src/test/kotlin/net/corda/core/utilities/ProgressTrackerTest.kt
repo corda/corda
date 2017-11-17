@@ -181,10 +181,8 @@ class ProgressTrackerTest {
 
         //put current state as a first change for simplicity when asserting
         val stepsTreeNotification = mutableListOf(pt.allStepsLabels)
-        println(pt.allStepsLabels)
         pt.stepsTreeChanges.subscribe {
             stepsTreeNotification += it
-            println(it)
         }
 
         fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {

@@ -1,8 +1,8 @@
 package net.corda.node.utilities
 
 import net.corda.core.internal.Emoji
+import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.utilities.ProgressTracker
-import net.corda.node.utilities.ANSIProgressRenderer.progressTracker
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LogEvent
 import org.apache.logging.log4j.core.LoggerContext
@@ -14,6 +14,16 @@ import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
 import rx.Subscription
 
+interface ANSIProgressRenderer {
+    fun render(flowProgressHandle: FlowProgressHandle<*>, onDone: () -> Unit = {})
+}
+
+class PrintWriterANSIProgressRenderer : ANSIProgressRenderer {
+    override fun render(flowProgressHandle: FlowProgressHandle<*>, onDone: () -> Unit) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+}
+
 /**
  * Knows how to render a [ProgressTracker] to the terminal using coloured, emoji-fied output. Useful when writing small
  * command line tools, demos, tests etc. Just set the [progressTracker] field and it will go ahead and start drawing
@@ -24,34 +34,70 @@ import rx.Subscription
  *
  * TODO: More thread safety
  */
-object ANSIProgressRenderer {
+object StdoutANSIProgressRenderer : ANSIProgressRenderer {
     private var installedYet = false
-    private var subscription: Subscription? = null
+    private var subscriptionIndex: Subscription? = null
+    private var subscriptionTree: Subscription? = null
 
     private var usingANSI = false
 
-    var progressTracker: ProgressTracker? = null
-        set(value) {
-            subscription?.unsubscribe()
+    private var treeIndex: Int = 0
+    private var tree: List<Pair<Int,String>> = listOf()
 
-            field = value
-            if (!installedYet) {
-                setup()
+    override fun render(flowProgressHandle: FlowProgressHandle<*>, onDone: () -> Unit) {
+        this.onDone = onDone
+        _render(flowProgressHandle)
+    }
+
+    private fun _render(flowProgressHandle: FlowProgressHandle<*>?) {
+        subscriptionIndex?.unsubscribe()
+        subscriptionTree?.unsubscribe()
+        treeIndex = 0
+        tree = listOf()
+
+        if (!installedYet) {
+            setup()
+        }
+
+        prevMessagePrinted = null
+        prevLinesDrawn = 0
+        draw(true)
+
+
+        flowProgressHandle?.apply {
+            stepsTreeIndexFeed?.apply {
+                treeIndex = snapshot
+                subscriptionIndex = updates.subscribe({ draw(true) }, { done(it) }, { done(null) })
             }
-
-            // Reset the state when a new tracker is wired up.
-            if (value != null) {
-                prevMessagePrinted = null
-                prevLinesDrawn = 0
-                draw(true)
-                subscription = value.changes.subscribe({ draw(true) }, { done(it) }, { done(null) })
+            stepsTreeFeed?.apply {
+                tree = snapshot
+                subscriptionTree = updates.subscribe({ draw(true) }, { done(it) }, { done(null) })
             }
         }
+    }
+
+//    var progressTracker: ProgressTracker? = null
+//        set(value) {
+//            subscription?.unsubscribe()
+//
+//            field = value
+//            if (!installedYet) {
+//                setup()
+//            }
+//
+//            // Reset the state when a new tracker is wired up.
+//            if (value != null) {
+//                prevMessagePrinted = null
+//                prevLinesDrawn = 0
+//                draw(true)
+//                subscription = value.changes.subscribe({ draw(true) }, { done(it) }, { done(null) })
+//            }
+//        }
 
     var onDone: () -> Unit = {}
 
     private fun done(error: Throwable?) {
-        if (error == null) progressTracker = null
+        if (error == null) _render(null)
         draw(true, error)
         onDone()
     }
@@ -77,8 +123,8 @@ object ANSIProgressRenderer {
                     // We lock on the renderer to avoid threads that are logging to the screen simultaneously messing
                     // things up. Of course this slows stuff down a bit, but only whilst this little utility is in use.
                     // Eventually it will be replaced with a real GUI and we can delete all this.
-                    synchronized(ANSIProgressRenderer) {
-                        if (progressTracker != null) {
+                    synchronized(StdoutANSIProgressRenderer) {
+                        if (tree.isNotEmpty()) {
                             val ansi = Ansi.ansi()
                             repeat(prevLinesDrawn) { ansi.eraseLine().cursorUp(1).eraseLine() }
                             System.out.print(ansi)
@@ -87,7 +133,7 @@ object ANSIProgressRenderer {
 
                         super.append(event)
 
-                        if (progressTracker != null)
+                        if (tree.isNotEmpty())
                             draw(false)
                     }
                 }
@@ -114,7 +160,7 @@ object ANSIProgressRenderer {
 
     @Synchronized private fun draw(moveUp: Boolean, error: Throwable? = null) {
         if (!usingANSI) {
-            val currentMessage = progressTracker?.currentStepRecursive?.label
+            val currentMessage = tree.getOrNull(treeIndex)?.second
             if (currentMessage != null && currentMessage != prevMessagePrinted) {
                 println(currentMessage)
                 prevMessagePrinted = currentMessage
@@ -131,8 +177,8 @@ object ANSIProgressRenderer {
             // Put a blank line between any logging and us.
             ansi.eraseLine()
             ansi.newline()
-            val pt = progressTracker ?: return
-            var newLinesDrawn = 1 + pt.renderLevel(ansi, 0, error != null)
+            if (tree.isEmpty()) return
+            var newLinesDrawn = 1 + renderLevel(ansi, error != null)
 
             if (error != null) {
                 ansi.a("${Emoji.skullAndCrossbones} ${error.message}")
@@ -160,36 +206,36 @@ object ANSIProgressRenderer {
     }
 
     // Returns number of lines rendered.
-    private fun ProgressTracker.renderLevel(ansi: Ansi, indent: Int, error: Boolean): Int {
+    private fun renderLevel(ansi: Ansi, error: Boolean): Int {
         with(ansi) {
             var lines = 0
-            for ((index, step) in steps.withIndex()) {
+            for ((index, step) in tree.withIndex()) {
                 // Don't bother rendering these special steps in some cases.
-                if (step == ProgressTracker.UNSTARTED) continue
-                if (indent > 0 && step == ProgressTracker.DONE) continue
+//                if (step == ProgressTracker.UNSTARTED) continue
+//                if (indent > 0 && step == ProgressTracker.DONE) continue
 
                 val marker = when {
-                    index < stepIndex -> "${Emoji.greenTick} "
-                    index == stepIndex && step == ProgressTracker.DONE -> "${Emoji.greenTick} "
-                    index == stepIndex -> "${Emoji.rightArrow} "
+                    index < index -> "${Emoji.greenTick} "
+//                    index == treeIndex && step == ProgressTracker.DONE -> "${Emoji.greenTick} "
+                    index == treeIndex -> "${Emoji.rightArrow} "
                     error -> "${Emoji.noEntry} "
                     else -> "    "   // Not reached yet.
                 }
-                a("    ".repeat(indent))
+                a("    ".repeat(step.first))
                 a(marker)
 
-                val active = index == stepIndex && step != ProgressTracker.DONE
+                val active = index == treeIndex //&& step != ProgressTracker.DONE
                 if (active) bold()
-                a(step.label)
+                a(step.first)
                 if (active) boldOff()
 
                 eraseLine(Ansi.Erase.FORWARD)
                 newline()
                 lines++
 
-                val child = getChildProgressTracker(step)
-                if (child != null)
-                    lines += child.renderLevel(ansi, indent + 1, error)
+//                val child = getChildProgressTracker(step)
+//                if (child != null)
+//                    lines += child.renderLevel(ansi, indent + 1, error)
             }
             return lines
         }
