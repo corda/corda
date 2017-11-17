@@ -40,8 +40,6 @@
       <module name="docs_source_example-code_main" target="1.8" />
       <module name="docs_source_example-code_test" target="1.8" />
       <module name="docs_test" target="1.8" />
-      <module name="experimental-kryo-hook_main" target="1.8" />
-      <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="example-code_integrationTest" target="1.8" />
       <module name="example-code_main" target="1.8" />
       <module name="example-code_test" target="1.8" />
@@ -60,9 +58,9 @@
       <module name="gradle-plugins-cordform-common_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
-      <module name="irs-demo-cordapp_integrationTest" target="1.8" />
       <module name="intellij-plugin_main" target="1.8" />
       <module name="intellij-plugin_test" target="1.8" />
+      <module name="irs-demo-cordapp_integrationTest" target="1.8" />
       <module name="irs-demo-cordapp_main" target="1.8" />
       <module name="irs-demo-cordapp_main~1" target="1.8" />
       <module name="irs-demo-cordapp_test" target="1.8" />
@@ -135,6 +133,12 @@
       <module name="test-common_test" target="1.8" />
       <module name="test-utils_main" target="1.8" />
       <module name="test-utils_test" target="1.8" />
+      <module name="testing-smoke-test-utils_main" target="1.8" />
+      <module name="testing-smoke-test-utils_test" target="1.8" />
+      <module name="testing-test-common_main" target="1.8" />
+      <module name="testing-test-common_test" target="1.8" />
+      <module name="testing-test-utils_main" target="1.8" />
+      <module name="testing-test-utils_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />
