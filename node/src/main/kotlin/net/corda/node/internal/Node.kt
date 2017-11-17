@@ -206,8 +206,14 @@ open class Node(configuration: NodeConfiguration,
             start()
         }
         // Start up the MQ clients.
-        rpcMessagingClient.start(rpcOps, userService)
-        verifierMessagingClient?.start()
+        rpcMessagingClient.run {
+            start(rpcOps, userService)
+            runOnStop += this::stop
+        }
+        verifierMessagingClient?.run {
+            start()
+            runOnStop += this::stop
+        }
         (network as P2PMessagingClient).start()
     }
 
