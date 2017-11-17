@@ -60,15 +60,16 @@ class DriverTests {
     fun `node registration`() {
         // Very simple Http handler which counts the requests it has received and always returns the same payload.
         val handler = object : HttpHandler {
-            var requests = 0
-                private set
+            private val _requests = mutableListOf<String>()
+            val requests: List<String>
+                get() = _requests.toList()
 
             override fun handle(exchange: HttpExchange) {
                 val response = "reply"
+                _requests.add(exchange.requestURI.toString())
                 exchange.responseHeaders.set("Content-Type", "text/html; charset=" + Charsets.UTF_8)
                 exchange.sendResponseHeaders(200, response.length.toLong())
                 exchange.responseBody.use { it.write(response.toByteArray()) }
-                requests++
             }
         }
 
@@ -80,11 +81,15 @@ class DriverTests {
         server.start()
 
         driver(portAllocation = PortAllocation.RandomFree) {
-            startNode(providedName = DUMMY_BANK_A.name, compatibilityZoneURL = URL("http://localhost:${port}"))
+            startNode(providedName = DUMMY_BANK_A.name, compatibilityZoneURL = URL("http://localhost:$port"))
+                    .get()
         }
 
-        // We're getting a request to sign the certificate and one poll request to see if the request has been approved.
-        assertThat(handler.requests).isEqualTo(2)
+        // We're getting:
+        //   a request to sign the certificate then
+        //   at least one poll request to see if the request has been approved.
+        //   all the network map registration and download.
+        assertThat(handler.requests).startsWith("/certificate", "/certificate/reply")
     }
 
     @Test

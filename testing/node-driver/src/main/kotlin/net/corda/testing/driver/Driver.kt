@@ -57,7 +57,8 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit.*
+import java.util.concurrent.TimeUnit.MILLISECONDS
+import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -652,27 +653,30 @@ class DriverDSL(
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name(organisation = "${oneOf(names).organisation}-${p2pAddress.port}", locality = "London", country = "GB")
-        compatibilityZoneURL?.let { registerNode(name, it) }
-        val rpcAddress = portAllocation.nextHostAndPort()
-        val webAddress = portAllocation.nextHostAndPort()
-        val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
-        val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory(name),
-                allowMissingConfig = true,
-                configOverrides = configOf(
-                        "myLegalName" to name.toString(),
-                        "p2pAddress" to p2pAddress.toString(),
-                        "rpcAddress" to rpcAddress.toString(),
-                        "webAddress" to webAddress.toString(),
-                        "useTestClock" to useTestClock,
-                        "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
-                        "verifierType" to verifierType.name
-                ) + customOverrides
-        )
-        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
+        val registrationFuture = compatibilityZoneURL?.let { registerNode(name, it) } ?: doneFuture(Unit)
+        return registrationFuture.flatMap {
+            val rpcAddress = portAllocation.nextHostAndPort()
+            val webAddress = portAllocation.nextHostAndPort()
+            val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
+            val config = ConfigHelper.loadConfig(
+                    baseDirectory = baseDirectory(name),
+                    allowMissingConfig = true,
+                    configOverrides = configOf(
+                            "myLegalName" to name.toString(),
+                            "p2pAddress" to p2pAddress.toString(),
+                            "rpcAddress" to rpcAddress.toString(),
+                            "webAddress" to webAddress.toString(),
+                            "useTestClock" to useTestClock,
+                            "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
+                            "verifierType" to verifierType.name
+                    ) + customOverrides
+            )
+
+            startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
+        }
     }
 
-    private fun registerNode(providedName: CordaX500Name, compatibilityZoneURL: URL) {
+    private fun registerNode(providedName: CordaX500Name, compatibilityZoneURL: URL): CordaFuture<Unit> {
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(providedName),
                 allowMissingConfig = true,
@@ -681,7 +685,7 @@ class DriverDSL(
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
                         "myLegalName" to providedName.toString())
         )
-        startNodeForRegistration(config)
+        return startNodeForRegistration(config)
     }
 
     override fun startNodes(nodes: List<CordformNode>, startInSameProcess: Boolean?, maximumHeapSize: String): List<CordaFuture<NodeHandle>> {
@@ -875,15 +879,17 @@ class DriverDSL(
         return future
     }
 
-    private fun startNodeForRegistration(config: Config) {
+    private fun startNodeForRegistration(config: Config): CordaFuture<Unit> {
         val maximumHeapSize = "200m"
         val configuration = config.parseAsNodeConfiguration()
 
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val processFuture = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,
+        val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,
                 systemProperties, cordappPackages, maximumHeapSize, initialRegistration = true)
-        // Wait for the process to complete.
-        processFuture.waitFor(1, MINUTES)
+
+        return poll(executorService, "process exit") {
+            if (process.isAlive) null else Unit
+        }
     }
 
     private fun startNodeInternal(config: Config,
