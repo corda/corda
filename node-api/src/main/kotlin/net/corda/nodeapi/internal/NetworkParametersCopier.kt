@@ -21,7 +21,9 @@ class NetworkParametersCopier(networkParameters: NetworkParameters, sign: Boolea
         if (sign) {
             val signature = DUMMY_MAP_KEY.sign(serialize)
             SignedData(serialize, signature).serialize()
-        } else serialize
+        } else {
+            serialize
+        }
     }
 
     fun install(dir: Path) {

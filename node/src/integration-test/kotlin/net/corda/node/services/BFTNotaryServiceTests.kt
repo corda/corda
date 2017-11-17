@@ -28,7 +28,7 @@ import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.chooseIdentity
 import net.corda.nodeapi.internal.NetworkParametersCopier
-import net.corda.nodeapi.internal.testNetworkParameters
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
 import net.corda.testing.node.MockNetwork

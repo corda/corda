@@ -157,30 +157,15 @@ open class Cordform : DefaultTask() {
     }
 
     private fun generateAndInstallNetworkParameters() {
-        project.logger.info("Generating network parameters")
+        project.logger.info("Generating and installing network parameters")
         val notaryMap = gatherNotaries()
         val networkParamsGenerator = loadParametersGenerator()
-        networkParamsGenerator.run(nodes[0].fullPath(), notaryMap)
-        project.logger.info("Installing network parameters")
-        val sourcePath = nodes[0].fullPath().toString()
-        for (destination in nodes.drop(1)) {
-            project.copy {
-                it.apply {
-                    from(sourcePath)
-                    include("network-parameters")
-                    into(destination.fullPath().toString())
-                }
-            }
-        }
+        networkParamsGenerator.run(notaryMap, nodes.map { it.fullPath() })
     }
 
     private fun gatherNotaries(): Map<String, Boolean> {
-        val notaryMap: HashMap<String, Boolean> = hashMapOf()
         val notaryNodes = nodes.filter { it.notary != null }
-        notaryNodes.forEach {
-            notaryMap[it.name] = it.notary.getOrDefault("validating", false) as Boolean
-        }
-        return notaryMap
+        return notaryNodes.associateBy ({ it.name }, { it.notary.getOrDefault("validating", false) as Boolean })
     }
 
     private fun generateAndInstallNodeInfos() {

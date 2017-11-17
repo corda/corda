@@ -93,33 +93,16 @@ class NodeInfoWatcher(private val nodePath: Path,
     fun saveToFile(signedNodeInfo: SignedData<NodeInfo>) = Companion.saveToFile(nodePath, signedNodeInfo)
 
     /**
-     * Loads all NodeInfo files stored in node's base directory and returns the [Party]s.
+     * Loads latest NodeInfo files stored in node's base directory.
      * Scans main directory and [CordformNode.NODE_INFO_DIRECTORY].
      * Signatures are not checked before returning a value. The latest value stored for a given name is returned.
      *
-     * @return a list of [Party]s
+     * @return list of latest [NodeInfo]s
      */
-    fun loadAndGatherNotaryIdentities(notaries: Map<CordaX500Name, Boolean>): List<NotaryInfo> {
-        val infosMap = getAllNodeInfos()
-        // Now get the notary identities based on names passed from Cordform configs. There is one problem, for distributed notaries
-        // Cordfom specifies in config only node's main name, the notary identity isn't passed there. It's read from keystore on
-        // node startup, so we have to look it up from node info as a second identity, which is ugly.
-        val notaryInfos = mutableSetOf<NotaryInfo>()
-        for (info in infosMap.values) {
-            // Here the ugliness happens.
-            // TODO Change Cordform definition so it specifies distributed notary identity.
-            if (info.legalIdentities[0].name in notaries.keys) {
-                val notaryId = if (info.legalIdentities.size == 2) info.legalIdentities[1] else info.legalIdentities[0]
-                notaryInfos.add(NotaryInfo(notaryId, notaries[info.legalIdentities[0].name]!!))
-            }
-        }
-        return notaryInfos.toList()
-    }
-
-    private fun getAllNodeInfos(): Map<CordaX500Name, NodeInfo> {
+    fun getAllNodeInfos(): List<NodeInfo> {
         val nodeInfos = loadFromDirectory(false)
         // NodeInfos are currently stored in 2 places: in [CordformNode.NODE_INFO_DIRECTORY] and in baseDirectory of the node.
-        val myFiles = nodePath.list {it.filter { it.toString().contains("nodeInfo-") }.toList() }
+        val myFiles = nodePath.list { it.filter { "nodeInfo-" in it.toString() }.toList() }
         val myNodeInfos = myFiles.mapNotNull { processFile(it, false) }
         val infosMap = mutableMapOf<CordaX500Name, NodeInfo>()
         // Running deployNodes more than once produces new NodeInfos. We need to load the latest NodeInfos based on serial field.
@@ -129,7 +112,7 @@ class NodeInfoWatcher(private val nodePath: Path,
             if(prevInfo == null || prevInfo.serial < info.serial)
                 infosMap.put(name, info)
         }
-        return infosMap
+        return infosMap.values.toList()
     }
 
     /**
