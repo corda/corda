@@ -14,6 +14,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
@@ -238,7 +239,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(database: CordaPersistence): MessagingService {
+        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
