@@ -2414,7 +2414,7 @@ public final class net.corda.core.schemas.CommonSchemaV1 extends net.corda.core.
   public static final net.corda.core.schemas.CommonSchemaV1 INSTANCE
 ##
 @javax.persistence.MappedSuperclass @net.corda.core.serialization.CordaSerializable public static class net.corda.core.schemas.CommonSchemaV1$FungibleState extends net.corda.core.schemas.PersistentState
-  public <init>(Set, net.corda.core.identity.AbstractParty, long, net.corda.core.identity.AbstractParty, String)
+  public <init>(Set, net.corda.core.identity.AbstractParty, long, net.corda.core.identity.AbstractParty, byte[])
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.AbstractParty getIssuer()
   @org.jetbrains.annotations.NotNull public final byte[] getIssuerRef()
   @org.jetbrains.annotations.NotNull public final net.corda.core.identity.AbstractParty getOwner()
