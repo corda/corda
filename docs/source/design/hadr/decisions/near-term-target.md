@@ -43,4 +43,4 @@ Proceed with Option 2: Hot-cold.
 
 ## Decision taken
 
-Decision still required.
+**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** Adopt option 2: Near-term target: Hot Cold (RGB, JC, MH agreed)

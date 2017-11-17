@@ -46,4 +46,4 @@ Proceed with Option 2: External broker
 
 ## Decision taken
 
-Decision still required.
+**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** The broker should only be separated if required by other features (e.g. the float), otherwise not. (RGB, JC, MH agreed).

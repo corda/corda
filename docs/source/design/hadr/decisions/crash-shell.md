@@ -49,4 +49,4 @@ Proceed with Option 2: Delegate to external tools
 
 ## Decision taken
 
-Decision still required.
+**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** Restarts should be handled by polite shutdown, followed by a hard clear. (RGB, JC, MH agreed)

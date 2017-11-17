@@ -44,4 +44,4 @@ Continue with Option 1: Storage in the file system
 
 ## Decision taken
 
-Decision still required.
+[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md) Use storage in the file system (for now)

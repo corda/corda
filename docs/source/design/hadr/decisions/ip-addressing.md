@@ -45,4 +45,4 @@ Proceed with Option 1: Via Load Balancer
 
 ## Decision taken
 
-Decision still required.
+**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** The design can allow for optional load balancers to be implemented by clients. (RGB, JC, MH agreed)
