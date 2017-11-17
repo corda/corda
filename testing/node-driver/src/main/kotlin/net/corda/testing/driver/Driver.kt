@@ -37,7 +37,7 @@ import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.nodeapi.internal.NetworkParametersCopier
-import net.corda.nodeapi.internal.testNetworkParameters
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO

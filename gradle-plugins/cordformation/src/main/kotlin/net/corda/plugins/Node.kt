@@ -256,10 +256,10 @@ class Node(private val project: Project) : CordformNode() {
      */
     private fun verifyAndGetJar(jarName: String): File {
         val maybeJar = project.configuration("runtime").filter {
-            it.toString().contains("$jarName-$releaseVersion.jar") || it.toString().contains("$jarName-enterprise-$releaseVersion.jar")
+            "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-enterprise-$releaseVersion.jar" in it.toString()
         }
         if (maybeJar.isEmpty) {
-            throw RuntimeException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")
+            throw IllegalStateException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")
         } else {
             val jar = maybeJar.singleFile
             assert(jar.isFile)

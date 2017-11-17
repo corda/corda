@@ -31,8 +31,11 @@ class Cordformation : Plugin<Project> {
 
     override fun apply(project: Project) {
         Utils.createCompileConfiguration("cordapp", project)
-        if(!project.rootProject.name.equals("corda-project")) {
+        // Add runtime dependency to node except for the corda project itself to avoid a circular dependency of Corda with itself.
+        if (project.rootProject.name != "corda-project") {
             project.dependencies.add("runtime", "net.corda:corda-node:${project.rootProject.ext<String>("cordaVersion")}")
+        } else {
+            project.dependencies.add("runtime", project.project(":node"))
         }
     }
 }
