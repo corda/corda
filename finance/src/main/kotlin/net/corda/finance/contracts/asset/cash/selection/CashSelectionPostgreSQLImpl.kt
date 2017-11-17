@@ -63,13 +63,13 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
             paramOffset += 1
         }
         if (onlyFromIssuerParties.isNotEmpty()) {
-            val issuerKeys = connection.createArrayOf("VARCHAR", onlyFromIssuerParties.map
+            val issuerKeys = connection.createArrayOf("BYTEA", onlyFromIssuerParties.map
             { it.owningKey.toBase58String() }.toTypedArray())
             statement.setArray(3 + paramOffset, issuerKeys)
             paramOffset += 1
         }
         if (withIssuerRefs.isNotEmpty()) {
-            val issuerRefs = connection.createArrayOf("BYTEA", withIssuerRefs.map
+            val issuerRefs = connection.createArrayOf("VARCHAR", withIssuerRefs.map
             { it.bytes }.toTypedArray())
             statement.setArray(3 + paramOffset, issuerRefs)
             paramOffset += 1
