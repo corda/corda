@@ -101,7 +101,7 @@ open class PersistentNetworkMapCache(
                         select(get<String>(NodeInfoSchemaV1.PersistentNodeInfo::hash.name))
                     }
                 }
-                session.createQuery(query).resultList.map { SecureHash.sha256(it) }
+                session.createQuery(query).resultList.map { SecureHash.parse(it) }
             }
         }
 
