@@ -396,6 +396,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
         serializationEnv.unset()
+        messagingNetwork.stop()
     }
 
     // Test method to block until all scheduled activity, active flows
