@@ -56,7 +56,7 @@ task(runSsh, dependsOn: 'classes', type: JavaExec) {
 
 // Run JMeter (by default the UI).
 // Extra args can be passed by setting jmeterArgs (e.g. -n to run in non-UI mode).
-// e.g. .gradlew tools:jmeter:run -PjmeterArgs="['-n']"
+// e.g. ./gradlew tools:jmeter:run -PjmeterArgs="['-n']"
 // ssh tunnels will be built from local host to remote hosts by specifying jmeterHosts
 // e.g. ./gradlew tools:jmeter:run -PjmeterHosts="['perf-notary.corda.r3cev.com', 'perf-node-1.corda.r3cev.com']"
 // Each host is paired with local host ports listed in remote_hosts of jmeter.properties
