@@ -47,7 +47,7 @@ class NodeStatePersistenceTests {
                 // Ensure the notary node has finished starting up, before starting a flow that needs a notary
                 defaultNotaryNode.getOrThrow()
                 nodeHandle.rpcClientToNode().start(user.username, user.password).use {
-                    it.proxy.startFlow(::SendMessageFlow, message).returnValue.getOrThrow()
+                    it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
                 }
                 nodeHandle.stop()
                 nodeName
@@ -130,7 +130,7 @@ open class MessageContract : Contract {
 }
 
 @StartableByRPC
-class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransaction>() {
+class SendMessageFlow(private val message: Message, private val notary: Party) : FlowLogic<SignedTransaction>() {
     companion object {
         object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
         object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
@@ -146,8 +146,6 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val notary = serviceHub.networkMapCache.notaryIdentities.firstOrNull() ?: throw IllegalStateException("No registered notaries")
-
         progressTracker.currentStep = GENERATING_TRANSACTION
 
         val messageState = MessageState(message = message, by = ourIdentity)
