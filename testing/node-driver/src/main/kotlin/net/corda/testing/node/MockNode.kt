@@ -245,8 +245,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                     serverThread,
                     myNotaryIdentity,
                     myLegalName,
-                    database
-            ).start().getOrThrow()
+                    database)
         }
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {

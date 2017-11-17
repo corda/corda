@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
@@ -10,7 +9,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
@@ -91,35 +89,14 @@ class InMemoryMessagingNetwork(
 
     val endpoints: List<InMemoryMessaging> @Synchronized get() = handleEndpointMap.values.toList()
     /**
-     * Creates a node and returns the new object that identifies its location on the network to senders, and the
-     * [InMemoryMessaging] that the recipient/in-memory node uses to receive messages and send messages itself.
+     * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
      *
-     * If [manuallyPumped] is set to true, then you are expected to call the [InMemoryMessaging.pump] method on the [InMemoryMessaging]
+     * @param manuallyPumped if set to true, then you are expected to call the [InMemoryMessaging.pump] method on the [InMemoryMessaging]
      * in order to cause the delivery of a single message, which will occur on the thread of the caller. If set to false
      * then this class will set up a background thread to deliver messages asynchronously, if the handler specifies no
      * executor.
-     *
-     * @param persistenceTx a lambda to wrap message handling in a transaction if necessary. Defaults to a no-op.
-     */
-    @Synchronized
-    fun createNode(manuallyPumped: Boolean,
-                   executor: AffinityExecutor,
-                   notaryService: PartyAndCertificate?,
-                   database: CordaPersistence): Pair<PeerHandle, Builder> {
-        check(counter >= 0) { "In memory network stopped: please recreate." }
-        val builder = createNodeWithID(manuallyPumped, counter, executor, notaryService, database = database)
-        counter++
-        val id = builder.id
-        return Pair(id, builder)
-    }
-
-    /**
-     * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
-     *
-     * @param manuallyPumped see [createNode].
      * @param id the numeric ID to use, e.g. set to whatever ID the node used last time.
      * @param description text string that identifies this node for message logging (if is enabled) or null to autogenerate.
-     * @param persistenceTx a lambda to wrap message handling in a transaction if necessary.
      */
     fun createNodeWithID(
             manuallyPumped: Boolean,
@@ -128,12 +105,19 @@ class InMemoryMessagingNetwork(
             notaryService: PartyAndCertificate?,
             description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"),
             database: CordaPersistence)
-            : Builder {
+            : InMemoryMessaging {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
         val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) } ?: emptyList() //TODO only notary can be distributed?
-        return Builder(manuallyPumped, peerHandle, serviceHandles, executor, database = database)
+        synchronized(this) {
+            val node = InMemoryMessaging(manuallyPumped, peerHandle, executor, database)
+            handleEndpointMap[peerHandle] = node
+            serviceHandles.forEach {
+                serviceToPeersMapping.getOrPut(it) { LinkedHashSet() }.add(peerHandle)
+            }
+            return node
+        }
     }
 
     interface LatencyCalculator {
@@ -180,25 +164,6 @@ class InMemoryMessagingNetwork(
 
         handleEndpointMap.clear()
         messageReceiveQueues.clear()
-    }
-
-    inner class Builder(
-            private val manuallyPumped: Boolean,
-            val id: PeerHandle,
-            private val serviceHandles: List<ServiceHandle>,
-            val executor: AffinityExecutor,
-            val database: CordaPersistence) {
-        fun start(): CordaFuture<InMemoryMessaging> {
-            synchronized(this@InMemoryMessagingNetwork) {
-                val node = InMemoryMessaging(manuallyPumped, id, executor, database)
-                handleEndpointMap[id] = node
-                serviceHandles.forEach {
-                    serviceToPeersMapping.getOrPut(it) { LinkedHashSet() }.add(id)
-                    Unit
-                }
-                return doneFuture(node)
-            }
-        }
     }
 
     @CordaSerializable
