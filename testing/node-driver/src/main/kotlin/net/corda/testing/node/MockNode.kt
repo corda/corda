@@ -169,7 +169,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
      * @see defaultNotaryNode
      */
     val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
-        return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        return defaultNotaryNode.info.legalIdentitiesAndCerts[1] // TODO Resolve once network parameters is merged back in
     }
 
     /**
