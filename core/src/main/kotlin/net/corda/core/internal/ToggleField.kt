@@ -57,7 +57,7 @@ class InheritableThreadLocalToggleField<T>(name: String,
                 get() ?: log.warn(e.message)
                 null
             } else {
-                get() ?: throw e // Heavy-handed, but leaks will go unnoticed otherwise.
+                get() ?: log.error(e.message)
                 this
             }
         }

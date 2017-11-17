@@ -141,18 +141,33 @@ class ToggleFieldTest {
         }
     }
 
+    /** We log an error rather than failing-fast as the new thread may be an undetected global. */
     @Test
-    fun `leaked thread is detected as soon as it tries to create another`() {
+    fun `leaked thread propagates holder to non-global thread, with error`() {
         val field = inheritableThreadLocalToggleField<String>()
         field.set("hello")
         withSingleThreadExecutor {
             assertEquals("hello", fork(field::get).getOrThrow())
             field.set(null) // The executor thread is now considered leaked.
-            val threadName = fork { Thread.currentThread().name }.getOrThrow()
-            val future = fork(::Thread)
-            assertThatThrownBy { future.getOrThrow() }
-                    .isInstanceOf(ThreadLeakException::class.java)
-                    .hasMessageContaining(threadName)
+            fork {
+                val leakedThreadName = Thread.currentThread().name
+                verifyNoMoreInteractions(log)
+                withSingleThreadExecutor {
+                    // If ThreadLeakException is seen in practice, these errors form a trail of where the holder has been:
+                    verify(log).error(argThat { contains(leakedThreadName) })
+                    val newThreadName = fork { Thread.currentThread().name }.getOrThrow()
+                    val future = fork(field::get)
+                    assertThatThrownBy { future.getOrThrow() }
+                            .isInstanceOf(ThreadLeakException::class.java)
+                            .hasMessageContaining(newThreadName)
+                    fork {
+                        verifyNoMoreInteractions(log)
+                        withSingleThreadExecutor {
+                            verify(log).error(argThat { contains(newThreadName) })
+                        }
+                    }.getOrThrow()
+                }
+            }.getOrThrow()
         }
     }
 
@@ -164,11 +179,11 @@ class ToggleFieldTest {
             assertEquals("hello", fork(field::get).getOrThrow())
             field.set(null) // The executor thread is now considered leaked.
             fork {
-                val threadName = Thread.currentThread().name
+                val leakedThreadName = Thread.currentThread().name
                 globalThreadCreationMethod {
                     verifyNoMoreInteractions(log)
                     withSingleThreadExecutor {
-                        verify(log).warn(argThat { contains(threadName) })
+                        verify(log).warn(argThat { contains(leakedThreadName) })
                         // In practice the new thread is for example a static thread we can't get rid of:
                         assertNull(fork(field::get).getOrThrow())
                     }
