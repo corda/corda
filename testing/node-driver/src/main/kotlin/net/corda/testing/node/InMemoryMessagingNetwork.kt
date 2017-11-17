@@ -46,11 +46,11 @@ import kotlin.concurrent.thread
 @ThreadSafe
 class InMemoryMessagingNetwork(
         val sendManuallyPumped: Boolean,
-        val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+        private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
         private val messagesInFlight: ReusableLatch = ReusableLatch()
 ) : SingletonSerializeAsToken() {
     companion object {
-        const val MESSAGES_LOG_NAME = "messages"
+        private const val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
     }
 
@@ -90,8 +90,6 @@ class InMemoryMessagingNetwork(
         get() = _receivedMessages
 
     val endpoints: List<InMemoryMessaging> @Synchronized get() = handleEndpointMap.values.toList()
-    fun endpoint(peer: PeerHandle): InMemoryMessaging? = handleEndpointMap.get(peer)
-
     /**
      * Creates a node and returns the new object that identifies its location on the network to senders, and the
      * [InMemoryMessaging] that the recipient/in-memory node uses to receive messages and send messages itself.
@@ -144,7 +142,7 @@ class InMemoryMessagingNetwork(
 
     /** This can be set to an object which can inject artificial latency between sender/recipient pairs. */
     @Volatile
-    var latencyCalculator: LatencyCalculator? = null
+    private var latencyCalculator: LatencyCalculator? = null
     private val timer = Timer()
 
     @Synchronized
@@ -185,9 +183,9 @@ class InMemoryMessagingNetwork(
     }
 
     inner class Builder(
-            val manuallyPumped: Boolean,
+            private val manuallyPumped: Boolean,
             val id: PeerHandle,
-            val serviceHandles: List<ServiceHandle>,
+            private val serviceHandles: List<ServiceHandle>,
             val executor: AffinityExecutor,
             val database: CordaPersistence) {
         fun start(): CordaFuture<InMemoryMessaging> {
@@ -195,7 +193,7 @@ class InMemoryMessagingNetwork(
                 val node = InMemoryMessaging(manuallyPumped, id, executor, database)
                 handleEndpointMap[id] = node
                 serviceHandles.forEach {
-                    serviceToPeersMapping.getOrPut(it) { LinkedHashSet<PeerHandle>() }.add(id)
+                    serviceToPeersMapping.getOrPut(it) { LinkedHashSet() }.add(id)
                     Unit
                 }
                 return doneFuture(node)
@@ -227,7 +225,7 @@ class InMemoryMessagingNetwork(
         }
 
         class RoundRobin : ServicePeerAllocationStrategy() {
-            val previousPicks = HashMap<ServiceHandle, Int>()
+            private val previousPicks = HashMap<ServiceHandle, Int>()
             override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
                 val nextIndex = previousPicks.compute(service) { _, previous ->
                     (previous?.plus(1) ?: 0) % pickFrom.size
@@ -450,9 +448,7 @@ class InMemoryMessagingNetwork(
 
         private fun pumpReceiveInternal(block: Boolean): MessageTransfer? {
             val q = getQueueForPeerHandle(peerHandle)
-            val next = getNextQueue(q, block) ?: return null
-            val (transfer, deliverTo) = next
-
+            val (transfer, deliverTo) = getNextQueue(q, block) ?: return null
             if (transfer.message.uniqueMessageId !in processedMessages) {
                 executor.execute {
                     database.transaction {
