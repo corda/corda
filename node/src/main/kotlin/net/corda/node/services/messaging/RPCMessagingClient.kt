@@ -6,7 +6,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
 import net.corda.node.utilities.*
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 
