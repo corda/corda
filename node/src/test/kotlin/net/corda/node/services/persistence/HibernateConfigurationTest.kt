@@ -18,6 +18,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_NAME
 import net.corda.finance.contracts.asset.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
@@ -79,8 +80,8 @@ class HibernateConfigurationTest {
     @Before
     fun setUp() {
         val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
-        bankServices = MockServices(cordappPackages, BOC.name, generateKeyPair())
-        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, generateKeyPair())
+        bankServices = MockServices(cordappPackages, BOC.name, BOC_KEY)
+        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
@@ -101,13 +102,6 @@ class HibernateConfigurationTest {
                 override fun jdbcSession() = database.createSession()
             }
             hibernatePersister = services.hibernatePersister
-        }
-
-        // Register all of the identities so persistence works
-        val allServices = listOf(issuerServices, notaryServices, bankServices, services)
-        val identites = allServices.flatMap { it.myInfo.legalIdentitiesAndCerts }.toSet()
-        allServices.forEach { serviceHub ->
-            identites.forEach { identity -> serviceHub.identityService.verifyAndRegisterIdentity(identity) }
         }
 
         identity = services.myInfo.singleIdentity()
