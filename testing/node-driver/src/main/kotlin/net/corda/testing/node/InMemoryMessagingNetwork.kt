@@ -342,7 +342,7 @@ class InMemoryMessagingNetwork(
             acknowledgementHandler?.invoke()
         }
 
-        override fun stop() {
+        fun stop() {
             if (backgroundThread != null) {
                 backgroundThread.interrupt()
                 backgroundThread.join()

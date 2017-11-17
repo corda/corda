@@ -199,7 +199,10 @@ open class Node(configuration: NodeConfiguration,
         }
 
         // Start up the MQ client.
-        (network as NodeMessagingClient).start(rpcOps, userService)
+        (network as NodeMessagingClient).apply {
+            start(rpcOps, userService)
+            runOnStop += this::stop
+        }
     }
 
     /**
