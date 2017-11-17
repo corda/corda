@@ -34,19 +34,6 @@ import kotlin.concurrent.schedule
 import kotlin.concurrent.thread
 
 /**
- * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods
- * on the messaging service interface until you have successfully started up the system. One of these objects should
- * be the only way to obtain a reference to a [MessagingService]. Startup may be a slow process: some implementations
- * may let you cast the returned future to an object that lets you get status info.
- *
- * A specific implementation of the controller class will have extra features that let you customise it before starting
- * it up.
- */
-interface MessagingServiceBuilder<out T : MessagingService> {
-    fun start(): CordaFuture<out T>
-}
-
-/**
  * An in-memory network allows you to manufacture [InMemoryMessaging]s for a set of participants. Each
  * [InMemoryMessaging] maintains a queue of messages it has received, and a background thread that dispatches
  * messages one by one to registered handlers. Alternatively, a messaging system may be manually pumped, in which
@@ -120,9 +107,9 @@ class InMemoryMessagingNetwork(
     fun createNode(manuallyPumped: Boolean,
                    executor: AffinityExecutor,
                    notaryService: PartyAndCertificate?,
-                   database: CordaPersistence): Pair<PeerHandle, MessagingServiceBuilder<InMemoryMessaging>> {
+                   database: CordaPersistence): Pair<PeerHandle, Builder> {
         check(counter >= 0) { "In memory network stopped: please recreate." }
-        val builder = createNodeWithID(manuallyPumped, counter, executor, notaryService, database = database) as Builder
+        val builder = createNodeWithID(manuallyPumped, counter, executor, notaryService, database = database)
         counter++
         val id = builder.id
         return Pair(id, builder)
@@ -143,7 +130,7 @@ class InMemoryMessagingNetwork(
             notaryService: PartyAndCertificate?,
             description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"),
             database: CordaPersistence)
-            : MessagingServiceBuilder<InMemoryMessaging> {
+            : Builder {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
@@ -202,8 +189,8 @@ class InMemoryMessagingNetwork(
             val id: PeerHandle,
             val serviceHandles: List<ServiceHandle>,
             val executor: AffinityExecutor,
-            val database: CordaPersistence) : MessagingServiceBuilder<InMemoryMessaging> {
-        override fun start(): CordaFuture<InMemoryMessaging> {
+            val database: CordaPersistence) {
+        fun start(): CordaFuture<InMemoryMessaging> {
             synchronized(this@InMemoryMessagingNetwork) {
                 val node = InMemoryMessaging(manuallyPumped, id, executor, database)
                 handleEndpointMap[id] = node
