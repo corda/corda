@@ -53,4 +53,4 @@ Proceed with Option 2: Placeholder
 
 ## Decision taken
 
-Decision still required.
+[DNB Meeting, 16/11/2017](./drb-meeting-20171116.md): Proceed with Option 2 - Add placeholder, subject to more detailed design proposal (RGB, JC, MH agreed)

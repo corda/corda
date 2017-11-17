@@ -100,4 +100,4 @@ Proceed with Variant option 1a: Terminate on firewall; include SASL connection c
 
 ## Decision taken
 
-Decision still required.
+[DNB Meeting, 16/11/2017](./drb-meeting-20171116.md): Proceed with Option 2c - Terminate on float, leave keys on file system  (RGB, JC, MH agreed) 

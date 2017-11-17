@@ -66,4 +66,4 @@ Proceed with Option 1
 
 ## Decision taken
 
-Decision still required.
+[DNB Meeting, 16/11/2017](./drb-meeting-20171116.md): Proceed with Option 1 - Continue to use AMQP (RGB, JC, MH agreed)
