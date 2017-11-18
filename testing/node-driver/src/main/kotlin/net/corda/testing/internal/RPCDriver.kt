@@ -230,7 +230,6 @@ fun <A> rpcDriver(
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = false,
         waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
@@ -254,7 +253,7 @@ fun <A> rpcDriver(
         ),
         coerce = { it },
         dsl = dsl,
-        initialiseSerialization = initialiseSerialization
+        initialiseSerialization = false
 )
 
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {

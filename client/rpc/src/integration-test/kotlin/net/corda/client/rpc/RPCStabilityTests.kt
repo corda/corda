@@ -16,12 +16,14 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.poll
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -31,6 +33,9 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 
 class RPCStabilityTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
     private val pool = Executors.newFixedThreadPool(10, testThreadFactory())
     @After
     fun shutdown() {
