@@ -1,37 +1,57 @@
 package net.corda.node.services.vault;
 
-import com.google.common.collect.*;
-import kotlin.*;
+import com.google.common.collect.ImmutableSet;
+import kotlin.Pair;
+import kotlin.Triple;
 import net.corda.core.contracts.*;
-import net.corda.core.identity.*;
-import net.corda.core.messaging.*;
-import net.corda.core.node.services.*;
+import net.corda.core.identity.AbstractParty;
+import net.corda.core.messaging.DataFeed;
+import net.corda.core.node.services.IdentityService;
+import net.corda.core.node.services.Vault;
+import net.corda.core.node.services.VaultQueryException;
+import net.corda.core.node.services.VaultService;
 import net.corda.core.node.services.vault.*;
-import net.corda.core.node.services.vault.QueryCriteria.*;
-import net.corda.core.utilities.*;
-import net.corda.finance.contracts.*;
-import net.corda.finance.contracts.asset.*;
-import net.corda.finance.schemas.*;
-import net.corda.node.utilities.*;
-import net.corda.testing.*;
-import net.corda.testing.contracts.*;
-import net.corda.testing.node.*;
-import org.junit.*;
+import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
+import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
+import net.corda.core.utilities.EncodingUtils;
+import net.corda.core.utilities.OpaqueBytes;
+import net.corda.finance.contracts.DealState;
+import net.corda.finance.contracts.asset.Cash;
+import net.corda.finance.contracts.asset.CashUtilities;
+import net.corda.finance.schemas.CashSchemaV1;
+import net.corda.node.utilities.CordaPersistence;
+import net.corda.node.utilities.DatabaseTransaction;
+import net.corda.testing.SerializationEnvironmentRule;
+import net.corda.testing.TestConstants;
+import net.corda.testing.contracts.DummyLinearContract;
+import net.corda.testing.contracts.VaultFiller;
+import net.corda.testing.node.MockServices;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import rx.Observable;
 
-import java.io.*;
-import java.lang.reflect.*;
-import java.security.*;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyPair;
+import java.security.cert.CertificateException;
 import java.util.*;
-import java.util.stream.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
-import static net.corda.core.utilities.ByteArrays.*;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
+import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.finance.contracts.asset.CashUtilities.*;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.*;
-import static net.corda.testing.node.MockServices.*;
-import static org.assertj.core.api.Assertions.*;
+import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
+import static net.corda.testing.node.MockServices.makeTestIdentityService;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests {
     @Rule
@@ -42,7 +62,7 @@ public class VaultQueryJavaTests {
     private CordaPersistence database;
 
     @Before
-    public void setUp() {
+    public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
@@ -54,6 +74,8 @@ public class VaultQueryJavaTests {
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
         vaultService = services.getVaultService();
+        services.getIdentityService().verifyAndRegisterIdentity(getDUMMY_CASH_ISSUER_IDENTITY());
+        services.getIdentityService().verifyAndRegisterIdentity(getDUMMY_NOTARY_IDENTITY());
     }
 
     @After

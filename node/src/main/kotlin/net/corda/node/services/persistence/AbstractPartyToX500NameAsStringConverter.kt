@@ -23,7 +23,7 @@ class AbstractPartyToX500NameAsStringConverter(identitySvc: () -> IdentityServic
         if (party != null) {
             val partyName = identityService.wellKnownPartyFromAnonymous(party)?.toString()
             if (partyName != null) return partyName
-            log.warn("Identity service unable to resolve AbstractParty: $party")
+             log.warn("Identity service unable to resolve AbstractParty: $party")
         }
         return null // non resolvable anonymous parties
     }
