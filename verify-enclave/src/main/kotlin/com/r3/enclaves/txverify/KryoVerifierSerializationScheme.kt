@@ -22,10 +22,11 @@ private class KryoVerifierSerializationScheme : AbstractKryoSerializationScheme(
      */
     private companion object {
         init {
-            SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-                registerScheme(KryoVerifierSerializationScheme())
-            }
-            SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+            // TODO: SerializationDefaults are now global singletons. Revisit this initialisation block.
+//            SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
+//                registerScheme(KryoVerifierSerializationScheme())
+//            }
+//            SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         }
     }
 }
