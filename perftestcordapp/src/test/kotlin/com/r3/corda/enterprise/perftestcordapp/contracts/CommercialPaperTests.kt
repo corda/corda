@@ -62,6 +62,7 @@ class KotlinCommercialPaperLegacyTest : CommercialPaperTestTemplate {
     override fun getContract() = CommercialPaper.CP_PROGRAM_ID
 }
 
+@Ignore
 @RunWith(Parameterized::class)
 class CommercialPaperTestsGeneric {
     companion object {
