@@ -6,7 +6,6 @@ import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.BOC
 import net.corda.testing.chooseIdentity
@@ -16,12 +15,10 @@ import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-@Ignore
 class CashExitFlowTests {
     private lateinit var mockNet: MockNetwork
     private val initialBalance = 2000.DOLLARS
