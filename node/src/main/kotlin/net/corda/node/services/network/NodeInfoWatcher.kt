@@ -7,7 +7,7 @@ import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.NodeInfoFilesCopier
 import rx.Observable
@@ -40,8 +40,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     val processedNodeInfoHashes: Set<SecureHash> get() = _processedNodeInfoHashes.toSet()
 
     companion object {
-        private val logger = loggerFor<NodeInfoWatcher>()
-
+        private val logger = contextLogger()
         /**
          * Saves the given [NodeInfo] to a path.
          * The node is 'encoded' as a SignedData<NodeInfo>, signed with the owning key of its first identity.

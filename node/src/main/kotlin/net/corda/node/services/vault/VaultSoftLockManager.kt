@@ -4,17 +4,14 @@ import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.services.VaultService
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.toNonEmptySet
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import java.util.*
 
 class VaultSoftLockManager private constructor(private val vault: VaultService) {
     companion object {
-        private val log = loggerFor<VaultSoftLockManager>()
+        private val log = contextLogger()
         @JvmStatic
         fun install(vault: VaultService, smm: StateMachineManager) {
             val manager = VaultSoftLockManager(vault)

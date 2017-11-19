@@ -30,7 +30,7 @@ import kotlin.system.exitProcess
 /** This class is responsible for starting a Node from command line arguments. */
 open class NodeStartup(val args: Array<String>) {
     companion object {
-        private val logger by lazy { loggerFor<Node>() }
+        private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         val LOGS_DIRECTORY_NAME = "logs"
         val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
     }

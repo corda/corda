@@ -3,10 +3,7 @@ package net.corda.finance.contracts.asset.cash.selection
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.toBase58String
+import net.corda.core.utilities.*
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
@@ -16,7 +13,7 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
 
     companion object {
         val JDBC_DRIVER_NAME = "PostgreSQL JDBC Driver"
-        val log = loggerFor<CashSelectionPostgreSQLImpl>()
+        private val log = contextLogger()
     }
 
     override fun isCompatible(metadata: DatabaseMetaData): Boolean {

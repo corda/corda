@@ -3,7 +3,7 @@ package net.corda.webserver.servlets
 import net.corda.core.internal.extractFile
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.jar.JarInputStream
@@ -25,7 +25,9 @@ import javax.ws.rs.core.MediaType
  * TODO: Provide an endpoint that exposes attachment file listings, to make attachments browsable.
  */
 class AttachmentDownloadServlet : HttpServlet() {
-    private val log = loggerFor<AttachmentDownloadServlet>()
+    companion object {
+        private val log = contextLogger()
+    }
 
     @Throws(IOException::class)
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {

@@ -7,7 +7,7 @@ import com.typesafe.config.ConfigRenderOptions
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.slf4j.event.Level
 import java.io.PrintStream
 import java.nio.file.Path
@@ -55,6 +55,9 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val help: Boolean,
                           val loggingLevel: Level,
                           val logToConsole: Boolean) {
+    companion object {
+        private val log = contextLogger()
+    }
 
     fun loadConfig(allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): Config {
         return loadConfig(baseDirectory, configFile, allowMissingConfig, configOverrides)
@@ -75,7 +78,6 @@ data class CmdLineOptions(val baseDirectory: Path,
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()
-        val log = loggerFor<CmdLineOptions>()
         log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
         return finalConfig
     }

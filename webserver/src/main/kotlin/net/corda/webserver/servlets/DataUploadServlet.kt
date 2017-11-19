@@ -1,7 +1,7 @@
 package net.corda.webserver.servlets
 
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.apache.commons.fileupload.servlet.ServletFileUpload
 import java.io.IOException
 import java.util.*
@@ -13,7 +13,9 @@ import javax.servlet.http.HttpServletResponse
  * Uploads to the node via the [CordaRPCOps] uploadFile interface.
  */
 class DataUploadServlet : HttpServlet() {
-    private val log = loggerFor<DataUploadServlet>()
+    companion object {
+        private val log = contextLogger()
+    }
 
     @Throws(IOException::class)
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
