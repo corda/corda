@@ -30,7 +30,6 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.security.KeyPair
 import java.util.*
@@ -80,7 +79,6 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
     return Vault(states)
 }
 
-@Ignore
 class CashTests {
     private val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     private val defaultIssuer = MEGA_CORP.ref(defaultRef)
@@ -132,7 +130,7 @@ class CashTests {
     }
 
     @Test
-    fun trivial() {
+    fun trivial() = withTestSerialization {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID) { inState }
@@ -166,10 +164,11 @@ class CashTests {
                 this.verifies()
             }
         }
+        Unit
     }
 
     @Test
-    fun `issue by move`() {
+    fun `issue by move`() = withTestSerialization {
         // Check we can't "move" money into existence.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -179,10 +178,11 @@ class CashTests {
 
             this `fails with` "there is at least one cash input for this group"
         }
+        Unit
     }
 
     @Test
-    fun issue() {
+    fun issue() = withTestSerialization {
         // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
         // institution is allowed to issue as much cash as they want.
         transaction {
@@ -202,6 +202,7 @@ class CashTests {
             command(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
             this.verifies()
         }
+        Unit
     }
 
     @Test
@@ -231,7 +232,7 @@ class CashTests {
     }
 
     @Test
-    fun `extended issue examples`() {
+    fun `extended issue examples`() = withTestSerialization {
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -281,6 +282,7 @@ class CashTests {
             }
             this.verifies()
         }
+        Unit
     }
 
     /**
@@ -303,7 +305,7 @@ class CashTests {
     }
 
     @Test
-    fun testMergeSplit() {
+    fun testMergeSplit() = withTestSerialization {
         // Splitting value works.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -330,10 +332,11 @@ class CashTests {
                 this.verifies()
             }
         }
+        Unit
     }
 
     @Test
-    fun zeroSizedValues() {
+    fun zeroSizedValues() = withTestSerialization {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID) { inState }
@@ -349,10 +352,11 @@ class CashTests {
             command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "zero sized outputs"
         }
+        Unit
     }
 
     @Test
-    fun trivialMismatches() {
+    fun trivialMismatches() = withTestSerialization {
         // Can't change issuer.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -410,10 +414,11 @@ class CashTests {
             command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "for reference [01]"
         }
+        Unit
     }
 
     @Test
-    fun exitLedger() {
+    fun exitLedger() = withTestSerialization {
         // Single input/output straightforward case.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -436,10 +441,11 @@ class CashTests {
                 }
             }
         }
+        Unit
     }
 
     @Test
-    fun `exit ledger with multiple issuers`() {
+    fun `exit ledger with multiple issuers`() = withTestSerialization {
         // Multi-issuer case.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -459,10 +465,11 @@ class CashTests {
             command(MINI_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` MINI_CORP.ref(defaultRef)) }
             this.verifies()
         }
+        Unit
     }
 
     @Test
-    fun `exit cash not held by its issuer`() {
+    fun `exit cash not held by its issuer`() = withTestSerialization {
         // Single input/output straightforward case.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -472,10 +479,11 @@ class CashTests {
             command(ALICE_PUBKEY) { Cash.Commands.Move() }
             this `fails with` "the amounts balance"
         }
+        Unit
     }
 
     @Test
-    fun multiIssuer() {
+    fun multiIssuer() = withTestSerialization {
         transaction {
             attachment(Cash.PROGRAM_ID)
             // Gather 2000 dollars from two different issuers.
@@ -500,10 +508,11 @@ class CashTests {
             output(Cash.PROGRAM_ID) { inState.copy(owner = AnonymousParty(BOB_PUBKEY)) issuedBy MINI_CORP }
             this.verifies()
         }
+        Unit
     }
 
     @Test
-    fun multiCurrency() {
+    fun multiCurrency() = withTestSerialization {
         // Check we can do an atomic currency trade tx.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -516,6 +525,7 @@ class CashTests {
 
             this.verifies()
         }
+        Unit
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -828,7 +838,7 @@ class CashTests {
 
     // Double spend.
     @Test
-    fun chainCashDoubleSpendFailsWith() {
+    fun chainCashDoubleSpendFailsWith() = withTestSerialization {
         val mockService = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset"), MEGA_CORP.name, MEGA_CORP_KEY)
 
         ledger(mockService) {
@@ -864,6 +874,7 @@ class CashTests {
 
             this.verifies()
         }
+        Unit
     }
 
     @Test
