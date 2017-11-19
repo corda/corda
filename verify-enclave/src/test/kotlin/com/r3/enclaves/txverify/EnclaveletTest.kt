@@ -6,10 +6,8 @@ import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.testing.DummyCommandData
-import net.corda.testing.MEGA_CORP_PUBKEY
-import net.corda.testing.MINI_CORP_PUBKEY
-import net.corda.testing.ledger
+import net.corda.testing.*
+import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -17,6 +15,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class EnclaveletTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     @Test
     fun success() {
         ledger {
