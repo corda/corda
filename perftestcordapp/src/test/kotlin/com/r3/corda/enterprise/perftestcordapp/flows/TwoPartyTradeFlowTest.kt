@@ -47,6 +47,7 @@ import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -80,6 +81,7 @@ internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
  *
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
+@Ignore
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
