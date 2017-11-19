@@ -1,6 +1,17 @@
-package net.corda.node.messaging
+package com.r3.corda.enterprise.perftestcordapp.flows
+
+// NB: Unlike the other flow tests in this package, this is not originally copied from net.corda.finance, but
+// from net.corda.node.messaging
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3.corda.enterprise.perftestcordapp.DOLLARS
+import com.r3.corda.enterprise.perftestcordapp.`issued by`
+import com.r3.corda.enterprise.perftestcordapp.contracts.CommercialPaper
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.CASH
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.fillWithSomeTestCash
+import com.r3.corda.enterprise.perftestcordapp.flows.TwoPartyTradeFlow.Buyer
+import com.r3.corda.enterprise.perftestcordapp.flows.TwoPartyTradeFlow.Seller
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
@@ -25,13 +36,6 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
-import net.corda.finance.DOLLARS
-import net.corda.finance.`issued by`
-import net.corda.finance.contracts.CommercialPaper
-import net.corda.finance.contracts.asset.CASH
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
-import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
@@ -39,7 +43,6 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
-import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
