@@ -136,8 +136,6 @@ interface DriverDSLExposedInterface : CordformContext {
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
      *     in. If null the Driver-level value will be used.
-     * @param compatibilityZoneURL if not null the node is started once in registration mode (which make the node quit
-     *     once registration is complete) and then re-starts the node with the given parameters.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available.
      */
     fun startNode(
@@ -147,8 +145,7 @@ interface DriverDSLExposedInterface : CordformContext {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize,
-            compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL): CordaFuture<NodeHandle>
+            maximumHeapSize: String = defaultParameters.maximumHeapSize): CordaFuture<NodeHandle>
 
     /**
      * Helper function for starting a [Node] with custom parameters from Java.
@@ -288,8 +285,7 @@ data class NodeParameters(
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "200m",
-        val compatibilityZoneURL: URL? = null
+        val maximumHeapSize: String = "200m"
 ) {
     fun setProvidedName(providedName: CordaX500Name?) = copy(providedName = providedName)
     fun setRpcUsers(rpcUsers: List<User>) = copy(rpcUsers = rpcUsers)
@@ -297,7 +293,6 @@ data class NodeParameters(
     fun setCustomerOverrides(customOverrides: Map<String, Any?>) = copy(customOverrides = customOverrides)
     fun setStartInSameProcess(startInSameProcess: Boolean?) = copy(startInSameProcess = startInSameProcess)
     fun setMaximumHeapSize(maximumHeapSize: String) = copy(maximumHeapSize = maximumHeapSize)
-    fun setCompatibilityZoneURL(compatibilityZoneURL: URL?) = copy(compatibilityZoneURL = compatibilityZoneURL)
 }
 
 /**
@@ -326,7 +321,9 @@ data class NodeParameters(
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSLExposedInterface.startNode].
  * @param notarySpecs The notaries advertised in the [NetworkParameters] for this network. These nodes will be started
- * automatically and will be available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
+ *     automatically and will be available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
+ * @param compatibilityZoneURL if not null each node is started once in registration mode (which makes the node register and quit),
+ *     and then re-starts the node with the given parameters.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
@@ -343,6 +340,7 @@ fun <A> driver(
         waitForAllNodesToFinish: Boolean = defaultParameters.waitForNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL,
         dsl: DriverDSLExposedInterface.() -> A
 ): A {
     return genericDriver(
@@ -356,7 +354,8 @@ fun <A> driver(
                     startNodesInProcess = startNodesInProcess,
                     waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
-                    extraCordappPackagesToScan = extraCordappPackagesToScan
+                    extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    compatibilityZoneURL = compatibilityZoneURL
             ),
             coerce = { it },
             dsl = dsl,
@@ -391,7 +390,8 @@ data class DriverParameters(
         val startNodesInProcess: Boolean = false,
         val waitForNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-        val extraCordappPackagesToScan: List<String> = emptyList()
+        val extraCordappPackagesToScan: List<String> = emptyList(),
+        val compatibilityZoneURL: URL? = null
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -456,6 +456,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL,
         driverDslWrapper: (DriverDSL) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
@@ -471,7 +472,8 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
                     startNodesInProcess = startNodesInProcess,
                     waitForNodesToFinish = waitForNodesToFinish,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    notarySpecs = notarySpecs
+                    notarySpecs = notarySpecs,
+                    compatibilityZoneURL = compatibilityZoneURL
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -577,7 +579,8 @@ class DriverDSL(
         val startNodesInProcess: Boolean,
         val waitForNodesToFinish: Boolean,
         extraCordappPackagesToScan: List<String>,
-        val notarySpecs: List<NotarySpec>
+        val notarySpecs: List<NotarySpec>,
+        val compatibilityZoneURL: URL?
 ) : DriverDSLInternalInterface {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -648,8 +651,7 @@ class DriverDSL(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            compatibilityZoneURL: URL?
+            maximumHeapSize: String
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
@@ -712,7 +714,8 @@ class DriverDSL(
                             "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
                     )
             )
-            startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
+            val registrationFuture = compatibilityZoneURL?.let { registerNode(name, it) } ?: doneFuture(Unit)
+            registrationFuture.flatMap { startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize) }
         }
     }
 

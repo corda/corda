@@ -80,9 +80,8 @@ class DriverTests {
         server.executor = null // creates a default executor
         server.start()
 
-        driver {
-            startNode(providedName = DUMMY_BANK_A.name, compatibilityZoneURL = URL("http://localhost:$port"))
-                    .get()
+        driver(compatibilityZoneURL = URL("http://localhost:$port")) {
+            startNode(providedName = DUMMY_BANK_A.name).get()
         }
 
         // We're getting:
