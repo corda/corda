@@ -14,13 +14,12 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.*
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.currentDBSession
 import java.io.*
-import java.lang.Exception
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.jar.JarInputStream
@@ -57,7 +56,7 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
     ) : Serializable
 
     companion object {
-        private val log = loggerFor<NodeAttachmentService>()
+        private val log = contextLogger()
     }
 
     @VisibleForTesting

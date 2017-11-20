@@ -3,10 +3,7 @@ package net.corda.testing.driver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.utilities.Try
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
+import net.corda.core.utilities.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
@@ -21,8 +18,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
     private val state = ThreadBox(State())
 
     companion object {
-        private val log = loggerFor<ShutdownManager>()
-
+        private val log = contextLogger()
         inline fun <A> run(providedExecutorService: ExecutorService? = null, block: ShutdownManager.() -> A): A {
             val executorService = providedExecutorService ?: Executors.newScheduledThreadPool(1)
             val shutdownManager = ShutdownManager(executorService)

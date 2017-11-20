@@ -16,7 +16,6 @@ import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
@@ -41,7 +40,7 @@ class BFTNonValidatingNotaryService(override val services: ServiceHubInternal,
                                     cluster: BFTSMaRt.Cluster) : NotaryService() {
     companion object {
         val id = constructId(validating = false, bft = true)
-        private val log = loggerFor<BFTNonValidatingNotaryService>()
+        private val log = contextLogger()
     }
 
     private val client: BFTSMaRt.Client

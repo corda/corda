@@ -7,8 +7,8 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.utilities.DatabaseTransactionManager
 import org.hibernate.FlushMode
@@ -20,7 +20,7 @@ import rx.Observable
 // TODO: Manage version evolution of the schemas via additional tooling.
 class HibernateObserver private constructor(private val config: HibernateConfiguration) {
     companion object {
-        private val log = loggerFor<HibernateObserver>()
+        private val log = contextLogger()
         @JvmStatic
         fun install(vaultUpdates: Observable<Vault.Update<ContractState>>, config: HibernateConfiguration): HibernateObserver {
             val observer = HibernateObserver(config)

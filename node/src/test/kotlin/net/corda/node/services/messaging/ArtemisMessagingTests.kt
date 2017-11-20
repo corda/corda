@@ -1,11 +1,9 @@
 package net.corda.node.services.messaging
 
-import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -58,16 +56,10 @@ class ArtemisMessagingTests {
     private lateinit var database: CordaPersistence
     private lateinit var userService: RPCUserService
     private lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
-
-    private var messagingClient: NodeMessagingClient? = null
+    private var messagingClient: P2PMessagingClient? = null
     private var messagingServer: ArtemisMessagingServer? = null
 
     private lateinit var networkMapCache: NetworkMapCacheImpl
-
-    private val rpcOps = object : RPCOps {
-        override val protocolVersion: Int get() = throw UnsupportedOperationException()
-    }
-
     @Before
     fun setUp() {
         val baseDirectory = temporaryFolder.root.toPath()
@@ -186,10 +178,10 @@ class ArtemisMessagingTests {
     }
 
     private fun startNodeMessagingClient() {
-        messagingClient!!.start(rpcOps, userService)
+        messagingClient!!.start()
     }
 
-    private fun createAndStartClientAndServer(receivedMessages: LinkedBlockingQueue<Message>): NodeMessagingClient {
+    private fun createAndStartClientAndServer(receivedMessages: LinkedBlockingQueue<Message>): P2PMessagingClient {
         createMessagingServer().start()
 
         val messagingClient = createMessagingClient()
@@ -198,20 +190,19 @@ class ArtemisMessagingTests {
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
-        thread { messagingClient.run(messagingServer!!.serverControl) }
+        thread { messagingClient.run() }
         return messagingClient
     }
 
-    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort)): NodeMessagingClient {
+    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort)): P2PMessagingClient {
         return database.transaction {
-            NodeMessagingClient(
+            P2PMessagingClient(
                     config,
                     MOCK_VERSION_INFO,
                     server,
                     identity.public,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
-                    database,
-                    MetricRegistry()).apply {
+                    database).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }

@@ -57,7 +57,7 @@ class NodeVaultService(
         hibernateConfig: HibernateConfiguration
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
-        val log = loggerFor<NodeVaultService>()
+        private val log = contextLogger()
     }
 
     private class InnerState {

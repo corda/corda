@@ -8,10 +8,11 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -19,9 +20,9 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingServer
-import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.config.VerifierType
+import net.corda.node.services.messaging.*
+import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
@@ -49,7 +50,7 @@ open class Node(configuration: NodeConfiguration,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
 ) : AbstractNode(configuration, createClock(configuration), versionInfo, cordappLoader) {
     companion object {
-        private val logger = loggerFor<Node>()
+        private val staticLog = contextLogger()
         var renderBasicInfoToConsole = true
 
         /** Used for useful info that we always want to show, even when not logging to the console */
@@ -79,8 +80,11 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    override val log: Logger get() = logger
-    override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
+    override val log: Logger get() = staticLog
+    override fun makeTransactionVerifierService(): TransactionVerifierService = when (configuration.verifierType) {
+        VerifierType.OutOfProcess -> verifierMessagingClient!!.verifierService
+        VerifierType.InMemory -> InMemoryTransactionVerifierService(numberOfWorkers = 4)
+    }
 
     private val sameVmNodeNumber = sameVmNodeCounter.incrementAndGet() // Under normal (non-test execution) it will always be "1"
 
@@ -134,15 +138,18 @@ open class Node(configuration: NodeConfiguration,
         val advertisedAddress = info.addresses.single()
 
         printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
-
-        return NodeMessagingClient(
+        rpcMessagingClient = RPCMessagingClient(configuration, serverAddress)
+        verifierMessagingClient = when (configuration.verifierType) {
+            VerifierType.OutOfProcess -> VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics)
+            VerifierType.InMemory -> null
+        }
+        return P2PMessagingClient(
                 configuration,
                 versionInfo,
                 serverAddress,
                 info.legalIdentities[0].owningKey,
                 serverThread,
                 database,
-                services.monitoringService.metrics,
                 advertisedAddress)
     }
 
@@ -197,9 +204,16 @@ open class Node(configuration: NodeConfiguration,
             runOnStop += this::stop
             start()
         }
-
-        // Start up the MQ client.
-        (network as NodeMessagingClient).start(rpcOps, userService)
+        // Start up the MQ clients.
+        rpcMessagingClient.run {
+            start(rpcOps, userService)
+            runOnStop += this::stop
+        }
+        verifierMessagingClient?.run {
+            start()
+            runOnStop += this::stop
+        }
+        (network as P2PMessagingClient).start()
     }
 
     /**
@@ -268,7 +282,7 @@ open class Node(configuration: NodeConfiguration,
                 _startupComplete.set(Unit)
             }
         },
-                { th -> logger.error("Unexpected exception", th) }
+                { th -> staticLog.error("Unexpected exception", th) } // XXX: Why not use log?
         )
         shutdownHook = addShutdownHook {
             stop()
@@ -289,9 +303,13 @@ open class Node(configuration: NodeConfiguration,
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader))
     }
 
+    private lateinit var rpcMessagingClient: RPCMessagingClient
+    private var verifierMessagingClient: VerifierMessagingClient? = null
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        (network as NodeMessagingClient).run(messageBroker!!.serverControl)
+        rpcMessagingClient.start2(messageBroker!!.serverControl)
+        verifierMessagingClient?.start2()
+        (network as P2PMessagingClient).run()
     }
 
     private var shutdown = false

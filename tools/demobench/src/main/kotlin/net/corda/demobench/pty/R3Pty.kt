@@ -5,7 +5,7 @@ import com.jediterm.terminal.ui.UIUtil
 import com.jediterm.terminal.ui.settings.SettingsProvider
 import com.pty4j.PtyProcess
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import java.awt.Dimension
 import java.io.IOException
 import java.nio.charset.StandardCharsets.UTF_8
@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 class R3Pty(val name: CordaX500Name, settings: SettingsProvider, dimension: Dimension, val onExit: (Int) -> Unit) : AutoCloseable {
     private companion object {
-        val log = loggerFor<R3Pty>()
+        private val log = contextLogger()
     }
 
     private val executor = Executors.newSingleThreadExecutor()
