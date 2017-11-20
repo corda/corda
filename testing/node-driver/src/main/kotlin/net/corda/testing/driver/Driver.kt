@@ -85,7 +85,8 @@ private val DRIVER_REQUIRED_PERMISSIONS = setOf(
         invokeRpc(CordaRPCOps::nodeInfoFromParty),
         invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
         invokeRpc("vaultQueryBy"),
-        invokeRpc("vaultTrackBy")
+        invokeRpc("vaultTrackBy"),
+        invokeRpc(CordaRPCOps::registeredFlows)
 )
 
 /**

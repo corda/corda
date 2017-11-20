@@ -33,15 +33,16 @@ service.
             rpcPort 10006
             webPort 10007
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL]]]
         }
         node {
             name "O=PartyB,L=New York,C=US"
             p2pPort 10008
             rpcPort 10009
             webPort 10010
+            sshdPort 10024
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": []]]
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
         }
     }
 
@@ -100,6 +101,9 @@ node via its built-in CRaSH shell.
 
 Go to the terminal window displaying the CRaSH shell of PartyA. Typing ``help`` will display a list of the available
 commands.
+
+.. note:: Local terminal shell is available only in a development mode. In production environment SSH server can be enabled.
+    More about SSH and how to connect can be found on :doc:`Shell` page.
 
 We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
 
