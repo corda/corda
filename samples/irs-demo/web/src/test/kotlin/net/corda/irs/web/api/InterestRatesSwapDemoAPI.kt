@@ -2,8 +2,8 @@ package net.corda.irs.web.api
 
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.UpdateBusinessDayFlow
 import org.springframework.beans.factory.annotation.Autowired
@@ -23,7 +23,7 @@ import java.time.ZoneId
 @RequestMapping("/api/irs")
 class InterestRatesSwapDemoAPI {
     companion object {
-        private val logger = loggerFor<InterestRatesSwapDemoAPI>()
+        private val logger = contextLogger()
     }
 
     @Autowired

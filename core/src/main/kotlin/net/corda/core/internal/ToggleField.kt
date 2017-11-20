@@ -1,6 +1,6 @@
 package net.corda.core.internal
 
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KProperty
@@ -47,8 +47,12 @@ class ThreadLeakException : RuntimeException("Leaked thread detected: ${Thread.c
 
 /** @param isAGlobalThreadBeingCreated whether a global thread (that should not inherit any value) is being created. */
 class InheritableThreadLocalToggleField<T>(name: String,
-                                           private val log: Logger = loggerFor<InheritableThreadLocalToggleField<*>>(),
+                                           private val log: Logger = staticLog,
                                            private val isAGlobalThreadBeingCreated: (Array<StackTraceElement>) -> Boolean) : ToggleField<T>(name) {
+    companion object {
+        private val staticLog = contextLogger()
+    }
+
     private inner class Holder(value: T) : AtomicReference<T?>(value) {
         fun valueOrDeclareLeak() = get() ?: throw ThreadLeakException()
         fun childValue(): Holder? {

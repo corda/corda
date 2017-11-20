@@ -11,10 +11,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
+import net.corda.core.utilities.*
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
@@ -96,7 +93,7 @@ class RPCClient<I : RPCOps>(
     ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration, serializationContext)
 
     companion object {
-        private val log = loggerFor<RPCClient<*>>()
+        private val log = contextLogger()
     }
 
     fun start(

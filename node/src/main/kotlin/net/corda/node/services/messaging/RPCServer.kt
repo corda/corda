@@ -24,10 +24,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
-import net.corda.core.utilities.Try
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
+import net.corda.core.utilities.*
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
@@ -42,6 +39,7 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
+import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import rx.Notification
 import rx.Observable
@@ -90,7 +88,7 @@ class RPCServer(
         private val rpcConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
 ) {
     private companion object {
-        val log = loggerFor<RPCServer>()
+        private val log = contextLogger()
     }
 
     private enum class State {
@@ -442,7 +440,7 @@ class ObservableContext(
         val observationSendExecutor: ExecutorService
 ) {
     private companion object {
-        val log = loggerFor<ObservableContext>()
+        private val log = contextLogger()
     }
 
     private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(this)
@@ -465,8 +463,7 @@ class ObservableContext(
 object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     private object RpcObservableContextKey
 
-    private val log = loggerFor<RpcServerObservableSerializer>()
-
+    private val log = LoggerFactory.getLogger(javaClass)
     fun createContext(observableContext: ObservableContext): SerializationContext {
         return RPC_SERVER_CONTEXT.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
     }

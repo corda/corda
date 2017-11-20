@@ -24,11 +24,18 @@ infix fun Int.exactAdd(b: Int): Int = Math.addExact(this, b)
 infix fun Long.exactAdd(b: Long): Long = Math.addExact(this, b)
 
 /**
- * Get the [Logger] for a class using the syntax
+ * Usually you won't need this method:
+ * * If you're in a companion object, use [contextLogger]
+ * * If you're in an object singleton, use [LoggerFactory.getLogger] directly on javaClass
  *
- * `val logger = loggerFor<MyClass>()`
+ * Otherwise, this gets the [Logger] for a class using the syntax
+ *
+ * `private val log = loggerFor<MyClass>()`
  */
 inline fun <reified T : Any> loggerFor(): Logger = LoggerFactory.getLogger(T::class.java)
+
+/** When called from a companion object, returns the logger for the enclosing class. */
+fun Any.contextLogger(): Logger = LoggerFactory.getLogger(javaClass.enclosingClass)
 
 /** Log a TRACE level message produced by evaluating the given lamdba, but only if TRACE logging is enabled. */
 inline fun Logger.trace(msg: () -> String) {

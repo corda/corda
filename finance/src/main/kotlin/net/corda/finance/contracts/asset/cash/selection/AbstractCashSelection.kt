@@ -4,15 +4,12 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
 import net.corda.finance.contracts.asset.Cash
 import java.sql.*
@@ -44,7 +41,7 @@ abstract class AbstractCashSelection {
             }.invoke()
         }
 
-        val log = loggerFor<AbstractCashSelection>()
+        private val log = contextLogger()
     }
 
     // coin selection retry loop counter, sleep (msecs) and lock for selecting states

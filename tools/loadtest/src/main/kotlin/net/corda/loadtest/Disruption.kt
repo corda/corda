@@ -1,12 +1,13 @@
 package net.corda.loadtest
 
 import net.corda.client.mock.*
+import net.corda.core.utilities.loggerFor
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 
-private val log = LoggerFactory.getLogger(Disruption::class.java)
+private val log = loggerFor<Disruption>()
 
 /**
  * A [Disruption] puts strain on the passed in node in some way. Each disruption runs in its own thread in a tight loop
