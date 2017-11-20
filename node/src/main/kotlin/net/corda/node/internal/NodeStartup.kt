@@ -17,6 +17,8 @@ import net.corda.nodeapi.internal.addShutdownHook
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
+import org.springframework.boot.ApplicationArguments
+import org.springframework.boot.ApplicationRunner
 import sun.misc.VMSupport
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
@@ -24,20 +26,25 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import javax.inject.Inject
+import javax.inject.Named
 import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
-open class NodeStartup(val args: Array<String>) {
+@Named
+open class NodeStartup @Inject constructor(private val exampleService: ExampleService) : ApplicationRunner {
+
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         val LOGS_DIRECTORY_NAME = "logs"
         val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
     }
 
-    open fun run() {
+    override fun run(args: ApplicationArguments) {
+
         val startTime = System.currentTimeMillis()
         assertCanNormalizeEmptyPath()
-        val (argsParser, cmdlineOptions) = parseArguments()
+        val (argsParser, cmdlineOptions) = parseArguments(args)
 
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
@@ -80,7 +87,7 @@ open class NodeStartup(val args: Array<String>) {
         banJavaSerialisation(conf)
         preNetworkRegistration(conf)
         maybeRegisterWithNetworkAndExit(cmdlineOptions, conf)
-        logStartupInfo(versionInfo, cmdlineOptions, conf)
+        logStartupInfo(versionInfo, cmdlineOptions, conf, args)
 
         try {
             cmdlineOptions.baseDirectory.createDirectories()
@@ -100,10 +107,10 @@ open class NodeStartup(val args: Array<String>) {
 
     open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
 
-    open protected fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
+    open protected fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo, exampleService: ExampleService): Node = Node(conf, versionInfo, exampleService)
 
     open protected fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
-        val node = createNode(conf, versionInfo)
+        val node = createNode(conf, versionInfo, exampleService)
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
             node.generateNodeInfo()
@@ -132,7 +139,7 @@ open class NodeStartup(val args: Array<String>) {
         startedNode.internals.run()
     }
 
-    open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
+    open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration, args: ApplicationArguments) {
         logger.info("Vendor: ${versionInfo.vendor}")
         logger.info("Release: ${versionInfo.releaseVersion}")
         logger.info("Platform Version: ${versionInfo.platformVersion}")
@@ -141,7 +148,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
         logger.info("Main class: ${NodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
-        logger.info("Application Args: ${args.joinToString(" ")}")
+        logger.info("Application Args: ${args.sourceArgs.joinToString(" ")}")
         logger.info("bootclasspath: ${info.bootClassPath}")
         logger.info("classpath: ${info.classPath}")
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
@@ -217,10 +224,10 @@ open class NodeStartup(val args: Array<String>) {
         pidFileRw.write(ourProcessID.toByteArray())
     }
 
-    private fun parseArguments(): Pair<ArgsParser, CmdLineOptions> {
+    private fun parseArguments(args: ApplicationArguments): Pair<ArgsParser, CmdLineOptions> {
         val argsParser = ArgsParser()
         val cmdlineOptions = try {
-            argsParser.parse(*args)
+            argsParser.parse(*args.sourceArgs)
         } catch (ex: OptionException) {
             println("Invalid command line arguments: ${ex.message}")
             argsParser.printHelp(System.out)

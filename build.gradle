@@ -28,7 +28,7 @@ buildscript {
     ext.jolokia_version = '2.0.0-M3'
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
-    ext.log4j_version = '2.9.1'
+    ext.log4j_version = '2.7'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.okhttp_version = '3.5.0'
@@ -48,6 +48,11 @@ buildscript {
     ext.dependency_checker_version = '3.0.1'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
+
+    ext.spring_boot_version = '1.5.8.RELEASE'
+    ext.spring_version = '5.0.0.RELEASE'
+    ext.jsr_250_version = '1.0'
+    ext.javax_inject_version = '1'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'

@@ -46,6 +46,7 @@ import kotlin.system.exitProcess
  */
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
+                private val exampleService: ExampleService? = null,
                 val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
 ) : AbstractNode(configuration, createClock(configuration), versionInfo, cordappLoader) {
@@ -256,6 +257,8 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun start(): StartedNode<Node> {
+
+        exampleService?.doStuff()
         if (initialiseSerialization) {
             initialiseSerialization()
         }
