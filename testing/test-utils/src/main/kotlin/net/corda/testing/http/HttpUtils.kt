@@ -1,11 +1,11 @@
 package net.corda.testing.http
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import net.corda.core.utilities.loggerFor
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import org.slf4j.LoggerFactory
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
  * A small set of utilities for making HttpCalls, aimed at demos and tests.
  */
 object HttpUtils {
-    private val logger = loggerFor<HttpUtils>()
+    private val logger = LoggerFactory.getLogger(javaClass)
     private val client by lazy {
         OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)

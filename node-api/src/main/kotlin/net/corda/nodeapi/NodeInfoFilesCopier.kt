@@ -5,7 +5,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import rx.Observable
 import rx.Scheduler
 import rx.Subscription
@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit
 class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseable {
 
     companion object {
-        private val log = loggerFor<NodeInfoFilesCopier>()
+        private val log = contextLogger()
         const val NODE_INFO_FILE_NAME_PREFIX = "nodeInfo-"
     }
 

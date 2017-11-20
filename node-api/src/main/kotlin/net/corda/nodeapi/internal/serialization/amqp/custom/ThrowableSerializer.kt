@@ -3,14 +3,14 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 import net.corda.core.CordaRuntimeException
 import net.corda.core.CordaThrowable
 import net.corda.core.serialization.SerializationFactory
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.serialization.amqp.*
 import java.io.NotSerializableException
 
 class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(Throwable::class.java, ThrowableProxy::class.java, factory) {
 
     companion object {
-        private val logger = loggerFor<ThrowableSerializer>()
+        private val logger = contextLogger()
     }
 
     override val revealSubclassesInSchema: Boolean = true

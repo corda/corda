@@ -7,13 +7,12 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
 object ServiceIdentityGenerator {
-    private val log = loggerFor<ServiceIdentityGenerator>()
-
+    private val log = LoggerFactory.getLogger(javaClass)
     /**
      * Generates signing key pairs and a common distributed service identity for a set of nodes.
      * The key pairs and the group identity get serialized to disk in the corresponding node directories.

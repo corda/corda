@@ -8,7 +8,7 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -16,7 +16,6 @@ import java.security.PublicKey
 import java.security.cert.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
-import javax.security.auth.x500.X500Principal
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
@@ -33,7 +32,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
                 trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
 
     companion object {
-        private val log = loggerFor<InMemoryIdentityService>()
+        private val log = contextLogger()
     }
 
     /**

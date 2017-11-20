@@ -10,8 +10,8 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.*
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
@@ -68,7 +68,7 @@ class P2PMessagingClient(config: NodeConfiguration,
                          advertisedAddress: NetworkHostAndPort = serverAddress
 ) : SingletonSerializeAsToken(), MessagingService {
     companion object {
-        private val log = loggerFor<P2PMessagingClient>()
+        private val log = contextLogger()
         // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
         // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
         // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid

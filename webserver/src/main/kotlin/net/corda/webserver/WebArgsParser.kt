@@ -75,7 +75,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()
-        val log = loggerFor<CmdLineOptions>()
+        val log = loggerFor<CmdLineOptions>() // I guess this is lazy so it happens after logging init.
         log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
         return finalConfig
     }

@@ -3,8 +3,8 @@ package net.corda.core.internal.concurrent
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.match
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
@@ -118,7 +118,7 @@ interface OpenFuture<V> : ValueOrException<V>, CordaFuture<V>
 @VisibleForTesting
 internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = CompletableFuture()) : Future<V> by impl, OpenFuture<V> {
     companion object {
-        private val defaultLog = loggerFor<CordaFutureImpl<*>>()
+        private val defaultLog = contextLogger()
         internal val listenerFailedMessage = "Future listener failed:"
     }
 

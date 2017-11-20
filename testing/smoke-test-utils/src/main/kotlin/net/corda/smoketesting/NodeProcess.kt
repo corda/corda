@@ -6,7 +6,7 @@ import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -22,7 +22,7 @@ class NodeProcess(
         private val client: CordaRPCClient
 ) : AutoCloseable {
     private companion object {
-        val log = loggerFor<NodeProcess>()
+        private val log = contextLogger()
     }
 
     fun connect(): CordaRPCConnection {

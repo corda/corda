@@ -2,15 +2,15 @@ package net.corda.loadtest
 
 import com.google.common.util.concurrent.RateLimiter
 import net.corda.client.mock.Generator
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase58String
 import net.corda.testing.driver.PortAllocation
-import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
-private val log = LoggerFactory.getLogger(LoadTest::class.java)
+private val log = loggerFor<LoadTest<*, *>>()
 
 /**
  * @param T The type of generated object in the load test. This should describe the basic unit of execution, for example

@@ -10,7 +10,7 @@ import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.serialization.amqp.hasAnnotationInHierarchy
 import net.corda.nodeapi.internal.serialization.kryo.ThrowableSerializer
 import java.io.PrintWriter
@@ -187,7 +187,7 @@ class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWh
 @Suppress("unused")
 class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true) : MutableClassWhitelist {
     companion object {
-        val log = loggerFor<LoggingWhitelist>()
+        private val log = contextLogger()
         val globallySeen: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
         val journalWriter: PrintWriter? = openOptionalDynamicWhitelistJournal()
 

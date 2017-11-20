@@ -9,11 +9,8 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import java.io.Serializable
@@ -62,8 +59,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     private val mutex = ThreadBox(InnerState())
 
     companion object {
-        private val log = loggerFor<PersistentUniquenessProvider>()
-
+        private val log = contextLogger()
         fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistentNotaryCommit, PersistentStateRef> =
                 AppendOnlyPersistentMap(
                         toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
