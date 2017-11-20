@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import com.codahale.metrics.Gauge
+import com.codahale.metrics.MetricRegistry
 import io.atomix.catalyst.buffer.BufferInput
 import io.atomix.catalyst.buffer.BufferOutput
 import io.atomix.catalyst.serializer.Serializer
@@ -13,6 +14,7 @@ import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.client.RecoveryStrategies
 import io.atomix.copycat.server.CopycatServer
+import io.atomix.copycat.server.cluster.Member
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.contracts.StateRef
@@ -25,10 +27,11 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -44,20 +47,21 @@ import javax.persistence.*
  * to the cluster leader to be actioned.
  */
 @ThreadSafe
-class RaftUniquenessProvider(private val services: ServiceHubInternal, private val raftConfig: RaftConfig) : UniquenessProvider, SingletonSerializeAsToken() {
+class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfiguration, private val db: CordaPersistence, private val metrics: MetricRegistry, private val raftConfig: RaftConfig) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
 
-        fun createMap(): AppendOnlyPersistentMap<String, Any, RaftState, String> =
+        fun createMap(): AppendOnlyPersistentMap<String, Pair<Long, Any>, RaftState, String> =
                 AppendOnlyPersistentMap(
                         toPersistentEntityKey = { it },
                         fromPersistentEntity = {
-                            Pair(it.key, it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
+                            Pair(it.key, Pair(it.index, it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)))
                         },
-                        toPersistentEntity = { k: String, v: Any ->
+                        toPersistentEntity = { k: String, v: Pair<Long, Any> ->
                             RaftState().apply {
                                 key = k
-                                value = v.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                                value = v.second.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                                index = v.first
                             }
                         },
                         persistentEntityClass = RaftState::class.java
@@ -65,25 +69,22 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal, private v
     }
 
     @Entity
-    @Table(name = "notary_committed_states")
+    @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_states")
     class RaftState(
             @Id
-            @Column
+            @Column(name = "id")
             var key: String = "",
 
             @Lob
             @Column
-            var value: ByteArray = ByteArray(0)
+            var value: ByteArray = ByteArray(0),
+
+            @Column
+            var index: Long = 0
     )
 
     /** Directory storing the Raft log and state machine snapshots */
-    private val storagePath: Path = services.configuration.baseDirectory
-    /** Address of the Copycat node run by this Corda node */
-    /** The database to store the state machine state in */
-    private val db: CordaPersistence = services.database
-    /** SSL configuration */
-    private val transportConfiguration: SSLConfiguration = services.configuration
-
+    private val storagePath: Path = transportConfiguration.baseDirectory
     private lateinit var _clientFuture: CompletableFuture<CopycatClient>
     private lateinit var server: CopycatServer
 
@@ -177,16 +178,22 @@ class RaftUniquenessProvider(private val services: ServiceHubInternal, private v
     }
 
     private fun registerMonitoring() {
-        services.monitoringService.metrics.register("RaftCluster.ThisServerStatus", Gauge<String> {
+        metrics.register("RaftCluster.ThisServerStatus", Gauge<String> {
             server.state().name
         })
-
-        services.monitoringService.metrics.register("RaftCluster.MembersCount", Gauge<Int> {
+        metrics.register("RaftCluster.MembersCount", Gauge<Int> {
             server.cluster().members().size
         })
-
-        services.monitoringService.metrics.register("RaftCluster.Members", Gauge<List<String>> {
+        metrics.register("RaftCluster.Members", Gauge<List<String>> {
             server.cluster().members().map { it.address().toString() }
+        })
+
+        metrics.register("RaftCluster.AvailableMembers", Gauge<List<String>> {
+            server.cluster().members().filter { it.status() == Member.Status.AVAILABLE }.map { it.address().toString() }
+        })
+
+        metrics.register("RaftCluster.AvailableMembersCount", Gauge<Int> {
+            server.cluster().members().filter { it.status() == Member.Status.AVAILABLE }.size
         })
     }
 

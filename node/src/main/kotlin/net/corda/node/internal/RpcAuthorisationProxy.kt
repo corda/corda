@@ -8,19 +8,27 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.NodeState
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
-import net.corda.node.services.messaging.RpcContext
-import net.corda.node.services.messaging.requireEitherPermission
+import net.corda.core.node.services.vault.*
+import net.corda.node.services.messaging.RpcAuthContext
+import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
 
 // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
-class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcContext, private val permissionsAllowing: (methodName: String, args: List<Any?>) -> Set<String>) : CordaRPCOps {
+class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val context: () -> RpcAuthContext, private val permissionsAllowing: (methodName: String, args: List<Any?>) -> Set<String>) : CordaRPCOps {
+
+    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash = guard("uploadAttachmentWithMetadata") {
+        implementation.uploadAttachmentWithMetadata(jar, uploader, filename)
+    }
+
+    override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> = guard("queryAttachments") {
+        implementation.queryAttachments(query, sorting)
+    }
 
     override fun stateMachinesSnapshot() = guard("stateMachinesSnapshot") {
         implementation.stateMachinesSnapshot()
@@ -59,6 +67,8 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
     }
 
     override fun nodeInfo(): NodeInfo = guard("nodeInfo", implementation::nodeInfo)
+
+    override fun nodeStateObservable(): Observable<NodeState> = guard("nodeStateObservable", implementation::nodeStateObservable)
 
     override fun notaryIdentities(): List<Party> = guard("notaryIdentities", implementation::notaryIdentities)
 
@@ -152,7 +162,7 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
     private inline fun <RESULT> guard(methodName: String, args: List<Any?>, action: () -> RESULT): RESULT {
 
-        context.invoke().requireEitherPermission(permissionsAllowing.invoke(methodName, args))
-        return action.invoke()
+        context().requireEitherPermission(permissionsAllowing.invoke(methodName, args))
+        return action()
     }
 }

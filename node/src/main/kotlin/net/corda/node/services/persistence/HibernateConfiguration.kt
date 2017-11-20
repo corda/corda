@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.internal.castIfPossible
 import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.api.SchemaService
@@ -18,8 +19,10 @@ import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
+import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
+import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -35,6 +38,11 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?: "")
     val sessionFactoryForRegisteredSchemas = schemaService.schemaOptions.keys.let {
         logger.info("Init HibernateConfiguration for schemas: $it")
+        // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
+        // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
+        // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
+        // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
+        JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(createIdentityService))
         sessionFactoryForSchemas(it)
     }
 
@@ -77,6 +85,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
+            applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
             build()
         }
 
@@ -131,6 +140,17 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                     return "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
                 }
             }
+        }
+    }
+
+    // A tweaked version of `org.hibernate.type.WrapperBinaryType` that deals with ByteArray (java primitive byte[] type).
+    private object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
+        override fun getRegistrationKeys(): Array<String> {
+            return arrayOf(name, "ByteArray", ByteArray::class.java.name)
+        }
+
+        override fun getName(): String {
+            return "corda-wrapper-binary"
         }
     }
 }

@@ -1,5 +1,6 @@
 package net.corda.node.services.messaging
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
@@ -10,7 +11,9 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -19,14 +22,17 @@ import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.RPCUserService
-import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.statemachine.StateMachineManagerImpl
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
 import net.corda.node.utilities.*
-import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
@@ -71,15 +77,15 @@ import javax.persistence.Lob
  * If not provided, will default to [serverAddress].
  */
 @ThreadSafe
-class NodeMessagingClient(override val config: NodeConfiguration,
+class NodeMessagingClient(private val config: NodeConfiguration,
                           private val versionInfo: VersionInfo,
                           private val serverAddress: NetworkHostAndPort,
                           private val myIdentity: PublicKey,
                           private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
-                          val database: CordaPersistence,
-                          val monitoringService: MonitoringService,
+                          private val database: CordaPersistence,
+                          private val metrics: MetricRegistry,
                           advertisedAddress: NetworkHostAndPort = serverAddress
-) : ArtemisMessagingComponent(), MessagingService {
+) : SingletonSerializeAsToken(), MessagingService {
     companion object {
         private val log = loggerFor<NodeMessagingClient>()
 
@@ -211,12 +217,14 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
-            val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
-            // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
-            // would be the default and the two lines below can be deleted.
-            locator.connectionTTL = -1
-            locator.clientFailureCheckPeriod = -1
-            locator.minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
+                // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
+                // would be the default and the two lines below can be deleted.
+                connectionTTL = -1
+                clientFailureCheckPeriod = -1
+                minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+                isUseGlobalPools = nodeSerializationEnv != null
+            }
             sessionFactory = locator.createSessionFactory()
 
             // Login using the node username. The broker will authentiate us as its node (as opposed to another peer)
@@ -557,7 +565,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     }
 
     private fun createOutOfProcessVerifierService(): TransactionVerifierService {
-        return object : OutOfProcessTransactionVerifierService(monitoringService) {
+        return object : OutOfProcessTransactionVerifierService(metrics) {
             override fun sendRequest(nonce: Long, transaction: LedgerTransaction) {
                 messagingExecutor.fetchFrom {
                     state.locked {

@@ -4,6 +4,7 @@ import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
 import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import org.slf4j.event.Level
 import java.io.PrintStream
@@ -35,6 +36,7 @@ class ArgsParser {
     private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
             "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
+    private val bootstrapRaftClusterArg = optionParser.accepts("bootstrap-raft-cluster", "Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster.")
     private val helpArg = optionParser.accepts("help").forHelp()
 
     fun parse(vararg args: String): CmdLineOptions {
@@ -52,8 +54,9 @@ class ArgsParser {
         val noLocalShell = optionSet.has(noLocalShellArg)
         val sshdServer = optionSet.has(sshdServerArg)
         val justGenerateNodeInfo = optionSet.has(justGenerateNodeInfoArg)
+        val bootstrapRaftCluster = optionSet.has(bootstrapRaftClusterArg)
         return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isRegistration, isVersion,
-                noLocalShell, sshdServer, justGenerateNodeInfo)
+                noLocalShell, sshdServer, justGenerateNodeInfo, bootstrapRaftCluster)
     }
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
@@ -68,7 +71,13 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val isVersion: Boolean,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
-                          val justGenerateNodeInfo: Boolean) {
-    fun loadConfig() = ConfigHelper
-            .loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
+                          val justGenerateNodeInfo: Boolean,
+                          val bootstrapRaftCluster: Boolean) {
+    fun loadConfig(): NodeConfiguration {
+        val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
+        if (isRegistration) {
+            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone Url must be provided in registration mode." }
+        }
+        return config
+    }
 }

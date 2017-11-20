@@ -10,9 +10,48 @@ Logging
 
 By default the node log files are stored to the ``logs`` subdirectory of the working directory and are rotated from time
 to time. You can have logging printed to the console as well by passing the ``--log-to-console`` command line flag.
-The default logging level is ``INFO`` which can be adjusted by the ``--logging-level`` command line argument. For more
-custom logging, the logger settings can be completely overridden with a `Log4j 2 <https://logging.apache.org/log4j/2.x>`_
-configuration file assigned to the ``log4j.configurationFile`` system property.
+The default logging level is ``INFO`` which can be adjusted by the ``--logging-level`` command line argument. This configuration
+option will affect all modules.
+
+It may be the case that you require to amend the log level of a particular subset of modules (e.g. if you'd like to take a
+closer look at hibernate activity). So, for more bespoke logging configuration, the logger settings can be completely overridden
+with a `Log4j 2 <https://logging.apache.org/log4j/2.x>`_ configuration file assigned to the ``log4j.configurationFile`` system property.
+
+Example
++++++++
+
+Create a file ``sql.xml`` in the current working directory. Add the following text :
+
+.. code-block:: xml
+
+    <?xml version="1.0" encoding="UTF-8"?>
+        <Configuration status="WARN">
+            <Appenders>
+                <Console name="Console" target="SYSTEM_OUT">
+                    <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+                </Console>
+            </Appenders>
+            <Loggers>
+                <Logger name="org.hibernate" level="debug" additivity="false">
+                    <AppenderRef ref="Console"/>
+                </Logger>
+                <Root level="error">
+                    <AppenderRef ref="Console"/>
+                </Root>
+            </Loggers>
+        </Configuration>
+
+Note the addition of a logger named ``org.hibernate`` that has set this particular logger level to ``debug``.
+
+Now start the node as usual but with the additional parameter ``log4j.configurationFile`` set to the filename as above, e.g.
+
+``java <Your existing startup options here> -Dlog4j.configurationFile=sql.xml -jar corda.jar``
+
+To determine the name of the logger, for Corda objects, use the fully qualified name (e.g. to look at node output
+in more detail, use ``net.corda.node.internal.Node`` although be aware that as we have marked this class ``internal`` we
+reserve the right to move and rename it as it's not part of the public API as yet). For other libraries, refer to their
+logging name construction. If you can't find what you need to refer to, use the ``--logging-level`` option as above and
+then determine the logging module name from the console output.
 
 Database access
 ---------------

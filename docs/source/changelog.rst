@@ -8,7 +8,13 @@ UNRELEASED
 ----------
 * ``ConfigUtilities`` now read system properties for a node. This allow to specify data source properties at runtime.
 
+* ``AttachmentStorage`` now allows providing metadata on attachments upload - username and filename, currently as plain
+  strings. Those can be then used for querying, utilizing ``queryAttachments`` method of the same interface.
+
 * ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
+
+* ``wellKnownPartyFromAnonymous()`` now always resolve the key to a ``Party``, then the party to the well known party.
+  Previously if it was passed a ``Party`` it would use its name as-is without verifying the key matched that name.
 
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
@@ -76,6 +82,13 @@ UNRELEASED
 
 * Moved ``NodeInfoSchema`` to internal package as the node info's database schema is not part of the public API. This is
   needed to allow new ``node_info_hash`` column to be added for the network map redesign work.
+
+* Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey``s.
+
+* Replaced node configuration parameter ``certificateSigningService`` with ``compatibilityZoneURL``, which is Corda
+  compatibility zone network management service's address.
+
+* ``waitForAllNodesToFinish()`` method in ``DriverDSLExposedInterface`` has instead become a parameter on driver creation.
 
 .. _changelog_v1:
 

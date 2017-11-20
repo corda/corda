@@ -5,8 +5,8 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.rpcDriver
-import net.corda.testing.startRpcClient
+import net.corda.testing.internal.rpcDriver
+import net.corda.testing.internal.startRpcClient
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 

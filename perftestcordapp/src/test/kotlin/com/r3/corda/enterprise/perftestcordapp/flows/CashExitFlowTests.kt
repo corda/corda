@@ -9,10 +9,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.BOC
 import net.corda.testing.chooseIdentity
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -35,7 +35,7 @@ class CashExitFlowTests {
         bankOfCorda = bankOfCordaNode.info.chooseIdentity()
 
         mockNet.runNetwork()
-        notary = bankOfCordaNode.services.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref, notary)).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()

@@ -1,11 +1,12 @@
 package com.r3.corda.enterprise.perftestcordapp.contracts.asset
 
-import net.corda.core.utilities.getOrThrow
 import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.flows.CashException
 import com.r3.corda.enterprise.perftestcordapp.flows.CashPaymentFlow
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test

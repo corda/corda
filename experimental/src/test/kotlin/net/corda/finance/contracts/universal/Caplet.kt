@@ -3,13 +3,17 @@ package net.corda.finance.contracts.universal
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Tenor
 import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.SerializationEnvironmentRule
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 
 class Caplet {
-
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
     val tradeDate: LocalDate = LocalDate.of(2016, 9, 1)

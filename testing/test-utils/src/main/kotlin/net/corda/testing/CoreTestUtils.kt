@@ -12,7 +12,6 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -87,9 +86,6 @@ val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
 val DUMMY_CASH_ISSUER_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_CASH_ISSUER.party as Party)
-
-val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)
-val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptySet(), DEV_CA.certificate.cert)
 
 val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
@@ -178,8 +174,6 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  * Extract a single identity from the node info. Throws an error if the node has multiple identities.
  */
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
-/** Returns the identity of the first notary found on the network */
-fun ServiceHub.getDefaultNotary(): Party = networkMapCache.notaryIdentities.first()
 
 /**
  * A method on a mock was called, but no behaviour was previously specified for that method.

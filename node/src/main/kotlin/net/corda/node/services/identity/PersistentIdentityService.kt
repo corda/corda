@@ -14,6 +14,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.node.utilities.X509Utilities
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
 import java.security.InvalidAlgorithmParameterException
@@ -77,7 +78,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             var publicKeyHash: String,
 
             @Lob
-            @Column
+            @Column(name = "identity_value")
             var identity: ByteArray = ByteArray(0)
     )
 
@@ -126,6 +127,20 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             throw e
         }
 
+        // Ensure we record the first identity of the same name, first
+        val identityPrincipal = identity.name.x500Principal
+        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
+            val principal = (it as? X509Certificate)?.subjectX500Principal
+            principal == identityPrincipal
+        }
+        if (firstCertWithThisName != identity.certificate) {
+            val certificates = identity.certPath.certificates
+            val idx = certificates.lastIndexOf(firstCertWithThisName)
+            val certFactory = CertificateFactory.getInstance("X509")
+            val firstPath = certFactory.generateCertPath(certificates.slice(idx..certificates.size - 1))
+            verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
+        }
+
         log.debug { "Registering identity $identity" }
         val key = mapToKey(identity)
         keyToParties.addWithDuplicatesAllowed(key, identity)
@@ -149,15 +164,13 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // Expand the anonymous party to a full party (i.e. has a name) if possible
-        val candidate = party as? Party ?: partyFromKey(party.owningKey)
+        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
+        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
+        // into a party, and from there figure out the well known party.
+        val candidate = partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
-        // Look up the well known identity for that name
         return if (candidate != null) {
-            // If we have a well known identity by that name, use it in preference to the candidate. Otherwise default
-            // back to the candidate.
-            val res = wellKnownPartyFromX500Name(candidate.name) ?: candidate
-            res
+            wellKnownPartyFromX500Name(candidate.name)
         } else {
             null
         }

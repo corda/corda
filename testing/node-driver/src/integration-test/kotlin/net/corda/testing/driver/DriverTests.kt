@@ -7,16 +7,17 @@ import net.corda.core.internal.readLines
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.IntegrationTest
 import net.corda.testing.ProjectStructure.projectRootDir
+import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 class DriverTests : IntegrationTest() {
-
     companion object {
         private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
@@ -62,5 +63,20 @@ class DriverTests : IntegrationTest() {
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
         }
+    }
+
+    @Test
+    fun `started node, which is not waited for in the driver, is shutdown when the driver exits`() {
+        // First check that the process-id file is created by the node on startup, so that we can be sure our check that
+        // it's deleted on shutdown isn't a false-positive.
+        driver {
+            val baseDirectory = defaultNotaryNode.getOrThrow().configuration.baseDirectory
+            assertThat(baseDirectory / "process-id").exists()
+        }
+
+        val baseDirectory = driver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
+            (this as DriverDSL).baseDirectory(DUMMY_NOTARY.name)
+        }
+        assertThat(baseDirectory / "process-id").doesNotExist()
     }
 }

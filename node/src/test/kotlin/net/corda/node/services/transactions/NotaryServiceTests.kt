@@ -17,10 +17,10 @@ import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.dummyCommand
-import net.corda.testing.getDefaultNotary
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.singleIdentity
+import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -41,9 +41,8 @@ class NotaryServiceTests {
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
         aliceServices = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME)).services
-        mockNet.runNetwork() // Clear network map registration messages
         notaryServices = mockNet.defaultNotaryNode.services //TODO get rid of that
-        notary = aliceServices.getDefaultNotary()
+        notary = mockNet.defaultNotaryIdentity
         alice = aliceServices.myInfo.singleIdentity()
     }
 

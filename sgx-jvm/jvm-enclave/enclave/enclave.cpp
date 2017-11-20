@@ -53,7 +53,7 @@ void check_transaction(void *reqbuf, size_t buflen, char *error) {
     JNI_CreateJavaVM(&vm, &env_void, &vmArgs);
     JNIEnv* env = static_cast<JNIEnv*>(env_void);
 
-    env->FindClass("com/r3/enclaves/txverify/KryoVerifierSerializationScheme");
+    env->FindClass("com/r3/enclaves/txverify/EnclaveletSerializationScheme");
     if (!env->ExceptionCheck()) {
         jclass c = env->FindClass("com/r3/enclaves/txverify/Enclavelet");
         if (!env->ExceptionCheck()) {

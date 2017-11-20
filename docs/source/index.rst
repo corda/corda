@@ -14,7 +14,7 @@ Want to see Corda running? Download our demonstration application `DemoBench <ht
 follow our :doc:`quickstart guide </quickstart-index>`.
 
 If you want to start coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read
-our :doc:`Hello, World! tutorial </hello-world-index>`. For the background behind Corda, read the non-technical
+our :doc:`Hello, World! tutorial </hello-world-introduction>`. For the background behind Corda, read the non-technical
 `introductory white paper`_ or for more detail, the `technical white paper`_.
 
 If you have questions or comments, then get in touch on `Slack <https://slack.corda.net/>`_ or write a question on

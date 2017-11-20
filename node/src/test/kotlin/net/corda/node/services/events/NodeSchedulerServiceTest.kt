@@ -40,10 +40,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Clock
@@ -60,7 +57,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     private val realClock: Clock = Clock.systemUTC()
     private val stoppedClock: Clock = Clock.fixed(realClock.instant(), realClock.zone)
     private val testClock = TestClock(stoppedClock)
@@ -106,7 +103,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 doReturn(configuration).whenever(it).configuration
                 doReturn(MonitoringService(MetricRegistry())).whenever(it).monitoringService
                 doReturn(validatedTransactions).whenever(it).validatedTransactions
-                doReturn(NetworkMapCacheImpl(MockNetworkMapCache(database, configuration), identityService)).whenever(it).networkMapCache
+                doReturn(NetworkMapCacheImpl(MockNetworkMapCache(database), identityService)).whenever(it).networkMapCache
                 doCallRealMethod().whenever(it).signInitialTransaction(any(), any<PublicKey>())
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
@@ -131,6 +128,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         }
     }
 
+    private var allowedUnsuspendedFiberCount = 0
     @After
     fun tearDown() {
         // We need to make sure the StateMachineManager is done before shutting down executors.
@@ -140,6 +138,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
         database.close()
+        mockSMM.stop(allowedUnsuspendedFiberCount)
     }
 
     // Ignore IntelliJ when it says these properties can be private, if they are we cannot serialise them
@@ -223,6 +222,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Test
     fun `test activity due in the future and schedule another later`() {
+        allowedUnsuspendedFiberCount = 1
         val time = stoppedClock.instant() + 1.days
         scheduleTX(time)
 

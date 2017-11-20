@@ -22,7 +22,7 @@ class DBTransactionStorage : WritableTransactionStorage, SingletonSerializeAsTok
             var txId: String = "",
 
             @Lob
-            @Column
+            @Column(name = "transaction_value")
             var transaction: ByteArray = ByteArray(0)
     )
 

@@ -8,11 +8,13 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.messaging.NodeState
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import rx.Observable
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
@@ -29,6 +31,16 @@ interface StateLoader {
      */
     @Throws(TransactionResolutionException::class)
     fun loadState(stateRef: StateRef): TransactionState<*>
+
+    /**
+     * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
+     *
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     */
+    // TODO: future implementation to use a Vault state ref -> contract state BLOB table and perform single query bulk load
+    // as the existing transaction store will become encrypted at some point
+    @Throws(TransactionResolutionException::class)
+    fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
 }
 
 /**
@@ -137,6 +149,9 @@ interface ServiceHub : ServicesForResolution {
 
     /** The [NodeInfo] object corresponding to our own entry in the network map. */
     val myInfo: NodeInfo
+
+    /** The [Observable] object used to communicate to RPC clients the state of the node. */
+    val myNodeStateObservable: Observable<NodeState>
 
     /**
      * Return the singleton instance of the given Corda service type. This is a class that is annotated with

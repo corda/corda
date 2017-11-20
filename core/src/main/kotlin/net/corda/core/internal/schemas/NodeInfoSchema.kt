@@ -27,8 +27,12 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "node_info_id")
             var id: Int,
 
+            @Column(name="node_info_hash", length = 64)
+            val hash: String,
+
             @Column(name = "addresses")
             @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
+            @JoinColumn(name = "node_info_id")
             val addresses: List<NodeInfoSchemaV1.DBHostAndPort>,
 
             @Column(name = "legal_identities_certs")
@@ -66,6 +70,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     ) : Serializable
 
     @Entity
+    @Table(name = "node_info_hosts")
     data class DBHostAndPort(
             @EmbeddedId
             private val pk: PKHostAndPort
@@ -91,7 +96,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_name", nullable = false)
             val name: String,
 
-            @Lob
             @Column(name = "owning_key_hash", length = MAX_HASH_HEX_SIZE)
             val owningKeyHash: String,
 

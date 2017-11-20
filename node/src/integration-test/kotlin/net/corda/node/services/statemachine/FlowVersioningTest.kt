@@ -11,6 +11,7 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity
 import net.corda.testing.internal.NodeBasedTest
+import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 

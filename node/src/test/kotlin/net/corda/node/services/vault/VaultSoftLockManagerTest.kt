@@ -25,10 +25,12 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.testing.chooseIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.rigorousMock
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Test
 import java.util.*
@@ -81,8 +83,8 @@ class VaultSoftLockManagerTest {
     }
     private val mockNet = MockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
         object : MockNetwork.MockNode(args) {
-            override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader): VaultServiceInternal {
-                val realVault = super.makeVaultService(keyManagementService, stateLoader)
+            override fun makeVaultService(keyManagementService: KeyManagementService, stateLoader: StateLoader, hibernateConfig: HibernateConfiguration): VaultServiceInternal {
+                val realVault = super.makeVaultService(keyManagementService, stateLoader, hibernateConfig)
                 return object : VaultServiceInternal by realVault {
                     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
                         mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.

@@ -269,11 +269,23 @@ class PersistentIdentityServiceTests {
      * Ensure if we feed in a full identity, we get the same identity back.
      */
     @Test
-    fun `deanonymising a well known identity`() {
+    fun `deanonymising a well known identity should return the identity`() {
+        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         val expected = ALICE
-        val actual = database.transaction {
-            identityService.wellKnownPartyFromAnonymous(expected)
-        }
+        service.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        val actual = service.wellKnownPartyFromAnonymous(expected)
         assertEquals(expected, actual)
+    }
+
+    /**
+     * Ensure we don't blindly trust what an anonymous identity claims to be.
+     */
+    @Test
+    fun `deanonymising a false well known identity should return null`() {
+        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
+        val notAlice = Party(ALICE.name, generateKeyPair().public)
+        service.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        val actual = service.wellKnownPartyFromAnonymous(notAlice)
+        assertNull(actual)
     }
 }

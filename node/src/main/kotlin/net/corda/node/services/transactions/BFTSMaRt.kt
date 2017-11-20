@@ -75,7 +75,7 @@ object BFTSMaRt {
         fun waitUntilAllReplicasHaveInitialized()
     }
 
-    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster) : SingletonSerializeAsToken() {
+    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster, private val notaryService: BFTNonValidatingNotaryService) : SingletonSerializeAsToken() {
         companion object {
             private val log = loggerFor<Client>()
         }

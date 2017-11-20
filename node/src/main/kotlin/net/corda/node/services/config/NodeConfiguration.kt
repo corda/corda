@@ -25,7 +25,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val rpcUsers: List<User>
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
-    val certificateSigningService: URL
+    val compatibilityZoneURL: URL?
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val messageRedeliveryDelaySeconds: Int
@@ -40,6 +40,10 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
     val relay: RelayConfiguration?
+}
+
+fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
+    return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
 }
 
 data class NotaryConfig(val validating: Boolean,
@@ -86,7 +90,7 @@ data class NodeConfigurationImpl(
         override val trustStorePassword: String,
         override val dataSourceProperties: Properties,
         override val database: Properties?,
-        override val certificateSigningService: URL,
+        override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
@@ -115,6 +119,7 @@ data class NodeConfigurationImpl(
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
+        require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
     }
 }
 

@@ -7,9 +7,9 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.rpcContext
-import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.rpcDriver
-import net.corda.testing.rpcTestUser
+import net.corda.testing.internal.RPCDriverExposedDSLInterface
+import net.corda.testing.internal.rpcDriver
+import net.corda.testing.internal.rpcTestUser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,6 +57,7 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
 
     inner class TestOpsImpl : TestOps {
         override val protocolVersion = 1
+        // do not remove Unit
         override fun barf(): Unit = throw IllegalArgumentException("Barf!")
         override fun void() {}
         override fun someCalculation(str: String, num: Int) = "$str $num"
@@ -64,8 +65,9 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         override fun makeListenableFuture() = doneFuture(1)
         override fun makeComplicatedObservable() = complicatedObservable
         override fun makeComplicatedListenableFuture() = complicatedListenableFuturee
+        // do not remove Unit
         override fun addedLater(): Unit = throw IllegalStateException()
-        override fun captureUser(): String = rpcContext().currentUser.username
+        override fun captureUser(): String = rpcContext().invocation.principal().name
     }
 
     @Test

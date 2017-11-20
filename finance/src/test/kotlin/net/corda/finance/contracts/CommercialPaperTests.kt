@@ -17,6 +17,7 @@ import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -87,7 +88,9 @@ class CommercialPaperTestsGeneric {
 
     @Parameterized.Parameter
     lateinit var thisTest: ICommercialPaperTestTemplate
-
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val issuer = MEGA_CORP.ref(123)
 
     @Test

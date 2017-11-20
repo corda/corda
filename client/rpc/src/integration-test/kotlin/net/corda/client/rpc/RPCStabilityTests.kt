@@ -2,17 +2,23 @@ package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.NodeState
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
+import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.testing.*
+import net.corda.nodeapi.User
+import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.poll
+import net.corda.testing.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -236,6 +242,30 @@ class RPCStabilityTests : IntegrationTest() {
         }
     }
 
+    @Test
+    fun `clients receive notifications that node is shutting down`() {
+        val alice = User("Alice", "Alice", setOf(invokeRpc(CordaRPCOps::nodeStateObservable)))
+        val bob = User("Bob", "Bob", setOf(invokeRpc(CordaRPCOps::nodeStateObservable)))
+        val slagathor = User("Slagathor", "Slagathor", setOf(invokeRpc(CordaRPCOps::nodeStateObservable)))
+        val userList = listOf(alice, bob, slagathor)
+        val expectedMessages = ArrayList<NodeState>()
+
+        rpcDriver(startNodesInProcess = true) {
+            val node = startNode(rpcUsers = listOf(alice, bob, slagathor)).getOrThrow()
+            userList.forEach {
+                val connection = node.rpcClientToNode().start(it.username, it.password)
+                val nodeStateObservable = connection.proxy.nodeStateObservable()
+                nodeStateObservable.subscribe { update ->
+                    expectedMessages.add(update)
+                }
+            }
+
+            node.stop()
+        }
+        assertEquals(userList.size, expectedMessages.size)
+        assertEquals(NodeState.SHUTTING_DOWN, expectedMessages.first())
+    }
+
     interface TrackSubscriberOps : RPCOps {
         fun subscribe(): Observable<Unit>
     }
@@ -320,9 +350,10 @@ class RPCStabilityTests : IntegrationTest() {
             val message = session.createMessage(false)
             val request = RPCApi.ClientToServer.RpcRequest(
                     clientAddress = SimpleString(myQueue),
-                    id = RPCApi.RpcRequestId(random63BitValue()),
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
-                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT).bytes
+                    serialisedArguments = listOf(10.millis, 123456).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT).bytes,
+                    replyId = Trace.InvocationId.newInstance(),
+                    sessionId = Trace.SessionId.newInstance()
             )
             request.writeToClientMessage(message)
             producer.send(message)

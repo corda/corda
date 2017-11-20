@@ -6,11 +6,11 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.context.Origin
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
@@ -64,7 +64,7 @@ class NodeMonitorModelTest : IntegrationTest() {
                     invokeRpc(CordaRPCOps::stateMachinesFeed),
                     invokeRpc(CordaRPCOps::networkMapFeed))
             )
-            val aliceNodeHandle = startNode(providedName = ALICE.name, rpcUsers = listOf(cashUser)).getOrThrow()
+            val aliceNodeHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
             aliceNode = aliceNodeHandle.nodeInfo
             newNode = { nodeName -> startNode(providedName = nodeName).getOrThrow().nodeInfo }
             val monitor = NodeMonitorModel()
@@ -79,7 +79,7 @@ class NodeMonitorModelTest : IntegrationTest() {
             rpc = monitor.proxyObservable.value!!
             notaryParty = defaultNotaryIdentity
 
-            val bobNodeHandle = startNode(providedName = BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
+            val bobNodeHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
             bobNode = bobNodeHandle.nodeInfo
             val monitorBob = NodeMonitorModel()
             stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
@@ -91,20 +91,20 @@ class NodeMonitorModelTest : IntegrationTest() {
 
     @Test
     fun `network map update`() = setup {
-        val charlieNode = newNode(CHARLIE.name)
+        val charlieNode = newNode(CHARLIE_NAME)
         val nonServiceIdentities = aliceNode.legalIdentitiesAndCerts + bobNode.legalIdentitiesAndCerts + charlieNode.legalIdentitiesAndCerts
         networkMapUpdates.filter { it.node.legalIdentitiesAndCerts.any { it in nonServiceIdentities } }
                 .expectEvents(isStrict = false) {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.chooseIdentity().name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.any { it.name == ALICE_NAME }) { "Expecting : ${ALICE_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.chooseIdentity().name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.any { it.name == BOB_NAME }) { "Expecting : ${BOB_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.chooseIdentity().name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
+                                require(output.node.legalIdentities.any { it.name == CHARLIE_NAME }) { "Expecting : ${CHARLIE_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             }
                     )
                 }
@@ -148,8 +148,8 @@ class NodeMonitorModelTest : IntegrationTest() {
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
-                        val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.RPC && initiator.username == "user1")
+                        val context = add.stateMachineInfo.context()
+                        require(context.origin is Origin.RPC && context.principal().name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -157,8 +157,8 @@ class NodeMonitorModelTest : IntegrationTest() {
                     // MOVE - N.B. There are other framework flows that happen in parallel for the remote resolve transactions flow
                     expect(match = { it.stateMachineInfo.flowLogicClassName == CashPaymentFlow::class.java.name }) { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
-                        val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.RPC && initiator.username == "user1")
+                        val context = add.stateMachineInfo.context()
+                        require(context.origin is Origin.RPC && context.principal().name == "user1")
                     },
                     expect(match = { it is StateMachineUpdate.Removed && it.id == moveSmId }) {
                     }
@@ -169,8 +169,8 @@ class NodeMonitorModelTest : IntegrationTest() {
             sequence(
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
-                        val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Peer && aliceNode.isLegalIdentity(initiator.party))
+                        val context = add.stateMachineInfo.context()
+                        require(context.origin is Origin.Peer && aliceNode.isLegalIdentity(aliceNode.identityFromX500Name((context.origin as Origin.Peer).party)))
                     }
             )
         }

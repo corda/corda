@@ -16,6 +16,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
+import org.apache.commons.collections4.map.LRUMap
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Modifier
@@ -67,6 +68,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         fun createDefault(baseDir: Path) = CordappLoader(getCordappsInDirectory(getCordappsPath(baseDir)))
 
+        // Cache for CordappLoaders to avoid costly classpath scanning
+        private val cordappLoadersCache = LRUMap<List<*>, CordappLoader>(1000)
+
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
          * and cordapps directory. This is intended mostly for use by the driver.
@@ -77,7 +81,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         @VisibleForTesting
         fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
-            return CordappLoader(getCordappsInDirectory(getCordappsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage))
+            val paths = getCordappsInDirectory(getCordappsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage)
+            return cordappLoadersCache.computeIfAbsent(paths, { CordappLoader(paths) })
         }
 
         /**
@@ -89,7 +94,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         @VisibleForTesting
         fun createWithTestPackages(testPackages: List<String>)
-                = CordappLoader(testPackages.flatMap(this::createScanPackage))
+                = cordappLoadersCache.computeIfAbsent(testPackages, { CordappLoader(testPackages.flatMap(this::createScanPackage)) })
 
         /**
          * Creates a dev mode CordappLoader intended only to be used in test environments
@@ -242,9 +247,12 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         return scanResult.getClassesWithSuperclass(MappedSchema::class).toSet()
     }
 
+    private val cachedScanResult = LRUMap<RestrictedURL, RestrictedScanResult>(1000)
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in $cordappJarPath")
-        return RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
+        return cachedScanResult.computeIfAbsent(cordappJarPath, {
+            RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
+        })
     }
 
     private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {

@@ -1,10 +1,9 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.context.InvocationContext
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.Try
 import rx.Observable
@@ -20,8 +19,7 @@ import rx.Observable
  * A flow is a class with a single call method. The call method and any others it invokes are rewritten by a bytecode
  * rewriting engine called Quasar, to ensure the code can be suspended and resumed at any point.
  *
- * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
- *       continuation is always unique?
+ * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised continuation is always unique?
  * TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
  * TODO: Timeouts
  * TODO: Surfacing of exceptions via an API and/or management UI
@@ -43,9 +41,9 @@ interface StateMachineManager {
      * Starts a new flow.
      *
      * @param flowLogic The flow's code.
-     * @param flowInitiator The initiator of the flow.
+     * @param context The context of the flow.
      */
-    fun <A> startFlow(flowLogic: FlowLogic<A>, flowInitiator: FlowInitiator, ourIdentity: Party? = null): CordaFuture<FlowStateMachine<A>>
+    fun <A> startFlow(flowLogic: FlowLogic<A>, context: InvocationContext): CordaFuture<FlowStateMachine<A>>
 
     /**
      * Represents an addition/removal of a state machine.

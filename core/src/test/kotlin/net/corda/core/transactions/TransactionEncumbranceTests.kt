@@ -9,7 +9,9 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.ledger
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -17,6 +19,9 @@ import java.time.temporal.ChronoUnit
 val TEST_TIMELOCK_ID = "net.corda.core.transactions.TransactionEncumbranceTests\$DummyTimeLock"
 
 class TransactionEncumbranceTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
     val defaultIssuer = MEGA_CORP.ref(1)
 
     val state = Cash.State(

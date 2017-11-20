@@ -136,20 +136,7 @@ service. Also, this service allows mapping of friendly names, or
 ``StateMachineManager`` to convert between the ``CompositeKey``, or 
 ``Party`` based addressing used in the flows/contracts and the 
 physical host and port information required for the physical 
-``ArtemisMQ`` messaging layer. 
-
-
-PersistentNetworkMapService
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``PersistentNetworkMapService`` keeps track of ``NodeInfo`` and
-persists it to the database. It and will include nodes that are not currently active.
-The networking layer will persist any messages directed at such inactive
-nodes with the expectation that they will be delivered eventually, or 
-else that the source flow will be terminated by admin intervention. 
-An ``InMemoryNetworkMapService`` is also available for unit tests 
-without a database. 
-
+``ArtemisMQ`` messaging layer.
 
 Storage and persistence related services
 ----------------------------------------

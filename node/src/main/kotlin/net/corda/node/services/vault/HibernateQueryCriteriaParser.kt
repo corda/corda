@@ -12,97 +12,45 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
+import net.corda.node.services.persistence.NodeAttachmentService
 import org.hibernate.query.criteria.internal.expression.LiteralExpression
+import org.hibernate.query.criteria.internal.path.SingularAttributePath
 import org.hibernate.query.criteria.internal.predicate.ComparisonPredicate
 import org.hibernate.query.criteria.internal.predicate.InPredicate
+import java.time.Instant
 import java.util.*
 import javax.persistence.Tuple
 import javax.persistence.criteria.*
 
 
-class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractState>,
-                                   val contractStateTypeMappings: Map<String, Set<String>>,
-                                   val criteriaBuilder: CriteriaBuilder,
-                                   val criteriaQuery: CriteriaQuery<Tuple>,
-                                   val vaultStates: Root<VaultSchemaV1.VaultStates>) : IQueryCriteriaParser {
-    private companion object {
-        val log = loggerFor<HibernateQueryCriteriaParser>()
-    }
+abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: BaseQueryCriteriaParser<Q, P, S>, in S: BaseSort> : BaseQueryCriteriaParser<Q, P, S> {
 
-    // incrementally build list of join predicates
-    private val joinPredicates = mutableListOf<Predicate>()
-    // incrementally build list of root entities (for later use in Sort parsing)
-    private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
-    private val aggregateExpressions = mutableListOf<Expression<*>>()
-    private val commonPredicates = mutableMapOf<Pair<String, Operator>, Predicate>()   // schema attribute Name, operator -> predicate
+    abstract val criteriaBuilder: CriteriaBuilder
 
-    var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
-
-    override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate> {
-        log.trace { "Parsing VaultQueryCriteria: $criteria" }
+    override fun parseOr(left: Q, right: Q): Collection<Predicate> {
         val predicateSet = mutableSetOf<Predicate>()
+        val leftPredicates = parse(left)
+        val rightPredicates = parse(right)
 
-        // soft locking
-        criteria.softLockingCondition?.let {
-            val softLocking = criteria.softLockingCondition
-            val type = softLocking!!.type
-            when (type) {
-                QueryCriteria.SoftLockingType.UNLOCKED_ONLY ->
-                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
-                QueryCriteria.SoftLockingType.LOCKED_ONLY ->
-                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNotNull))
-                QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED -> {
-                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
-                    predicateSet.add(criteriaBuilder.or(vaultStates.get<String>("lockId").isNull,
-                            vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
-                }
-                QueryCriteria.SoftLockingType.SPECIFIED -> {
-                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
-                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
-                }
-            }
-        }
+        val orPredicate = criteriaBuilder.or(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
+        predicateSet.add(orPredicate)
 
-        // notary names
-        criteria.notary?.let {
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<AbstractParty>("notary").`in`(criteria.notary)))
-        }
-
-        // state references
-        criteria.stateRefs?.let {
-            val persistentStateRefs = (criteria.stateRefs as List<StateRef>).map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
-            val compositeKey = vaultStates.get<PersistentStateRef>("stateRef")
-            predicateSet.add(criteriaBuilder.and(compositeKey.`in`(persistentStateRefs)))
-        }
-
-        // time constraints (recorded, consumed)
-        criteria.timeCondition?.let {
-            val timeCondition = criteria.timeCondition
-            val timeInstantType = timeCondition!!.type
-            val timeColumn = when (timeInstantType) {
-                QueryCriteria.TimeInstantType.RECORDED -> Column(VaultSchemaV1.VaultStates::recordedTime)
-                QueryCriteria.TimeInstantType.CONSUMED -> Column(VaultSchemaV1.VaultStates::consumedTime)
-            }
-            val expression = CriteriaExpression.ColumnPredicateExpression(timeColumn, timeCondition.predicate)
-            predicateSet.add(parseExpression(vaultStates, expression) as Predicate)
-        }
         return predicateSet
     }
 
-    private fun deriveContractStateTypes(contractStateTypes: Set<Class<out ContractState>>? = null): Set<String> {
-        log.trace { "Contract types to be derived: primary ($contractStateType), additional ($contractStateTypes)" }
-        val combinedContractStateTypes = contractStateTypes?.plus(contractStateType) ?: setOf(contractStateType)
-        combinedContractStateTypes.filter { it.name != ContractState::class.java.name }.let {
-            val interfaces = it.flatMap { contractStateTypeMappings[it.name] ?: setOf(it.name) }
-            val concrete = it.filter { !it.isInterface }.map { it.name }
-            log.trace { "Derived contract types: ${interfaces.union(concrete)}" }
-            return interfaces.union(concrete)
-        }
+    override fun parseAnd(left: Q, right: Q): Collection<Predicate> {
+        val predicateSet = mutableSetOf<Predicate>()
+        val leftPredicates = parse(left)
+        val rightPredicates = parse(right)
+
+        val andPredicate = criteriaBuilder.and(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
+        predicateSet.add(andPredicate)
+
+        return predicateSet
     }
 
-    private fun columnPredicateToPredicate(column: Path<out Any?>, columnPredicate: ColumnPredicate<*>): Predicate {
+    protected fun columnPredicateToPredicate(column: Path<out Any?>, columnPredicate: ColumnPredicate<*>): Predicate {
         return when (columnPredicate) {
             is ColumnPredicate.EqualityComparison -> {
                 val literal = columnPredicate.rightLiteral
@@ -152,6 +100,150 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             else -> throw VaultQueryException("Not expecting $columnPredicate")
         }
     }
+}
+
+class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: CriteriaBuilder,
+                                             private val criteriaQuery: CriteriaQuery<NodeAttachmentService.DBAttachment>, val root: Root<NodeAttachmentService.DBAttachment>) :
+        AbstractQueryCriteriaParser<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>(), AttachmentsQueryCriteriaParser {
+
+    private companion object {
+        val log = loggerFor<HibernateAttachmentQueryCriteriaParser>()
+    }
+
+    init {
+        criteriaQuery.select(root)
+    }
+
+    override fun parse(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): Collection<Predicate> {
+        val predicateSet = criteria.visit(this)
+
+        sorting?.let {
+            if (sorting.columns.isNotEmpty())
+                parse(sorting)
+        }
+
+        criteriaQuery.where(*predicateSet.toTypedArray())
+
+        return predicateSet
+    }
+
+    private fun parse(sorting: AttachmentSort) {
+        log.trace { "Parsing sorting specification: $sorting" }
+
+        val orderCriteria = mutableListOf<Order>()
+
+        sorting.columns.map { (sortAttribute, direction) ->
+            when (direction) {
+                Sort.Direction.ASC -> orderCriteria.add(criteriaBuilder.asc(root.get<String>(sortAttribute.columnName)))
+                Sort.Direction.DESC -> orderCriteria.add(criteriaBuilder.desc(root.get<String>(sortAttribute.columnName)))
+            }
+        }
+        if (orderCriteria.isNotEmpty()) {
+            criteriaQuery.orderBy(orderCriteria)
+        }
+    }
+
+    override fun parseCriteria(criteria: AttachmentQueryCriteria.AttachmentsQueryCriteria): Collection<Predicate> {
+        log.trace { "Parsing AttachmentsQueryCriteria: $criteria" }
+
+        val predicateSet = mutableSetOf<Predicate>()
+
+        criteria.filenameCondition?.let {
+            predicateSet.add(columnPredicateToPredicate(root.get<String>("filename"), it))
+        }
+
+        criteria.uploaderCondition?.let {
+            predicateSet.add(columnPredicateToPredicate(root.get<String>("uploader"), it))
+        }
+
+        criteria.uploadDateCondition?.let {
+            predicateSet.add(columnPredicateToPredicate(root.get<Instant>("upload_date"), it))
+        }
+
+        return predicateSet
+    }
+}
+
+class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractState>,
+                                   val contractStateTypeMappings: Map<String, Set<String>>,
+                                   override val criteriaBuilder: CriteriaBuilder,
+                                   val criteriaQuery: CriteriaQuery<Tuple>,
+                                   val vaultStates: Root<VaultSchemaV1.VaultStates>) : AbstractQueryCriteriaParser<QueryCriteria, IQueryCriteriaParser, Sort>(), IQueryCriteriaParser {
+    private companion object {
+        val log = loggerFor<HibernateQueryCriteriaParser>()
+    }
+
+    // incrementally build list of join predicates
+    private val joinPredicates = mutableListOf<Predicate>()
+    // incrementally build list of root entities (for later use in Sort parsing)
+    private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
+    private val aggregateExpressions = mutableListOf<Expression<*>>()
+    private val commonPredicates = mutableMapOf<Pair<String, Operator>, Predicate>()   // schema attribute Name, operator -> predicate
+
+    var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
+
+    override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate> {
+        log.trace { "Parsing VaultQueryCriteria: $criteria" }
+        val predicateSet = mutableSetOf<Predicate>()
+
+        // soft locking
+        criteria.softLockingCondition?.let {
+            val softLocking = criteria.softLockingCondition
+            val type = softLocking!!.type
+            when (type) {
+                QueryCriteria.SoftLockingType.UNLOCKED_ONLY ->
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNull))
+                QueryCriteria.SoftLockingType.LOCKED_ONLY ->
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").isNotNull))
+                QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED -> {
+                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
+                    predicateSet.add(criteriaBuilder.or(vaultStates.get<String>("lockId").isNull,
+                            vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                }
+                QueryCriteria.SoftLockingType.SPECIFIED -> {
+                    require(softLocking.lockIds.isNotEmpty()) { "Must specify one or more lockIds" }
+                    predicateSet.add(criteriaBuilder.and(vaultStates.get<String>("lockId").`in`(softLocking.lockIds.map { it.toString() })))
+                }
+            }
+        }
+
+        // notary names
+        criteria.notary?.let {
+            predicateSet.add(criteriaBuilder.and(vaultStates.get<AbstractParty>("notary").`in`(criteria.notary)))
+        }
+
+        // state references
+        criteria.stateRefs?.let {
+            val persistentStateRefs = (criteria.stateRefs as List<StateRef>).map(::PersistentStateRef)
+            val compositeKey = vaultStates.get<PersistentStateRef>("stateRef")
+            predicateSet.add(criteriaBuilder.and(compositeKey.`in`(persistentStateRefs)))
+        }
+
+        // time constraints (recorded, consumed)
+        criteria.timeCondition?.let {
+            val timeCondition = criteria.timeCondition
+            val timeInstantType = timeCondition!!.type
+            val timeColumn = when (timeInstantType) {
+                QueryCriteria.TimeInstantType.RECORDED -> Column(VaultSchemaV1.VaultStates::recordedTime)
+                QueryCriteria.TimeInstantType.CONSUMED -> Column(VaultSchemaV1.VaultStates::consumedTime)
+            }
+            val expression = CriteriaExpression.ColumnPredicateExpression(timeColumn, timeCondition.predicate)
+            predicateSet.add(parseExpression(vaultStates, expression) as Predicate)
+        }
+        return predicateSet
+    }
+
+    private fun deriveContractStateTypes(contractStateTypes: Set<Class<out ContractState>>? = null): Set<String> {
+        log.trace { "Contract types to be derived: primary ($contractStateType), additional ($contractStateTypes)" }
+        val combinedContractStateTypes = contractStateTypes?.plus(contractStateType) ?: setOf(contractStateType)
+        combinedContractStateTypes.filter { it.name != ContractState::class.java.name }.let {
+            val interfaces = it.flatMap { contractStateTypeMappings[it.name] ?: setOf(it.name) }
+            val concrete = it.filter { !it.isInterface }.map { it.name }
+            log.trace { "Derived contract types: ${interfaces.union(concrete)}" }
+            return interfaces.union(concrete)
+        }
+    }
+
 
     private fun <O> parseExpression(entityRoot: Root<O>, expression: CriteriaExpression<O, Boolean>, predicateSet: MutableSet<Predicate>) {
         if (expression is CriteriaExpression.AggregateFunctionExpression<O, *>) {
@@ -195,6 +287,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                             AggregateFunctionType.MAX -> criteriaBuilder.max(column)
                             AggregateFunctionType.MIN -> criteriaBuilder.min(column)
                         }
+                //TODO investigate possibility to avoid producing redundant joins in SQL for multiple aggregate functions against the same table
                 aggregateExpressions.add(aggregateExpression)
                 // optionally order by this aggregate function
                 expression.orderBy?.let {
@@ -210,6 +303,10 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     val groupByExpressions =
                             columns.map { _column ->
                                 val path = root.get<Any?>(getColumnName(_column))
+                                if (path is SingularAttributePath) //remove the same columns from different joins to match the single column in 'group by' only (from the last join)
+                                    aggregateExpressions.removeAll {
+                                        elem -> if (elem is SingularAttributePath) elem.attribute.javaMember == path.attribute.javaMember else false
+                                    }
                                 aggregateExpressions.add(path)
                                 path
                             }
@@ -323,32 +420,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
             throw VaultQueryException("Parsing error: ${e.message}")
         }
-        return predicateSet
-    }
-
-    override fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
-        log.trace { "Parsing OR QueryCriteria composition: $left OR $right" }
-
-        val predicateSet = mutableSetOf<Predicate>()
-        val leftPredicates = parse(left)
-        val rightPredicates = parse(right)
-
-        val orPredicate = criteriaBuilder.or(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
-        predicateSet.add(orPredicate)
-
-        return predicateSet
-    }
-
-    override fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate> {
-        log.trace { "Parsing AND QueryCriteria composition: $left AND $right" }
-
-        val predicateSet = mutableSetOf<Predicate>()
-        val leftPredicates = parse(left)
-        val rightPredicates = parse(right)
-
-        val andPredicate = criteriaBuilder.and(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
-        predicateSet.add(andPredicate)
-
         return predicateSet
     }
 

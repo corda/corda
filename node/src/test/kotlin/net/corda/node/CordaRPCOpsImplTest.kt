@@ -2,6 +2,7 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
+import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
@@ -25,17 +26,15 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
-import net.corda.node.services.messaging.RpcContext
-import net.corda.nodeapi.User
-import net.corda.testing.chooseIdentity
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
+import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.node.services.messaging.RpcPermissions
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.sequence
+import net.corda.testing.node.MockNodeParameters
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -56,25 +55,25 @@ class CordaRPCOpsImplTest {
 
     private lateinit var mockNet: MockNetwork
     private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var alice: Party
     private lateinit var notary: Party
     private lateinit var rpc: CordaRPCOps
     private lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     private lateinit var transactions: Observable<SignedTransaction>
     private lateinit var vaultTrackCash: Observable<Vault.Update<Cash.State>>
 
-    private val user = User("user", "pwd", permissions = emptySet())
-
     @Before
     fun setup() {
         mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
-        aliceNode = mockNet.createNode()
+        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
-        CURRENT_RPC_CONTEXT.set(RpcContext(user))
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), RpcPermissions.NONE))
 
         mockNet.runNetwork()
         withPermissions(invokeRpc(CordaRPCOps::notaryIdentities)) {
-            notary = rpc.notaryIdentities().first()
+            notary = rpc.notaryIdentities().single()
         }
+        alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
     }
 
     @After
@@ -119,7 +118,7 @@ class CordaRPCOpsImplTest {
 
             val anonymisedRecipient = result.returnValue.getOrThrow().recipient!!
             val expectedState = Cash.State(Amount(quantity,
-                    Issued(aliceNode.info.chooseIdentity().ref(ref), GBP)),
+                    Issued(alice.ref(ref), GBP)),
                     anonymisedRecipient)
 
             // Query vault via RPC
@@ -157,7 +156,7 @@ class CordaRPCOpsImplTest {
 
             mockNet.runNetwork()
 
-            rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.info.chooseIdentity())
+            rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, alice)
 
             mockNet.runNetwork()
 
@@ -191,7 +190,7 @@ class CordaRPCOpsImplTest {
                             require(stx.tx.outputs.size == 1)
                             val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                             // Only Alice signed, as issuer
-                            val aliceKey = aliceNode.info.chooseIdentity().owningKey
+                            val aliceKey = alice.owningKey
                             require(signaturePubKeys.size <= aliceKey.keys.size)
                             require(aliceKey.isFulfilledBy(signaturePubKeys))
                         },
@@ -290,7 +289,7 @@ class CordaRPCOpsImplTest {
 
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
-            CURRENT_RPC_CONTEXT.set(RpcContext(user.copy(permissions = permissions.toSet())))
+            CURRENT_RPC_CONTEXT.set(previous.copy(grantedPermissions = RpcPermissions(permissions.toSet())))
             action.invoke()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)

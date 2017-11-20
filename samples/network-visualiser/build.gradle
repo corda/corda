@@ -13,9 +13,7 @@ buildscript {
 // Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
 // causing the problems in runtime. Those can be changed by manipulating above properties
 // See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
-// unfortunately, this has to be repeated in every file using the spring boot plug-in as otherwise change in the order
-// in which files are a processed changes the outcome of the processing (dependencies are listed after plug-ins, so the
-// configuration of a dependency does not necessarily affect the plug-in application)
+// This has to be repeated here as otherwise the order of files does matter
 ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
 

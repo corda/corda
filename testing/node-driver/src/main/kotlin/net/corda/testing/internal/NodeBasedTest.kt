@@ -17,14 +17,11 @@ import net.corda.node.services.config.plus
 import net.corda.nodeapi.User
 import net.corda.testing.IntegrationTest
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.common.internal.NetworkParametersCopier
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import net.corda.testing.node.MockServices
 import org.apache.logging.log4j.Level
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
@@ -39,22 +36,16 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    private lateinit var defaultNetworkParameters: NetworkParametersCopier
     private val nodes = mutableListOf<StartedNode<Node>>()
     private val nodeInfos = mutableListOf<NodeInfo>()
 
     init {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
-    }
-
-    @Before
-    fun init() {
-        defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters(emptyList()))
     }
 
     /**
@@ -64,16 +55,20 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     @After
     fun stopAllNodes() {
         val shutdownExecutor = Executors.newScheduledThreadPool(nodes.size)
-        nodes.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
-        // Wait until ports are released
-        val portNotBoundChecks = nodes.flatMap {
-            listOf(
-                    it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
-                    it.internals.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
-            )
-        }.filterNotNull()
-        nodes.clear()
-        portNotBoundChecks.transpose().getOrThrow()
+        try {
+            nodes.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
+            // Wait until ports are released
+            val portNotBoundChecks = nodes.flatMap {
+                listOf(
+                        it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
+                        it.internals.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
+                )
+            }.filterNotNull()
+            nodes.clear()
+            portNotBoundChecks.transpose().getOrThrow()
+        } finally {
+            shutdownExecutor.shutdown()
+        }
     }
 
     @JvmOverloads
@@ -96,7 +91,6 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         )
 
         val parsedConfig = config.parseAsNodeConfiguration()
-        defaultNetworkParameters.install(baseDirectory)
         val node = Node(
                 parsedConfig,
                 MockServices.MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
