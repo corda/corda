@@ -55,7 +55,7 @@ data class FlowHandleImpl<A>(
 }
 
 @CordaSerializable
-data class FlowProgressHandleImpl<A>(
+data class FlowProgressHandleImpl<A> @JvmOverloads constructor(
         override val id: StateMachineRunId,
         override val returnValue: CordaFuture<A>,
         override val progress: Observable<String>,
