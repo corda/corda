@@ -3,7 +3,6 @@ package com.r3.corda.jmeter
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.loadtest.setupJSchWithSshAgent
 import net.corda.nodeapi.internal.addShutdownHook
 import org.slf4j.LoggerFactory
 import java.io.BufferedReader
