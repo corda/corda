@@ -689,7 +689,7 @@ class DriverDSL(
                         "myLegalName" to providedName.toString())
         )
         if (startNodesInProcess) {
-            // This is a bit cheating, we're not stating a full node, we're just calling the code nodes call
+            // This is a bit cheating, we're not starting a full node, we're just calling the code nodes call
             // when registering.
             val configuration = config.parseAsNodeConfiguration()
             NetworkRegistrationHelper(configuration, HTTPNetworkRegistrationService(compatibilityZoneURL))
