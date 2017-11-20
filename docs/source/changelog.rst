@@ -10,8 +10,7 @@ UNRELEASED
 * ``AttachmentStorage`` now allows providing metadata on attachments upload - username and filename, currently as plain
   strings. Those can be then used for querying, utilizing ``queryAttachments`` method of the same interface.
 
-* ``SSH Server`` - Instead the node can now expose SSH server with proper authorization
-  and permissioning built in.
+* ``SSH Server`` - The node can now expose shell via SSH server with proper authorization and permissioning built in.
 
 * ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
 

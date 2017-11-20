@@ -84,13 +84,10 @@ object InteractiveShell {
     private lateinit var node: StartedNode<Node>
     @VisibleForTesting
     internal lateinit var database: CordaPersistence
-
     private lateinit var rpcOps:CordaRPCOps
     private lateinit var userService:RPCUserService
     private lateinit var identityService:IdentityService
-
     private var shell:Shell? = null
-
     private lateinit var nodeLegalName: CordaX500Name
 
     /**

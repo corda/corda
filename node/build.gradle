@@ -139,12 +139,12 @@ dependencies {
     compile "io.netty:netty-all:$netty_version"
 
     // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
-    compile("com.github.corda.crash:crash.shell:faba68332800f21278c5b600bf14ad55cef5989e") {
+    compile("com.github.corda.crash:crash.shell:$crash_version") {
         exclude group: "org.slf4j", module: "slf4j-jdk14"
         exclude group: "org.bouncycastle"
     }
 
-    compile("com.github.corda.crash:crash.connectors.ssh:faba68332800f21278c5b600bf14ad55cef5989e") {
+    compile("com.github.corda.crash:crash.connectors.ssh:$crash_version") {
         exclude group: "org.slf4j", module: "slf4j-jdk14"
         exclude group: "org.bouncycastle"
     }

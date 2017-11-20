@@ -12,6 +12,7 @@ import org.crsh.text.ui.TableElement;
 
 import java.util.*;
 
+import static net.corda.node.services.messaging.RPCServerKt.CURRENT_RPC_CONTEXT;
 import static net.corda.node.shell.InteractiveShell.*;
 
 @Man(
