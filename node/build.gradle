@@ -109,6 +109,7 @@ dependencies {
     compile "org.springframework.boot:spring-boot:$spring_boot_version"
     compile "org.springframework.boot:spring-boot-autoconfigure:$spring_boot_version"
     runtime "org.springframework.boot:spring-boot-starter-log4j2:$spring_boot_version"
+    testCompile "org.hibernate:hibernate-validator:5.2.4.Final"
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
