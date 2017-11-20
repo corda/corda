@@ -13,16 +13,26 @@ import java.io.DataOutputStream
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.nio.file.Path
 import java.security.KeyStore
-import java.security.cert.Certificate
-import java.security.cert.X509Certificate
-import java.util.stream.Stream
 import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.*
 
+/**
+ * Various tests for mixed-scheme mutual TLS authentication, such as:
+ * Both TLS keys and CAs are using EC NIST P-256.
+ * Both TLS keys and CAs are using RSA.
+ * Server EC NIST P-256 - Client RSA.
+ * Server RSA - Client EC NIST P-256.
+ * Mixed CA and TLS keys.
+ */
 class TLSAuthenticationTests {
+
+    @Rule
+    @JvmField
+    val tempFolder: TemporaryFolder = TemporaryFolder()
 
     // Root CA.
     private val ROOT_X500 = CordaX500Name(commonName = "Root_CA_1", organisation = "R3CEV", locality = "London", country = "GB")
@@ -41,19 +51,144 @@ class TLSAuthenticationTests {
             "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
     )
 
+    @Test
+    fun `All EC R1`() {
+        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
+                rootCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                intermediateCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client1CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client1TLSScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2TLSScheme = Crypto.ECDSA_SECP256R1_SHA256
+        )
 
-    @Rule
-    @JvmField
-    val tempFolder: TemporaryFolder = TemporaryFolder()
+        val (serverSocket, clientSocket) =
+                buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
+
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+    }
 
     @Test
-    fun `TLS test - RSA server key RSA - EC-R1 client key`() {
+    fun `All RSA`() {
+        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
+                rootCAScheme = Crypto.RSA_SHA256,
+                intermediateCAScheme = Crypto.RSA_SHA256,
+                client1CAScheme = Crypto.RSA_SHA256,
+                client1TLSScheme = Crypto.RSA_SHA256,
+                client2CAScheme = Crypto.RSA_SHA256,
+                client2TLSScheme = Crypto.RSA_SHA256
+        )
+
+        val (serverSocket, clientSocket) =
+                buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
+
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+    }
+
+    @Test
+    fun `Server RSA - Client EC R1 - CAs all EC R1`() {
+        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
+                rootCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                intermediateCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client1CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client1TLSScheme = Crypto.RSA_SHA256,
+                client2CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2TLSScheme = Crypto.ECDSA_SECP256R1_SHA256
+        )
+
+        val (serverSocket, clientSocket) =
+                buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
+
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+    }
+
+    @Test
+    fun `Server EC R1 - Client RSA - CAs all EC R1`() {
+        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
+                rootCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                intermediateCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client1CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client1TLSScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2TLSScheme = Crypto.RSA_SHA256
+        )
+
+        val (serverSocket, clientSocket) = buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+    }
+
+    @Test
+    fun `Server EC R1 - Client EC R1 - CAs all RSA`() {
+        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
+                rootCAScheme = Crypto.RSA_SHA256,
+                intermediateCAScheme = Crypto.RSA_SHA256,
+                client1CAScheme = Crypto.RSA_SHA256,
+                client1TLSScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2CAScheme = Crypto.RSA_SHA256,
+                client2TLSScheme = Crypto.ECDSA_SECP256R1_SHA256
+        )
+
+        val (serverSocket, clientSocket) = buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+    }
+
+    @Test
+    fun `Server EC R1 - Client RSA - Mixed CAs`() {
+        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
+                rootCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                intermediateCAScheme = Crypto.RSA_SHA256,
+                client1CAScheme = Crypto.RSA_SHA256,
+                client1TLSScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2TLSScheme = Crypto.RSA_SHA256
+        )
+
+        val (serverSocket, clientSocket) = buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+    }
+
+    @Test
+    fun `All RSA - avoid ECC for DH`() {
+        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
+                rootCAScheme = Crypto.RSA_SHA256,
+                intermediateCAScheme = Crypto.RSA_SHA256,
+                client1CAScheme = Crypto.RSA_SHA256,
+                client1TLSScheme = Crypto.RSA_SHA256,
+                client2CAScheme = Crypto.RSA_SHA256,
+                client2TLSScheme = Crypto.RSA_SHA256
+        )
+
+        val (serverSocket, clientSocket) = buildTLSSockets(
+                serverSocketFactory,
+                clientSocketFactory,
+                0,
+                0,
+                CORDA_TLS_CIPHER_SUITES,
+                arrayOf("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")) // Second client accepts DHE only.
+        testConnect(serverSocket, clientSocket, "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")
+    }
+
+    private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
+
+    private fun buildTLSFactories(
+            rootCAScheme: SignatureScheme,
+            intermediateCAScheme: SignatureScheme,
+            client1CAScheme: SignatureScheme,
+            client1TLSScheme: SignatureScheme,
+            client2CAScheme: SignatureScheme,
+            client2TLSScheme: SignatureScheme
+    ): Pair<SSLServerSocketFactory, SSLSocketFactory> {
+
+        val trustStorePath = tempFile("cordaTrustStore.jks")
+        val client1TLSKeyStorePath = tempFile("client1sslkeystore.jks")
+        val client2TLSKeyStorePath = tempFile("client2sslkeystore.jks")
+
         // ROOT CA key and cert.
-        val rootCAKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val rootCAKeyPair = Crypto.generateKeyPair(rootCAScheme)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ROOT_X500, rootCAKeyPair)
 
         // Intermediate CA key and cert.
-        val intermediateCAKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val intermediateCAKeyPair = Crypto.generateKeyPair(intermediateCAScheme)
         val intermediateCACert = X509Utilities.createCertificate(
                 CertificateType.INTERMEDIATE_CA,
                 rootCACert,
@@ -63,9 +198,7 @@ class TLSAuthenticationTests {
         )
 
         // Client 1 keys, certs and SSLKeyStore.
-        val client1CAKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-
-        // val client1NameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, CLIENT_1_X500.x500Name))), arrayOf())
+        val client1CAKeyPair = Crypto.generateKeyPair(client1CAScheme)
         val client1CACert = X509Utilities.createCertificate(
                 CertificateType.CLIENT_CA,
                 intermediateCACert,
@@ -74,8 +207,7 @@ class TLSAuthenticationTests {
                 client1CAKeyPair.public
         )
 
-        val client1TLSKeyPair = Crypto.generateKeyPair(Crypto.RSA_SHA256)
-
+        val client1TLSKeyPair = Crypto.generateKeyPair(client1TLSScheme)
         val client1TLSCert = X509Utilities.createCertificate(
                 CertificateType.TLS,
                 client1CACert,
@@ -84,19 +216,16 @@ class TLSAuthenticationTests {
                 client1TLSKeyPair.public
         )
 
-        val client1TLSKeyStorePath = tempFile("client1sslkeystore.jks")
         val client1TLSKeyStore = loadOrCreateKeyStore(client1TLSKeyStorePath, PASSWORD)
         client1TLSKeyStore.addOrReplaceKey(
                 X509Utilities.CORDA_CLIENT_TLS,
                 client1TLSKeyPair.private,
                 PASSWORD.toCharArray(),
                 arrayOf(client1TLSCert, client1CACert, intermediateCACert, rootCACert))
-        client1TLSKeyStore.save(client1TLSKeyStorePath, PASSWORD)
-
+        // client1TLSKeyStore.save(client1TLSKeyStorePath, PASSWORD)
 
         // Client 2 keys, certs and SSLKeyStore.
-        val client2CAKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-
+        val client2CAKeyPair = Crypto.generateKeyPair(client2CAScheme)
         val client2CACert = X509Utilities.createCertificate(
                 CertificateType.CLIENT_CA,
                 intermediateCACert,
@@ -105,7 +234,7 @@ class TLSAuthenticationTests {
                 client2CAKeyPair.public
         )
 
-        val client2TLSKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val client2TLSKeyPair = Crypto.generateKeyPair(client2TLSScheme)
         val client2TLSCert = X509Utilities.createCertificate(
                 CertificateType.TLS,
                 client2CACert,
@@ -114,23 +243,18 @@ class TLSAuthenticationTests {
                 client2TLSKeyPair.public
         )
 
-        val client2TLSKeyStorePath = tempFile("client2sslkeystore.jks")
         val client2TLSKeyStore = loadOrCreateKeyStore(client2TLSKeyStorePath, PASSWORD)
         client2TLSKeyStore.addOrReplaceKey(
                 X509Utilities.CORDA_CLIENT_TLS,
                 client2TLSKeyPair.private,
                 PASSWORD.toCharArray(),
                 arrayOf(client2TLSCert, client2CACert, intermediateCACert, rootCACert))
-        client2TLSKeyStore.save(client2TLSKeyStorePath, PASSWORD)
+        // client2TLSKeyStore.save(client2TLSKeyStorePath, PASSWORD)
 
-        val trustStorePath = tempFile("cordaTrustStore.jks")
         val trustStore = loadOrCreateKeyStore(trustStorePath, PASSWORD)
-
         trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
         trustStore.addOrReplaceCertificate(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateCACert.cert)
-
-        trustStore.save(trustStorePath, PASSWORD)
-
+        // trustStore.save(trustStorePath, PASSWORD)
 
         val client1SSLContext = sslContext(client1TLSKeyStore, PASSWORD, trustStore)
         val client2SSLContext = sslContext(client2TLSKeyStore, PASSWORD, trustStore)
@@ -138,23 +262,37 @@ class TLSAuthenticationTests {
         val serverSocketFactory = client1SSLContext.serverSocketFactory
         val clientSocketFactory = client2SSLContext.socketFactory
 
-        val serverSocket = serverSocketFactory.createServerSocket(0) as SSLServerSocket // use 0 to get first free socket.
-        val serverParams = SSLParameters(CORDA_TLS_CIPHER_SUITES, arrayOf("TLSv1.2"))
-        serverParams.needClientAuth = true
+        return Pair(serverSocketFactory, clientSocketFactory)
+    }
+
+    private fun buildTLSSockets(
+            serverSocketFactory: SSLServerSocketFactory,
+            clientSocketFactory: SSLSocketFactory,
+            serverPort: Int = 0, // Use 0 to get first free socket.
+            clientPort: Int = 0, // Use 0 to get first free socket.
+            cipherSuitesServer: Array<String> = CORDA_TLS_CIPHER_SUITES,
+            cipherSuitesClient: Array<String> = CORDA_TLS_CIPHER_SUITES
+    ): Pair<SSLServerSocket, SSLSocket> {
+        val serverSocket = serverSocketFactory.createServerSocket(serverPort) as SSLServerSocket // use 0 to get first free socket.
+        val serverParams = SSLParameters(cipherSuitesServer, arrayOf("TLSv1.2"))
+        serverParams.needClientAuth = true // Note that needClientAuth is requiring client authentication Vs wantClientAuth, in which client authentication is optional).
         serverParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
         serverSocket.sslParameters = serverParams
         serverSocket.useClientMode = false
 
         val clientSocket = clientSocketFactory.createSocket() as SSLSocket
-        val clientParams = SSLParameters(CORDA_TLS_CIPHER_SUITES, arrayOf("TLSv1.2"))
+        val clientParams = SSLParameters(cipherSuitesClient, arrayOf("TLSv1.2"))
         clientParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
         clientSocket.sslParameters = clientParams
         clientSocket.useClientMode = true
         // We need to specify this explicitly because by default the client binds to 'localhost' and we want it to bind
         // to whatever <hostname> resolves to(as that's what the server binds to). In particular on Debian <hostname>
         // resolves to 127.0.1.1 instead of the external address of the interface, so the TLS handshake fails.
-        clientSocket.bind(InetSocketAddress(InetAddress.getLocalHost(), 0))
+        clientSocket.bind(InetSocketAddress(InetAddress.getLocalHost(), clientPort))
+        return Pair(serverSocket, clientSocket)
+    }
 
+    private fun testConnect(serverSocket: ServerSocket, clientSocket: SSLSocket, expectedCipherSuite: String) {
         val lock = Object()
         var done = false
         var serverError = false
@@ -178,22 +316,16 @@ class TLSAuthenticationTests {
 
         clientSocket.connect(InetSocketAddress(InetAddress.getLocalHost(), serverSocket.localPort))
         assertTrue(clientSocket.isConnected)
+        assertEquals(expectedCipherSuite, clientSocket.session.cipherSuite)
 
-        // Server (client1) uses RSA and client2 EC key. So we expect they agree on TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256.
-        assertEquals("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", clientSocket.session.cipherSuite)
-
-        // Double check hostname manually.
-        val peerChain = clientSocket.session.peerCertificates
-        val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
-        assertEquals(CLIENT_1_X500.x500Principal, peerX500Principal)
-        X509Utilities.validateCertificateChain(trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA), *peerChain)
+        // Timeout after 30 secs.
         val output = DataOutputStream(clientSocket.outputStream)
         output.writeUTF("Hello World")
         var timeout = 0
         synchronized(lock) {
             while (!done) {
                 timeout++
-                if (timeout > 10) throw IOException("Timed out waiting for server to complete")
+                if (timeout > 30) throw IOException("Timed out waiting for server to complete")
                 lock.wait(1000)
             }
         }
@@ -203,61 +335,6 @@ class TLSAuthenticationTests {
         assertFalse { serverError }
         serverSocket.close()
         assertTrue(done)
-    }
-
-    private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
-
-    data class KeyStoreAndTrustStore (val keystore: KeyStore, val trustStore: KeyStore)
-
-    /**
-     * All in one wrapper to manufacture a root CA cert and an Intermediate CA cert.
-     * Normally this would be run once and then the outputs would be re-used repeatedly to manufacture the server certs
-     * @param keyStoreFilePath The output KeyStore path to publish the private keys of the CA root and intermediate certs into.
-     * @param keyStorePassword The storage password to protect access to the generated KeyStore and public certificates
-     * @param keyPassword The password that protects the CA private keys.
-     * Unlike the SSL libraries that tend to assume the password is the same as the keystore password.
-     * These CA private keys should be protected more effectively with a distinct password.
-     * @param trustStoreFilePath The output KeyStore to place the Root CA public certificate, which can be used as an SSL truststore
-     * @param trustStorePassword The password to protect the truststore
-     * @return The KeyStore object that was saved to file
-     */
-    private fun createCAKeyStoreAndTrustStore(
-            keyStoreFilePath: Path,
-            keyStorePassword: String,
-            keyPassword: String,
-            trustStoreFilePath: Path,
-            trustStorePassword: String,
-            caSignatureScheme: SignatureScheme = X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME,
-            intermediateSignatureSheme: SignatureScheme = X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME,
-            caX500: CordaX500Name = ROOT_X500,
-            intermediateCaX500: CordaX500Name = INTERMEDIATE_X500
-    ): KeyStoreAndTrustStore {
-        val rootCAKey = Crypto.generateKeyPair(caSignatureScheme)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(caX500, rootCAKey)
-
-        val intermediateCAKeyPair = Crypto.generateKeyPair(intermediateSignatureSheme)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, intermediateCaX500, intermediateCAKeyPair.public)
-
-        val keyPass = keyPassword.toCharArray()
-        val keyStore = loadOrCreateKeyStore(keyStoreFilePath, keyStorePassword)
-
-        keyStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, rootCAKey.private, keyPass, arrayOf<Certificate>(rootCACert.cert))
-
-        keyStore.addOrReplaceKey(X509Utilities.CORDA_INTERMEDIATE_CA,
-                intermediateCAKeyPair.private,
-                keyPass,
-                Stream.of(intermediateCACert, rootCACert).map { it.cert }.toTypedArray<Certificate>())
-
-        keyStore.save(keyStoreFilePath, keyStorePassword)
-
-        val trustStore = loadOrCreateKeyStore(trustStoreFilePath, trustStorePassword)
-
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateCACert.cert)
-
-        trustStore.save(trustStoreFilePath, trustStorePassword)
-
-        return KeyStoreAndTrustStore(keyStore, trustStore)
     }
 
     // Generate an SSLContext from a KeyStore and a TrustStore.
