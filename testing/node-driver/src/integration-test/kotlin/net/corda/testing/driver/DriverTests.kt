@@ -12,8 +12,11 @@ import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.internal.addressMustBeBound
 import net.corda.testing.internal.addressMustNotBeBound
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.AfterClass
+import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -21,6 +24,11 @@ import java.util.concurrent.ScheduledExecutorService
 class DriverTests {
     companion object {
         private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+        @AfterClass
+        @JvmStatic
+        fun shutdown() {
+            executorService.shutdown()
+        }
 
         private fun nodeMustBeUp(handleFuture: CordaFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
             val hostAndPort = nodeInfo.addresses.first()
@@ -34,6 +42,10 @@ class DriverTests {
             addressMustNotBeBound(executorService, hostAndPort)
         }
     }
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
 
     @Test
     fun `simple node startup and shutdown`() {

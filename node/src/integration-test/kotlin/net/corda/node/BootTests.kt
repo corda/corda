@@ -11,15 +11,20 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Rule
 import org.junit.Test
 import java.io.*
 import java.nio.file.Files
 import kotlin.test.assertEquals
 
 class BootTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
 
     @Test
     fun `java deserialization is disabled`() {

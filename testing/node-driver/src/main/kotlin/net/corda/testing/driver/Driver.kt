@@ -15,7 +15,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.internal.InProcessNode
 import net.corda.testing.internal.DriverDSLImpl
 import net.corda.testing.internal.genericDriver
 import net.corda.testing.internal.getTimestampAsDirectoryName
@@ -166,7 +165,6 @@ fun <A> driver(
         debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
-        initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         waitForAllNodesToFinish: Boolean = defaultParameters.waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
@@ -188,7 +186,7 @@ fun <A> driver(
             ),
             coerce = { it },
             dsl = dsl,
-            initialiseSerialization = initialiseSerialization
+            initialiseSerialization = startNodesInProcess
     )
 }
 

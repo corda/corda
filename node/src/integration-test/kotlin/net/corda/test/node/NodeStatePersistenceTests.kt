@@ -20,10 +20,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.driver
 import org.junit.Assume.assumeFalse
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import java.lang.management.ManagementFactory
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -32,6 +35,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class NodeStatePersistenceTests {
+    @Rule
+    @JvmField
+    val testSerialization = if (isQuasarAgentSpecified) TestRule { base, _ -> base } else SerializationEnvironmentRule(true)
+
     @Test
     fun `persistent state survives node restart`() {
         // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
@@ -40,8 +47,8 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
-            val nodeName = {
+        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified) {
+            val nodeName = run {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
                 // Ensure the notary node has finished starting up, before starting a flow that needs a notary
@@ -51,8 +58,7 @@ class NodeStatePersistenceTests {
                 }
                 nodeHandle.stop()
                 nodeName
-            }()
-
+            }
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
             val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
@@ -74,7 +80,7 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
@@ -101,9 +107,9 @@ class NodeStatePersistenceTests {
     }
 }
 
-fun isQuasarAgentSpecified(): Boolean {
+private val isQuasarAgentSpecified = run {
     val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
-    return jvmArgs.any { it.startsWith("-javaagent:") && it.endsWith("quasar.jar") }
+    jvmArgs.any { it.startsWith("-javaagent:") && it.endsWith("quasar.jar") }
 }
 
 @CordaSerializable

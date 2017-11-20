@@ -15,19 +15,24 @@ import net.corda.testing.driver.driver
 import org.bouncycastle.util.io.Streams
 import org.junit.Test
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.testing.SerializationEnvironmentRule
 import java.net.ConnectException
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Rule
 import java.util.regex.Pattern
 
 class SSHServerTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
 
     @Test()
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver() {
+        driver {
             val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user))
             node.getOrThrow()
 
@@ -112,8 +117,7 @@ class SSHServerTest {
 
             channel.disconnect()
             session.disconnect()
-
-            assertThat(response).matches("(?s)User not permissioned with any of \\[[^]]*${flowNameEscaped}.*")
+            assertThat(response).matches("(?s)User not permissioned with any of \\[[^]]*$flowNameEscaped.*")
         }
     }
 
@@ -161,7 +165,7 @@ class SSHServerTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class FlowICannotRun(val otherParty: Party) : FlowLogic<String>() {
+    class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
 

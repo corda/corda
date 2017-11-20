@@ -21,11 +21,15 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Rule
 import org.junit.Test
 import rx.Observable
 import java.util.*
 
 class DistributedServiceTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
     private lateinit var alice: NodeHandle
     private lateinit var notaryNodes: List<NodeHandle.OutOfProcess>
     private lateinit var aliceProxy: CordaRPCOps

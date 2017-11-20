@@ -20,21 +20,22 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.*
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockAttachmentStorage
-import net.corda.testing.rigorousMock
-import net.corda.testing.withTestSerialization
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
     private val attachments = MockAttachmentStorage()
     private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
     private val cordapp get() = provider.cordapps.first()
@@ -80,7 +81,7 @@ class AttachmentLoadingTests {
     }
 
     @Test
-    fun `test a wire transaction has loaded the correct attachment`() = withTestSerialization {
+    fun `test a wire transaction has loaded the correct attachment`() {
         val appClassLoader = appContext.classLoader
         val contractClass = appClassLoader.loadClass(ISOLATED_CONTRACT_ID).asSubclass(Contract::class.java)
         val generateInitialMethod = contractClass.getDeclaredMethod("generateInitial", PartyAndReference::class.java, Integer.TYPE, Party::class.java)
