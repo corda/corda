@@ -139,7 +139,8 @@ class SSHServerTest {
 
             val response = String(Streams.readAll(channel.inputStream))
 
-            assertThat(response).contains("Observable has completed")
+            //There are ANSI control characters involved, so we want to avoid direct byte to byte matching
+            assertThat(response.lines()).filteredOn( { it.contains("✓") && it.contains("Done")}).hasSize(1)
         }
     }
 
