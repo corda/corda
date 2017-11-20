@@ -138,7 +138,6 @@ interface DriverDSLExposedInterface : CordformContext {
      *     in. If null the Driver-level value will be used.
      * @param compatibilityZoneURL if not null the node is started once in registration mode (which make the node quit
      *     once registration is complete) and then re-starts the node with the given parameters.
-     *     Note that the registration part is always ran as a separate process regardless of settings.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available.
      */
     fun startNode(

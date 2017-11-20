@@ -80,7 +80,7 @@ class DriverTests {
         server.executor = null // creates a default executor
         server.start()
 
-        driver(portAllocation = PortAllocation.RandomFree, startNodesInProcess = false) {
+        driver {
             startNode(providedName = DUMMY_BANK_A.name, compatibilityZoneURL = URL("http://localhost:$port"))
                     .get()
         }
