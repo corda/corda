@@ -62,6 +62,11 @@ data class FlowProgressHandleImpl<A> @JvmOverloads constructor(
         override val stepsTreeIndexFeed: DataFeed<Int, Int>? = null,
         override val stepsTreeFeed: DataFeed<List<Pair<Int, String>>, List<Pair<Int, String>>>? = null) : FlowProgressHandle<A> {
 
+    // For API compatibility
+    fun copy(id: StateMachineRunId, returnValue: CordaFuture<A>, progress: Observable<String>): FlowProgressHandleImpl<A> {
+        return copy(id = id, returnValue = returnValue, progress = progress, stepsTreeFeed = null, stepsTreeIndexFeed = null)
+    }
+
     // Remember to add @Throws to FlowProgressHandle.close() if this throws an exception.
     override fun close() {
         try {
