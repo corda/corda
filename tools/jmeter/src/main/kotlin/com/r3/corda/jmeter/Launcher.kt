@@ -50,6 +50,9 @@ class Launcher {
                 }
                 jmeter.start(arrayOf("-s", "-p", (capsuleDirPath / "jmeter.properties").toString()) + extraArgs + args)
             } else {
+                val searchPath = Files.readAllLines(Paths.get(System.getProperty("search_paths_file"))).first()
+                logger.info("search_paths = $searchPath")
+                System.setProperty("search_paths", searchPath)
                 jmeter.start(maybeOpenSshTunnels(args))
             }
         }
