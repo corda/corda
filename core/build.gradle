@@ -80,9 +80,6 @@ dependencies {
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:$jsr305_version"
 
-    // TypeSafe Config: for simple and human friendly config files.
-    compile "com.typesafe:config:$typesafe_config_version"
-
     // Log4J: logging framework (ONLY explicitly referenced by net.corda.core.utilities.Logging.kt)
     compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
 

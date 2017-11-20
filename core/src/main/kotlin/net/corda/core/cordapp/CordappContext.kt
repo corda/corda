@@ -1,6 +1,5 @@
 package net.corda.core.cordapp
 
-import com.typesafe.config.Config
 import net.corda.core.crypto.SecureHash
 
 /**

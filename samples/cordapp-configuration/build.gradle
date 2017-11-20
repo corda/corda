@@ -1,0 +1,38 @@
+apply plugin: 'kotlin'
+apply plugin: 'java'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+
+dependencies {
+    cordaCompile project(":core")
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+
+    directory "./build/nodes"
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        notary = [validating : true]
+        p2pPort 10002
+        cordapps = []
+    }
+    node {
+        name "O=Bank A,L=London,C=GB"
+        p2pPort 10004
+        webPort 10005
+        rpcPort 10006
+        cordapps = []
+        rpcUsers = ext.rpcUsers
+    }
+    node {
+        name "O=Bank B,L=New York,C=US"
+        p2pPort 10007
+        webPort 10008
+        rpcPort 10009
+        cordapps = []
+        rpcUsers = ext.rpcUsers
+    }
+}
