@@ -895,7 +895,7 @@ class DriverDSL(
     private fun startNodeForRegistration(config: Config): CordaFuture<Unit> {
         val maximumHeapSize = "200m"
         val configuration = config.parseAsNodeConfiguration()
-        val baseDirectory = configuration.baseDirectory.createDirectories()
+        configuration.baseDirectory.createDirectories()
 
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,
