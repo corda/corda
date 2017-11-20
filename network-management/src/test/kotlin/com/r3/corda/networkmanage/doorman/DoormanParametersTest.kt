@@ -31,7 +31,7 @@ class DoormanParametersTest {
     }
 
     @Test
-    fun `should throw ShowHelpException when -? is on the command line`() {
+    fun `should throw ShowHelpException when help option is passed on the command line`() {
         assertFailsWith<ShowHelpException> {
             parseCommandLine("-?")
         }
