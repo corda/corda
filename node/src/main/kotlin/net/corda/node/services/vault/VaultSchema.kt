@@ -29,7 +29,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
         mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
     @Entity
     @Table(name = "vault_states",
-            indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
+            indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status"),
+                    Index(name = "lock_id_idx", columnList = "lock_id, state_status")))
     class VaultStates(
             /** NOTE: serialized transaction state (including contract state) is now resolved from transaction store */
             // TODO: create a distinct table to hold serialized state data (once DBTransactionStore is encrypted)
