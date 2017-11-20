@@ -8,6 +8,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
@@ -170,6 +171,14 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
      */
     val defaultNotaryIdentity: Party get() {
         return defaultNotaryNode.info.legalIdentities[1] // TODO Resolve once network parameters is merged back in
+    }
+
+    /**
+     * Return the identity of the default notary node.
+     * @see defaultNotaryNode
+     */
+    val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
+        return defaultNotaryNode.info.legalIdentitiesAndCerts[1] // TODO Resolve once network parameters is merged back in
     }
 
     /**

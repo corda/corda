@@ -12,7 +12,10 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.days
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.toHexString
 import net.corda.finance.*
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
@@ -31,7 +34,6 @@ import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -57,7 +59,7 @@ class VaultQueryTests {
     private lateinit var services: MockServices
     private lateinit var notaryServices: MockServices
     private val vaultService: VaultService get() = services.vaultService
-    private val identitySvc: IdentityService = makeTestIdentityService()
+    private lateinit var identitySvc: IdentityService
     private lateinit var database: CordaPersistence
 
     // test cash notary
@@ -68,14 +70,16 @@ class VaultQueryTests {
     @Before
     fun setUp() {
         // register additional identities
-        identitySvc.verifyAndRegisterIdentity(CASH_NOTARY_IDENTITY)
-        identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY),
-                createIdentityService = { identitySvc },
                 cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
+        identitySvc = services.identityService
+        // Register all of the identities we're going to use
+        (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
+            services.identityService.verifyAndRegisterIdentity(identity)
+        }
     }
 
     @After
@@ -1388,20 +1392,24 @@ class VaultQueryTests {
         // GBP issuer
         val gbpCashIssuerName = CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB")
         val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerName, generateKeyPair())
-        val gbpCashIssuer = gbpCashIssuerServices.myInfo.singleIdentity().ref(1)
+        val gbpCashIssuer = gbpCashIssuerServices.myInfo.singleIdentityAndCert()
         // USD issuer
         val usdCashIssuerName = CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US")
         val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerName, generateKeyPair())
-        val usdCashIssuer = usdCashIssuerServices.myInfo.singleIdentity().ref(1)
+        val usdCashIssuer = usdCashIssuerServices.myInfo.singleIdentityAndCert()
         // CHF issuer
         val chfCashIssuerName = CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH")
         val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerName, generateKeyPair())
-        val chfCashIssuer = chfCashIssuerServices.myInfo.singleIdentity().ref(1)
-
+        val chfCashIssuer = chfCashIssuerServices.myInfo.singleIdentityAndCert()
+        listOf(gbpCashIssuer, usdCashIssuer, chfCashIssuer).forEach { identity ->
+            services.identityService.verifyAndRegisterIdentity(identity)
+        }
         database.transaction {
-            services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = gbpCashIssuer)
-            services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = usdCashIssuer)
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = chfCashIssuer)
+            services.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = gbpCashIssuer.party.ref(1))
+            services.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = usdCashIssuer.party.ref(1))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = chfCashIssuer.party.ref(1))
+        }
+        database.transaction {
             val criteria = FungibleAssetQueryCriteria(issuer = listOf(gbpCashIssuer.party, usdCashIssuer.party))
             val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(2)
@@ -1413,8 +1421,9 @@ class VaultQueryTests {
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = BOC.ref(1))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MINI_CORP))
-
+                    issuedBy = MEGA_CORP.ref(0), owner = (MINI_CORP))
+        }
+        database.transaction {
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
             val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(1)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
@@ -1426,10 +1435,11 @@ class VaultQueryTests {
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MEGA_CORP))
+                    issuedBy = MEGA_CORP.ref(0), owner = (MEGA_CORP))
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = BOC.ref(0), ownedBy = (MINI_CORP))  // irrelevant to this vault
-
+                    issuedBy = BOC.ref(0), owner = MINI_CORP)  // irrelevant to this vault
+        }
+        database.transaction {
             // DOCSTART VaultQueryExample5.2
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP, BOC))
             val results = vaultService.queryBy<ContractState>(criteria)

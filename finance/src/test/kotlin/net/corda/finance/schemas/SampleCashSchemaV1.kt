@@ -1,8 +1,10 @@
 package net.corda.finance.schemas
 
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import org.hibernate.annotations.Type
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Index
@@ -35,7 +37,8 @@ object SampleCashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             @Column(name = "issuer_key_hash", length = MAX_HASH_HEX_SIZE)
             var issuerPartyHash: String,
 
-            @Column(name = "issuer_ref")
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
     ) : PersistentState()
 }

@@ -117,6 +117,9 @@ dependencies {
 
     // JPA 2.1 annotations.
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
+
+    // required to use @Type annotation
+    compile "org.hibernate:hibernate-core:$hibernate_version"
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)

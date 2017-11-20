@@ -4,14 +4,15 @@ import net.corda.core.contracts.Amount
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
 import java.util.*
 
 class CashSelectionH2Impl : AbstractCashSelection() {
-
     companion object {
         const val JDBC_DRIVER_NAME = "H2 JDBC Driver"
         val log = loggerFor<CashSelectionH2Impl>()
@@ -23,7 +24,6 @@ class CashSelectionH2Impl : AbstractCashSelection() {
 
     override fun toString() = "${this::class.java} for $JDBC_DRIVER_NAME"
 
-
     //       We are using an H2 specific means of selecting a minimum set of rows that match a request amount of coins:
     //       1) There is no standard SQL mechanism of calculating a cumulative total on a field and restricting row selection on the
     //          running total of such an accumulator
@@ -32,7 +32,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
     //       3) H2 does not support JOIN's in FOR UPDATE (hence we are forced to execute 2 queries)
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
                               onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>) : ResultSet {
-        connection.createStatement().execute("CALL SET(@t, 0);")
+        connection.createStatement().execute("CALL SET(@t, CAST(0 AS BIGINT));")
 
         val selectJoin = """
                     SELECT vs.transaction_id, vs.output_index, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
@@ -60,7 +60,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
         if (onlyFromIssuerParties.isNotEmpty())
             psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any}.toTypedArray() )
         if (withIssuerRefs.isNotEmpty())
-            psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray())
+            psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes as Any }.toTypedArray())
         log.debug { psSelectJoin.toString() }
 
         return psSelectJoin.executeQuery()
