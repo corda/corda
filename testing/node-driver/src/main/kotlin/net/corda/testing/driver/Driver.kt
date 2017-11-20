@@ -71,6 +71,10 @@ private val DEFAULT_POLL_INTERVAL = 500.millis
 
 private const val DEFAULT_WARN_COUNT = 120
 
+/**
+ * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
+ * in demo application like NodeExplorer.
+ */
 private val DRIVER_REQUIRED_PERMISSIONS = setOf(
         invokeRpc(CordaRPCOps::nodeInfo),
         invokeRpc(CordaRPCOps::networkMapFeed),
