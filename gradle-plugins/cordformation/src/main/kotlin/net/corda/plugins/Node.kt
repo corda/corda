@@ -2,10 +2,10 @@ package net.corda.plugins
 
 import com.typesafe.config.*
 import net.corda.cordform.CordformNode
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
+import sun.security.x509.X500Name
 import java.io.File
+import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -123,14 +123,11 @@ class Node(private val project: Project) : CordformNode() {
         }
 
         val dirName = try {
-            val o = X500Name(name).getRDNs(BCStyle.O)
-            if (o.size > 0) {
-                o.first().first.value.toString()
-            } else {
-                name
-            }
-        } catch(_ : IllegalArgumentException) {
-            // Can't parse as an X500 name, use the full string
+            // Using sun.security.x509.X500Name because importing BouncyCastle provider in Cordformation causes problems
+            // with loading our custom X509EdDSAEngine.
+            X500Name(name).organization
+        } catch(_ : IOException) {
+            // Can't parse as an X500 name or no organisation part, use the full string
             name
         }
         nodeDir = File(rootDir.toFile(), dirName)
