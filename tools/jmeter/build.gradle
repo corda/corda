@@ -47,7 +47,8 @@ task(runServer, dependsOn: 'classes', type: JavaExec) {
     def file = new File("$rootDir/build/search_paths.txt")
     file.createNewFile()
     file.text = "${project(':tools:jmeter').configurations.runtime.files.join(";")}"
-    systemProperty "search_paths_file", file.toString()    systemProperty "java.rmi.server.hostname", "0.0.0.0"
+    systemProperty "search_paths_file", file.toString()
+    systemProperty "java.rmi.server.hostname", "0.0.0.0"
     systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
     // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
     args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
