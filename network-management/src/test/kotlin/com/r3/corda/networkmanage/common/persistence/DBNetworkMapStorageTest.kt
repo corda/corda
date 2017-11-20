@@ -7,11 +7,11 @@ import com.r3.corda.networkmanage.common.signer.SignedNetworkMap
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.utilities.CertificateType
@@ -62,15 +62,15 @@ class DBNetworkMapStorageTest : TestBase() {
         val certPath = buildCertPath(clientCert.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())
         requestStorage.putCertificatePath(requestId, certPath, emptyList())
         val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(certPath)), 1, serial = 1L)
-        val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfo)
-        // Some random bytes
-        val signature = keyPair.sign(nodeInfo.serialize())
-        nodeInfoStorage.signNodeInfo(nodeInfoHash, signature)
+        // Put signed node info data
+        val nodeInfoBytes = nodeInfo.serialize()
+        val nodeInfoHash = nodeInfoStorage.putNodeInfo(SignedData(nodeInfoBytes, keyPair.sign(nodeInfoBytes)))
 
         // Create network parameters
         val networkParametersHash = networkMapStorage.putNetworkParameters(testNetworkParameters(emptyList()))
 
-        val signatureData = SignatureAndCertPath(signature, certPath)
+        val networkMap = NetworkMap(listOf(nodeInfoHash.toString()), networkParametersHash.toString())
+        val signatureData = SignatureAndCertPath(keyPair.sign(networkMap.serialize()), certPath)
         val signedNetworkMap = SignedNetworkMap(NetworkMap(listOf(nodeInfoHash.toString()), networkParametersHash.toString()), signatureData)
 
         // when
@@ -121,7 +121,7 @@ class DBNetworkMapStorageTest : TestBase() {
     }
 
     @Test
-    fun `getDetachedSignedAndValidNodeInfoHashes returns only valid and signed node info hashes`() {
+    fun `getDetachedAndValidNodeInfoHashes returns only valid and signed node info hashes`() {
         // given
         // Create node info.
         val organisationA = "TestA"
@@ -139,11 +139,11 @@ class DBNetworkMapStorageTest : TestBase() {
         requestStorage.putCertificatePath(requestIdB, certPathB, emptyList())
         val nodeInfoA = NodeInfo(listOf(NetworkHostAndPort("my.companyA.com", 1234)), listOf(PartyAndCertificate(certPathA)), 1, serial = 1L)
         val nodeInfoB = NodeInfo(listOf(NetworkHostAndPort("my.companyB.com", 1234)), listOf(PartyAndCertificate(certPathB)), 1, serial = 1L)
-        val nodeInfoHashA = nodeInfoStorage.putNodeInfo(nodeInfoA)
-        val nodeInfoHashB = nodeInfoStorage.putNodeInfo(nodeInfoB)
-        // Sign node info
-        nodeInfoStorage.signNodeInfo(nodeInfoHashA, keyPair.sign(nodeInfoA.serialize()))
-        nodeInfoStorage.signNodeInfo(nodeInfoHashB, keyPair.sign(nodeInfoB.serialize()))
+        // Put signed node info data
+        val nodeInfoABytes = nodeInfoA.serialize()
+        val nodeInfoBBytes = nodeInfoB.serialize()
+        val nodeInfoHashA = nodeInfoStorage.putNodeInfo(SignedData(nodeInfoABytes, keyPair.sign(nodeInfoABytes)))
+        val nodeInfoHashB = nodeInfoStorage.putNodeInfo(SignedData(nodeInfoBBytes, keyPair.sign(nodeInfoBBytes)))
 
         // Create network parameters
         val networkParametersHash = networkMapStorage.putNetworkParameters(createNetworkParameters())
@@ -155,7 +155,7 @@ class DBNetworkMapStorageTest : TestBase() {
         networkMapStorage.saveNetworkMap(signedNetworkMap)
 
         // when
-        val detachedHashes = networkMapStorage.getDetachedSignedAndValidNodeInfoHashes()
+        val detachedHashes = networkMapStorage.getDetachedAndValidNodeInfoHashes()
 
         // then
         assertEquals(1, detachedHashes.size)

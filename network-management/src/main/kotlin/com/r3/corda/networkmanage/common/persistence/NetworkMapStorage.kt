@@ -33,10 +33,10 @@ interface NetworkMapStorage {
     fun saveNetworkMap(signedNetworkMap: SignedNetworkMap)
 
     /**
-     * Retrieve all node info hashes for all signed node info with valid certificates,
+     * Retrieve all node info hashes for all node info with valid certificates,
      * that are not associated with any network map yet.
      */
-    fun getDetachedSignedAndValidNodeInfoHashes(): List<SecureHash>
+    fun getDetachedAndValidNodeInfoHashes(): List<SecureHash>
 
     /**
      * Retrieve network parameters by their hash.

@@ -3,12 +3,10 @@ package com.r3.corda.networkmanage.doorman.webservice
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.common.utils.hashString
-import com.r3.corda.networkmanage.doorman.signer.LocalSigner
-import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.networkMapPath
+import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -23,42 +21,39 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
-@Path(networkMapPath)
+@Path(NETWORK_MAP_PATH)
 class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
-                         private val networkMapStorage: NetworkMapStorage,
-                         private val signer: LocalSigner? = null) {
+                         private val networkMapStorage: NetworkMapStorage) {
     companion object {
-        const val networkMapPath = "network-map"
+        const val NETWORK_MAP_PATH = "network-map"
     }
 
     @POST
-    @Path("register")
+    @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     fun registerNode(input: InputStream): Response {
-        // TODO: Use JSON instead.
         val registrationData = input.readBytes().deserialize<SignedData<NodeInfo>>()
 
         val nodeInfo = registrationData.verified()
-        val digitalSignature = registrationData.sig
 
-        val certPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(digitalSignature.by.hashString()))
+        val certPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(nodeInfo.legalIdentitiesAndCerts.first().certPath.certificates.first().publicKey.hashString()))
         return if (certPath != null) {
             try {
-                val serializedNodeInfo = nodeInfo.serialize().bytes
                 val nodeCAPubKey = certPath.certificates.first().publicKey
                 // Validate node public key
                 nodeInfo.legalIdentitiesAndCerts.forEach {
                     require(it.certPath.certificates.any { it.publicKey == nodeCAPubKey })
                 }
-                require(Crypto.doVerify(nodeCAPubKey, digitalSignature.bytes, serializedNodeInfo))
-                // Store the NodeInfo and notify registration listener
-                nodeInfoStorage.putNodeInfo(nodeInfo, signer?.sign(serializedNodeInfo)?.signature)
+                val digitalSignature = registrationData.sig
+                require(Crypto.doVerify(nodeCAPubKey, digitalSignature.bytes, registrationData.raw.bytes))
+                // Store the NodeInfo
+                nodeInfoStorage.putNodeInfo(registrationData)
                 ok()
             } catch (e: Exception) {
                 // Catch exceptions thrown by signature verification.
                 when (e) {
                     is IllegalArgumentException, is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
-                    // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
+                // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
                     else -> throw e
                 }
             }
@@ -76,9 +71,12 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
     @GET
     @Path("{nodeInfoHash}")
     fun getNodeInfo(@PathParam("nodeInfoHash") nodeInfoHash: String): Response {
-        return nodeInfoStorage.getSignedNodeInfo(SecureHash.parse(nodeInfoHash))?.let {
-            ok(it.serialize().bytes).build()
-        } ?: status(Response.Status.NOT_FOUND).build()
+        val nodeInfo = nodeInfoStorage.getNodeInfo(SecureHash.parse(nodeInfoHash))
+        return if (nodeInfo != null) {
+            ok(nodeInfo.serialize().bytes).build()
+        } else {
+            status(Response.Status.NOT_FOUND).build()
+        }
     }
 
     @GET

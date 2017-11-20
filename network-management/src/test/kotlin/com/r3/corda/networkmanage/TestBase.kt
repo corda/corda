@@ -23,28 +23,6 @@ abstract class TestBase {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    protected fun certificateSigningRequestEntity(
-            requestId: String = SecureHash.randomSHA256().toString(),
-            status: RequestStatus = RequestStatus.NEW,
-            legalName: String = "TestLegalName",
-            modifiedBy: List<String> = emptyList(),
-            modifiedAt: Instant = Instant.now(),
-            remark: String = "Test remark",
-            certificateData: CertificateDataEntity? = null,
-            requestBytes: ByteArray = ByteArray(0)
-    ): CertificateSigningRequestEntity {
-        return CertificateSigningRequestEntity(
-                requestId = requestId,
-                status = status,
-                legalName = legalName,
-                modifiedBy = modifiedBy,
-                modifiedAt = modifiedAt,
-                remark = remark,
-                certificateData = certificateData,
-                requestBytes = requestBytes
-        )
-    }
-
     protected fun certificateSigningRequest(
             requestId: String = SecureHash.randomSHA256().toString(),
             status: RequestStatus = RequestStatus.NEW,

@@ -1,7 +1,7 @@
 ext {
     // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
     // aligned with the corresponding Corda release.
-    corda_dependency_version = '2.0-20171108.000038-27'
+    corda_dependency_version = '3.0-20171115.000100-7'
 }
 
 version "$corda_dependency_version"
@@ -125,7 +125,6 @@ dependencies {
     testCompile "com.nhaarman:mockito-kotlin:0.6.1"
     testRuntime "net.corda:corda-rpc:$corda_dependency_version"
     testCompile "com.spotify:docker-client:8.9.1"
-    integrationTestCompile "net.corda:corda-test-common:$corda_dependency_version"
     integrationTestRuntime "net.corda:corda-rpc:$corda_dependency_version"
 
     compile('com.atlassian.jira:jira-rest-java-client-core:4.0.0') {

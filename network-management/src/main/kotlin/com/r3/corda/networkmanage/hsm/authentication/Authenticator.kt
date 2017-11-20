@@ -93,7 +93,7 @@ class Authenticator(private val provider: CryptoServerProvider,
 /*
  * Configuration class for [CryptoServerProvider]
  */
-internal data class CryptoServerProviderConfig(
+data class CryptoServerProviderConfig(
         val Device: String = "3001@127.0.0.1",
         val ConnectionTimeout: Int = 30000,
         val Timeout: Int = 60000,
@@ -113,6 +113,10 @@ fun Parameters.createProvider(): CryptoServerProvider {
             KeyGroup = keyGroup,
             KeySpecifier = keySpecifier
     )
+    return createProvider(config)
+}
+
+fun createProvider(config: CryptoServerProviderConfig): CryptoServerProvider {
     val cfgBuffer = ByteArrayOutputStream()
     val writer = cfgBuffer.writer(Charsets.UTF_8)
     for (property in CryptoServerProviderConfig::class.memberProperties) {

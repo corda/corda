@@ -79,7 +79,7 @@ class DoormanServer(hostAndPort: NetworkHostAndPort, private vararg val webServi
                 webServices.forEach { register(it) }
             }
             val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
-            addServlet(jerseyServlet, "/api/*")
+            addServlet(jerseyServlet, "/*")
         }
     }
 }
@@ -184,7 +184,7 @@ fun startDoorman(hostAndPort: NetworkHostAndPort,
     val networkMapStorage = PersistentNetworkMapStorage(database)
     val nodeInfoStorage = PersistentNodeInfoStorage(database)
 
-    val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus), NodeInfoWebService(nodeInfoStorage, networkMapStorage, signer))
+    val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus), NodeInfoWebService(nodeInfoStorage, networkMapStorage))
     doorman.start()
 
     val networkMapSigner = if (signer != null) NetworkMapSigner(networkMapStorage, signer) else null

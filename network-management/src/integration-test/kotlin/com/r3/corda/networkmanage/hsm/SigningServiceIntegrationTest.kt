@@ -86,19 +86,20 @@ class SigningServiceIntegrationTest {
     }
 
     @Test
-    fun `Signing service communicates with Doorman`() {
+    fun `Signing service signs approved CSRs`() {
         //Start doorman server
         val database = configureDatabase(makeTestDataSourceProperties(), null, {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         }, SchemaService())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 10, initialNetworkMapParameters = testNetworkParameters(emptyList()))
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 30, initialNetworkMapParameters = testNetworkParameters(emptyList()))
 
         // Start Corda network registration.
         val config = testNodeConfiguration(
                 baseDirectory = tempFolder.root.toPath(),
                 myLegalName = ALICE.name).also {
-            whenever(it.certificateSigningService).thenReturn(URL("http://$HOST:${doorman.hostAndPort.port}"))
+            val doormanHostAndPort = doorman.hostAndPort
+            whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
         }
 
         val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), makeNotInitialisingTestDatabaseProperties(), {
@@ -126,7 +127,7 @@ class SigningServiceIntegrationTest {
                 // [org.hibernate.tool.schema.spi.SchemaManagementException] being thrown as the schema is missing.
             }
         }
-        NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.certificateSigningService)).buildKeystore()
+        NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
         verify(hsmSigner).sign(any())
         doorman.close()
     }
@@ -166,9 +167,9 @@ class SigningServiceIntegrationTest {
                             3 -> CHARLIE.name
                             else -> throw IllegalArgumentException("Unrecognised option")
                         }).also {
-                    whenever(it.certificateSigningService).thenReturn(URL("http://$HOST:${doorman.hostAndPort.port}"))
+                    whenever(it.compatibilityZoneURL).thenReturn(URL("http://$HOST:${doorman.hostAndPort.port}"))
                 }
-                NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.certificateSigningService)).buildKeystore()
+                NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
             }
         }.map { it.join() }
         doorman.close()

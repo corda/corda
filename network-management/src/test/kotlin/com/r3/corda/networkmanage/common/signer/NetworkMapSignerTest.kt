@@ -32,7 +32,7 @@ class NetworkMapSignerTest : TestBase() {
         whenever(networkMapStorage.getCurrentNetworkMap())
                 .thenReturn(SignedNetworkMap(NetworkMap(signedNodeInfoHashes.map { it.toString() }, "Dummy"), mock()))
         whenever(networkMapStorage.getCurrentNetworkMapNodeInfoHashes(any())).thenReturn(signedNodeInfoHashes)
-        whenever(networkMapStorage.getDetachedSignedAndValidNodeInfoHashes()).thenReturn(detachedNodeInfoHashes)
+        whenever(networkMapStorage.getDetachedAndValidNodeInfoHashes()).thenReturn(detachedNodeInfoHashes)
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(networkMapParameters)
         whenever(signer.sign(any())).thenReturn(mock())
 
@@ -42,7 +42,7 @@ class NetworkMapSignerTest : TestBase() {
         // then
         // Verify networkMapStorage calls
         verify(networkMapStorage).getCurrentNetworkMapNodeInfoHashes(any())
-        verify(networkMapStorage).getDetachedSignedAndValidNodeInfoHashes()
+        verify(networkMapStorage).getDetachedAndValidNodeInfoHashes()
         verify(networkMapStorage).getLatestNetworkParameters()
         argumentCaptor<SignedNetworkMap>().apply {
             verify(networkMapStorage).saveNetworkMap(capture())
@@ -63,7 +63,7 @@ class NetworkMapSignerTest : TestBase() {
         val signedNetworkMap = SignedNetworkMap(networkMap, mock())
         whenever(networkMapStorage.getCurrentNetworkMap()).thenReturn(signedNetworkMap)
         whenever(networkMapStorage.getCurrentNetworkMapNodeInfoHashes(any())).thenReturn(emptyList())
-        whenever(networkMapStorage.getDetachedSignedAndValidNodeInfoHashes()).thenReturn(emptyList())
+        whenever(networkMapStorage.getDetachedAndValidNodeInfoHashes()).thenReturn(emptyList())
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(networkMapParameters)
 
         // when

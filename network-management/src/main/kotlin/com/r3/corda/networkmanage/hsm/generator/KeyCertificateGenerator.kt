@@ -31,7 +31,7 @@ class KeyCertificateGenerator(private val authenticator: Authenticator,
      * @param parentPrivateKeyPassword password for the parent private key
      * @param validDays days of certificate validity
      */
-    fun generateAllCertificates(keyStorePassword: String?,
+    fun generateAllCertificates(keyStorePassword: String? = null,
                                 intermediateCertificatesCredentials: List<CertificateNameAndPass>,
                                 parentCertificateName: String,
                                 parentPrivateKeyPassword: String,

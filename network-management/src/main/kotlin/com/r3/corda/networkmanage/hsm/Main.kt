@@ -1,7 +1,6 @@
 package com.r3.corda.networkmanage.hsm
 
 import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
-import com.r3.corda.networkmanage.common.persistence.PersistentNodeInfoStorage
 import com.r3.corda.networkmanage.common.persistence.SchemaService
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
@@ -32,10 +31,8 @@ fun run(parameters: Parameters) {
         }, SchemaService())
         val csrStorage = DBSignedCertificateRequestStorage(database)
         val networkMapStorage = PersistentNetworkMapStorage(database)
-        val nodeInfoStorage = PersistentNodeInfoStorage(database)
         val hsmNetworkMapSigningThread = HsmNetworkMapSigner(
                 networkMapStorage,
-                nodeInfoStorage,
                 networkMapCertificateName,
                 networkMapPrivateKeyPass,
                 keyStorePass,

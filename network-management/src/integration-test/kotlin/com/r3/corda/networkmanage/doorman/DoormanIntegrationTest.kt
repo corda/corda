@@ -2,62 +2,72 @@ package com.r3.corda.networkmanage.doorman
 
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.common.persistence.SchemaService
+import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
+import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.utilities.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.testing.ALICE
+import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.testNodeConfiguration
+import org.bouncycastle.cert.X509CertificateHolder
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.net.URL
 import java.util.*
 import kotlin.test.assertEquals
-import net.corda.testing.common.internal.testNetworkParameters
+import kotlin.test.assertNotNull
 
 class DoormanIntegrationTest {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
 
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+
     @Test
     fun `initial registration`() {
-        val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA", organisation = "R3 Ltd", locality = "London", country = "GB"), rootCAKey)
-        val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey,
-                CordaX500Name(commonName = "Integration Test Corda Node Intermediate CA", locality = "London", country = "GB", organisation = "R3 Ltd"), intermediateCAKey.public)
-
-        val database = configureDatabase(makeTestDataSourceProperties(), null, {
-            // Identity service not needed doorman, corda persistence is not very generic.
-            throw UnsupportedOperationException()
-        }, SchemaService())
-        val signer = LocalSigner(intermediateCAKey, arrayOf(intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate()))
+        val rootCertAndKey = createDoormanRootCertificateAndKeyPair()
+        val intermediateCertAndKey = createDoormanIntermediateCertificateAndKeyPair(rootCertAndKey)
 
         //Start doorman server
-        val doorman = startDoorman(NetworkHostAndPort("localhost", 0), database, true, testNetworkParameters(emptyList()), signer, 2, 10,null)
+        val doorman = startDoorman(intermediateCertAndKey, rootCertAndKey.certificate)
 
         // Start Corda network registration.
         val config = testNodeConfiguration(
                 baseDirectory = tempFolder.root.toPath(),
                 myLegalName = ALICE.name).also {
-            whenever(it.certificateSigningService).thenReturn(URL("http://localhost:${doorman.hostAndPort.port}"))
+            val doormanHostAndPort = doorman.hostAndPort
+            whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
             whenever(it.emailAddress).thenReturn("iTest@R3.com")
         }
 
-        NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.certificateSigningService)).buildKeystore()
+        NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
 
         // Checks the keystore are created with the right certificates and keys.
         assert(config.nodeKeystore.toFile().exists())
         assert(config.sslKeystore.toFile().exists())
         assert(config.trustStoreFile.toFile().exists())
+
+        val intermediateCACert = intermediateCertAndKey.certificate
+        val rootCACert = rootCertAndKey.certificate
 
         loadKeyStore(config.nodeKeystore, config.keyStorePassword).apply {
             assert(containsAlias(X509Utilities.CORDA_CLIENT_CA))
@@ -75,15 +85,91 @@ class DoormanIntegrationTest {
             assert(containsAlias(X509Utilities.CORDA_ROOT_CA))
             assertEquals(rootCACert.cert.subjectX500Principal, getX509Certificate(X509Utilities.CORDA_ROOT_CA).subjectX500Principal)
         }
+
         doorman.close()
     }
 
-    private fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
-        val props = Properties()
-        props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-        props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-        props.setProperty("dataSource.user", "sa")
-        props.setProperty("dataSource.password", "")
-        return props
+    //TODO remove @Ignore once PR https://github.com/corda/corda/pull/2054 is merged
+    @Test
+    @Ignore
+    fun `nodeInfo is published to the network map`() {
+        // Given
+        val rootCertAndKey = createDoormanRootCertificateAndKeyPair()
+        val intermediateCertAndKey = createDoormanIntermediateCertificateAndKeyPair(rootCertAndKey)
+
+        //Start doorman server
+        val doorman = startDoorman(intermediateCertAndKey, rootCertAndKey.certificate)
+        val doormanHostAndPort = doorman.hostAndPort
+
+        // Start Corda network registration.
+        val config = testNodeConfiguration(
+                baseDirectory = tempFolder.root.toPath(),
+                myLegalName = ALICE.name).also {
+            whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
+            whenever(it.emailAddress).thenReturn("iTest@R3.com")
+        }
+
+        NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
+
+        // Publish NodeInfo
+        val networkMapClient = NetworkMapClient(config.compatibilityZoneURL!!)
+        val certs = loadKeyStore(config.nodeKeystore, config.keyStorePassword).getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
+        val keyPair = loadKeyStore(config.nodeKeystore, config.keyStorePassword).getKeyPair(X509Utilities.CORDA_CLIENT_CA, config.keyStorePassword)
+        val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(buildCertPath(*certs))), 1, serial = 1L)
+        val nodeInfoBytes = nodeInfo.serialize()
+
+        // When
+        networkMapClient.publish(SignedData(nodeInfoBytes, keyPair.sign(nodeInfoBytes)))
+
+        // Then
+        val networkMapNodeInfo = networkMapClient.getNodeInfo(nodeInfoBytes.hash)
+        assertNotNull(networkMapNodeInfo)
+        assertEquals(nodeInfo, networkMapNodeInfo)
+
+        doorman.close()
     }
+}
+
+fun createDoormanIntermediateCertificateAndKeyPair(rootCertificateAndKeyPair: CertificateAndKeyPair): CertificateAndKeyPair {
+    val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCertificateAndKeyPair.certificate, rootCertificateAndKeyPair.keyPair,
+            CordaX500Name(commonName = "Integration Test Corda Node Intermediate CA",
+                    locality = "London",
+                    country = "GB",
+                    organisation = "R3 Ltd"), intermediateCAKey.public)
+    return CertificateAndKeyPair(intermediateCACert, intermediateCAKey)
+}
+
+fun createDoormanRootCertificateAndKeyPair(): CertificateAndKeyPair {
+    val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    val rootCACert = X509Utilities.createSelfSignedCACertificate(
+            CordaX500Name(commonName = "Integration Test Corda Node Root CA",
+                    organisation = "R3 Ltd", locality = "London",
+                    country = "GB"), rootCAKey)
+    return CertificateAndKeyPair(rootCACert, rootCAKey)
+}
+
+fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+    val props = Properties()
+    props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+    props.setProperty("dataSource.user", "sa")
+    props.setProperty("dataSource.password", "")
+    return props
+}
+
+fun startDoorman(intermediateCACertAndKey: CertificateAndKeyPair, rootCACert: X509CertificateHolder): DoormanServer {
+    val signer = LocalSigner(intermediateCACertAndKey.keyPair,
+            arrayOf(intermediateCACertAndKey.certificate.toX509Certificate(), rootCACert.toX509Certificate()))
+    //Start doorman server
+    return startDoorman(signer)
+}
+
+fun startDoorman(localSigner: LocalSigner? = null): DoormanServer {
+    val database = configureDatabase(makeTestDataSourceProperties(), null, {
+        // Identity service not needed doorman, corda persistence is not very generic.
+        throw UnsupportedOperationException()
+    }, SchemaService())
+    //Start doorman server
+    return startDoorman(NetworkHostAndPort("localhost", 0), database, true, testNetworkParameters(emptyList()), localSigner, 2, 30,null)
 }

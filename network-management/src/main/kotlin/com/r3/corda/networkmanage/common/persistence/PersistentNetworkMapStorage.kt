@@ -98,7 +98,7 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         session.createQuery(query).resultList.first()
     }
 
-    override fun getDetachedSignedAndValidNodeInfoHashes(): List<SecureHash> = database.transaction {
+    override fun getDetachedAndValidNodeInfoHashes(): List<SecureHash> = database.transaction {
         val builder = session.criteriaBuilder
         // Get signed NodeInfoEntities
         val query = builder.createQuery(NodeInfoEntity::class.java).run {

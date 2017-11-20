@@ -169,7 +169,7 @@ class RegistrationWebServiceTest : TestBase() {
     }
 
     private fun submitRequest(request: PKCS10CertificationRequest): String {
-        val conn = URL("http://${doormanServer.hostAndPort}/api/certificate").openConnection() as HttpURLConnection
+        val conn = URL("http://${doormanServer.hostAndPort}/certificate").openConnection() as HttpURLConnection
         conn.doOutput = true
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
@@ -178,7 +178,7 @@ class RegistrationWebServiceTest : TestBase() {
     }
 
     private fun pollForResponse(id: String): PollResponse {
-        val url = URL("http://${doormanServer.hostAndPort}/api/certificate/$id")
+        val url = URL("http://${doormanServer.hostAndPort}/certificate/$id")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
 

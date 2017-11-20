@@ -31,7 +31,7 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage,
     fun signNetworkMap() {
         val currentSignedNetworkMap = networkMapStorage.getCurrentNetworkMap()
         val currentNetworkMapValidNodeInfo = networkMapStorage.getCurrentNetworkMapNodeInfoHashes(listOf(CertificateStatus.VALID))
-        val detachedValidNodeInfo = networkMapStorage.getDetachedSignedAndValidNodeInfoHashes()
+        val detachedValidNodeInfo = networkMapStorage.getDetachedAndValidNodeInfoHashes()
         val nodeInfoHashes = currentNetworkMapValidNodeInfo + detachedValidNodeInfo
         val networkParameters = networkMapStorage.getLatestNetworkParameters()
         val networkMap = NetworkMap(nodeInfoHashes.map { it.toString() }, networkParameters.serialize().hash.toString())

@@ -1,5 +1,8 @@
 package com.r3.corda.networkmanage
 
+import CryptoServerAPI.CryptoServerException
+import com.r3.corda.networkmanage.hsm.authentication.CryptoServerProviderConfig
+import com.r3.corda.networkmanage.hsm.authentication.createProvider
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.ContainerConfig
@@ -29,7 +32,9 @@ data class CryptoUserCredentials(val username: String, val password: String)
  */
 class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
                    private val imageRepoTag: String = DEFAULT_IMAGE_REPO_TAG,
-                   private val imageVersion: String = DEFAULT_IMAGE_VERSION) : ExternalResource() {
+                   private val imageVersion: String = DEFAULT_IMAGE_VERSION,
+                   private val registryUser: String? = REGISTRY_USERNAME,
+                   private val registryPass: String? = REGISTRY_PASSWORD) : ExternalResource() {
 
     private companion object {
         val DEFAULT_SERVER_ADDRESS = "corda.azurecr.io"
@@ -46,6 +51,9 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
         val REGISTRY_PASSWORD = System.getenv("AZURE_CR_PASS")
 
         val log = loggerFor<HsmSimulator>()
+
+        private val HSM_STARTUP_SLEEP_INTERVAL_MS = 500L
+        private val HSM_STARTUP_POLL_MAX_COUNT = 10;
     }
 
     private val localHostAndPortBinding = freeLocalHostAndPort()
@@ -53,8 +61,8 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
     private var containerId: String? = null
 
     override fun before() {
-        assumeFalse("Docker registry username is not set!. Skipping the test.", REGISTRY_USERNAME.isNullOrBlank())
-        assumeFalse("Docker registry password is not set!. Skipping the test.", REGISTRY_PASSWORD.isNullOrBlank())
+        assumeFalse("Docker registry username is not set!. Skipping the test.", registryUser.isNullOrBlank())
+        assumeFalse("Docker registry password is not set!. Skipping the test.", registryPass.isNullOrBlank())
         docker = DefaultDockerClient.fromEnv().build().pullHsmSimulatorImageFromRepository()
         containerId = docker.createContainer()
         docker.startHsmSimulatorContainer()
@@ -96,7 +104,31 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
         if (containerId != null) {
             log.debug("Starting container $containerId...")
             this.startContainer(containerId)
+            pollAndWaitForHsmSimulator()
         }
+    }
+
+    private fun pollAndWaitForHsmSimulator() {
+        val config = CryptoServerProviderConfig(
+                Device = "${localHostAndPortBinding.port}@${localHostAndPortBinding.host}",
+                KeyGroup = "*",
+                KeySpecifier = -1
+        )
+        var pollCount = HSM_STARTUP_POLL_MAX_COUNT
+        while (pollCount > 0) {
+            val provider = createProvider(config)
+            try {
+                provider.loginPassword(CRYPTO_USER, CRYPTO_PASSWORD)
+                provider.cryptoServer.authState
+                return
+            } catch (e: CryptoServerException) {
+                pollCount--
+                Thread.sleep(HSM_STARTUP_SLEEP_INTERVAL_MS)
+            } finally {
+                provider.logoff()
+            }
+        }
+        throw IllegalStateException("Unable to obtain connection to initialised HSM Simulator")
     }
 
     private fun getImageFullName() = "$imageRepoTag:$imageVersion"
@@ -105,8 +137,8 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
         this.pull(imageRepoTag,
                 RegistryAuth.builder()
                         .serverAddress(serverAddress)
-                        .username(REGISTRY_USERNAME)
-                        .password(REGISTRY_PASSWORD)
+                        .username(registryUser)
+                        .password(registryPass)
                         .build())
         return this
     }
