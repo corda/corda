@@ -11,6 +11,9 @@ UNRELEASED
 
 * ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
 
+* ``wellKnownPartyFromAnonymous()`` now always resolve the key to a ``Party``, then the party to the well known party.
+  Previously if it was passed a ``Party`` it would use its name as-is without verifying the key matched that name.
+
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.
 
