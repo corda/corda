@@ -8,12 +8,12 @@ import com.jcraft.jsch.agentproxy.AgentProxy
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.PortAllocation
-import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.streams.toList
 
-private val log = LoggerFactory.getLogger(ConnectionManager::class.java)
+private val log = loggerFor<ConnectionManager>()
 
 /**
  * Creates a new [JSch] instance with identities loaded from the running SSH agent.

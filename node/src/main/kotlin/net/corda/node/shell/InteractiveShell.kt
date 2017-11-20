@@ -20,7 +20,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
@@ -48,6 +47,7 @@ import org.crsh.util.Utils
 import org.crsh.vfs.FS
 import org.crsh.vfs.spi.file.FileMountFactory
 import org.crsh.vfs.spi.url.ClassPathMountFactory
+import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscriber
 import java.io.*
@@ -73,7 +73,7 @@ import kotlin.concurrent.thread
 // TODO: Make it notice new shell commands added after the node started.
 
 object InteractiveShell {
-    private val log = loggerFor<InteractiveShell>()
+    private val log = LoggerFactory.getLogger(javaClass)
     private lateinit var node: StartedNode<Node>
     @VisibleForTesting
     internal lateinit var database: CordaPersistence

@@ -19,7 +19,7 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.CordaPersistence
@@ -63,7 +63,7 @@ class NetworkMapCacheImpl(
 @ThreadSafe
 open class PersistentNetworkMapCache(private val database: CordaPersistence) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
     companion object {
-        val logger = loggerFor<PersistentNetworkMapCache>()
+        private val logger = contextLogger()
     }
 
     // TODO Small explanation, partyNodes and registeredNodes is left in memory as it was before, because it will be removed in

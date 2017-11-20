@@ -3,11 +3,10 @@ package net.corda.traderdemo
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.finance.DOLLARS
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
-import org.slf4j.Logger
 import kotlin.system.exitProcess
 
 /**
@@ -24,7 +23,7 @@ private class TraderDemo {
     }
 
     companion object {
-        val logger: Logger = loggerFor<TraderDemo>()
+        private val logger = contextLogger()
         val buyerName = DUMMY_BANK_A.name
         val sellerName = DUMMY_BANK_B.name
         val sellerRpcPort = 10009

@@ -9,7 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
 import java.security.PublicKey
 
@@ -45,8 +45,11 @@ abstract class NotaryService : SingletonSerializeAsToken() {
  * of the cluster is sufficient for transaction notarisation. For example, a single-node or a Raft notary.
  */
 abstract class TrustedAuthorityNotaryService : NotaryService() {
-    protected open val log: Logger = loggerFor<TrustedAuthorityNotaryService>()
+    companion object {
+        private val staticLog = contextLogger()
+    }
 
+    protected open val log: Logger get() = staticLog
     // TODO: specify the valid time window in config, and convert TimeWindowChecker to a utility method
     protected abstract val timeWindowChecker: TimeWindowChecker
     protected abstract val uniquenessProvider: UniquenessProvider

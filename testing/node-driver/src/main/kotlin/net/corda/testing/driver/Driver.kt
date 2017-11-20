@@ -71,10 +71,21 @@ private val DEFAULT_POLL_INTERVAL = 500.millis
 
 private const val DEFAULT_WARN_COUNT = 120
 
+/**
+ * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
+ * in demo application like NodeExplorer.
+ */
 private val DRIVER_REQUIRED_PERMISSIONS = setOf(
         invokeRpc(CordaRPCOps::nodeInfo),
         invokeRpc(CordaRPCOps::networkMapFeed),
-        invokeRpc(CordaRPCOps::networkMapSnapshot)
+        invokeRpc(CordaRPCOps::networkMapSnapshot),
+        invokeRpc(CordaRPCOps::notaryIdentities),
+        invokeRpc(CordaRPCOps::stateMachinesFeed),
+        invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
+        invokeRpc(CordaRPCOps::nodeInfoFromParty),
+        invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
+        invokeRpc("vaultQueryBy"),
+        invokeRpc("vaultTrackBy")
 )
 
 /**
@@ -145,7 +156,7 @@ interface DriverDSLExposedInterface : CordformContext {
      * Helper function for starting a [Node] with custom parameters from Java.
      *
      * @param parameters The default parameters for the driver.
-     * @return The value returned in the [dsl] closure.
+     * @return [NodeHandle] that will be available sometime in the future.
      */
     fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> = startNode(defaultParameters = parameters)
 
@@ -314,8 +325,8 @@ data class NodeParameters(
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSLExposedInterface.startNode].
- * @param notarySpecs The notaries advertised in the [NetworkParameters] for this network. These nodes will be started
- * automatically and will be available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
+ * @param notarySpecs The notaries advertised for this network. These nodes will be started automatically and will be
+ * available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */

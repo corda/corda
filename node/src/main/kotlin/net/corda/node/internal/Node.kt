@@ -10,9 +10,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.serialization.KryoServerSerializationScheme
@@ -50,7 +50,7 @@ open class Node(configuration: NodeConfiguration,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
 ) : AbstractNode(configuration, createClock(configuration), versionInfo, cordappLoader) {
     companion object {
-        private val logger = loggerFor<Node>()
+        private val staticLog = contextLogger()
         var renderBasicInfoToConsole = true
 
         /** Used for useful info that we always want to show, even when not logging to the console */
@@ -80,7 +80,7 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    override val log: Logger get() = logger
+    override val log: Logger get() = staticLog
     override fun makeTransactionVerifierService(): TransactionVerifierService = when (configuration.verifierType) {
         VerifierType.OutOfProcess -> verifierMessagingClient!!.verifierService
         VerifierType.InMemory -> InMemoryTransactionVerifierService(numberOfWorkers = 4)
@@ -283,7 +283,7 @@ open class Node(configuration: NodeConfiguration,
                 _startupComplete.set(Unit)
             }
         },
-                { th -> logger.error("Unexpected exception", th) }
+                { th -> staticLog.error("Unexpected exception", th) } // XXX: Why not use log?
         )
         shutdownHook = addShutdownHook {
             stop()

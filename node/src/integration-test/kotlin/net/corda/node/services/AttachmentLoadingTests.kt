@@ -13,8 +13,8 @@ import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.*
@@ -41,7 +41,7 @@ class AttachmentLoadingTests {
     }
 
     private companion object {
-        val logger = loggerFor<AttachmentLoadingTests>()
+        private val logger = contextLogger()
         val isolatedJAR = AttachmentLoadingTests::class.java.getResource("isolated.jar")!!
         val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 

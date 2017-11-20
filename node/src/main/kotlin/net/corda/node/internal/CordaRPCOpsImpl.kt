@@ -20,8 +20,8 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
@@ -296,6 +296,6 @@ internal class CordaRPCOpsImpl(
     }
 
     companion object {
-        private val log = loggerFor<CordaRPCOpsImpl>()
+        private val log = contextLogger()
     }
 }

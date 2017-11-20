@@ -7,7 +7,7 @@ import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimap
 import net.corda.client.jackson.StringToMethodCallParser.ParsedMethodCall
 import net.corda.core.CordaException
-import org.slf4j.LoggerFactory
+import net.corda.core.utilities.contextLogger
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
 import java.util.concurrent.Callable
@@ -90,7 +90,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
             return result
         }
 
-        private val log = LoggerFactory.getLogger(StringToMethodCallParser::class.java)!!
+        private val log = contextLogger()
     }
 
     /** The methods that can be invoked via this parser. */

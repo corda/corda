@@ -12,10 +12,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.parsePublicKeyBase58
+import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
@@ -99,7 +96,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                              val networkMapCache: NetworkMapCache,
                              val userService: RPCUserService) : SingletonSerializeAsToken() {
     companion object {
-        private val log = loggerFor<ArtemisMessagingServer>()
+        private val log = contextLogger()
         /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
         @JvmStatic
         val MAX_FILE_SIZE = 10485760
@@ -235,8 +232,10 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles[P2P_QUEUE] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
-        // TODO remove the NODE_USER role once the webserver doesn't need it
+        // TODO: remove the NODE_USER role below once the webserver doesn't need it anymore.
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
+        // Each RPC user must have its own role and its own queue. This prevents users accessing each other's queues
+        // and stealing RPC responses.
         for ((username) in userService.users) {
             securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#"] = setOf(
                     nodeInternalRole,
@@ -417,7 +416,7 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                                       protocolManager: ClientProtocolManager?) :
         NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
     companion object {
-        private val log = loggerFor<VerifyingNettyConnector>()
+        private val log = contextLogger()
     }
 
     private val sslEnabled = ConfigurationHelper.getBooleanProperty(TransportConstants.SSL_ENABLED_PROP_NAME, TransportConstants.DEFAULT_SSL_ENABLED, configuration)
@@ -540,8 +539,7 @@ class NodeLoginModule : LoginModule {
         const val VERIFIER_ROLE = "SystemRoles/Verifier"
 
         const val CERT_CHAIN_CHECKS_OPTION_NAME = "CertChainChecks"
-
-        val log = loggerFor<NodeLoginModule>()
+        private val log = contextLogger()
     }
 
     private var loginSucceeded: Boolean = false
