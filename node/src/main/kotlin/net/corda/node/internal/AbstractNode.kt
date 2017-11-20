@@ -605,17 +605,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     private fun readNetworkParameters() {
         val file = configuration.baseDirectory / "network-parameters"
-        networkParameters = if (configuration.devMode) {
-            try { // TODO It is enabled only in dev mode, because of Cordformation networkParameters generation.
-                file.readAll().deserialize<NetworkParameters>()
-            } catch (e: Exception) {
-                if(e is ClassCastException || e is NotSerializableException)
-                    file.readAll().deserialize<SignedData<NetworkParameters>>().verified()
-                else throw e
-            }
-        } else {
-            file.readAll().deserialize<SignedData<NetworkParameters>>().verified()
-        }
+        networkParameters = file.readAll().deserialize<SignedData<NetworkParameters>>().verified()
         log.info(networkParameters.toString())
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node is too old for the network" }
     }

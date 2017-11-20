@@ -31,7 +31,7 @@ class TestNetworkParametersGenerator : NetworkParametersGenerator {
                 maxMessageSize = 40000,
                 maxTransactionSize = 40000,
                 epoch = 1
-        ), false)
+        ))
         nodesDirs.forEach { copier.install(it) }
     }
     

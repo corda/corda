@@ -11,19 +11,15 @@ import java.math.BigInteger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 
-class NetworkParametersCopier(networkParameters: NetworkParameters, sign: Boolean = true) {
+class NetworkParametersCopier(networkParameters: NetworkParameters) {
     private companion object {
         val DUMMY_MAP_KEY = entropyToKeyPair(BigInteger.valueOf(123))
     }
 
     private val serializedNetworkParameters = networkParameters.let {
         val serialize = it.serialize()
-        if (sign) {
-            val signature = DUMMY_MAP_KEY.sign(serialize)
-            SignedData(serialize, signature).serialize()
-        } else {
-            serialize
-        }
+        val signature = DUMMY_MAP_KEY.sign(serialize)
+        SignedData(serialize, signature).serialize()
     }
 
     fun install(dir: Path) {

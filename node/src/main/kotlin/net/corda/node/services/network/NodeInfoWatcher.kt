@@ -95,15 +95,15 @@ class NodeInfoWatcher(private val nodePath: Path,
     /**
      * Loads latest NodeInfo files stored in node's base directory.
      * Scans main directory and [CordformNode.NODE_INFO_DIRECTORY].
-     * Signatures are not checked before returning a value. The latest value stored for a given name is returned.
+     * Signatures are checked before returning a value. The latest value stored for a given name is returned.
      *
      * @return list of latest [NodeInfo]s
      */
     fun getAllNodeInfos(): List<NodeInfo> {
-        val nodeInfos = loadFromDirectory(false)
+        val nodeInfos = loadFromDirectory()
         // NodeInfos are currently stored in 2 places: in [CordformNode.NODE_INFO_DIRECTORY] and in baseDirectory of the node.
         val myFiles = nodePath.list { it.filter { "nodeInfo-" in it.toString() }.toList() }
-        val myNodeInfos = myFiles.mapNotNull { processFile(it, false) }
+        val myNodeInfos = myFiles.mapNotNull { processFile(it) }
         val infosMap = mutableMapOf<CordaX500Name, NodeInfo>()
         // Running deployNodes more than once produces new NodeInfos. We need to load the latest NodeInfos based on serial field.
         for (info in nodeInfos + myNodeInfos) {
@@ -121,7 +121,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      *
      * @return a list of [NodeInfo]s
      */
-    private fun loadFromDirectory(checkSignature: Boolean = true): List<NodeInfo> {
+    private fun loadFromDirectory(): List<NodeInfo> {
         if (!nodeInfoDirectory.isDirectory()) {
             return emptyList()
         }
@@ -129,7 +129,7 @@ class NodeInfoWatcher(private val nodePath: Path,
             paths.filter { it !in processedNodeInfoFiles }
                     .filter { it.isRegularFile() }
                     .map { path ->
-                        processFile(path, checkSignature)?.apply {
+                        processFile(path)?.apply {
                             processedNodeInfoFiles.add(path)
                             _processedNodeInfoHashes.add(this.serialize().hash)
                         }
@@ -143,11 +143,11 @@ class NodeInfoWatcher(private val nodePath: Path,
         return result
     }
 
-    private fun processFile(file: Path, checkSignature: Boolean = true): NodeInfo? {
+    private fun processFile(file: Path): NodeInfo? {
         return try {
             logger.info("Reading NodeInfo from file: $file")
             val signedData = file.readAll().deserialize<SignedData<NodeInfo>>()
-            if (checkSignature) signedData.verified() else signedData.raw.deserialize()
+            signedData.verified()
         } catch (e: Exception) {
             logger.warn("Exception parsing NodeInfo from file. $file", e)
             null
