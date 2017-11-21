@@ -27,6 +27,21 @@ import kotlin.test.*
  * Server EC NIST P-256 - Client RSA.
  * Server RSA - Client EC NIST P-256.
  * Mixed CA and TLS keys.
+ *
+ * TLS/SSL protocols support a large number of cipher suites.
+ * A cipher suite is a collection of symmetric and asymmetric encryption algorithms used by hosts to establish
+ * a secure communication. Supported cipher suites can be classified based on encryption algorithm strength,
+ * key length, key exchange and authentication mechanisms. Some cipher suites offer better level of security than others.
+ *
+ * Each TLS cipher suite has a unique name that is used to identify it and to describe the algorithmic contents of it.
+ * Each segment in a cipher suite name stands for a different algorithm or protocol.
+ * An example of a cipher suite name: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+ * The meaning of this name is:
+ * TLS defines the protocol that this cipher suite is for; it will usually be TLS.
+ * ECDHE indicates the key exchange algorithm being used.
+ * ECDSA indicates the authentication algorithm (signing the DH keys).
+ * AES_128_GCM indicates the block cipher being used to encrypt the message stream.
+ * SHA256 indicates the message authentication algorithm which is used to authenticate a message.
  */
 class TLSAuthenticationTests {
 
@@ -82,9 +97,10 @@ class TLSAuthenticationTests {
         val (serverSocket, clientSocket) =
                 buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
 
-        testConnect(serverSocket, clientSocket, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
     }
 
+    // Server's public key type is the one selected if users use different key types (e.g RSA and EC R1).
     @Test
     fun `Server RSA - Client EC R1 - CAs all EC R1`() {
         val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
@@ -98,8 +114,7 @@ class TLSAuthenticationTests {
 
         val (serverSocket, clientSocket) =
                 buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
-
-        testConnect(serverSocket, clientSocket, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256") // Server's key type is selected.
     }
 
     @Test
@@ -114,7 +129,7 @@ class TLSAuthenticationTests {
         )
 
         val (serverSocket, clientSocket) = buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
-        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") // Server's key type is selected.
     }
 
     @Test
@@ -166,6 +181,32 @@ class TLSAuthenticationTests {
                 CORDA_TLS_CIPHER_SUITES,
                 arrayOf("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")) // Second client accepts DHE only.
         testConnect(serverSocket, clientSocket, "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")
+    }
+
+    // According to RFC 5246 (TLS 1.2), section 7.4.1.2 ClientHello cipher_suites:
+    // This is a list of the cryptographic options supported by the client, with the client's first preference first.
+    //
+    // However, the server is still free to ignore this order and pick what it thinks is best,
+    // see https://security.stackexchange.com/questions/121608 for more information.
+    @Test
+    fun `TLS cipher suite order matters - client wins`() {
+        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
+                rootCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                intermediateCAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client1CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client1TLSScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
+                client2TLSScheme = Crypto.ECDSA_SECP256R1_SHA256
+        )
+
+        val (serverSocket, clientSocket) = buildTLSSockets(
+                serverSocketFactory,
+                clientSocketFactory,
+                0,
+                0,
+                arrayOf("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"), // GCM then CBC.
+                arrayOf("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")) // CBC then GCM.
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256") // Client order wins.
     }
 
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
