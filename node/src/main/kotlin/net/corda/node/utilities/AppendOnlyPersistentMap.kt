@@ -1,6 +1,6 @@
 package net.corda.node.utilities
 
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import java.util.*
 
 
@@ -18,7 +18,7 @@ class AppendOnlyPersistentMap<K, V, E, out EK>(
 ) { //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
 
     private companion object {
-        val log = loggerFor<AppendOnlyPersistentMap<*, *, *, *>>()
+        private val log = contextLogger()
     }
 
     private val cache = NonInvalidatingCache<K, Optional<V>>(

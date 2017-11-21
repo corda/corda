@@ -10,11 +10,10 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import net.corda.core.utilities.contextLogger
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import net.corda.node.utilities.X509Utilities
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
 import java.security.InvalidAlgorithmParameterException
@@ -36,7 +35,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
                 trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
 
     companion object {
-        private val log = loggerFor<PersistentIdentityService>()
+        private val log = contextLogger()
         private val certFactory: CertificateFactory = CertificateFactory.getInstance("X.509")
 
         fun createPKMap(): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
@@ -164,15 +163,13 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // Expand the anonymous party to a full party (i.e. has a name) if possible
-        val candidate = party as? Party ?: partyFromKey(party.owningKey)
+        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
+        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
+        // into a party, and from there figure out the well known party.
+        val candidate = partyFromKey(party.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
-        // Look up the well known identity for that name
         return if (candidate != null) {
-            // If we have a well known identity by that name, use it in preference to the candidate. Otherwise default
-            // back to the candidate.
-            val res = wellKnownPartyFromX500Name(candidate.name) ?: candidate
-            res
+            wellKnownPartyFromX500Name(candidate.name)
         } else {
             null
         }

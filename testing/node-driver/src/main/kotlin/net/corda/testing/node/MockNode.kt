@@ -8,19 +8,20 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.NotaryInfo
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
@@ -36,17 +37,13 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.common.internal.NetworkParametersCopier
-import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.setGlobalSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.setGlobalSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.slf4j.Logger
-import java.io.Closeable
+import org.apache.sshd.common.util.security.SecurityUtils
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
@@ -123,9 +120,16 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                   private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
+                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
+
+    init {
+        // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
+        // This SFTP support loads BouncyCastle, which we want to avoid.
+        // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
+        SecurityUtils.setAPrioriDisabledProvider("BC", true)
+    }
 
     var nextNodeId = 0
         private set
@@ -134,7 +138,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
-    private val networkParameters: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
     private val serializationEnv = setGlobalSerialization(initialiseSerialization)
     private val sharedUserCount = AtomicInteger(0)
@@ -164,7 +167,15 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
      * @see defaultNotaryNode
      */
     val defaultNotaryIdentity: Party get() {
-        return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        return defaultNotaryNode.info.legalIdentities[1] // TODO Resolve once network parameters is merged back in
+    }
+
+    /**
+     * Return the identity of the default notary node.
+     * @see defaultNotaryNode
+     */
+    val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
+        return defaultNotaryNode.info.legalIdentitiesAndCerts[1] // TODO Resolve once network parameters is merged back in
     }
 
     /**
@@ -191,20 +202,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
     init {
         filesystem.getPath("/nodes").createDirectory()
-        val notaryInfos = generateNotaryIdentities()
-        // The network parameters must be serialised before starting any of the nodes
-        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
         notaryNodes = createNotaries()
-    }
-
-    private fun generateNotaryIdentities(): List<NotaryInfo> {
-        return notarySpecs.mapIndexed { index, spec ->
-            val identity = ServiceIdentityGenerator.generateToDisk(
-                    dirs = listOf(baseDirectory(nextNodeId + index)),
-                    serviceName = spec.name,
-                    serviceId = "identity")
-            NotaryInfo(identity, spec.validating)
-        }
     }
 
     private fun createNotaries(): List<StartedNode<MockNode>> {
@@ -222,13 +220,15 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch
     ) {
+        companion object {
+            private val staticLog = contextLogger()
+        }
+
         val mockNet = args.network
         val id = args.id
         private val entropyRoot = args.entropyRoot
         var counter = entropyRoot
-
-        override val log: Logger = loggerFor<MockNode>()
-
+        override val log get() = staticLog
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode) {
                     ServiceAffinityExecutor("Mock node $id thread", 1)
@@ -240,7 +240,6 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         override val started: StartedNode<MockNode>? get() = uncheckedCast(super.started)
 
         override fun start(): StartedNode<MockNode> {
-            mockNet.networkParameters.install(configuration.baseDirectory)
             val started: StartedNode<MockNode> = uncheckedCast(super.start())
             advertiseNodeToNetwork(started)
             return started
@@ -257,7 +256,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(database: CordaPersistence): MessagingService {
+        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
@@ -265,8 +264,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                     serverThread,
                     myNotaryIdentity,
                     myLegalName,
-                    database
-            ).start().getOrThrow()
+                    database).also { runOnStop += it::stop }
         }
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
@@ -275,6 +273,10 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
             return E2ETestKeyManagementService(identityService, keyPairs)
+        }
+
+        override fun startShell(rpcOps: CordaRPCOps) {
+            //No mock shell
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {
@@ -418,6 +420,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
         serializationEnv.unset()
+        messagingNetwork.stop()
     }
 
     // Test method to block until all scheduled activity, active flows
@@ -426,19 +429,8 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         busyLatch.await()
     }
 
-    override fun close() {
-        stopNodes()
-    }
-
     data class NotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
         constructor(name: CordaX500Name) : this(name, validating = true)
-    }
-}
-
-fun network(nodesCount: Int, action: MockNetwork.(List<StartedNode<MockNetwork.MockNode>>) -> Unit) {
-    MockNetwork().use { mockNet ->
-        val nodes = (1..nodesCount).map { mockNet.createPartyNode() }
-        mockNet.action(nodes)
     }
 }
 

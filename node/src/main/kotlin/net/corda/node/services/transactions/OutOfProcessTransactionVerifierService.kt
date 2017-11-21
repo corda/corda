@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import com.codahale.metrics.Gauge
+import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.Timer
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
@@ -10,17 +11,17 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.loggerFor
-import net.corda.node.services.api.MonitoringService
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.VerifierApi
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import java.util.concurrent.ConcurrentHashMap
 
-abstract class OutOfProcessTransactionVerifierService(
-        val monitoringService: MonitoringService
+class OutOfProcessTransactionVerifierService(
+        private val metrics: MetricRegistry,
+        private val sendRequest: (Long, LedgerTransaction) -> Unit
 ) : SingletonSerializeAsToken(), TransactionVerifierService {
     companion object {
-        val log = loggerFor<OutOfProcessTransactionVerifierService>()
+        private val log = contextLogger()
     }
 
     private data class VerificationHandle(
@@ -34,16 +35,16 @@ abstract class OutOfProcessTransactionVerifierService(
     // Metrics
     private fun metric(name: String) = "OutOfProcessTransactionVerifierService.$name"
 
-    private val durationTimer = monitoringService.metrics.timer(metric("Verification.Duration"))
-    private val successMeter = monitoringService.metrics.meter(metric("Verification.Success"))
-    private val failureMeter = monitoringService.metrics.meter(metric("Verification.Failure"))
+    private val durationTimer = metrics.timer(metric("Verification.Duration"))
+    private val successMeter = metrics.meter(metric("Verification.Success"))
+    private val failureMeter = metrics.meter(metric("Verification.Failure"))
 
     class VerificationResultForUnknownTransaction(nonce: Long) :
             Exception("Verification result arrived for unknown transaction nonce $nonce")
 
     fun start(responseConsumer: ClientConsumer) {
         log.info("Starting out of process verification service")
-        monitoringService.metrics.register(metric("VerificationsInFlight"), Gauge { verificationHandles.size })
+        metrics.register(metric("VerificationsInFlight"), Gauge { verificationHandles.size })
         responseConsumer.setMessageHandler { message ->
             val response = VerifierApi.VerificationResponse.fromClientMessage(message)
             val handle = verificationHandles.remove(response.verificationId) ?:
@@ -59,8 +60,6 @@ abstract class OutOfProcessTransactionVerifierService(
             }
         }
     }
-
-    abstract fun sendRequest(nonce: Long, transaction: LedgerTransaction)
 
     override fun verify(transaction: LedgerTransaction): CordaFuture<*> {
         log.info("Verifying ${transaction.id}")

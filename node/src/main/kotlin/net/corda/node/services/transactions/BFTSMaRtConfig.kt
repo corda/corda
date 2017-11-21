@@ -2,8 +2,8 @@ package net.corda.node.services.transactions
 
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import java.io.FileWriter
 import java.io.PrintWriter
 import java.net.InetAddress
@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
  */
 class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean, val exposeRaces: Boolean) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
-        private val log = loggerFor<BFTSMaRtConfig>()
+        private val log = contextLogger()
         internal val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
     }
 

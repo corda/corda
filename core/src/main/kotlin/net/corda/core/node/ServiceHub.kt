@@ -8,13 +8,11 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
-import net.corda.core.messaging.NodeState
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import rx.Observable
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
@@ -149,9 +147,6 @@ interface ServiceHub : ServicesForResolution {
 
     /** The [NodeInfo] object corresponding to our own entry in the network map. */
     val myInfo: NodeInfo
-
-    /** The [Observable] object used to communicate to RPC clients the state of the node. */
-    val myNodeStateObservable: Observable<NodeState>
 
     /**
      * Return the singleton instance of the given Corda service type. This is a class that is annotated with

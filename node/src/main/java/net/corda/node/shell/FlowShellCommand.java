@@ -2,6 +2,9 @@ package net.corda.node.shell;
 
 // See the comments at the top of run.java
 
+import net.corda.core.messaging.CordaRPCOps;
+import net.corda.node.utilities.ANSIProgressRenderer;
+import net.corda.node.utilities.CRaSHNSIProgressRenderer;
 import org.crsh.cli.*;
 import org.crsh.command.*;
 import org.crsh.text.*;
@@ -9,6 +12,7 @@ import org.crsh.text.ui.TableElement;
 
 import java.util.*;
 
+import static net.corda.node.services.messaging.RPCServerKt.CURRENT_RPC_CONTEXT;
 import static net.corda.node.shell.InteractiveShell.*;
 
 @Man(
@@ -25,25 +29,27 @@ public class FlowShellCommand extends InteractiveShellCommand {
             @Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
             @Usage("The data to pass as input") @Argument(unquote = false) List<String> input
     ) {
-        startFlow(name, input, out);
+        startFlow(name, input, out, ops(), ansiProgressRenderer());
     }
 
     // TODO Limit number of flows shown option?
     @Command
     @Usage("watch information about state machines running on the node with result information")
     public void watch(InvocationContext<TableElement> context) throws Exception {
-        runStateMachinesView(out);
+        runStateMachinesView(out, ops());
     }
 
     static void startFlow(@Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
                           @Usage("The data to pass as input") @Argument(unquote = false) List<String> input,
-                          RenderPrintWriter out) {
+                          RenderPrintWriter out,
+                          CordaRPCOps rpcOps,
+                          ANSIProgressRenderer ansiProgressRenderer) {
         if (name == null) {
             out.println("You must pass a name for the flow, see 'man flow'", Color.red);
             return;
         }
         String inp = input == null ? "" : String.join(" ", input).trim();
-        runFlowByNameFragment(name, inp, out);
+        runFlowByNameFragment(name, inp, out, rpcOps, ansiProgressRenderer != null ? ansiProgressRenderer : new CRaSHNSIProgressRenderer(out) );
     }
 
     @Command

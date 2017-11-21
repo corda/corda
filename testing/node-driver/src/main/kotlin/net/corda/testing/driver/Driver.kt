@@ -16,9 +16,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NotaryService
 import net.corda.core.toFuture
@@ -37,8 +35,6 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
-import net.corda.testing.common.internal.NetworkParametersCopier
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -77,10 +73,22 @@ private val DEFAULT_POLL_INTERVAL = 500.millis
 
 private const val DEFAULT_WARN_COUNT = 120
 
+/**
+ * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
+ * in demo application like NodeExplorer.
+ */
 private val DRIVER_REQUIRED_PERMISSIONS = setOf(
         invokeRpc(CordaRPCOps::nodeInfo),
         invokeRpc(CordaRPCOps::networkMapFeed),
-        invokeRpc(CordaRPCOps::networkMapSnapshot)
+        invokeRpc(CordaRPCOps::networkMapSnapshot),
+        invokeRpc(CordaRPCOps::notaryIdentities),
+        invokeRpc(CordaRPCOps::stateMachinesFeed),
+        invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
+        invokeRpc(CordaRPCOps::nodeInfoFromParty),
+        invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
+        invokeRpc("vaultQueryBy"),
+        invokeRpc("vaultTrackBy"),
+        invokeRpc(CordaRPCOps::registeredFlows)
 )
 
 /**
@@ -151,7 +159,7 @@ interface DriverDSLExposedInterface : CordformContext {
      * Helper function for starting a [Node] with custom parameters from Java.
      *
      * @param parameters The default parameters for the driver.
-     * @return The value returned in the [dsl] closure.
+     * @return [NodeHandle] that will be available sometime in the future.
      */
     fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> = startNode(defaultParameters = parameters)
 
@@ -320,9 +328,8 @@ data class NodeParameters(
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSLExposedInterface.startNode].
- * @param notarySpecs The notaries advertised in the [NetworkParameters] for this network. These nodes will be started
- *     automatically and will be available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
- * @param compatibilityZoneURL if not null each node is started once in registration mode (which makes the node register and quit),
+ * @param notarySpecs The notaries advertised  for this network. These nodes will be started
+  automatically and will be* available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.* @param compatibilityZoneURL if not null each node is started once in registration mode (which makes the node register and quit),
  *     and then re-starts the node with the given parameters.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
@@ -595,7 +602,6 @@ class DriverDSL(
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
     override val notaryHandles: List<NotaryHandle> get() = _notaries
-    private lateinit var networkParameters: NetworkParametersCopier
 
     class State {
         val processes = ArrayList<Process>()
@@ -749,33 +755,29 @@ class DriverDSL(
         _shutdownManager = ShutdownManager(executorService)
         shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
         val notaryInfos = generateNotaryIdentities()
-        // The network parameters must be serialised before starting any of the nodes
-        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
         val nodeHandles = startNotaries()
         _notaries = notaryInfos.zip(nodeHandles) { (identity, validating), nodes -> NotaryHandle(identity, validating, nodes) }
     }
 
-    private fun generateNotaryIdentities(): List<NotaryInfo> {
+    private fun generateNotaryIdentities(): List<Pair<Party, Boolean>> {
         return notarySpecs.map { spec ->
             val identity = if (spec.cluster == null) {
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = listOf(baseDirectory(spec.name)),
-                        serviceName = spec.name,
-                        serviceId = "identity")
+                        serviceName = spec.name.copy(commonName = NotaryService.constructId(validating = spec.validating))
+                )
             } else {
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
-                        serviceName = spec.name,
-                        serviceId = NotaryService.constructId(
-                                validating = spec.validating,
-                                raft = spec.cluster is ClusterSpec.Raft))
+                        serviceName = spec.name
+                )
             }
-            NotaryInfo(identity, spec.validating)
+            Pair(identity, spec.validating)
         }
     }
 
     private fun generateNodeNames(spec: NotarySpec): List<CordaX500Name> {
-        return (0 until spec.cluster!!.clusterSize).map { spec.name.copy(organisation = "${spec.name.organisation}-$it") }
+        return (0 until spec.cluster!!.clusterSize).map { spec.name.copy(commonName = null, organisation = "${spec.name.organisation}-$it") }
     }
 
     private fun startNotaries(): List<CordaFuture<List<NodeHandle>>> {
@@ -912,7 +914,6 @@ class DriverDSL(
                                   maximumHeapSize: String): CordaFuture<NodeHandle> {
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
-        networkParameters.install(baseDirectory)
         nodeInfoFilesCopier.addConfig(baseDirectory)
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier.removeConfig(baseDirectory)

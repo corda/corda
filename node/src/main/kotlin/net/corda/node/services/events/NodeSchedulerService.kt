@@ -17,7 +17,7 @@ import net.corda.core.internal.until
 import net.corda.core.node.StateLoader
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.internal.MutableClock
 import net.corda.node.services.api.FlowStarter
@@ -65,8 +65,7 @@ class NodeSchedulerService(private val clock: Clock,
     : SchedulerService, SingletonSerializeAsToken() {
 
     companion object {
-        private val log = loggerFor<NodeSchedulerService>()
-
+        private val log = contextLogger()
         /**
          * Wait until the given [Future] is complete or the deadline is reached, with support for [MutableClock] implementations
          * used in demos or testing.  This will substitute a Fiber compatible Future so the current

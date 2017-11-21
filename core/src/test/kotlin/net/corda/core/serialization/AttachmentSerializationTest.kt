@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.TestDataVendingFlow
+import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.getOrThrow
@@ -15,9 +16,11 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.utilities.currentDBSession
-import net.corda.testing.chooseIdentity
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.singleIdentity
 import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Before
@@ -63,13 +66,16 @@ class AttachmentSerializationTest {
     private lateinit var mockNet: MockNetwork
     private lateinit var server: StartedNode<MockNetwork.MockNode>
     private lateinit var client: StartedNode<MockNetwork.MockNode>
+    private lateinit var serverIdentity: Party
 
     @Before
     fun setUp() {
         mockNet = MockNetwork()
-        server = mockNet.createNode()
-        client = mockNet.createNode()
+        server = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
+        client = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
+        mockNet.runNetwork()
+        serverIdentity = server.info.singleIdentity()
     }
 
     @After
@@ -91,9 +97,7 @@ class AttachmentSerializationTest {
     private class ClientResult(internal val attachmentContent: String)
 
     @InitiatingFlow
-    private abstract class ClientLogic(server: StartedNode<*>) : FlowLogic<ClientResult>() {
-        internal val server = server.info.chooseIdentity()
-
+    private abstract class ClientLogic(val serverIdentity: Party) : FlowLogic<ClientResult>() {
         @Suspendable
         internal fun communicate(serverSession: FlowSession) {
             serverSession.sendAndReceive<String>("ping one").unwrap { assertEquals("pong", it) }
@@ -112,30 +116,30 @@ class AttachmentSerializationTest {
         override val signers get() = throw UnsupportedOperationException()
     }
 
-    private class CustomAttachmentLogic(server: StartedNode<*>, private val attachmentId: SecureHash, private val customContent: String) : ClientLogic(server) {
+    private class CustomAttachmentLogic(serverIdentity: Party, private val attachmentId: SecureHash, private val customContent: String) : ClientLogic(serverIdentity) {
         @Suspendable
         override fun getAttachmentContent(): String {
             val customAttachment = CustomAttachment(attachmentId, customContent)
-            val session = initiateFlow(server)
+            val session = initiateFlow(serverIdentity)
             communicate(session)
             return customAttachment.customContent
         }
     }
 
-    private class OpenAttachmentLogic(server: StartedNode<*>, private val attachmentId: SecureHash) : ClientLogic(server) {
+    private class OpenAttachmentLogic(serverIdentity: Party, private val attachmentId: SecureHash) : ClientLogic(serverIdentity) {
         @Suspendable
         override fun getAttachmentContent(): String {
             val localAttachment = serviceHub.attachments.openAttachment(attachmentId)!!
-            val session = initiateFlow(server)
+            val session = initiateFlow(serverIdentity)
             communicate(session)
             return localAttachment.extractContent()
         }
     }
 
-    private class FetchAttachmentLogic(server: StartedNode<*>, private val attachmentId: SecureHash) : ClientLogic(server) {
+    private class FetchAttachmentLogic(serverIdentity: Party, private val attachmentId: SecureHash) : ClientLogic(serverIdentity) {
         @Suspendable
         override fun getAttachmentContent(): String {
-            val serverSession = initiateFlow(server)
+            val serverSession = initiateFlow(serverIdentity)
             val (downloadedAttachment) = subFlow(FetchAttachmentsFlow(setOf(attachmentId), serverSession)).downloaded
             serverSession.send(FetchDataFlow.Request.End)
             communicate(serverSession)
@@ -166,14 +170,14 @@ class AttachmentSerializationTest {
     @Test
     fun `custom (and non-persisted) attachment should be saved in checkpoint`() {
         val attachmentId = SecureHash.sha256("any old data")
-        launchFlow(CustomAttachmentLogic(server, attachmentId, "custom"), 1)
+        launchFlow(CustomAttachmentLogic(serverIdentity, attachmentId, "custom"), 1)
         assertEquals("custom", rebootClientAndGetAttachmentContent())
     }
 
     @Test
     fun `custom attachment should be saved in checkpoint even if its data was persisted`() {
         val attachmentId = client.saveAttachment("genuine")
-        launchFlow(CustomAttachmentLogic(server, attachmentId, "custom"), 1)
+        launchFlow(CustomAttachmentLogic(serverIdentity, attachmentId, "custom"), 1)
         client.hackAttachment(attachmentId, "hacked") // Should not be reloaded, checkAttachmentsOnLoad may cause next line to blow up if client attempts it.
         assertEquals("custom", rebootClientAndGetAttachmentContent())
     }
@@ -182,7 +186,7 @@ class AttachmentSerializationTest {
     fun `only the hash of a regular attachment should be saved in checkpoint`() {
         val attachmentId = client.saveAttachment("genuine")
         client.attachments.checkAttachmentsOnLoad = false // Cached by AttachmentImpl.
-        launchFlow(OpenAttachmentLogic(server, attachmentId), 1)
+        launchFlow(OpenAttachmentLogic(serverIdentity, attachmentId), 1)
         client.hackAttachment(attachmentId, "hacked")
         assertEquals("hacked", rebootClientAndGetAttachmentContent(false)) // Pass in false to allow non-genuine data to be loaded.
     }
@@ -190,7 +194,7 @@ class AttachmentSerializationTest {
     @Test
     fun `only the hash of a FetchAttachmentsFlow attachment should be saved in checkpoint`() {
         val attachmentId = server.saveAttachment("genuine")
-        launchFlow(FetchAttachmentLogic(server, attachmentId), 2, sendData = true)
+        launchFlow(FetchAttachmentLogic(serverIdentity, attachmentId), 2, sendData = true)
         client.hackAttachment(attachmentId, "hacked")
         assertEquals("hacked", rebootClientAndGetAttachmentContent(false))
     }

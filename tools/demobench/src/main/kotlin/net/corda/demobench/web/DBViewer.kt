@@ -1,6 +1,6 @@
 package net.corda.demobench.web
 
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.h2.Driver
 import org.h2.server.web.LocalWebServer
 import org.h2.tools.Server
@@ -11,7 +11,7 @@ import kotlin.reflect.jvm.jvmName
 
 class DBViewer : AutoCloseable {
     private companion object {
-        val log = loggerFor<DBViewer>()
+        private val log = contextLogger()
     }
 
     private val webServer: Server

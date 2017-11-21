@@ -16,7 +16,7 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
@@ -43,7 +43,7 @@ interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
 
 interface ServiceHubInternal : ServiceHub {
     companion object {
-        private val log = loggerFor<ServiceHubInternal>()
+        private val log = contextLogger()
     }
 
     override val vaultService: VaultServiceInternal

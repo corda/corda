@@ -4,7 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.Amount.Companion.sumOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import java.security.PublicKey
 import java.util.*
@@ -32,8 +32,7 @@ data class PartyAndAmount<T : Any>(val party: AbstractParty, val amount: Amount<
  */
 abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : Contract {
     companion object {
-        val log = loggerFor<OnLedgerAsset<*, *, *>>()
-
+        private val log = contextLogger()
         /**
          * Generate a transaction that moves an amount of currency to the given pubkey.
          *

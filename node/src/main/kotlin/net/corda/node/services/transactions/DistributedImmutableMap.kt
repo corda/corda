@@ -4,7 +4,7 @@ import io.atomix.copycat.Command
 import io.atomix.copycat.Query
 import io.atomix.copycat.server.Commit
 import io.atomix.copycat.server.StateMachine
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.utilities.*
 import java.util.LinkedHashMap
 
@@ -17,7 +17,7 @@ import java.util.LinkedHashMap
  */
 class DistributedImmutableMap<K : Any, V : Any, E, EK>(val db: CordaPersistence, createMap: () -> AppendOnlyPersistentMap<K, Pair<Long, V>, E, EK>) : StateMachine() {
     companion object {
-        private val log = loggerFor<DistributedImmutableMap<*, *, *, *>>()
+        private val log = contextLogger()
     }
 
     object Commands {
