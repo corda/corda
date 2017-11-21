@@ -10,7 +10,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.NodeState
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
@@ -179,8 +178,6 @@ open class MockServices(
             val identity = getTestPartyAndCertificate(initialIdentityName, key.public)
             return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
         }
-    override val myNodeStateObservable: Observable<NodeState>
-        get() = PublishSubject.create<NodeState>()
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     val mockCordappProvider = MockCordappProvider(cordappLoader, attachments)
     override val cordappProvider: CordappProvider get() = mockCordappProvider

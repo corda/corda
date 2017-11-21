@@ -117,10 +117,6 @@ internal class CordaRPCOpsImpl(
         return services.myInfo
     }
 
-    override fun nodeStateObservable(): Observable<NodeState> {
-        return services.myNodeStateObservable
-    }
-
     override fun notaryIdentities(): List<Party> {
         return services.networkMapCache.notaryIdentities
     }
@@ -142,7 +138,9 @@ internal class CordaRPCOpsImpl(
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = stateMachine.logic.track()?.updates ?: Observable.empty()
+                progress = stateMachine.logic.track()?.updates ?: Observable.empty(),
+                stepsTreeIndexFeed = stateMachine.logic.trackStepsTreeIndex(),
+                stepsTreeFeed = stateMachine.logic.trackStepsTree()
         )
     }
 

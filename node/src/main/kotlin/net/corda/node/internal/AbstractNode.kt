@@ -36,6 +36,7 @@ import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
+import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.*
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -55,11 +56,11 @@ import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
+import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable
-import rx.subjects.PublishSubject
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.security.KeyPair
@@ -119,7 +120,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
-    protected val nodeStateObservable: PublishSubject<NodeState> = PublishSubject.create<NodeState>()
     protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
     protected lateinit var smm: StateMachineManager
@@ -129,6 +129,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
     protected val networkMapClient: NetworkMapClient? by lazy { configuration.compatibilityZoneURL?.let(::NetworkMapClient) }
+
+    lateinit var userService: RPCUserService get
 
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
@@ -213,6 +215,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
 
             runOnStop += network::stop
+
+            startShell(rpcOps)
+
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
 
@@ -241,6 +246,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
             _started = this
         }
+    }
+
+    open fun startShell(rpcOps: CordaRPCOps) {
+        InteractiveShell.startShell(configuration, rpcOps, userService, _services.identityService, _services.database)
     }
 
     private fun initNodeInfo(): Pair<Set<KeyPair>, NodeInfo> {
@@ -624,9 +633,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // Meanwhile, we let the remote service send us updates until the acknowledgment buffer overflows and it
         // unsubscribes us forcibly, rather than blocking the shutdown process.
 
-        // Notify observers that the node is shutting down
-        nodeStateObservable.onNext(NodeState.SHUTTING_DOWN)
-
         // Run shutdown hooks in opposite order to starting
         for (toRun in runOnStop.reversed()) {
             toRun()
@@ -727,7 +733,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
         override val networkService: MessagingService get() = network
         override val clock: Clock get() = platformClock
-        override val myNodeStateObservable: Observable<NodeState> get() = nodeStateObservable
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }

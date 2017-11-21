@@ -117,12 +117,13 @@ open class NodeStartup(val args: Array<String>) {
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
-            val runShell = !cmdlineOptions.noLocalShell && System.console() != null
-            startedNode.internals.startupComplete.then {
-                try {
-                    InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, startedNode)
-                } catch (e: Throwable) {
-                    logger.error("Shell failed to start", e)
+            if (!cmdlineOptions.noLocalShell && System.console() != null && conf.devMode) {
+                startedNode.internals.startupComplete.then {
+                    try {
+                        InteractiveShell.runLocalShell(startedNode)
+                    } catch (e: Throwable) {
+                        logger.error("Shell failed to start", e)
+                    }
                 }
             }
         },
@@ -315,7 +316,6 @@ open class NodeStartup(val args: Array<String>) {
                     """/ /___  /_/ / /  / /_/ / /_/ /          """).fgBrightBlue().a(msg2).newline().fgBrightRed().a(
                     """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
                     a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
-                    newline().
                     newline().
                     newline().
                     reset())

@@ -75,10 +75,10 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
             var key: String = "",
 
             @Lob
-            @Column
+            @Column(name = "state_value")
             var value: ByteArray = ByteArray(0),
 
-            @Column
+            @Column(name = "state_index")
             var index: Long = 0
     )
 
