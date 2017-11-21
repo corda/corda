@@ -31,12 +31,12 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 V1.0 to V2.0
 ------------
 
-You only need to update the version identifiers in your project gradle file:
+You only need to update the corda_release_version identifier in your project gradle file. The corda_gradle_plugins_version should remain at 1.0.0:
 
 .. sourcecode:: shell
 
     ext.corda_release_version = '2.0.0'
-    ext.corda_gradle_plugins_version = '2.0.0'
+    ext.corda_gradle_plugins_version = '1.0.0'
 
 Public Beta (M12) to V1.0
 -------------------------
