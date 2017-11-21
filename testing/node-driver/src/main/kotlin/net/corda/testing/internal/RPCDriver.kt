@@ -236,7 +236,6 @@ fun <A> rpcDriver(
         waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
-        compatibilityZoneURL: URL? = null,
         externalTrace: Trace? = null,
         compatibilityZoneURL: URL? = null,
         dsl: RPCDriverExposedDSLInterface.() -> A

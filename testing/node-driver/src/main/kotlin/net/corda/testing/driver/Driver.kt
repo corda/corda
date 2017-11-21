@@ -17,6 +17,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NotaryService
 import net.corda.core.toFuture
@@ -35,6 +36,8 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
+import net.corda.testing.common.internal.NetworkParametersCopier
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -467,8 +470,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL,
         driverDslWrapper: (DriverDSL) -> D,
-        coerce: (D) -> DI, dsl: DI.() -> A,
-        compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL
+        coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
     val serializationEnv = setGlobalSerialization(initialiseSerialization)
     val driverDsl = driverDslWrapper(
