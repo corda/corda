@@ -11,8 +11,8 @@ API: Contracts
 
 .. contents::
 
-Contract
---------
+The Contract interface
+----------------------
 Contracts are classes that implement the ``Contract`` interface. The ``Contract`` interface is defined as follows:
 
 .. container:: codeset
@@ -22,6 +22,8 @@ Contracts are classes that implement the ``Contract`` interface. The ``Contract`
         :start-after: DOCSTART 5
         :end-before: DOCEND 5
 
+verify
+^^^^^^
 ``Contract`` has a single method, ``verify``, which takes a ``LedgerTransaction`` as input and returns
 nothing. This function is used to check whether a transaction proposal is valid, as follows:
 
@@ -78,7 +80,7 @@ Here are the two simplest ``verify`` functions:
 
 LedgerTransaction
 -----------------
-The ``LedgerTransaction`` object passed into ``verify`` has the following properties:
+The ``LedgerTransaction`` instance passed into ``verify`` has the following properties:
 
 .. container:: codeset
 
@@ -232,5 +234,36 @@ the single command of type ``XContract.Commands`` from the transaction, and bran
                 } else if (command instanceof Commands.Transfer) {
                     // Transfer verification logic.
                 }
+            }
+        }
+
+Legal prose
+-----------
+A ``Contract`` class can be annotated with the ``@LegalProseReference`` annotation. This annotation associates the
+contract with a document that restates the constraints imposed by ``verify`` in legal prose terms. This is not
+required, but can be useful in contexts where it is expected that legal contracts will take precedence over the
+software implementations in case of disagreement.
+
+``@LegalProseReference`` takes a single parameter, ``uri``, which identifies the legal prose document the contract is
+associated with:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        @LegalProseReference(uri = "foo.bar.com/my-legal-doc.html")
+        class MyContract : Contract {
+            override fun verify(tx: LedgerTransaction) {
+                // Contract logic.
+            }
+        }
+
+   .. sourcecode:: java
+
+        @LegalProseReference(uri = "foo.bar.com/my-legal-doc.html")
+        public class MyContract implements Contract {
+            @Override
+            public void verify(LedgerTransaction tx) {
+                // Contract logic.
             }
         }
