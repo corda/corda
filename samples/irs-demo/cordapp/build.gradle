@@ -51,7 +51,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
              'permissions' : [
                      "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
                      "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
-                     "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow"
+                     "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
+                     "InvokeRpc.vaultQueryBy",
+                     "InvokeRpc.networkMapSnapshot"
              ]]
     ]
 
