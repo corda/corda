@@ -34,6 +34,8 @@ sourceSets {
 }
 
 dependencies {
+    gradleApi()
+
     compile project(":cordapp")
     compile project(':cordform-common')
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"

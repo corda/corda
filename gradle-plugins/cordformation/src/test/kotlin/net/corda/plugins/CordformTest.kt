@@ -26,16 +26,29 @@ class CordformTest {
     }
 
     @Test
-    fun `test`() {
-        createBuildFile("DeployNodesTest.gradle")
-        val result = GradleRunner.create()
-                .withProjectDir(testProjectDir.root)
-                .withArguments("deployNodes", "-s")
-                .withPluginClasspath()
-                .build()
+    fun `a node with cordapp dependency`() {
+        val runner = getStandardGradleRunnerFor("DeploySingleNodeWithCordapp.gradle")
+
+        val result = runner.build()
+
+        assertThat(result.task(":deployNodes")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+    }
+
+    @Test
+    fun `deploy a node with cordapp config`() {
+        val runner = getStandardGradleRunnerFor("DeploySingleNodeWithCordappConfig.gradle")
+
+        val result = runner.build()
 
         assertThat(result.task(":deployNodes")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
     }
 
     private fun createBuildFile(buildFileResourceName: String) = IOUtils.copy(javaClass.getResourceAsStream(buildFileResourceName), buildFile!!.outputStream())
+    private fun getStandardGradleRunnerFor(buildFileResourceName: String): GradleRunner {
+        createBuildFile(buildFileResourceName)
+        return GradleRunner.create()
+                .withProjectDir(testProjectDir.root)
+                .withArguments("deployNodes", "-s")
+                .withPluginClasspath()
+    }
 }

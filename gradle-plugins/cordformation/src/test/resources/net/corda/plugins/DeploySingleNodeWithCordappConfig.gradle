@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'net.corda.plugins.cordformation'
+}
+
+ext {
+    corda_group = "net.corda"
+    corda_release_version = "3.0-SNAPSHOT"
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    runtime "$corda_group:corda:$corda_release_version"
+    cordapp "$corda_group:corda-finance:$corda_release_version"
+}
+
+task deployNodes(type: net.corda.plugins.Cordform) {
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        notary = [validating : true]
+        p2pPort 10002
+        rpcPort 10003
+        cordapp {
+            coordinates "$corda_group:corda-finance:$corda_release_version"
+            config "a=b"
+        }
+    }
+}
