@@ -2,8 +2,9 @@ CorDapp samples
 ===============
 
 There are two distinct sets of samples provided with Corda, one introducing new developers to how to write CorDapps, and
-more complex worked examples of how solutions to a number of common designs could be implemented in a CorDapp.  New
-developers should start with the :doc:`example CorDapps <tutorial-cordapp>`.
+more complex worked examples of how solutions to a number of common designs could be implemented in a CorDapp.
+The former can be found on `the Corda website <https://www.corda.net/samples/>`_. In particular, new developers
+should start with the :doc:`example CorDapp <tutorial-cordapp>`.
 
 The advanced samples are contained within the `samples/` folder of the Corda repository. The most generally useful of
 these samples are:
