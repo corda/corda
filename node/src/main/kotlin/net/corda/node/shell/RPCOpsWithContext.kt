@@ -19,7 +19,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.node.services.messaging.RpcPermissions
-import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
@@ -54,10 +53,6 @@ class RPCOpsWithContext(val cordaRPCOps: CordaRPCOps, val invocationContext:Invo
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         return RPCContextRunner(invocationContext, rpcPermissions) { cordaRPCOps.queryAttachments(query, sorting) }.get().getOrThrow()
-    }
-
-    override fun nodeStateObservable(): Observable<NodeState> {
-        return RPCContextRunner(invocationContext, rpcPermissions) { cordaRPCOps.nodeStateObservable() }.get().getOrThrow()
     }
 
     override fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
