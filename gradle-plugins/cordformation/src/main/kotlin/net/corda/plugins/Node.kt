@@ -70,6 +70,8 @@ class Node(private val project: Project) : CordformNode() {
         installAgentJar()
         installBuiltCordapp()
         installCordapps()
+        installConfig()
+        appendOptionalConfig()
     }
 
     internal fun rootDir(rootDir: Path) {
@@ -166,14 +168,25 @@ class Node(private val project: Project) : CordformNode() {
     /**
      * Installs the configuration file to the root directory and detokenises it.
      */
-    internal fun installConfig() {
-        configureProperties()
-        val tmpConfFile = createTempConfigFile()
-        appendOptionalConfig(tmpConfFile)
+    private fun installConfig() {
+        val options = ConfigRenderOptions
+                .defaults()
+                .setOriginComments(false)
+                .setComments(false)
+                .setFormatted(true)
+                .setJson(false)
+        val configFileText = config.root().render(options).split("\n").toList()
+
+        // Need to write a temporary file first to use the project.copy, which resolves directories correctly.
+        val tmpDir = File(project.buildDir, "tmp")
+        tmpDir.mkdir()
+        val tmpConfFile = File(tmpDir, "node.conf")
+        Files.write(tmpConfFile.toPath(), configFileText, StandardCharsets.UTF_8)
+
         project.copy {
             it.apply {
                 from(tmpConfFile)
-                into(rootDir)
+                into(nodeDir)
             }
         }
     }
@@ -181,7 +194,7 @@ class Node(private val project: Project) : CordformNode() {
     /**
      * Appends installed config file with properties from an optional file.
      */
-    private fun appendOptionalConfig(confFile: File) {
+    private fun appendOptionalConfig() {
         val optionalConfig: File? = when {
             project.findProperty(configFileProperty) != null -> //provided by -PconfigFile command line property when running Gradle task
                 File(project.findProperty(configFileProperty) as String)
@@ -193,6 +206,7 @@ class Node(private val project: Project) : CordformNode() {
             if (!optionalConfig.exists()) {
                 project.logger.error("$configFileProperty '$optionalConfig' not found")
             } else {
+                val confFile = File(project.buildDir.path + "/../" + nodeDir, "node.conf")
                 confFile.appendBytes(optionalConfig.readBytes())
             }
         }
@@ -218,11 +232,18 @@ class Node(private val project: Project) : CordformNode() {
      * @return List of this node's cordapps.
      */
     private fun getCordappList(): Collection<File> {
+        val cordappConfiguration = project.configuration("cordapp")
         // Cordapps can sometimes contain a GString instance which fails the equality test with the Java string
         @Suppress("RemoveRedundantCallsOfConversionMethods")
         val cordapps: List<String> = cordapps.map { it.toString() }
-        return project.configuration("cordapp").files {
-            cordapps.contains(it.group + ":" + it.name + ":" + it.version)
+        return cordapps.map { cordappName ->
+            val cordappFile = cordappConfiguration.files { cordappName == (it.group + ":" + it.name + ":" + it.version) }
+
+            when {
+                cordappFile.size == 0 -> throw GradleException("Cordapp $cordappName not found in cordapps configuration.")
+                cordappFile.size > 1 -> throw GradleException("Multiple files found for $cordappName")
+                else -> cordappFile.single()
+            }
         }
     }
 }

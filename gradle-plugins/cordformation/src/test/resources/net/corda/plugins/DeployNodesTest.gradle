@@ -1,48 +1,29 @@
-package net.corda.plugins
+plugins {
+    id 'java'
+    id 'net.corda.plugins.cordformation'
+}
 
 ext {
-    group = "net.corda"
-    cordaReleaseVersion = "1.0.0"
+    corda_group = "net.corda"
+    corda_release_version = "3.0-SNAPSHOT"
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    runtime "$corda_group:corda:$corda_release_version"
+    cordapp "$corda_group:corda-finance:$corda_release_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform) {
-    directory "./build/nodes"
-    // This name "Notary" is hard-coded into BankOfCordaClientApi so if you change it here, change it there too.
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
         p2pPort 10002
         rpcPort 10003
-        cordapps = ["$group:finance:$cordaReleaseVersion"]
-    }
-    node {
-        name "O=BankOfCorda,L=London,C=GB"
-        extraConfig = [issuableCurrencies : ["USD"]]
-        p2pPort 10005
-        rpcPort 10006
-        webPort 10007
-        cordapps = ["$group:finance:$cordaReleaseVersion"]
-        rpcUsers = [
-                ['username'   : "bankUser",
-                 'password'   : "test",
-                 'permissions': ["StartFlow.net.corda.finance.flows.CashPaymentFlow",
-                                 "StartFlow.net.corda.finance.flows.CashConfigDataFlow",
-                                 "StartFlow.net.corda.finance.flows.CashExitFlow",
-                                 "StartFlow.net.corda.finance.flows.CashIssueAndPaymentFlow",
-                                 "StartFlow.net.corda.finance.flows.CashConfigDataFlow"]]
-        ]
-    }
-    node {
-        name "O=BigCorporation,L=New York,C=US"
-        p2pPort 10008
-        rpcPort 10009
-        webPort 10010
-        cordapps = ["$group:finance:$cordaReleaseVersion"]
-        rpcUsers = [
-                ['username'   : "bigCorpUser",
-                 'password'   : "test",
-                 'permissions': ["StartFlow.net.corda.finance.flows.CashPaymentFlow",
-                                 "StartFlow.net.corda.finance.flows.CashConfigDataFlow"]]
-        ]
+        cordapps = ["$corda_group:corda-finance:$corda_release_version"]
     }
 }

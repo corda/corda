@@ -1,6 +1,7 @@
 package net.corda.plugins
 
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.*
 import org.junit.Before
 import org.junit.Rule
@@ -12,7 +13,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
-
 
 class CordformTest {
     @Rule
@@ -27,22 +27,7 @@ class CordformTest {
 
     @Test
     fun `test`() {
-        val testDsl = """
-plugins {
-    id 'java'
-    id 'net.corda.plugins.cordformation'
-}
-
-ext {
-    corda_release_version = '1.0.0'
-}
-
-task deployNodes(type: net.corda.plugins.Cordform) {
-
-}
-            """
-
-        FileUtils.writeStringToFile(buildFile, testDsl, StandardCharsets.UTF_8)
+        createBuildFile("DeployNodesTest.gradle")
         val result = GradleRunner.create()
                 .withProjectDir(testProjectDir.root)
                 .withArguments("deployNodes", "-s")
@@ -51,4 +36,6 @@ task deployNodes(type: net.corda.plugins.Cordform) {
 
         assertThat(result.task(":deployNodes")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
     }
+
+    private fun createBuildFile(buildFileResourceName: String) = IOUtils.copy(javaClass.getResourceAsStream(buildFileResourceName), buildFile!!.outputStream())
 }
