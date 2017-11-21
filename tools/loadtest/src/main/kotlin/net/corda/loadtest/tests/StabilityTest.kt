@@ -7,7 +7,6 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.finance.USD
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashExitFlow.ExitRequest
@@ -16,10 +15,10 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
 import net.corda.loadtest.LoadTest
-
+import org.slf4j.LoggerFactory
 
 object StabilityTest {
-    private val log = loggerFor<StabilityTest>()
+    private val log = LoggerFactory.getLogger(javaClass)
     fun crossCashTest(replication: Int) = LoadTest<CrossCashCommand, Unit>(
             "Creating Cash transactions",
             generate = { _, _ ->

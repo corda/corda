@@ -32,8 +32,6 @@ import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.MutableClassWhitelist
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
@@ -53,6 +51,7 @@ import java.io.InputStream
 import java.lang.reflect.Modifier.isPublic
 import java.security.PublicKey
 import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -109,8 +108,7 @@ object DefaultKryoCustomizer {
             register(FileInputStream::class.java, InputStreamSerializer)
             register(CertPath::class.java, CertPathSerializer)
             register(X509CertPath::class.java, CertPathSerializer)
-            register(X500Name::class.java, X500NameSerializer)
-            register(X509CertificateHolder::class.java, X509CertificateSerializer)
+            register(X509Certificate::class.java, X509CertificateSerializer)
             register(BCECPrivateKey::class.java, PrivateKeySerializer)
             register(BCECPublicKey::class.java, publicKeySerializer)
             register(BCRSAPrivateCrtKey::class.java, PrivateKeySerializer)

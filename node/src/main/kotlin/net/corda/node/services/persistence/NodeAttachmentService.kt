@@ -1,38 +1,60 @@
 package net.corda.node.services.persistence
 
 import com.codahale.metrics.MetricRegistry
-import net.corda.core.internal.VisibleForTesting
 import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.*
-import net.corda.core.internal.AbstractAttachment
+import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.currentDBSession
 import java.io.*
-import java.lang.Exception
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
-import javax.persistence.Column
 
 /**
  * Stores attachments using Hibernate to database.
  */
 @ThreadSafe
 class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, SingletonSerializeAsToken() {
+
+    companion object {
+        private val log = contextLogger()
+
+        // Just iterate over the entries with verification enabled: should be good enough to catch mistakes.
+        // Note that JarInputStream won't throw any kind of error at all if the file stream is in fact not
+        // a ZIP! It'll just pretend it's an empty archive, which is kind of stupid but that's how it works.
+        // So we have to check to ensure we found at least one item.
+        private fun checkIsAValidJAR(stream: InputStream) {
+            val jar = JarInputStream(stream, true)
+            var count = 0
+            while (true) {
+                val cursor = jar.nextJarEntry ?: break
+                val entryPath = Paths.get(cursor.name)
+                // Security check to stop zips trying to escape their rightful place.
+                require(!entryPath.isAbsolute) { "Path $entryPath is absolute" }
+                require(entryPath.normalize() == entryPath) { "Path $entryPath is not normalised" }
+                require(!('\\' in cursor.name || cursor.name == "." || cursor.name == "..")) { "Bad character in $entryPath" }
+                count++
+            }
+            require(count > 0) { "Stream is either empty or not a JAR/ZIP" }
+        }
+    }
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}attachments",
@@ -55,10 +77,6 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
             @Column(name = "filename", updatable = false)
             var filename: String? = null
     ) : Serializable
-
-    companion object {
-        private val log = loggerFor<NodeAttachmentService>()
-    }
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true
@@ -171,6 +189,24 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         return import(jar, uploader, filename)
     }
 
+    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
+        val hs = HashingInputStream(Hashing.sha256(), jar)
+        val bytes = hs.readBytes()
+        checkIsAValidJAR(ByteArrayInputStream(bytes))
+        val id = SecureHash.SHA256(hs.hash().asBytes())
+        return Pair(id, bytes)
+    }
+
+    override fun hasAttachment(attachmentId: AttachmentId): Boolean {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
+        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
+        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), attachmentId.toString()))
+        return (session.createQuery(criteriaQuery).singleResult > 0)
+    }
+
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         require(jar !is JarInputStream)
@@ -180,27 +216,28 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
         // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
         // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
         // set the hash field of the new attachment record.
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        val bytes = hs.readBytes()
-        checkIsAValidJAR(ByteArrayInputStream(bytes))
-        val id = SecureHash.SHA256(hs.hash().asBytes())
 
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-        val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
-        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), id.toString()))
-        val count = session.createQuery(criteriaQuery).singleResult
-        if (count == 0L) {
+        val (id, bytes) = getAttachmentIdAndBytes(jar)
+        if (!hasAttachment(id)) {
+            checkIsAValidJAR(ByteArrayInputStream(bytes))
+            val session = currentDBSession()
             val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename)
             session.save(attachment)
-
             attachmentCount.inc()
             log.info("Stored new attachment $id")
+            return id
+        } else {
+            throw java.nio.file.FileAlreadyExistsException(id.toString())
         }
+    }
 
-        return id
+    override fun importOrGetAttachment(jar: InputStream): AttachmentId {
+        try {
+            return importAttachment(jar)
+        }
+        catch (faee: java.nio.file.FileAlreadyExistsException) {
+            return AttachmentId.parse(faee.message!!)
+        }
     }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
@@ -227,22 +264,4 @@ class NodeAttachmentService(metrics: MetricRegistry) : AttachmentStorage, Single
     }
 
 
-    private fun checkIsAValidJAR(stream: InputStream) {
-        // Just iterate over the entries with verification enabled: should be good enough to catch mistakes.
-        // Note that JarInputStream won't throw any kind of error at all if the file stream is in fact not
-        // a ZIP! It'll just pretend it's an empty archive, which is kind of stupid but that's how it works.
-        // So we have to check to ensure we found at least one item.
-        val jar = JarInputStream(stream, true)
-        var count = 0
-        while (true) {
-            val cursor = jar.nextJarEntry ?: break
-            val entryPath = Paths.get(cursor.name)
-            // Security check to stop zips trying to escape their rightful place.
-            require(!entryPath.isAbsolute) { "Path $entryPath is absolute" }
-            require(entryPath.normalize() == entryPath) { "Path $entryPath is not normalised" }
-            require(!('\\' in cursor.name || cursor.name == "." || cursor.name == "..")) { "Bad character in $entryPath" }
-            count++
-        }
-        require(count > 0) { "Stream is either empty or not a JAR/ZIP" }
-    }
 }

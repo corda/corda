@@ -18,11 +18,47 @@ Some of its features include:
 * View JMX metrics and monitoring exports.
 * UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data.
 
-.. note:: A future version of Corda will add SSH access to the node.
-
 It is based on the popular `CRaSH`_ shell used in various other projects and supports many of the same features.
 
-The shell may be disabled by passing the ``--no-local-shell`` flag to the node.
+Local terminal shell runs only in development mode. It may be disabled by passing the ``--no-local-shell`` flag to the node.
+
+SSH server
+----------
+
+Shell can also be accessible via SSH. By default SSH server is *disabled*. To enable it port must be configured - in ``node.conf`` file
+
+.. code:: bash
+
+    sshd {
+        port = 2222
+    }
+
+Authentication and authorization
+--------------------------------
+SSH require user to login first - using the same users as RPC system. In fact, shell serves as a proxy to RPC and communicates
+with node using RPC calls. This also means that RPC permissions are enforced. No permissions are required to allow the connection
+and login in.
+Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed`` while starting flows requires
+``InvokeRpc.startTrackedFlowDynamic`` and ``InvokeRpc.registeredFlows`` in addition to a permission for a particular flow.
+
+Host key
+--------
+
+The host key is loaded from ``sshkey/hostkey.pem`` file. If the file does not exist, it will be generated randomly, however
+in the development mode seed may be tuned to give the same results on the same computer - in order to avoid host checking
+errors.
+
+Connecting
+----------
+
+Linux and MacOS computers usually come with SSH client preinstalled. On Windows it usually require extra download.
+Usual connection syntax is ``ssh user@host -p 2222`` - where ``user`` is a RPC username, and ``-p`` specifies a port parameters -
+it's the same as setup in ``node.conf`` file. ``host`` should point to a node hostname, usually ``localhost`` if connecting and
+running node on the same computer. Password will be asked after establishing connection.
+
+:note: While developing, checking multiple samples or simply restarting a node frequently host key may be regenerated. SSH usually
+    saved once trusted hosts and will refuse to connect in case of a change. Then check may be disabled with extra options
+    ``ssh -o StrictHostKeyChecking=no user@host -p2222``. This option should never be used in production environment!
 
 Getting help
 ------------

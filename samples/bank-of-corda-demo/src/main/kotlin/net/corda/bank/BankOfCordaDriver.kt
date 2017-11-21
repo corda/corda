@@ -9,6 +9,7 @@ import net.corda.finance.flows.CashConfigDataFlow
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
@@ -65,7 +66,8 @@ private class BankOfCordaDriver {
                                         startFlow<CashConfigDataFlow>(),
                                         startFlow<CashExitFlow>(),
                                         startFlow<CashIssueAndPaymentFlow>(),
-                                        startFlow<CashConfigDataFlow>()
+                                        startFlow<CashConfigDataFlow>(),
+                                        all()
                                 ))
                         val bankOfCorda = startNode(
                                 providedName = BOC.name,
@@ -73,7 +75,8 @@ private class BankOfCordaDriver {
                         val bigCorpUser = User(BIGCORP_USERNAME, "test",
                                 permissions = setOf(
                                         startFlow<CashPaymentFlow>(),
-                                        startFlow<CashConfigDataFlow>()))
+                                        startFlow<CashConfigDataFlow>(),
+                                        all()))
                         startNode(providedName = BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                         startWebserver(bankOfCorda.get())
                     }

@@ -10,7 +10,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.NodeState
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
@@ -56,6 +55,7 @@ open class MockServices(
         vararg val keys: KeyPair
 ) : ServiceHub, StateLoader by stateLoader {
     companion object {
+        private val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)
 
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
@@ -101,7 +101,7 @@ open class MockServices(
         /**
          * Makes database and mock services appropriate for unit tests.
          * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
-         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defauts to [InMemoryIdentityService].
+         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defaults to [InMemoryIdentityService].
          *
          * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
@@ -178,8 +178,6 @@ open class MockServices(
             val identity = getTestPartyAndCertificate(initialIdentityName, key.public)
             return NodeInfo(emptyList(), listOf(identity), 1, serial = 1L)
         }
-    override val myNodeStateObservable: Observable<NodeState>
-        get() = PublishSubject.create<NodeState>()
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     val mockCordappProvider = MockCordappProvider(cordappLoader, attachments)
     override val cordappProvider: CordappProvider get() = mockCordappProvider

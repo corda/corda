@@ -11,7 +11,7 @@ import net.corda.core.node.services.vault.QueryCriteria.CommonQueryCriteria
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.persistence.NodeAttachmentService
 import org.hibernate.query.criteria.internal.expression.LiteralExpression
@@ -107,7 +107,7 @@ class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: Crite
         AbstractQueryCriteriaParser<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>(), AttachmentsQueryCriteriaParser {
 
     private companion object {
-        val log = loggerFor<HibernateAttachmentQueryCriteriaParser>()
+        private val log = contextLogger()
     }
 
     init {
@@ -170,7 +170,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                                    val criteriaQuery: CriteriaQuery<Tuple>,
                                    val vaultStates: Root<VaultSchemaV1.VaultStates>) : AbstractQueryCriteriaParser<QueryCriteria, IQueryCriteriaParser, Sort>(), IQueryCriteriaParser {
     private companion object {
-        val log = loggerFor<HibernateQueryCriteriaParser>()
+        private val log = contextLogger()
     }
 
     // incrementally build list of join predicates

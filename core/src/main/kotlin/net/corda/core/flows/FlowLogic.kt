@@ -348,6 +348,20 @@ abstract class FlowLogic<out T> {
         }
     }
 
+    fun trackStepsTreeIndex(): DataFeed<Int, Int>? {
+        // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
+        return progressTracker?.let {
+            DataFeed(it.stepsTreeIndex, it.stepsTreeIndexChanges)
+        }
+    }
+
+    fun trackStepsTree(): DataFeed<List<Pair<Int,String>>, List<Pair<Int,String>>>? {
+        // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
+        return progressTracker?.let {
+            DataFeed(it.allStepsLabels, it.stepsTreeChanges)
+        }
+    }
+
     /**
      * Suspends the flow until the transaction with the specified ID is received, successfully verified and
      * sent to the vault for processing. Note that this call suspends until the transaction is considered

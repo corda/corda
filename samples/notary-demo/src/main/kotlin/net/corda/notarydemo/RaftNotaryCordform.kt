@@ -5,7 +5,6 @@ import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.core.node.services.NotaryService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.RaftConfig
@@ -59,9 +58,6 @@ class RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes") {
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(
-                notaryNames.map { context.baseDirectory(it.toString()) },
-                clusterName,
-                NotaryService.constructId(validating = true, raft = true))
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it.toString()) }, clusterName)
     }
 }

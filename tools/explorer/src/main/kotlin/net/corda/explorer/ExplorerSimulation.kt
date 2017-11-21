@@ -124,7 +124,7 @@ class ExplorerSimulation(private val options: OptionSet) {
         fun FlowHandle<AbstractCashFlow.Result>.log(seq: Int, name: String) {
             val out = "[$seq] $name $id :"
             returnValue.thenMatch({ (stx) ->
-                Main.log.info("$out ${stx.id} ${(stx.tx.outputs.first().data as Cash.State).amount}")
+                Main.log.info("$out ${stx.id} ${(stx.tx.outputs.first().data as Cash.State).amount}") // XXX: Why Main's log?
             }, {
                 Main.log.info("$out ${it.message}")
             })

@@ -1,19 +1,17 @@
-package net.corda.nodeapi
+package net.corda.nodeapi.internal
 
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.toBase58String
-import net.corda.nodeapi.config.SSLConfiguration
 import java.security.PublicKey
 
 /**
  * The base class for Artemis services that defines shared data structures and SSL transport configuration.
  */
-abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
+class ArtemisMessagingComponent {
     companion object {
         init {
             System.setProperty("org.jboss.logging.provider", "slf4j")
@@ -66,7 +64,4 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     data class ServiceAddress(val identity: PublicKey) : ArtemisAddress, MessageRecipientGroup {
         override val queueName: String = "$PEERS_PREFIX${identity.toBase58String()}"
     }
-
-    /** The config object is used to pass in the passwords for the certificate KeyStore and TrustStore */
-    abstract val config: SSLConfiguration?
 }

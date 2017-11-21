@@ -7,25 +7,23 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
 object ServiceIdentityGenerator {
-    private val log = loggerFor<ServiceIdentityGenerator>()
-
+    private val log = LoggerFactory.getLogger(javaClass)
     /**
      * Generates signing key pairs and a common distributed service identity for a set of nodes.
      * The key pairs and the group identity get serialized to disk in the corresponding node directories.
      * This method should be called *before* any of the nodes are started.
      *
      * @param dirs List of node directories to place the generated identity and key pairs in.
-     * @param serviceName The legal name of the distributed service.
+     * @param serviceName The legal name of the distributed service, with service id as CN.
      * @param threshold The threshold for the generated group [CompositeKey].
      */
     fun generateToDisk(dirs: List<Path>,
                        serviceName: CordaX500Name,
-                       serviceId: String,
                        threshold: Int = 1): Party {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
@@ -40,6 +38,7 @@ object ServiceIdentityGenerator {
             val compositeKeyCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)
             val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
             val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
+            val serviceId = serviceName.commonName
             keystore.setCertificateEntry("$serviceId-composite-key", compositeKeyCert.cert)
             keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
             keystore.save(certPath, "cordacadevpass")

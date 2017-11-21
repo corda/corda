@@ -2,7 +2,7 @@ package net.corda.test.spring
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.map
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.testing.driver.*
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.NotarySpec
@@ -61,7 +61,7 @@ fun <A> springDriver(
 
 data class SpringBootDriverDSL(private val driverDSL: DriverDSL) : DriverDSLInternalInterface by driverDSL, SpringDriverInternalDSLInterface {
     companion object {
-        val log = loggerFor<SpringBootDriverDSL>()
+        private val log = contextLogger()
     }
 
     override fun startSpringBootWebapp(clazz: Class<*>, handle: NodeHandle, checkUrl: String): CordaFuture<WebserverHandle> {

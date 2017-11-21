@@ -53,6 +53,11 @@ reserve the right to move and rename it as it's not part of the public API as ye
 logging name construction. If you can't find what you need to refer to, use the ``--logging-level`` option as above and
 then determine the logging module name from the console output.
 
+SSH access
+----------
+
+Node can be configured to run SSH server. See :doc:`shell` for details.
+
 Database access
 ---------------
 

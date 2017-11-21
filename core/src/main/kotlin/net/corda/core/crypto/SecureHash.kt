@@ -103,3 +103,5 @@ fun ByteArray.sha256(): SecureHash.SHA256 = SecureHash.sha256(this)
  * Compute the SHA-256 hash for the contents of the [OpaqueBytes].
  */
 fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bytes)
+
+

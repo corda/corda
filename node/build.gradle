@@ -139,8 +139,14 @@ dependencies {
     compile "io.netty:netty-all:$netty_version"
 
     // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
-    compile("com.github.corda.crash:crash.shell:d5da86ba1b38e9c33af2a621dd15ba286307bec4") {
+    compile("com.github.corda.crash:crash.shell:$crash_version") {
         exclude group: "org.slf4j", module: "slf4j-jdk14"
+        exclude group: "org.bouncycastle"
+    }
+
+    compile("com.github.corda.crash:crash.connectors.ssh:$crash_version") {
+        exclude group: "org.slf4j", module: "slf4j-jdk14"
+        exclude group: "org.bouncycastle"
     }
 
     // OkHTTP: Simple HTTP library.
@@ -156,6 +162,9 @@ dependencies {
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
+
+    // Jsh: Testing SSH server
+    integrationTestCompile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
 
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets

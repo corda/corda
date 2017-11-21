@@ -3,6 +3,7 @@ package net.corda.finance.schemas
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.OpaqueBytes
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Index
@@ -32,6 +33,6 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             @Transient
             val _issuerParty: AbstractParty,
             @Transient
-            val _issuerRef: ByteArray
-    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef)
+            val _issuerRef: OpaqueBytes
+    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.bytes)
 }

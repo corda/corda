@@ -226,10 +226,6 @@ interface CordaRPCOps : RPCOps {
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
 
-    /** Returns and [Observable] object with future states of the node. */
-    @RPCReturnsObservables
-    fun nodeStateObservable(): Observable<NodeState>
-
     /**
      * Returns network's notary identities, assuming this will not change while the node is running.
      *
@@ -468,8 +464,3 @@ inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startTrac
  */
 @CordaSerializable
 data class DataFeed<out A, B>(val snapshot: A, val updates: Observable<B>)
-
-@CordaSerializable
-enum class NodeState {
-    SHUTTING_DOWN
-}
