@@ -56,10 +56,6 @@ class RPCOpsWithContext(val cordaRPCOps: CordaRPCOps, val invocationContext:Invo
         return RPCContextRunner(invocationContext, rpcPermissions) { cordaRPCOps.queryAttachments(query, sorting) }.get().getOrThrow()
     }
 
-    override fun nodeStateObservable(): Observable<NodeState> {
-        return RPCContextRunner(invocationContext, rpcPermissions) { cordaRPCOps.nodeStateObservable() }.get().getOrThrow()
-    }
-
     override fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return RPCContextRunner(invocationContext, rpcPermissions) { cordaRPCOps.vaultTrackByWithSorting(contractStateType, criteria, sorting) }.get().getOrThrow()
     }
