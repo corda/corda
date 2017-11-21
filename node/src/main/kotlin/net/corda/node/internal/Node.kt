@@ -131,7 +131,6 @@ open class Node(configuration: NodeConfiguration,
 
     private var shutdownHook: ShutdownHook? = null
 
-    private lateinit var userService: RPCUserService
     override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
 

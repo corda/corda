@@ -6,9 +6,6 @@ import rx.Subscription
 import rx.subjects.PublishSubject
 import java.util.*
 
-// TODO: Expose the concept of errors.
-// TODO: It'd be helpful if this class was at least partly thread safe.
-
 /**
  * A progress tracker helps surface information about the progress of an operation to a user interface or API of some
  * kind. It lets you define a set of _steps_ that represent an operation. A step is represented by an object (typically
@@ -34,16 +31,16 @@ import java.util.*
 @CordaSerializable
 class ProgressTracker(vararg steps: Step) {
     @CordaSerializable
-    sealed class Change {
-        data class Position(val tracker: ProgressTracker, val newStep: Step) : Change() {
+    sealed class Change(val progressTracker: ProgressTracker) {
+        data class Position(val tracker: ProgressTracker,  val newStep: Step) : Change(tracker) {
             override fun toString() = newStep.label
         }
 
-        data class Rendering(val tracker: ProgressTracker, val ofStep: Step) : Change() {
+        data class Rendering(val tracker: ProgressTracker, val ofStep: Step) : Change(tracker) {
             override fun toString() = ofStep.label
         }
 
-        data class Structural(val tracker: ProgressTracker, val parent: Step) : Change() {
+        data class Structural(val tracker: ProgressTracker, val parent: Step) : Change(tracker) {
             override fun toString() = "Structural step change in child of ${parent.label}"
         }
     }
@@ -70,16 +67,22 @@ class ProgressTracker(vararg steps: Step) {
         override fun equals(other: Any?) = other is DONE
     }
 
-    /** The steps in this tracker, same as the steps passed to the constructor but with UNSTARTED and DONE inserted. */
-    val steps = arrayOf(UNSTARTED, *steps, DONE)
-
-    // This field won't be serialized.
-    private val _changes by transient { PublishSubject.create<Change>() }
-
     @CordaSerializable
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
 
     private val childProgressTrackers = mutableMapOf<Step, Child>()
+
+    /** The steps in this tracker, same as the steps passed to the constructor but with UNSTARTED and DONE inserted. */
+    val steps = arrayOf(UNSTARTED, *steps, DONE)
+
+    private var _allStepsCache: List<Pair<Int, Step>> = _allSteps()
+
+    // This field won't be serialized.
+    private val _changes by transient { PublishSubject.create<Change>() }
+    private val _stepsTreeChanges by transient { PublishSubject.create<List<Pair<Int, String>>>() }
+    private val _stepsTreeIndexChanges by transient { PublishSubject.create<Int>() }
+
+
 
     init {
         steps.forEach {
@@ -92,7 +95,15 @@ class ProgressTracker(vararg steps: Step) {
 
     /** The zero-based index of the current step in the [steps] array (i.e. with UNSTARTED and DONE) */
     var stepIndex: Int = 0
-        private set
+        private set(value) {
+            field = value
+        }
+
+    var stepsTreeIndex: Int = -1
+        private set(value) {
+            field = value
+            _stepsTreeIndexChanges.onNext(value)
+        }
 
     /**
      * Reading returns the value of steps[stepIndex], writing moves the position of the current tracker. Once moved to
@@ -118,22 +129,39 @@ class ProgressTracker(vararg steps: Step) {
             curChangeSubscription?.unsubscribe()
             stepIndex = index
             _changes.onNext(Change.Position(this, steps[index]))
-            curChangeSubscription = currentStep.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
+            recalculateStepsTreeIndex()
+            curChangeSubscription = currentStep.changes.subscribe({
+                _changes.onNext(it)
+                if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
+            }, { _changes.onError(it) })
 
-            if (currentStep == DONE) _changes.onCompleted()
+            if (currentStep == DONE) {
+                _changes.onCompleted()
+                _stepsTreeIndexChanges.onCompleted()
+                _stepsTreeChanges.onCompleted()
+            }
         }
 
     /** Returns the current step, descending into children to find the deepest step we are up to. */
     val currentStepRecursive: Step
         get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
 
+    private fun currentStepRecursiveWithoutUnstarted(): Step {
+        val stepRecursive = getChildProgressTracker(currentStep)?.currentStepRecursive
+        return if (stepRecursive == null || stepRecursive == UNSTARTED) currentStep else stepRecursive
+    }
+
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
     fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
-        val subscription = childProgressTracker.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
+        val subscription = childProgressTracker.changes.subscribe({
+            _changes.onNext(it)
+            if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
+        }, { _changes.onError(it) })
         childProgressTrackers[step] = Child(childProgressTracker, subscription)
         childProgressTracker.parent = this
         _changes.onNext(Change.Structural(this, step))
+        rebuildStepsTree()
     }
 
     private fun removeChildProgressTracker(step: ProgressTracker.Step) {
@@ -142,6 +170,7 @@ class ProgressTracker(vararg steps: Step) {
             it.subscription?.unsubscribe()
         }
         _changes.onNext(Change.Structural(this, step))
+        rebuildStepsTree()
     }
 
     /**
@@ -166,6 +195,18 @@ class ProgressTracker(vararg steps: Step) {
             return cursor
         }
 
+    private fun rebuildStepsTree() {
+        _allStepsCache = _allSteps()
+        _stepsTreeChanges.onNext(allStepsLabels)
+
+        recalculateStepsTreeIndex()
+    }
+
+    private fun recalculateStepsTreeIndex() {
+        val step = currentStepRecursiveWithoutUnstarted()
+        stepsTreeIndex = _allStepsCache.indexOfFirst { it.second == step }
+    }
+
     private fun _allSteps(level: Int = 0): List<Pair<Int, Step>> {
         val result = ArrayList<Pair<Int, Step>>()
         for (step in steps) {
@@ -177,11 +218,15 @@ class ProgressTracker(vararg steps: Step) {
         return result
     }
 
+    private fun _allStepsLabels(level: Int = 0): List<Pair<Int, String>> = _allSteps(level).map { Pair(it.first, it.second.label) }
+
     /**
      * A list of all steps in this ProgressTracker and the children, with the indent level provided starting at zero.
      * Note that UNSTARTED is never counted, and DONE is only counted at the calling level.
      */
-    val allSteps: List<Pair<Int, Step>> get() = _allSteps()
+    val allSteps: List<Pair<Int, Step>> get() = _allStepsCache
+
+    val allStepsLabels: List<Pair<Int, String>> get() = _allStepsLabels()
 
     private var curChangeSubscription: Subscription? = null
 
@@ -200,8 +245,15 @@ class ProgressTracker(vararg steps: Step) {
      */
     val changes: Observable<Change> get() = _changes
 
+    val stepsTreeChanges: Observable<List<Pair<Int,String>>> get() = _stepsTreeChanges
+
+    val stepsTreeIndexChanges: Observable<Int> get() = _stepsTreeIndexChanges
+
     /** Returns true if the progress tracker has ended, either by reaching the [DONE] step or prematurely with an error */
     val hasEnded: Boolean get() = _changes.hasCompleted() || _changes.hasThrowable()
 }
+// TODO: Expose the concept of errors.
+// TODO: It'd be helpful if this class was at least partly thread safe.
+
 
 

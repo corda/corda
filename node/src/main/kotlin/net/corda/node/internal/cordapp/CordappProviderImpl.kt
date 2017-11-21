@@ -2,18 +2,24 @@ package net.corda.node.internal.cordapp
 
 import com.google.common.collect.HashBiMap
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.crypto.SecureHash
-import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.loggerFor
 import java.net.URL
 
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
 open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
+
+    companion object {
+        private val log = loggerFor<CordappProviderImpl>()
+    }
+
     override fun getAppContext(): CordappContext {
         // TODO: Use better supported APIs in Java 9
         Exception().stackTrace.forEach { stackFrame ->
@@ -45,7 +51,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader, attachm
 
     private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> {
         val cordappsWithAttachments = cordapps.filter { !it.contractClassNames.isEmpty() }.map { it.jarPath }
-        val attachmentIds = cordappsWithAttachments.map { it.openStream().use { attachmentStorage.importAttachment(it) } }
+        val attachmentIds = cordappsWithAttachments.map { it.openStream().use { attachmentStorage.importOrGetAttachment(it) }}
         return attachmentIds.zip(cordappsWithAttachments).toMap()
     }
 

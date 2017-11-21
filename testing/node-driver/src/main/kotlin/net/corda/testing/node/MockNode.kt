@@ -12,6 +12,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -42,6 +43,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.setGlobalSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.sshd.common.util.security.SecurityUtils
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
@@ -121,6 +123,13 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
+
+    init {
+        // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
+        // This SFTP support loads BouncyCastle, which we want to avoid.
+        // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
+        SecurityUtils.setAPrioriDisabledProvider("BC", true)
+    }
 
     var nextNodeId = 0
         private set
@@ -264,6 +273,10 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
             return E2ETestKeyManagementService(identityService, keyPairs)
+        }
+
+        override fun startShell(rpcOps: CordaRPCOps) {
+            //No mock shell
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {
