@@ -21,4 +21,3 @@ Tutorials
    tutorial-attachments
    event-scheduling
    tutorial-observer-nodes
-   running-the-demos

@@ -1,11 +1,12 @@
-Samples
-=======
+CorDapp Samples
+===============
 
 .. contents::
 
 A number of samples are provided with Corda, under the `samples/` folder, in order to provide worked examples of
-how solutions to a number of common designs could be implemented in a CorDapp. New developers should start with the
-:doc:`example CorDapp <tutorial-cordapp>`, rather than these samples. The primary samples are:
+how solutions to a number of common designs could be implemented in a CorDapp. These are intended to show how to use
+certain features of Corda in various scenarios, and do not necessarily reflect best practice. New developers should
+start with the :doc:`example CorDapp <tutorial-cordapp>`, rather than these samples. The primary samples are:
 
 1. The :ref:`trader-demo`, which shows a delivery-vs-payment atomic swap of commercial paper for cash
 2. The :ref:`attachment-demo`, which demonstrates uploading attachments to nodes
