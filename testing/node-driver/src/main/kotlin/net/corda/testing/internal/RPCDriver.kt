@@ -48,6 +48,7 @@ import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import java.lang.reflect.Method
+import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -236,6 +237,7 @@ fun <A> rpcDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
+        compatibilityZoneURL: URL? = null,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -249,7 +251,8 @@ fun <A> rpcDriver(
                         startNodesInProcess = startNodesInProcess,
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs
+                        notarySpecs = notarySpecs,
+                        compatibilityZoneURL = compatibilityZoneURL
                 ), externalTrace
         ),
         coerce = { it },

@@ -37,6 +37,7 @@ import org.apache.activemq.artemis.core.security.CheckType
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager
+import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -85,6 +86,7 @@ fun <A> verifierDriver(
         waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
+        compatibilityZoneURL: URL? = null,
         dsl: VerifierExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -98,7 +100,8 @@ fun <A> verifierDriver(
                         startNodesInProcess = startNodesInProcess,
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs
+                        notarySpecs = notarySpecs,
+                        compatibilityZoneURL = compatibilityZoneURL
                 )
         ),
         coerce = { it },
