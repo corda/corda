@@ -2,16 +2,16 @@ package net.corda.nodeapi.internal.serialization
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.SessionData
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.amqpSpecific
 import net.corda.testing.kryoSpecific
-import net.corda.testing.SerializationEnvironmentRule
-import org.assertj.core.api.Assertions
-import org.bouncycastle.asn1.x500.X500Name
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
@@ -53,7 +53,7 @@ class MapsSerializationTest {
     fun `check throws for forbidden declared type`() = amqpSpecific("Such exceptions are not expected in Kryo mode.") {
         val payload = HashMap<String, String>(smallMap)
         val wrongPayloadType = WrongPayloadType(payload)
-        Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
+        assertThatThrownBy { wrongPayloadType.serialize() }
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining(
                 "Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
     }
@@ -62,27 +62,29 @@ class MapsSerializationTest {
     data class MyKey(val keyContent: Double)
 
     @CordaSerializable
-    data class MyValue(val valueContent: X500Name)
+    data class MyValue(val valueContent: CordaX500Name)
 
     @Test
     fun `check map serialization works with custom types`() {
         val myMap = mapOf(
-                MyKey(1.0) to MyValue(X500Name("CN=one")),
-                MyKey(10.0) to MyValue(X500Name("CN=ten")))
+                MyKey(1.0) to MyValue(CordaX500Name("OOO", "LLL", "CC")),
+                MyKey(10.0) to MyValue(CordaX500Name("OO", "LL", "CC")))
         assertEqualAfterRoundTripSerialization(myMap)
     }
 
     @Test
-    fun `check empty map serialises as Java emptyMap`() = kryoSpecific("Specifically checks Kryo serialization") {
-        val nameID = 0
-        val serializedForm = emptyMap<Int, Int>().serialize()
-        val output = ByteArrayOutputStream().apply {
-            write(KryoHeaderV0_1.bytes)
-            write(DefaultClassResolver.NAME + 2)
-            write(nameID)
-            write(javaEmptyMapClass.name.toAscii())
-            write(Kryo.NOT_NULL.toInt())
+    fun `check empty map serialises as Java emptyMap`() {
+        kryoSpecific("Specifically checks Kryo serialization") {
+            val nameID = 0
+            val serializedForm = emptyMap<Int, Int>().serialize()
+            val output = ByteArrayOutputStream().apply {
+                write(KryoHeaderV0_1.bytes)
+                write(DefaultClassResolver.NAME + 2)
+                write(nameID)
+                write(javaEmptyMapClass.name.toAscii())
+                write(Kryo.NOT_NULL.toInt())
+            }
+            assertArrayEquals(output.toByteArray(), serializedForm.bytes)
         }
-        assertArrayEquals(output.toByteArray(), serializedForm.bytes)
     }
 }
