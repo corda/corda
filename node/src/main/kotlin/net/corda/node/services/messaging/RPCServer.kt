@@ -367,7 +367,7 @@ class RPCServer(
         val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
         // TODO switch userService based on targetLegalIdentity
         val rpcUser = userService.getUser(validatedUser) ?:
-                throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")
+                throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user")
         return Pair(
             Actor(Id(rpcUser.username), userService.id, targetLegalIdentity),
             RpcPermissions(rpcUser.permissions))
