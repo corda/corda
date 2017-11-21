@@ -26,7 +26,7 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.CordaPersistence
@@ -49,8 +49,7 @@ import javax.persistence.*
 @ThreadSafe
 class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfiguration, private val db: CordaPersistence, private val metrics: MetricRegistry, private val raftConfig: RaftConfig) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
-        private val log = loggerFor<RaftUniquenessProvider>()
-
+        private val log = contextLogger()
         fun createMap(): AppendOnlyPersistentMap<String, Pair<Long, Any>, RaftState, String> =
                 AppendOnlyPersistentMap(
                         toPersistentEntityKey = { it },
@@ -76,10 +75,10 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
             var key: String = "",
 
             @Lob
-            @Column
+            @Column(name = "state_value")
             var value: ByteArray = ByteArray(0),
 
-            @Column
+            @Column(name = "state_index")
             var index: Long = 0
     )
 

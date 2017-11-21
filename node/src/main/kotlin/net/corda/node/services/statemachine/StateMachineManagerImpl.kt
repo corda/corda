@@ -27,10 +27,7 @@ import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.Try
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
@@ -67,7 +64,7 @@ class StateMachineManagerImpl(
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
 
     companion object {
-        private val logger = loggerFor<StateMachineManagerImpl>()
+        private val logger = contextLogger()
         internal val sessionTopic = TopicSession("platform.session")
 
         init {

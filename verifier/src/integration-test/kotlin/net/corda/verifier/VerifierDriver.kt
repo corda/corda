@@ -14,7 +14,7 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
@@ -149,7 +149,7 @@ data class VerifierDriverDSL(
     val verifierCount = AtomicInteger(0)
 
     companion object {
-        private val log = loggerFor<VerifierDriverDSL>()
+        private val log = contextLogger()
         fun createConfiguration(baseDirectory: Path, nodeHostAndPort: NetworkHostAndPort): Config {
             return ConfigFactory.parseMap(
                     mapOf(

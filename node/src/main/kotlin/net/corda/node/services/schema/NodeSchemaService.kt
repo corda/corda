@@ -14,7 +14,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
-import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.messaging.P2PMessagingClient
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -47,8 +47,8 @@ class NodeSchemaService(cordappLoader: CordappLoader?) : SchemaService, Singleto
                     PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
-                    NodeMessagingClient.ProcessedMessage::class.java,
-                    NodeMessagingClient.RetryMessage::class.java,
+                    P2PMessagingClient.ProcessedMessage::class.java,
+                    P2PMessagingClient.RetryMessage::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
                     RaftUniquenessProvider.RaftState::class.java,
                     BFTNonValidatingNotaryService.PersistedCommittedState::class.java,

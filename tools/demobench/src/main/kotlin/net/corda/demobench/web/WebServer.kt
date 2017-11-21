@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.RateLimiter
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.until
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.demobench.model.NodeConfigWrapper
 import net.corda.demobench.readErrorLines
@@ -18,7 +18,7 @@ import kotlin.concurrent.thread
 
 class WebServer internal constructor(private val webServerController: WebServerController) : AutoCloseable {
     private companion object {
-        val log = loggerFor<WebServer>()
+        private val log = contextLogger()
     }
 
     private val executor = Executors.newSingleThreadExecutor()

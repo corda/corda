@@ -11,16 +11,17 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.VerifierApi
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import java.util.concurrent.ConcurrentHashMap
 
-abstract class OutOfProcessTransactionVerifierService(
-        private val metrics: MetricRegistry
+class OutOfProcessTransactionVerifierService(
+        private val metrics: MetricRegistry,
+        private val sendRequest: (Long, LedgerTransaction) -> Unit
 ) : SingletonSerializeAsToken(), TransactionVerifierService {
     companion object {
-        val log = loggerFor<OutOfProcessTransactionVerifierService>()
+        private val log = contextLogger()
     }
 
     private data class VerificationHandle(
@@ -59,8 +60,6 @@ abstract class OutOfProcessTransactionVerifierService(
             }
         }
     }
-
-    abstract fun sendRequest(nonce: Long, transaction: LedgerTransaction)
 
     override fun verify(transaction: LedgerTransaction): CordaFuture<*> {
         log.info("Verifying ${transaction.id}")

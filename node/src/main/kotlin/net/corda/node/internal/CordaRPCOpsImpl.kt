@@ -20,8 +20,8 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
@@ -117,10 +117,6 @@ internal class CordaRPCOpsImpl(
         return services.myInfo
     }
 
-    override fun nodeStateObservable(): Observable<NodeState> {
-        return services.myNodeStateObservable
-    }
-
     override fun notaryIdentities(): List<Party> {
         return services.networkMapCache.notaryIdentities
     }
@@ -142,7 +138,9 @@ internal class CordaRPCOpsImpl(
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = stateMachine.logic.track()?.updates ?: Observable.empty()
+                progress = stateMachine.logic.track()?.updates ?: Observable.empty(),
+                stepsTreeIndexFeed = stateMachine.logic.trackStepsTreeIndex(),
+                stepsTreeFeed = stateMachine.logic.trackStepsTree()
         )
     }
 
@@ -296,6 +294,6 @@ internal class CordaRPCOpsImpl(
     }
 
     companion object {
-        private val log = loggerFor<CordaRPCOpsImpl>()
+        private val log = contextLogger()
     }
 }

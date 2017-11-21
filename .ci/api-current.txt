@@ -1533,7 +1533,6 @@ public final class net.corda.core.identity.IdentityUtils extends java.lang.Objec
   @org.jetbrains.annotations.NotNull public abstract List networkMapSnapshot()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.NodeInfo nodeInfo()
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.node.NodeInfo nodeInfoFromParty(net.corda.core.identity.AbstractParty)
-  @net.corda.core.messaging.RPCReturnsObservables @org.jetbrains.annotations.NotNull public abstract rx.Observable nodeStateObservable()
   @org.jetbrains.annotations.NotNull public abstract List notaryIdentities()
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party notaryPartyFromX500Name(net.corda.core.identity.CordaX500Name)
   @org.jetbrains.annotations.NotNull public abstract java.io.InputStream openAttachment(net.corda.core.crypto.SecureHash)
@@ -1612,11 +1611,6 @@ public final class net.corda.core.messaging.CordaRPCOpsKt extends java.lang.Obje
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.messaging.MessageRecipientGroup extends net.corda.core.messaging.MessageRecipients
 ##
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.messaging.MessageRecipients
-##
-@net.corda.core.serialization.CordaSerializable public final class net.corda.core.messaging.NodeState extends java.lang.Enum
-  protected <init>(String, int)
-  public static net.corda.core.messaging.NodeState valueOf(String)
-  public static net.corda.core.messaging.NodeState[] values()
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.messaging.RPCOps
   public abstract int getProtocolVersion()
@@ -1714,7 +1708,6 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.ContractUpgradeService getContractUpgradeService()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.KeyManagementService getKeyManagementService()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.NodeInfo getMyInfo()
-  @org.jetbrains.annotations.NotNull public abstract rx.Observable getMyNodeStateObservable()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.NetworkMapCache getNetworkMapCache()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.TransactionStorage getValidatedTransactions()

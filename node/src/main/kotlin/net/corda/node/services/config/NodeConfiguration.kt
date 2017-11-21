@@ -39,6 +39,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
+    val sshd: SSHDConfiguration?
     val relay: RelayConfiguration?
 }
 
@@ -111,7 +112,9 @@ data class NodeConfigurationImpl(
         override val detectPublicIp: Boolean = true,
         override val activeMQServer: ActiveMqServerConfiguration,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
-        override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
+        override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
+        override val sshd: SSHDConfiguration? = null
+
 ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
@@ -147,6 +150,7 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
         }
 }
 
+data class SSHDConfiguration(val port: Int)
 data class RelayConfiguration(val relayHost: String,
                               val remoteInboundPort: Int,
                               val username: String,

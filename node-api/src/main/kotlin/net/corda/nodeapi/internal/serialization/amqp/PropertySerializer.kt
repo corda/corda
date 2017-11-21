@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
@@ -61,8 +61,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     }
 
     companion object {
-        private val logger = loggerFor<PropertySerializer>()
-
+        private val logger = contextLogger()
         fun make(name: String, readMethod: Method?, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
             readMethod?.isAccessible = true
             if (SerializerFactory.isPrimitive(resolvedType)) {

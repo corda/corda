@@ -1,17 +1,20 @@
+@file:Suppress("unused", "MemberVisibilityCanPrivate")
+
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.client.rpc.RPCException
 import net.corda.core.CordaRuntimeException
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
-import net.corda.core.internal.toX509CertHolder
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.client.rpc.RPCException
-import net.corda.core.contracts.*
-import net.corda.core.internal.AbstractAttachment
-import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
@@ -25,10 +28,8 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertNotSame
-import org.junit.Assert.assertSame
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
+import org.junit.Assert.*
 import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -39,10 +40,7 @@ import java.nio.ByteBuffer
 import java.time.*
 import java.time.temporal.ChronoUnit
 import java.util.*
-import kotlin.reflect.full.declaredFunctions
-import kotlin.reflect.full.declaredMemberFunctions
 import kotlin.reflect.full.superclasses
-import kotlin.reflect.jvm.javaMethod
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -79,7 +77,6 @@ class SerializationOutputTests {
     }
 
     data class Woo(val fred: Int) {
-        @Suppress("unused")
         val bob = "Bob"
     }
 
@@ -89,7 +86,6 @@ class SerializationOutputTests {
 
     @CordaSerializable
     data class AnnotatedWoo(val fred: Int) {
-        @Suppress("unused")
         val bob = "Bob"
     }
 
@@ -150,6 +146,13 @@ class SerializationOutputTests {
     data class InheritAnnotation(val foo: String) : AnnotatedInterface
 
     data class PolymorphicProperty(val foo: FooInterface?)
+
+    @CordaSerializable
+    class NonZeroByte(val value: Byte) {
+        init {
+            require(value.toInt() != 0) { "Zero not allowed" }
+        }
+    }
 
     private inline fun <reified T : Any> serdes(obj: T,
                                                 factory: SerializerFactory = SerializerFactory(
@@ -404,6 +407,32 @@ class SerializationOutputTests {
     fun `test mismatched property and constructor type`() {
         val obj = MismatchType(456)
         serdes(obj)
+    }
+
+    @Test
+    fun `class constructor is invoked on deserialisation`() {
+        val ser = SerializationOutput(SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader()))
+        val des = DeserializationInput(ser.serializerFactory)
+
+        val serialisedOne = ser.serialize(NonZeroByte(1)).bytes
+        val serialisedTwo = ser.serialize(NonZeroByte(2)).bytes
+
+        // Find the index that holds the value byte
+        val valueIndex = serialisedOne.zip(serialisedTwo).mapIndexedNotNull { index, (oneByte, twoByte) ->
+            if (oneByte.toInt() == 1 && twoByte.toInt() == 2) index else null
+        }.single()
+
+        val copy = serialisedTwo.clone()
+
+        // Double check
+        copy[valueIndex] = 0x03
+        assertThat(des.deserialize(OpaqueBytes(copy), NonZeroByte::class.java).value).isEqualTo(3)
+
+        // Now use the forbidden value
+        copy[valueIndex] = 0x00
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            des.deserialize(OpaqueBytes(copy), NonZeroByte::class.java)
+        }.withMessageContaining("Zero not allowed")
     }
 
     @Test
@@ -762,26 +791,32 @@ class SerializationOutputTests {
     }
 
     @Test
-    fun `test certificate holder serialize`() {
+    fun `test privacy salt serialize`() {
+        serdes(PrivacySalt())
+        serdes(PrivacySalt(secureRandomBytes(32)))
+    }
+
+    @Test
+    fun `test X509 certificate serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateSerializer)
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateHolderSerializer)
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CertificateSerializer)
 
-        val obj = BOB_IDENTITY.certificate.toX509CertHolder()
+        val obj = BOB_IDENTITY.certificate
         serdes(obj, factory, factory2)
     }
 
     @Test
-    fun `test party and certificate serialize`() {
+    fun `test cert path serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory))
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.CertPathSerializer(factory))
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.PartyAndCertificateSerializer(factory2))
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.CertPathSerializer(factory2))
 
-        val obj = BOB_IDENTITY
+        val obj = BOB_IDENTITY.certPath
         serdes(obj, factory, factory2)
     }
 

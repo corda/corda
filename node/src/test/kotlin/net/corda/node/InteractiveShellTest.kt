@@ -2,11 +2,17 @@ package net.corda.node
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import net.corda.client.jackson.JacksonSupport
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.shell.InteractiveShell
@@ -20,6 +26,7 @@ import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -36,8 +43,8 @@ class InteractiveShellTest {
 
     @Suppress("UNUSED")
     class FlowA(val a: String) : FlowLogic<String>() {
-        constructor(b: Int) : this(b.toString())
-        constructor(b: Int, c: String) : this(b.toString() + c)
+        constructor(b: Int?) : this(b.toString())
+        constructor(b: Int?, c: String) : this(b.toString() + c)
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
         constructor(party: Party) : this(party.name.toString())
@@ -50,9 +57,16 @@ class InteractiveShellTest {
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {
-        var output: DummyFSM? = null
-        InteractiveShell.runFlowFromString({ DummyFSM(it as FlowA).apply { output = this } }, input, FlowA::class.java, om)
-        assertEquals(expected, output!!.logic.a, input)
+        var output: String? = null
+        InteractiveShell.runFlowFromString( { clazz, args ->
+
+            val instance = clazz.getConstructor(*args.map { it!!::class.java }.toTypedArray()).newInstance(*args) as FlowA
+            output = instance.a
+            val future = openFuture<String>()
+            future.set("ABC")
+            FlowProgressHandleImpl(StateMachineRunId.createRandom(), future, Observable.just("Some string"))
+        }, input, FlowA::class.java, om)
+        assertEquals(expected, output!!, input)
     }
 
     @Test

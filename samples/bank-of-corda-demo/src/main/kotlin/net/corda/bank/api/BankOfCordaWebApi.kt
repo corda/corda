@@ -5,8 +5,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import java.time.LocalDateTime
 import java.util.*
@@ -23,7 +23,7 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
                                   val notaryName: CordaX500Name)
 
     private companion object {
-        val logger = loggerFor<BankOfCordaWebApi>()
+        private val logger = contextLogger()
     }
 
     @GET

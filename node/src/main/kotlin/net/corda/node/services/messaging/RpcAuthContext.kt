@@ -23,6 +23,7 @@ data class RpcPermissions(private val values: Set<String> = emptySet()) {
 
     companion object {
         val NONE = RpcPermissions()
+        val ALL = RpcPermissions(setOf("ALL"))
     }
 
     fun coverAny(permissions: Set<String>) = !values.intersect(permissions + Permissions.all()).isEmpty()
