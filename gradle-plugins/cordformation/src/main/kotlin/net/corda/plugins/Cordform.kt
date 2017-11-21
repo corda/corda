@@ -79,7 +79,7 @@ open class Cordform : DefaultTask() {
     private fun installRunScript() {
         project.copy {
             it.apply {
-                from(Cordformation.getPluginFile(project, "net/corda/plugins/runnodes.jar"))
+                from(Cordformation.getPluginFile("runnodes.jar"))
                 fileMode = Cordformation.executableFileMode
                 into("$directory/")
             }
@@ -87,7 +87,7 @@ open class Cordform : DefaultTask() {
 
         project.copy {
             it.apply {
-                from(Cordformation.getPluginFile(project, "net/corda/plugins/runnodes"))
+                from(Cordformation.getPluginFile("runnodes"))
                 // Replaces end of line with lf to avoid issues with the bash interpreter and Windows style line endings.
                 filter(mapOf("eol" to FixCrLfFilter.CrLf.newInstance("lf")), FixCrLfFilter::class.java)
                 fileMode = Cordformation.executableFileMode
@@ -97,7 +97,7 @@ open class Cordform : DefaultTask() {
 
         project.copy {
             it.apply {
-                from(Cordformation.getPluginFile(project, "net/corda/plugins/runnodes.bat"))
+                from(Cordformation.getPluginFile("runnodes.bat"))
                 into("$directory/")
             }
         }
