@@ -16,7 +16,9 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NotaryService
 import net.corda.core.toFuture
@@ -35,6 +37,8 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
+import net.corda.testing.common.internal.NetworkParametersCopier
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -602,6 +606,7 @@ class DriverDSL(
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
     override val notaryHandles: List<NotaryHandle> get() = _notaries
+    private lateinit var networkParameters: NetworkParametersCopier
 
     class State {
         val processes = ArrayList<Process>()
@@ -755,29 +760,33 @@ class DriverDSL(
         _shutdownManager = ShutdownManager(executorService)
         shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
         val notaryInfos = generateNotaryIdentities()
+        // The network parameters must be serialised before starting any of the nodes
+        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
         val nodeHandles = startNotaries()
         _notaries = notaryInfos.zip(nodeHandles) { (identity, validating), nodes -> NotaryHandle(identity, validating, nodes) }
     }
 
-    private fun generateNotaryIdentities(): List<Pair<Party, Boolean>> {
+    private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.map { spec ->
             val identity = if (spec.cluster == null) {
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = listOf(baseDirectory(spec.name)),
-                        serviceName = spec.name.copy(commonName = NotaryService.constructId(validating = spec.validating))
-                )
+                        serviceName = spec.name,
+                        serviceId = "identity")
             } else {
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
-                        serviceName = spec.name
-                )
+                        serviceName = spec.name,
+                        serviceId = NotaryService.constructId(
+                                validating = spec.validating,
+                                raft = spec.cluster is ClusterSpec.Raft))
             }
-            Pair(identity, spec.validating)
+            NotaryInfo(identity, spec.validating)
         }
     }
 
     private fun generateNodeNames(spec: NotarySpec): List<CordaX500Name> {
-        return (0 until spec.cluster!!.clusterSize).map { spec.name.copy(commonName = null, organisation = "${spec.name.organisation}-$it") }
+        return (0 until spec.cluster!!.clusterSize).map { spec.name.copy(organisation = "${spec.name.organisation}-$it") }
     }
 
     private fun startNotaries(): List<CordaFuture<List<NodeHandle>>> {
@@ -914,6 +923,7 @@ class DriverDSL(
                                   maximumHeapSize: String): CordaFuture<NodeHandle> {
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
+        networkParameters.install(baseDirectory)
         nodeInfoFilesCopier.addConfig(baseDirectory)
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier.removeConfig(baseDirectory)
