@@ -3964,6 +3964,18 @@ void Thread::dispose()
   m->processor->dispose(this);
 }
 
+bool Thread::isBlacklisting()
+{
+  return (javaThread != NULL) && javaThread->blacklisting();
+}
+
+void Thread::startBlacklisting()
+{
+  if (javaThread != NULL) {
+    javaThread->setBlacklisting(this, 1);
+  }
+}
+
 void shutDown(Thread* t)
 {
   ACQUIRE(t, t->m->shutdownLock);
@@ -4883,6 +4895,40 @@ GcClass* resolveSystemClass(Thread* t,
   PROTECT(t, spec);
 
   ACQUIRE(t, t->m->classLock);
+
+  /*
+   * We require that SystemClassLoader.isForbidden() has already
+   * been executed once before isBlacklisting is set to true.
+   * Otherwise this code-block recurses until the stack explodes.
+   */
+  if (t->isBlacklisting()
+        && ::strcmp("avian/SystemClassLoader", reinterpret_cast<const char*>(spec->body().begin()))) {
+    GcMethod* forbid = resolveMethod(t,
+                                     roots(t)->bootLoader(),
+                                     "avian/SystemClassLoader",
+                                     "isForbidden",
+                                     "(Ljava/lang/String;)Z");
+    GcString *name = t->m->classpath->makeString(t, spec, 0, spec->length());
+    GcInt *result = cast<GcInt>(t, t->m->processor->invoke(t, forbid, NULL, name));
+    if (UNLIKELY(t->exception)) {
+      if (throw_) {
+        GcThrowable* e = t->exception;
+        t->exception = 0;
+        vm::throw_(t, e);
+      } else {
+        t->exception = 0;
+        return 0;
+      }
+    }
+
+    if (result->value() == JNI_TRUE) {
+      if (throw_) {
+        throwNew(t, throwType, "%s", spec->body().begin());
+      } else {
+        return 0;
+      }
+    }
+  }
 
   GcClass* class_ = findLoadedClass(t, loader, spec);
   if (class_ == 0) {

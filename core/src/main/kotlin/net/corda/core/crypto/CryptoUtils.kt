@@ -219,7 +219,7 @@ private val _newSecureRandom: () -> SecureRandom by lazy {
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun newSecureRandom() = _newSecureRandom()
+fun newSecureRandom(): SecureRandom = _newSecureRandom()
 
 /**
  * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order

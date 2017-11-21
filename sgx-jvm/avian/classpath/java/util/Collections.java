@@ -31,10 +31,6 @@ public class Collections {
     }
   }
 
-  public static void shuffle(List list) {
-    shuffle(list, new Random());
-  }
-
   public static void sort(List list) {
     sort(list, new Comparator() {
         public int compare(Object a, Object b) {
@@ -200,6 +196,14 @@ public class Collections {
     return new ReverseComparator<T>(cmp);
   }
   
+  public static <T> boolean addAll(Collection<? super T> collection, T... items) {
+    boolean modified = false;
+    for (T item : items) {
+        modified |= collection.add(item);
+    }
+    return modified;
+  }
+
   static class IteratorEnumeration<T> implements Enumeration<T> {
     private final Iterator<T> it;
 

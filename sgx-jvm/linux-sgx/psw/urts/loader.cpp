@@ -365,7 +365,7 @@ int CLoader::build_secs(sgx_attributes_t * const secs_attr, sgx_misc_attribute_t
     int ret = enclave_creator->create_enclave(&m_secs, &m_enclave_id, &m_start_addr, is_ae(&m_metadata->enclave_css));
     if(SGX_SUCCESS == ret)
     {
-        SE_TRACE(SE_TRACE_NOTICE, "enclave start address = %p, size = %x\n", m_start_addr, m_metadata->enclave_size);
+        SE_TRACE(SE_TRACE_NOTICE, "enclave start address = %p, size = 0x%x\n", m_start_addr, m_metadata->enclave_size);
     }
     return ret;
 }

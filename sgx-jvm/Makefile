@@ -11,7 +11,7 @@ all: jvm-enclave/standalone/build/standalone_sgx_verify linux-sgx-driver/isgx.ko
 
 # The final binary
 jvm-enclave/standalone/build/standalone_sgx_verify: avian linux-sgx/build/linux/aesm_service
-	JAVA_HOME=$(JAVA_HOME) $(MAKE) -C jvm-enclave
+	JAVA_HOME=$(JAVA_HOME) JDK_IMAGE=$(JDK_IMAGE) $(MAKE) -C jvm-enclave
 
 # Avian with SGX support
 AVIAN_EXTRA_CFLAGS="-I$(ROOT)/usr/include -I$(ROOT)/usr/include/x86_64-linux-gnu"

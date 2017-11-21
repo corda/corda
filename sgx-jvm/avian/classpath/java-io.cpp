@@ -347,65 +347,6 @@ extern "C" JNIEXPORT jlong JNICALL
   return 0;
 }
 
-extern "C" JNIEXPORT void JNICALL
-    Java_java_io_File_mkdir(JNIEnv* e, jclass, jstring path)
-{
-  string_t chars = getChars(e, path);
-  if (chars) {
-    if (not exists(chars)) {
-      int r = ::MKDIR(chars, 0777);
-      if (r != 0) {
-        throwNewErrno(e, "java/io/IOException");
-      }
-    }
-    releaseChars(e, path, chars);
-  }
-}
-
-extern "C" JNIEXPORT jboolean JNICALL
-    Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
-{
-  bool result = false;
-  string_t chars = getChars(e, path);
-  if (chars) {
-    if (not exists(chars)) {
-      int fd = OPEN(chars, O_CREAT | O_WRONLY | O_EXCL, 0666);
-      if (fd == -1) {
-        if (errno != EEXIST) {
-          throwNewErrno(e, "java/io/IOException");
-        }
-      } else {
-        result = true;
-        doClose(e, fd);
-      }
-    }
-    releaseChars(e, path, chars);
-  }
-  return result;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
-{
-  string_t chars = getChars(e, path);
-  int r;
-  if (chars) {
-#ifdef PLATFORM_WINDOWS
-    if (GetFileAttributes(chars) & FILE_ATTRIBUTE_DIRECTORY) {
-      r = !RemoveDirectory(chars);
-    } else {
-      r = REMOVE(chars);
-    }
-#else
-    r = REMOVE(chars);
-#endif
-    if (r != 0) {
-      throwNewErrno(e, "java/io/IOException");
-    }
-    releaseChars(e, path, chars);
-  }
-}
-
 extern "C" JNIEXPORT jboolean JNICALL
     Java_java_io_File_canRead(JNIEnv* e, jclass, jstring path)
 {
@@ -496,27 +437,6 @@ extern "C" JNIEXPORT jboolean JNICALL
 }
 
 #endif
-
-extern "C" JNIEXPORT jboolean JNICALL
-    Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)
-{
-  string_t oldChars = getChars(e, old);
-  string_t newChars = getChars(e, new_);
-  if (oldChars) {
-    bool v;
-    if (newChars) {
-      v = RENAME(oldChars, newChars) == 0;
-
-      releaseChars(e, new_, newChars);
-    } else {
-      v = false;
-    }
-    releaseChars(e, old, oldChars);
-    return v;
-  } else {
-    return false;
-  }
-}
 
 extern "C" JNIEXPORT jboolean JNICALL
     Java_java_io_File_isDirectory(JNIEnv* e, jclass, jstring path)

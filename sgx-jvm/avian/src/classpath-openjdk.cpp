@@ -3355,7 +3355,7 @@ uint64_t jvmInitProperties(Thread* t, uintptr_t* arguments)
   local::setProperty(
       t, method, *properties, "java.vm.vendor", "Avian Contributors");
 
-  local::setProperty(t, method, *properties, "java.vm.name", "Avian");
+  local::setProperty(t, method, *properties, "java.vm.name", "Avian (Corda)");
 #ifdef AVIAN_VERSION
   local::setProperty(t, method, *properties, "java.vm.version", AVIAN_VERSION);
 #endif

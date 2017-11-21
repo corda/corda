@@ -94,7 +94,6 @@ openjdk-headers-classes = \
 	sun.misc.VMSupport \
 	sun.misc.Version \
 	sun.misc.URLClassPath \
-	sun.net.spi.DefaultProxySelector \
 	sun.nio.ch.IOStatus \
 	sun.reflect.ConstantPool \
 	sun.reflect.NativeConstructorAccessorImpl \
@@ -214,7 +213,6 @@ else
 		"-I$(openjdk-src)/solaris/native/java/lang" \
 		"-I$(openjdk-src)/solaris/native/java/net" \
 		"-I$(openjdk-src)/solaris/native/java/util" \
-		"-I$(openjdk-src)/solaris/native/sun/management" \
 		"-I$(openjdk-src)/solaris/native/sun/nio/ch" \
 		"-I$(openjdk-src)/solaris/javavm/include" \
 		"-I$(openjdk-src)/solaris/hpi/include" \

@@ -22,10 +22,6 @@ import java.util.Hashtable;
 import java.util.Properties;
 
 public abstract class System {
-  private static class NanoTime {
-    public static final long BaseInMillis = currentTimeMillis();
-  }
-  
   private static class Static {
     public static Properties properties = makeProperties();
   }
@@ -91,13 +87,7 @@ public abstract class System {
 
   private static native String[] getVMProperties();
 
-  public static native long currentTimeMillis();
-
   public static native int identityHashCode(Object o);
-
-  public static long nanoTime() {
-    return (currentTimeMillis() - NanoTime.BaseInMillis) * 1000000;
-  }
 
   public static String mapLibraryName(String name) {
     if (name != null) {

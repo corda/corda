@@ -397,20 +397,4 @@ public enum TimeUnit {
       obj.wait(ms, ns);
     }
   }
-  
-  public void timedJoin(Thread thread, long timeout) throws InterruptedException {
-    if (timeout > 0) {
-      long ms = toMillis(timeout);
-      int ns = excessNanos(timeout, ms);
-      thread.join(ms, ns);
-    }
-  }
-  
-  public void sleep(long timeout) throws InterruptedException {
-    if (timeout > 0) {
-      long ms = toMillis(timeout);
-      int ns = excessNanos(timeout, ms);
-      Thread.sleep(ms, ns);
-    }
-  }
 }

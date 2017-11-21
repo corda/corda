@@ -183,6 +183,12 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
       t->m->classpath->makeString(t, array, offset, length));
 }
 
+extern "C" AVIAN_EXPORT void JNICALL
+    Avian_avian_SystemClassLoader_startBlacklisting0(Thread* t, object, uintptr_t*)
+{
+  t->startBlacklisting();
+}
+
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_avian_SystemClassLoader_appLoader(Thread* t, object, uintptr_t*)
 {

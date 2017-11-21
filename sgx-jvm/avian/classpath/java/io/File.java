@@ -47,43 +47,6 @@ public class File implements Serializable {
     this(parent.getPath() + FileSeparator + child);
   }
 
-  public static File createTempFile(String prefix, String suffix)
-    throws IOException
-  {
-    return createTempFile(prefix, suffix, null);
-  }
-
-  public static File createTempFile(String prefix, String suffix,
-                                    File directory)
-    throws IOException
-  {
-    if(directory == null) {
-      directory = new File(System.getProperty("java.io.tmpdir"));
-    }
-    if(suffix == null) {
-      suffix = ".tmp";
-    }
-    File ret;
-    long state = System.currentTimeMillis();
-
-    do {
-      ret = generateFile(directory, prefix, state, suffix);
-      state *= 7;
-      state += 3;
-    } while(ret == null);
-    ret.createNewFile();
-    return ret;
-  }
-
-  private static File generateFile(File directory, String prefix, long state, String suffix) {
-    File ret = new File(directory, prefix + state + suffix);
-    if(ret.exists()) {
-      return null;
-    } else {
-      return ret;
-    }
-  }
-
   private static String stripSeparators(String p) {
     while (p.length() > 1 && p.endsWith(FileSeparator)) {
       p = p.substring(0, p.length() - 1);
@@ -102,12 +65,6 @@ public class File implements Serializable {
     }
     return stripSeparators
       ("\\".equals(FileSeparator) ? path.replace('/', '\\') : path);
-  }
-
-  public static native boolean rename(String old, String new_);
-
-  public boolean renameTo(File newName) {
-    return rename(path, newName.path);
   }
 
   private static native boolean isDirectory(String path);
@@ -144,16 +101,6 @@ public class File implements Serializable {
     return canExecute(path);
   }
 
-  private static native boolean setExecutable(String path, boolean executable, boolean ownerOnly);
-
-  public boolean setExecutable(boolean executable) {
-    return setExecutable(executable, true);
-  }
-
-  public boolean setExecutable(boolean executable, boolean ownerOnly) {
-    return setExecutable(path, executable, ownerOnly);
-  }
-  
   public String getName() {
     int index = path.lastIndexOf(FileSeparator);
     if (index >= 0) {
@@ -217,46 +164,6 @@ public class File implements Serializable {
 
   public boolean exists() {
     return exists(path);
-  }
-
-  private static native void mkdir(String path) throws IOException;
-
-  public boolean mkdir() {
-    try {
-      mkdir(path);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
-  }
-
-  private static native boolean createNewFile(String path) throws IOException;
-
-  public boolean createNewFile() throws IOException {
-    return createNewFile(path);
-  }
-
-  public static native void delete(String path) throws IOException;
-
-  public boolean delete() {
-    try {
-      delete(path);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
-  }
-
-  public boolean mkdirs() {
-    File parent = getParentFile();
-    if (parent != null) {
-      if (!parent.exists()) {
-        if (!parent.mkdirs()) {
-          return false;
-        }
-      }
-    }
-    return mkdir();
   }
 
   public File[] listFiles() {

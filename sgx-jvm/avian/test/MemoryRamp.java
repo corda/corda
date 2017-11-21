@@ -29,7 +29,6 @@ public class MemoryRamp implements Runnable {
      * @return time to create and access array in milliseconds
      */
     private static long mem() {
-        long start = System.currentTimeMillis();
         final byte[] array = new byte[ARRAY_SIZE];
         if (ACCESS_ARRAY) {
             for (int i = 0; i < array.length; i++) {
@@ -37,7 +36,7 @@ public class MemoryRamp implements Runnable {
                 byte x = array[i]; //read
             }
         }
-        return System.currentTimeMillis() - start;
+        return 0;
     }
 
     /**
@@ -46,7 +45,6 @@ public class MemoryRamp implements Runnable {
      */
     private static long memMulti(int numOfThreads) {
         Thread[] threads = new Thread[numOfThreads];
-        long start = System.currentTimeMillis();
 
         for (int i = 0; i < threads.length; i++) {
             threads[i] = new Thread(new MemoryRamp(), "mem-");
@@ -61,6 +59,6 @@ public class MemoryRamp implements Runnable {
         catch (InterruptedException iex) {
             throw new RuntimeException(iex);
         }
-        return System.currentTimeMillis() - start;
+        return 0;
     }
 }

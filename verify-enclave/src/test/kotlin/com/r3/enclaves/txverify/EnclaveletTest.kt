@@ -7,6 +7,7 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.testing.*
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Files
@@ -18,6 +19,8 @@ class EnclaveletTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
+    @Ignore("Pending Gradle bug: https://github.com/gradle/gradle/issues/2657")
     @Test
     fun success() {
         ledger {
@@ -50,6 +53,7 @@ class EnclaveletTest {
         }
     }
 
+    @Ignore("Pending Gradle bug: https://github.com/gradle/gradle/issues/2657")
     @Test
     fun fail() {
         ledger {

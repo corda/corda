@@ -7,6 +7,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import java.io.File
 
@@ -14,9 +15,22 @@ import java.io.File
 
 /** This is just used to simplify marshalling across the enclave boundary (EDL is a bit awkward) */
 @CordaSerializable
-class TransactionVerificationRequest(val wtxToVerify: SerializedBytes<WireTransaction>,
-                                     val dependencies: Array<SerializedBytes<WireTransaction>>,
-                                     val attachments: Array<ByteArray>)
+class TransactionVerificationRequest(private val wtxToVerify: SerializedBytes<WireTransaction>,
+                                     private val dependencies: Array<SerializedBytes<WireTransaction>>,
+                                     val attachments: Array<ByteArray>) {
+    fun toLedgerTransaction(): LedgerTransaction {
+        val deps = dependencies.map { it.deserialize() }.associateBy(WireTransaction::id)
+        val attachments = attachments.map { it.deserialize<Attachment>() }
+        val attachmentMap = attachments.associateBy(Attachment::id)
+        val contractAttachmentMap = attachments.mapNotNull { it as? MockContractAttachment }.associateBy(MockContractAttachment::contract)
+        return wtxToVerify.deserialize().toLedgerTransaction(
+            resolveIdentity = { null },
+            resolveAttachment = { attachmentMap[it] },
+            resolveStateRef = { deps[it.txhash]?.outputs?.get(it.index) },
+            resolveContractAttachment = { contractAttachmentMap[it.contract]?.id }
+        )
+    }
+}
 
 /**
  * Returns either null to indicate success when the transactions are validated, or a string with the
@@ -30,19 +44,24 @@ class TransactionVerificationRequest(val wtxToVerify: SerializedBytes<WireTransa
  */
 @Throws(Exception::class)
 fun verifyInEnclave(reqBytes: ByteArray) {
-    val req = reqBytes.deserialize<TransactionVerificationRequest>()
-    val wtxToVerify = req.wtxToVerify.deserialize()
-    val dependencies = req.dependencies.map { it.deserialize() }.associateBy { it.id }
-    val attachments = req.attachments.map { it.deserialize<Attachment>() }
-    val attachmentMap = attachments.associateBy(Attachment::id)
-    val contractAttachmentMap = attachments.mapNotNull { it as? MockContractAttachment }.associateBy { it.contract }
-    val ltx = wtxToVerify.toLedgerTransaction(
-            resolveIdentity = { null },
-            resolveAttachment = { attachmentMap[it] },
-            resolveStateRef = { dependencies[it.txhash]?.outputs?.get(it.index) },
-            resolveContractAttachment = { contractAttachmentMap[it.contract]?.id }
-    )
+    val ltx = deserialise(reqBytes)
+    // Prevent this thread from linking new classes against any
+    // blacklisted classes, e.g. ones needed by Kryo or by the
+    // JVM itself. Note that java.lang.Thread is also blacklisted.
+    startClassBlacklisting()
     ltx.verify()
+}
+
+private fun startClassBlacklisting() {
+    val systemClassLoader = ClassLoader.getSystemClassLoader()
+    systemClassLoader.javaClass.getMethod("startBlacklisting").apply {
+        invoke(systemClassLoader)
+    }
+}
+
+private fun deserialise(reqBytes: ByteArray): LedgerTransaction {
+    return reqBytes.deserialize<TransactionVerificationRequest>()
+                .toLedgerTransaction()
 }
 
 // Note: This is only here for debugging purposes

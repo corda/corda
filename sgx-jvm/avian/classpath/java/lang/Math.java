@@ -16,10 +16,6 @@ public final class Math {
   public static final double E = 2.718281828459045;
   public static final double PI = 3.141592653589793;
 
-  private static class Static {
-    public static final Random random = new Random();
-  }
-
   private Math() { }
 
   public static double max(double a, double b) {
@@ -84,10 +80,6 @@ public final class Math {
 
   public static float signum(float f) {
     return f > 0 ? +1.0f : f < 0 ? -1.0f : 0;
-  }
-
-  public static double random() {
-    return Static.random.nextDouble();
   }
 
   public static native double floor(double v);

@@ -5,6 +5,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.toHexString
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
@@ -29,6 +30,11 @@ private class EnclaveletSerializationScheme {
                  * incoming request received.
                  */
                 KRYO_P2P_CONTEXT)
+
+            /*
+             * Ensure that we initialise JAXP before blacklisting is enabled.
+             */
+            ByteArray(0).toHexString()
         }
     }
 }

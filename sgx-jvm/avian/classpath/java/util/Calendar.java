@@ -34,7 +34,7 @@ public abstract class Calendar {
   protected Calendar() { }
  
   public static Calendar getInstance() {
-    return new MyCalendar(System.currentTimeMillis());
+    return new MyCalendar(0);
   }
 
   public int get(int field) {

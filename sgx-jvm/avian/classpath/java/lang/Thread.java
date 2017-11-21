@@ -25,7 +25,6 @@ public class Thread implements Runnable {
   private byte priority;
   private final Runnable task;
   private Map<ThreadLocal, Object> locals;
-  private Object sleepLock;
   private ClassLoader classLoader;
   private UncaughtExceptionHandler exceptionHandler;
   private String name;
@@ -158,30 +157,6 @@ public class Thread implements Runnable {
     return interrupted;
   }
 
-  public static void sleep(long milliseconds) throws InterruptedException {
-    if (milliseconds <= 0) {
-      milliseconds = 1;
-    }
-
-    Thread t = currentThread();
-    if (t.sleepLock == null) {
-      t.sleepLock = new Object();
-    }
-    synchronized (t.sleepLock) {
-      t.sleepLock.wait(milliseconds);
-    }
-  }
-
-  public static void sleep(long milliseconds, int nanoseconds)
-    throws InterruptedException
-  {
-    if (nanoseconds > 0) {
-      ++ milliseconds;
-    }
-
-    sleep(milliseconds);
-  }
-
   public StackTraceElement[] getStackTrace() {
     long p = peer;
     if (p == 0) {
@@ -267,27 +242,6 @@ public class Thread implements Runnable {
     while (getState() != State.TERMINATED) {
       wait();
     }
-  }
-
-  public synchronized void join(long milliseconds) throws InterruptedException
-  {
-    long then = System.currentTimeMillis();
-    long remaining = milliseconds;
-    while (remaining > 0 && getState() != State.TERMINATED) {
-      wait(remaining);
-
-      remaining = milliseconds - (System.currentTimeMillis() - then);
-    }
-  }
-
-  public void join(long milliseconds, int nanoseconds)
-    throws InterruptedException
-  {
-    if (nanoseconds > 0) {
-      ++ milliseconds;
-    }
-
-    join(milliseconds);
   }
 
   public ThreadGroup getThreadGroup() {

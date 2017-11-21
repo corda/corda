@@ -67,11 +67,16 @@ jar {
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    jvmArgs '-Djava.library.path=../sgx-jvm/jvm-enclave/jni/build'
+    systemProperties['java.library.path'] = '../sgx-jvm/jvm-enclave/jni/build'
+}
+
+test {
+    // Pending Gradle bug: https://github.com/gradle/gradle/issues/2657
+    //systemProperties['java.system.class.loader'] = 'com.r3.enclaves.DummySystemClassLoader'
 }
 
 task generateNativeSgxHeaders(type: Exec) {
     def classpath = sourceSets.main.output.classesDirs.asPath
-    commandLine "javah", "-o", "build/native/include/jni_sgx_api.h", "-cp", classpath, "com.r3.enclaves.txverify.NativeSgxApi"
+    commandLine "javah", "-o", "$buildDir/native/include/jni_sgx_api.h", "-cp", classpath, "com.r3.enclaves.txverify.NativeSgxApi"
     dependsOn classes
 }

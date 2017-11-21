@@ -6,5 +6,6 @@ object NativeSgxApi {
         System.loadLibrary("untrusted_corda_sgx")
     }
 
+    @JvmStatic
     external fun verify(enclavePath: String, transactionBytes: ByteArray): String?
 }

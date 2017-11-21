@@ -51,16 +51,6 @@ public class BufferedInputStreamTest
          }
          //on all following calls block. The spec says, that a least one byte is returned, if the
          //stream is not at EOF.
-         while(available() == 0)
-         {
-             try
-            {
-                Thread.sleep(100);
-            }
-            catch (InterruptedException e)
-            {
-            }
-         }
          return 0;
       }
       

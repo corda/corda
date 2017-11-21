@@ -23,16 +23,6 @@ public class Random {
     setSeed(seed);
   }
 
-  public Random() {
-    synchronized (Random.class) {
-      setSeed(nextSeed ^ System.currentTimeMillis());
-      nextSeed *= 123456789987654321L;
-      if (nextSeed == 0) {
-        nextSeed = InitialSeed;
-      }
-    }
-  }
-
   public void setSeed(long seed) {
     this.seed = (seed ^ Mask) & ((1L << 48) - 1);
   }

@@ -6,7 +6,7 @@
 
 extern "C" {
 
-JNIEXPORT jstring JNICALL Java_com_r3_enclaves_txverify_NativeSgxApi_verify(JNIEnv *env, jobject, jstring enclave_path, jbyteArray transaction) {
+JNIEXPORT jstring JNICALL Java_com_r3_enclaves_txverify_NativeSgxApi_verify(JNIEnv *env, jclass, jstring enclave_path, jbyteArray transaction) {
     sgx_launch_token_t token = {0};
     sgx_enclave_id_t enclave_id = {0};
     int updated = 0;

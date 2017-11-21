@@ -1,4 +1,4 @@
-import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.BufferUnderflowException;
 import java.nio.BufferOverflowException;
@@ -9,7 +9,7 @@ public class Buffers {
     System.loadLibrary("test");
   }
   
-  private static void testArrays(Factory factory1, Factory factory2) throws IOException {
+  private static void testArrays(Factory factory1, Factory factory2) throws UnsupportedEncodingException {
     final int size = 64;
     ByteBuffer b1 = factory1.allocate(size);
     ByteBuffer b2 = factory2.allocate(size);
@@ -118,16 +118,6 @@ public class Buffers {
         }
       };
 
-    Factory direct = new Factory() {
-        public ByteBuffer allocate(int capacity) {
-          return ByteBuffer.allocateDirect(capacity);
-        }
-
-        public void dispose(ByteBuffer b) {
-          // ignore
-        }
-      };
-
     Factory native_ = new Factory() {
         public ByteBuffer allocate(int capacity) {
           return allocateNative(capacity);
@@ -140,22 +130,11 @@ public class Buffers {
 
     testPrimativeGetAndSet(array, array);
     testArrays(array, array);
-    testPrimativeGetAndSet(array, direct);
-    testArrays(array, direct);
     testPrimativeGetAndSet(array, native_);
     testArrays(array, native_);
 
-    testPrimativeGetAndSet(direct, array);
-    testArrays(direct, array);
-    testPrimativeGetAndSet(direct, direct);
-    testArrays(direct, direct);
-    testPrimativeGetAndSet(direct, native_);
-    testArrays(direct, native_);
-
     testPrimativeGetAndSet(native_, array);
     testArrays(native_, array);
-    testPrimativeGetAndSet(native_, direct);
-    testArrays(native_, direct);
     testPrimativeGetAndSet(native_, native_);
     testArrays(native_, native_);
 

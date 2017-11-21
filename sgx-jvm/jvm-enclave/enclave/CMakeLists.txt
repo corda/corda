@@ -23,6 +23,7 @@ set(ENCLAVE_SIGNED_OUTPUT_LIB cordaenclave.signed.so)
 set(SGX_SIGN_TOOL ${SGX_SDK}/build/linux/sgx_sign)
 set(PROGUARD_JAR_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/root/usr/share/java/proguard.jar)
 set(AVIAN_PATH ${PROJECT_SOURCE_DIR}/../../avian)
+set(JDK_IMAGE ${PROJECT_SOURCE_DIR}/../../jdk8u/build/linux-x86_64-normal-server-release/images/j2re-image)
 set(ENCLAVE_JAR_PATH ${PROJECT_SOURCE_DIR}/../../../verify-enclave/build/libs/corda-enclavelet.jar)
 set(AVIAN_PROCESS "-debug-openjdk-src")
 
@@ -55,8 +56,8 @@ set(PRIVATE_KEY_NAME ${CMAKE_CURRENT_SOURCE_DIR}/selfsigning.pem)
 
 # Now add the compiled class files to our copy of the boot jar (as we need a single uni-jar for everything).
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encjars/classpath.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/app.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/corda-enclavelet.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/jce.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/jsse.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/sunjce_provider.jar
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/create-boot-jar.sh ${AVIAN_PATH}/build/linux-x86_64${AVIAN_PROCESS} ${ENCLAVE_JAR_PATH} ${CMAKE_CURRENT_BINARY_DIR}/encjars ${PROGUARD_JAR_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/proguard.pro ${JAVA_HOME}
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encjars/classpath.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/app.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/corda-enclavelet.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/jce.jar ${CMAKE_CURRENT_BINARY_DIR}/encjars/jsse.jar
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/create-boot-jar.sh ${AVIAN_PATH}/build/linux-x86_64${AVIAN_PROCESS} ${ENCLAVE_JAR_PATH} ${CMAKE_CURRENT_BINARY_DIR}/encjars ${PROGUARD_JAR_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/proguard.pro ${JDK_IMAGE}
     DEPENDS ${ENCLAVE_JAR_PATH}
 )
 

@@ -184,6 +184,10 @@ ifneq ($(openjdk),)
 		x := $(error "android and openjdk are incompatible")
 	endif
 
+        ifeq ($(openjdk-image),)
+                openjdk-image = $(openjdk)/jre
+        endif
+
 	ifneq ($(openjdk-src),)
 		include openjdk-src.mk
 		options := $(options)-openjdk-src
@@ -2382,8 +2386,6 @@ $(openjdk-jar-dep):
 	@mkdir -p $(classpath-build)
 	(cd $(classpath-build) && \
 		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/rt.jar")" && \
-		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/jsse.jar")" && \
-		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/jce.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/charsets.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/resources.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk-image)/lib/ext/sunec.jar")")

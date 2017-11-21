@@ -18,6 +18,9 @@ import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.NoSuchElementException;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 public class SystemClassLoader extends ClassLoader {
   public static native ClassLoader appLoader();
@@ -25,6 +28,7 @@ public class SystemClassLoader extends ClassLoader {
   private native VMClass findVMClass(String name)
     throws ClassNotFoundException;
 
+  @Override
   protected Class findClass(String name) throws ClassNotFoundException {
     return getClass(findVMClass(name));
   }
@@ -35,11 +39,54 @@ public class SystemClassLoader extends ClassLoader {
 
   private native VMClass findLoadedVMClass(String name);
 
+  private static native void startBlacklisting0();
+
+  public void startBlacklisting() {
+    if (isForbidden("java/util/regex/Pattern$Test")) {
+      throw new IllegalStateException("Impossible!");
+    }
+    startBlacklisting0();
+  }
+
+  private static final Set<Pattern> BLACKLIST = Collections.unmodifiableSet(setOf(
+      Pattern.compile("^java/lang/reflect/"),
+      Pattern.compile("^java/lang/invoke/"),
+      Pattern.compile("^java/io/File"),
+      Pattern.compile("^java/net/"),
+      Pattern.compile("^java/.*Random$"),
+      Pattern.compile("^java/util/concurrent/"),
+      Pattern.compile("^java/lang/ClassLoader$"),
+      Pattern.compile("^java/lang/(Inheritable)?ThreadLocal$"),
+      Pattern.compile("^java/lang/Thread$"),
+      Pattern.compile("^com/sun/"),
+      Pattern.compile("^sun/")
+  ));
+
+  private static <T> Set<T> setOf(T... items) {
+    Set<T> set = new LinkedHashSet<T>();
+    Collections.addAll(set, items);
+    return set;
+  }
+
+  /*
+   * Invoked via JNI, so uses the specification
+   * rather than the class name.
+   */
+  private static boolean isForbidden(String spec) {
+    for (Pattern bad : BLACKLIST) {
+        if (bad.matcher(spec).find()) {
+            return true;
+        }
+    }
+    return false;
+  }
+
   protected Class reallyFindLoadedClass(String name){
     VMClass c = findLoadedVMClass(name);
     return c == null ? null : getClass(c);
   }
 
+  @Override
   protected Class loadClass(String name, boolean resolve)
     throws ClassNotFoundException
   {
@@ -83,6 +130,7 @@ public class SystemClassLoader extends ClassLoader {
   // appropriate for the Avian build, so we override it to ensure we
   // get the behavior we want.  This implementation is the same as
   // that of Avian's java.lang.ClassLoader.getResource.
+  @Override
   public URL getResource(String path) {
     URL url = null;
     ClassLoader parent = getParent();
@@ -99,6 +147,7 @@ public class SystemClassLoader extends ClassLoader {
 
   // As above, we override this method to avoid inappropriate behavior
   // in OpenJDK's java.lang.ClassLoader.getResources.
+  @Override
   public Enumeration<URL> getResources(String name) throws IOException {
     Collection<URL> urls = new ArrayList<URL>(5);
 

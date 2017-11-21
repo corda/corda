@@ -12,7 +12,6 @@ package java.io;
 
 import java.lang.IllegalArgumentException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 
 public class RandomAccessFile implements DataInput, Closeable {
 
@@ -229,54 +228,4 @@ public class RandomAccessFile implements DataInput, Closeable {
   }
 
   private static native void close(long peer);
-
-  public FileChannel getChannel() {
-    return new FileChannel() {
-      public void close() {
-        if (peer != 0) RandomAccessFile.close(peer);
-      }
-
-      public boolean isOpen() {
-        return peer != 0;
-      }
-
-      public int read(ByteBuffer dst, long position) throws IOException {
-        if (!dst.hasArray()) throw new IOException("Cannot handle " + dst.getClass());
-	// TODO: this needs to be synchronized on the Buffer, no?
-        byte[] array = dst.array();
-        return readBytes(peer, position, array, dst.position(), dst.remaining());
-      }
-
-      public int read(ByteBuffer dst) throws IOException {
-        int count = read(dst, position);
-        if (count > 0) position += count;
-        return count;
-      }
-
-      public int write(ByteBuffer src, long position) throws IOException {
-        if (!src.hasArray()) throw new IOException("Cannot handle " + src.getClass());
-        byte[] array = src.array();
-        return writeBytes(peer, position, array, src.position(), src.remaining());
-      }
-
-      public int write(ByteBuffer src) throws IOException {
-        int count = write(src, position);
-        if (count > 0) position += count;
-        return count;
-      }
-
-      public long position() throws IOException {
-        return getFilePointer();
-      }
-
-      public FileChannel position(long position) throws IOException {
-        seek(position);
-        return this;
-      }
-
-      public long size() throws IOException {
-        return length();
-      }
-    };
-  }
 }

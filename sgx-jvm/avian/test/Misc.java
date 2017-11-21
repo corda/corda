@@ -254,8 +254,6 @@ public class Misc {
       }
     }
 
-    System.out.println(new java.util.Date().toString());
-
     System.out.println('x');
     System.out.println(true);
     System.out.println(42);

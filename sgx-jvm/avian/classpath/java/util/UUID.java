@@ -17,19 +17,6 @@ public class UUID {
     this.data = data;
   }
 
-  public static UUID randomUUID() {
-    byte[] array = new byte[16];
-
-    new Random().nextBytes(array);
-
-    array[6] &= 0x0f;
-    array[6] |= 0x40;
-    array[8] &= 0x3f;
-    array[8] |= 0x80;
-
-    return new UUID(array);
-  }
-
   public String toString() {
     StringBuilder sb = new StringBuilder();
     toHex(sb, data, 0, 4); sb.append('-');

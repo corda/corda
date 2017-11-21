@@ -81,9 +81,7 @@ public final class URL {
   private static URLStreamHandler findHandler(String protocol)
     throws MalformedURLException
   {
-    if ("http".equals(protocol) || "https".equals(protocol)) {
-      return new avian.http.Handler();
-    } else if ("avianvmresource".equals(protocol)) {
+    if ("avianvmresource".equals(protocol)) {
       return new avian.avianvmresource.Handler();
     } else if ("file".equals(protocol)) {
       return new avian.file.Handler();

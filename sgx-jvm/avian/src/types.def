@@ -188,6 +188,7 @@
   (require object interruptLock)
   (require uint8_t interrupted)
   (require uint8_t unparked)
+  (require uint8_t blacklisting)
   (alias peer uint64_t eetop)
   (alias peer uint64_t nativePeer)
   (require uint64_t peer))

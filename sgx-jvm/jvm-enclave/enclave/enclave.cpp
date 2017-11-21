@@ -35,8 +35,8 @@ void check_transaction(void *reqbuf, size_t buflen, char *error) {
     vmArgs.version = JNI_VERSION_1_2;
     vmArgs.ignoreUnrecognized = JNI_TRUE;
 
-    char xmxOption[256];
-    snprintf(xmxOption, 256, "-Xmx%d", g_global_data.heap_size);
+    char xmxOption[32];
+    snprintf(xmxOption, sizeof(xmxOption), "-Xmx%d", g_global_data.heap_size);
     JavaVMOption options[] = {
         // Tell Avian to call the functions above to find the embedded jar data.
         // We separate the app into boot and app jars because some code does not
@@ -49,9 +49,8 @@ void check_transaction(void *reqbuf, size_t buflen, char *error) {
     vmArgs.nOptions = sizeof(options) / sizeof(JavaVMOption);
 
     JavaVM* vm = NULL;
-    void* env_void = NULL;
-    JNI_CreateJavaVM(&vm, &env_void, &vmArgs);
-    JNIEnv* env = static_cast<JNIEnv*>(env_void);
+    JNIEnv* env = NULL;
+    JNI_CreateJavaVM(&vm, reinterpret_cast<void**>(&env), &vmArgs);
 
     env->FindClass("com/r3/enclaves/txverify/EnclaveletSerializationScheme");
     if (!env->ExceptionCheck()) {
@@ -60,7 +59,7 @@ void check_transaction(void *reqbuf, size_t buflen, char *error) {
             jmethodID m = env->GetStaticMethodID(c, "verifyInEnclave", "([B)V");
             if (!env->ExceptionCheck()) {
                 jbyteArray reqbits = env->NewByteArray((jsize) buflen);
-                env->SetByteArrayRegion(reqbits, 0, buflen, (const jbyte *)reqbuf);
+                env->SetByteArrayRegion(reqbits, 0, buflen, static_cast<const jbyte*>(reqbuf));
                 jobject result = env->CallStaticObjectMethod(c, m, reqbits);
             }
         }

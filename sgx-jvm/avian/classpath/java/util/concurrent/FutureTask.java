@@ -64,11 +64,7 @@ public class FutureTask<T> implements RunnableFuture<T> {
            * and thus thread is in interrupted status, the exception should 
            * throw immediately on the sleep call.
            */
-          try {
-            Thread.sleep(Long.MAX_VALUE);
-          } catch (InterruptedException e) {
-            // expected
-          }
+          throw new UnsupportedOperationException("Blocking not supported.");
         }
 
         Thread.interrupted(); // reset interrupted status if set
@@ -127,43 +123,13 @@ public class FutureTask<T> implements RunnableFuture<T> {
 
   @Override
   public T get() throws InterruptedException, ExecutionException {
-    try {
-      return get(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-    } catch (TimeoutException e) {
-      // not possible
-      throw new RuntimeException(e);
-    }
+    throw new UnsupportedOperationException("System clock unavailable");
   }
 
   @Override
   public T get(long timeout, TimeUnit unit) throws InterruptedException, 
                                                    ExecutionException,
                                                    TimeoutException {
-    long timeoutInMillis = unit.toMillis(timeout);
-    long startTime = 0;
-    if (timeoutInMillis < Long.MAX_VALUE) {
-      startTime = System.currentTimeMillis();
-    }
-    long remainingTime;
-    synchronized (notifyLock) {
-      remainingTime = timeoutInMillis;
-      while (! isDone() && remainingTime > 0) {
-        notifyLock.wait(remainingTime);
-        
-        if (timeoutInMillis < Long.MAX_VALUE) {
-          remainingTime = timeoutInMillis - (System.currentTimeMillis() - startTime);
-        }
-      }
-    }
-    
-    if (remainingTime <= 0) {
-      throw new TimeoutException();
-    } else if (currentState.get() == State.Canceled) {
-      throw new CancellationException();
-    } else if (failure != null) {
-      throw new ExecutionException(failure);
-    } else {
-      return result;
-    }
+    throw new UnsupportedOperationException("System clock unavailable");
   }
 }

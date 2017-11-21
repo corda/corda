@@ -1341,6 +1341,9 @@ class Thread {
     return flags;
   }
 
+  bool isBlacklisting();
+  void startBlacklisting();
+
   JNIEnvVTable* vtable;
   Machine* m;
   Thread* parent;
