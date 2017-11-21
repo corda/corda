@@ -97,7 +97,7 @@ class TLSAuthenticationTests {
         val (serverSocket, clientSocket) =
                 buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
 
-        testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+        testConnect(serverSocket, clientSocket, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
     }
 
     // Server's public key type is the one selected if users use different key types (e.g RSA and EC R1).
