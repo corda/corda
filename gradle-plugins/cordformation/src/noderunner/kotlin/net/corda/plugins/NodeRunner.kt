@@ -89,7 +89,7 @@ private abstract class JavaCommand(
     internal val command: List<String> = mutableListOf<String>().apply {
         add(getJavaPath())
         addAll(jvmArgs)
-        add("-Dname=$nodeName")
+        add("-Dname=\"$nodeName\"")
         val jvmArgs: MutableList<String> = mutableListOf()
         null != debugPort && jvmArgs.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
         null != monitoringPort && jvmArgs.add("-javaagent:drivers/$jolokiaJar=port=$monitoringPort")

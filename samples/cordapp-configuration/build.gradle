@@ -22,7 +22,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10004
-        webPort 10005
         rpcPort 10006
         cordapps = []
         rpcUsers = ext.rpcUsers
@@ -30,7 +29,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10007
-        webPort 10008
         rpcPort 10009
         cordapps = []
         rpcUsers = ext.rpcUsers
