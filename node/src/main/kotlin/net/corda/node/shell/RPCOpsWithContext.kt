@@ -19,7 +19,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.node.services.messaging.RpcPermissions
-import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant

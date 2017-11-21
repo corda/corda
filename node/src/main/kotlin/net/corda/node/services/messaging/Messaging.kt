@@ -1,6 +1,5 @@
 package net.corda.node.services.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
@@ -133,14 +132,6 @@ interface MessagingService {
 
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
-
-    /**
-     * Initiates shutdown: if called from a thread that isn't controlled by the executor passed to the constructor
-     * then this will block until all in-flight messages have finished being handled and acknowledged. If called
-     * from a thread that's a part of the [net.corda.node.utilities.AffinityExecutor] given to the constructor,
-     * it returns immediately and shutdown is asynchronous.
-     */
-    fun stop()
 }
 
 /**
