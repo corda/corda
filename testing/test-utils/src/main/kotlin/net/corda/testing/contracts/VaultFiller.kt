@@ -97,8 +97,25 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
 }
 
 /**
+ * Creates a random set of cash states that add up to the given amount and adds them to the vault. This is intended for
+ * unit tests. The cash is owned by the legal identity key from the storage service.
+ *
+ * The service hub needs to provide at least a key management service and a storage service.
+ *
+ * @param issuerServices service hub of the issuer node, which will be used to sign the transaction.
+ * @param outputNotary the notary to use for output states. The transaction is NOT signed by this notary.
+ * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
+ */
+fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
+                                    issuerServices: ServiceHub,
+                                    outputNotary: Party,
+                                    states: Int,
+                                    issuedBy: PartyAndReference): Vault<Cash.State>
+    = fillWithSomeTestCash(howMuch, issuerServices, outputNotary, states, states, issuedBy = issuedBy)
+
+/**
  * Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
- * to the vault. This is intended for unit tests. The cash is issued by [DUMMY_CASH_ISSUER] and owned by the legal
+ * to the vault. This is intended for unit tests. By default the cash is issued by [DUMMY_CASH_ISSUER] and owned by the legal
  * identity key from the storage service.
  *
  * The service hub needs to provide at least a key management service and a storage service.
@@ -113,18 +130,15 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     atLeastThisManyStates: Int = 3,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
-                                    ownedBy: AbstractParty? = null,
+                                    owner: AbstractParty? = null,
                                     issuedBy: PartyAndReference = DUMMY_CASH_ISSUER): Vault<Cash.State> {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
-
-    val myKey = ownedBy?.owningKey ?: myInfo.chooseIdentity().owningKey
-    val anonParty = AnonymousParty(myKey)
 
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
         val issuance = TransactionBuilder(null as Party?)
-        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy, howMuch.token)), anonParty, outputNotary)
+        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy, howMuch.token)),owner ?: myInfo.singleIdentity(), outputNotary)
 
         return@map issuerServices.signInitialTransaction(issuance, issuedBy.party.owningKey)
     }

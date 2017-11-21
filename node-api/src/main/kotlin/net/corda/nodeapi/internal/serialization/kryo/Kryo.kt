@@ -15,7 +15,8 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationContext.UseCase.*
+import net.corda.core.serialization.SerializationContext.UseCase.Checkpoint
+import net.corda.core.serialization.SerializationContext.UseCase.Storage
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.toFuture
@@ -23,9 +24,6 @@ import net.corda.core.toObservable
 import net.corda.core.transactions.*
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.serializationContextKey
-import org.bouncycastle.asn1.ASN1InputStream
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -36,6 +34,7 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
@@ -471,46 +470,28 @@ object ClassSerializer : Serializer<Class<*>>() {
     }
 }
 
-/**
- * For serialising an [X500Name] without touching Sun internal classes.
- */
-@ThreadSafe
-object X500NameSerializer : Serializer<X500Name>() {
-    override fun read(kryo: Kryo, input: Input, type: Class<X500Name>): X500Name {
-        return X500Name.getInstance(ASN1InputStream(input.readBytes()).readObject())
-    }
-
-    override fun write(kryo: Kryo, output: Output, obj: X500Name) {
-        output.writeBytes(obj.encoded)
-    }
-}
-
-/**
- * For serialising an [CertPath] in an X.500 standard format.
- */
 @ThreadSafe
 object CertPathSerializer : Serializer<CertPath>() {
-    val factory: CertificateFactory = CertificateFactory.getInstance("X.509")
     override fun read(kryo: Kryo, input: Input, type: Class<CertPath>): CertPath {
-        return factory.generateCertPath(input)
+        val factory = CertificateFactory.getInstance(input.readString())
+        return factory.generateCertPath(input.readBytesWithLength().inputStream())
     }
 
     override fun write(kryo: Kryo, output: Output, obj: CertPath) {
-        output.writeBytes(obj.encoded)
+        output.writeString(obj.type)
+        output.writeBytesWithLength(obj.encoded)
     }
 }
 
-/**
- * For serialising an [X509CertificateHolder] in an X.500 standard format.
- */
 @ThreadSafe
-object X509CertificateSerializer : Serializer<X509CertificateHolder>() {
-    override fun read(kryo: Kryo, input: Input, type: Class<X509CertificateHolder>): X509CertificateHolder {
-        return X509CertificateHolder(input.readBytes())
+object X509CertificateSerializer : Serializer<X509Certificate>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<X509Certificate>): X509Certificate {
+        val factory = CertificateFactory.getInstance("X.509")
+        return factory.generateCertificate(input.readBytesWithLength().inputStream()) as X509Certificate
     }
 
-    override fun write(kryo: Kryo, output: Output, obj: X509CertificateHolder) {
-        output.writeBytes(obj.encoded)
+    override fun write(kryo: Kryo, output: Output, obj: X509Certificate) {
+        output.writeBytesWithLength(obj.encoded)
     }
 }
 

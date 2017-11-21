@@ -8,7 +8,7 @@ import net.corda.core.internal.openHttpConnection
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
@@ -25,10 +25,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class NetworkMapClient(compatibilityZoneURL: URL) {
-    companion object {
-        val logger = loggerFor<NetworkMapClient>()
-    }
-
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
 
     fun publish(signedNodeInfo: SignedData<NodeInfo>) {
@@ -73,7 +69,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val fileWatcher: NodeInfoWatcher,
                         private val networkMapClient: NetworkMapClient?) : Closeable {
     companion object {
-        private val logger = loggerFor<NetworkMapUpdater>()
+        private val logger = contextLogger()
         private val retryInterval = 1.minutes
     }
 

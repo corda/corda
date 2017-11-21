@@ -35,7 +35,10 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow"]]]
+    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+                                                                             "InvokeRpc.attachmentExists",
+                                                                             "InvokeRpc.uploadAttachment",
+                                                                             "InvokeRpc.internalVerifiedTransactionsFeed"]]]
 
     directory "./build/nodes"
     node {

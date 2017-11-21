@@ -4,7 +4,7 @@ package net.corda.node.utilities
 import com.google.common.cache.RemovalCause
 import com.google.common.cache.RemovalListener
 import com.google.common.cache.RemovalNotification
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import java.util.*
 
 
@@ -19,7 +19,7 @@ class PersistentMap<K, V, E, out EK>(
 ) : MutableMap<K, V>, AbstractMap<K, V>() {
 
     private companion object {
-        val log = loggerFor<PersistentMap<*, *, *, *>>()
+        private val log = contextLogger()
     }
 
     private val cache = NonInvalidatingUnboundCache(

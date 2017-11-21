@@ -3,7 +3,7 @@ package net.corda.node.services.messaging
 import net.corda.client.rpc.PermissionException
 import net.corda.core.context.InvocationContext
 import net.corda.node.services.Permissions
-import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.ArtemisMessagingComponent
 
 data class RpcAuthContext(val invocation: InvocationContext, val grantedPermissions: RpcPermissions) {
 
@@ -23,6 +23,7 @@ data class RpcPermissions(private val values: Set<String> = emptySet()) {
 
     companion object {
         val NONE = RpcPermissions()
+        val ALL = RpcPermissions(setOf("ALL"))
     }
 
     fun coverAny(permissions: Set<String>) = !values.intersect(permissions + Permissions.all()).isEmpty()

@@ -5,6 +5,7 @@ import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import org.assertj.core.api.Assertions.*
 
 class ProgressTrackerTest {
     object SimpleSteps {
@@ -24,13 +25,23 @@ class ProgressTrackerTest {
         fun tracker() = ProgressTracker(AYY, BEE, SEA)
     }
 
+    object BabySteps {
+        object UNOS : ProgressTracker.Step("unos")
+        object DOES : ProgressTracker.Step("does")
+        object TRES : ProgressTracker.Step("tres")
+
+        fun tracker() = ProgressTracker(UNOS, DOES, TRES)
+    }
+
     lateinit var pt: ProgressTracker
     lateinit var pt2: ProgressTracker
+    lateinit var pt3: ProgressTracker
 
     @Before
     fun before() {
         pt = SimpleSteps.tracker()
         pt2 = ChildSteps.tracker()
+        pt3 = BabySteps.tracker()
     }
 
     @Test
@@ -79,6 +90,118 @@ class ProgressTrackerTest {
         assertEquals(ChildSteps.AYY, pt2.nextStep())
         assertNextStep(ChildSteps.AYY)
         assertEquals(ChildSteps.BEE, pt2.nextStep())
+    }
+
+    @Test
+    fun `steps tree index counts children steps`() {
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
+
+        val allSteps = pt.allSteps
+
+        //capture notifications
+        val stepsIndexNotifications = LinkedList<Int>()
+        pt.stepsTreeIndexChanges.subscribe {
+            stepsIndexNotifications += it
+        }
+        val stepsTreeNotification = LinkedList<List<Pair<Int, String>>>()
+        pt.stepsTreeChanges.subscribe {
+            stepsTreeNotification += it
+        }
+
+        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+            assertEquals(index, pt.stepsTreeIndex)
+            assertEquals(step, allSteps[pt.stepsTreeIndex].second)
+        }
+
+        //travel tree
+        pt.currentStep = SimpleSteps.ONE
+        assertCurrentStepsTree(0, SimpleSteps.ONE)
+
+        pt.currentStep = SimpleSteps.TWO
+        assertCurrentStepsTree(1, SimpleSteps.TWO)
+
+        pt2.currentStep = ChildSteps.BEE
+        assertCurrentStepsTree(3, ChildSteps.BEE)
+
+        pt.currentStep = SimpleSteps.THREE
+        assertCurrentStepsTree(5, SimpleSteps.THREE)
+
+        //assert no structure changes and proper steps propagation
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(0, 1, 3, 5))
+        assertThat(stepsTreeNotification).isEmpty()
+    }
+
+    @Test
+    fun `structure changes are pushed down when progress trackers are added`() {
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
+
+        //capture notifications
+        val stepsIndexNotifications = LinkedList<Int>()
+        pt.stepsTreeIndexChanges.subscribe {
+            stepsIndexNotifications += it
+        }
+
+        //put current state as a first change for simplicity when asserting
+        val stepsTreeNotification = mutableListOf(pt.allStepsLabels)
+        println(pt.allStepsLabels)
+        pt.stepsTreeChanges.subscribe {
+            stepsTreeNotification += it
+        }
+
+        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+            assertEquals(index, pt.stepsTreeIndex)
+            assertEquals(step.label, stepsTreeNotification.last()[pt.stepsTreeIndex].second)
+        }
+
+        pt.currentStep = SimpleSteps.TWO
+        assertCurrentStepsTree(1, SimpleSteps.TWO)
+
+        pt.currentStep = SimpleSteps.FOUR
+        assertCurrentStepsTree(6, SimpleSteps.FOUR)
+
+
+        pt.setChildProgressTracker(SimpleSteps.THREE, pt3)
+
+        assertCurrentStepsTree(9, SimpleSteps.FOUR)
+
+        //assert no structure changes and proper steps propagation
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 6, 9))
+        assertThat(stepsTreeNotification).hasSize(2) // 1 change + 1 our initial state
+    }
+
+    @Test
+    fun `structure changes are pushed down when progress trackers are removed`() {
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
+
+        //capture notifications
+        val stepsIndexNotifications = LinkedList<Int>()
+        pt.stepsTreeIndexChanges.subscribe {
+            stepsIndexNotifications += it
+        }
+
+        //put current state as a first change for simplicity when asserting
+        val stepsTreeNotification = mutableListOf(pt.allStepsLabels)
+        pt.stepsTreeChanges.subscribe {
+            stepsTreeNotification += it
+        }
+
+        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+            assertEquals(index, pt.stepsTreeIndex)
+            assertEquals(step.label, stepsTreeNotification.last()[pt.stepsTreeIndex].second)
+        }
+
+        pt.currentStep = SimpleSteps.TWO
+        pt2.currentStep = ChildSteps.SEA
+        pt3.currentStep = BabySteps.UNOS
+        assertCurrentStepsTree(4, ChildSteps.SEA)
+
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt3)
+
+        assertCurrentStepsTree(2, BabySteps.UNOS)
+
+        //assert no structure changes and proper steps propagation
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 4, 2))
+        assertThat(stepsTreeNotification).hasSize(2) // 1 change + 1 our initial state
     }
 
     @Test

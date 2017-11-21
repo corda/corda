@@ -55,7 +55,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         _quantity = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         _issuerParty = this.amount.token.issuer.party,
-                        _issuerRef = this.amount.token.issuer.reference.bytes
+                        _issuerRef = this.amount.token.issuer.reference
                 )
                 is SampleCashSchemaV3 -> SampleCashSchemaV3.PersistentCashState(
                         participants = this.participants.toMutableSet(),

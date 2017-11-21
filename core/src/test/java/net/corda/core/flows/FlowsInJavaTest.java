@@ -4,8 +4,8 @@ import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
 import net.corda.node.internal.StartedNode;
-import net.corda.testing.node.MockNetwork;
 import net.corda.testing.TestConstants;
+import net.corda.testing.node.MockNetwork;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,7 +13,7 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import static net.corda.testing.CoreTestUtils.chooseIdentity;
+import static net.corda.testing.CoreTestUtils.singleIdentity;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 import static net.corda.testing.NodeTestUtils.startFlow;
@@ -22,11 +22,13 @@ public class FlowsInJavaTest {
     private final MockNetwork mockNet = new MockNetwork();
     private StartedNode<MockNetwork.MockNode> aliceNode;
     private StartedNode<MockNetwork.MockNode> bobNode;
+    private Party bob;
 
     @Before
     public void setUp() throws Exception {
         aliceNode = mockNet.createPartyNode(TestConstants.getALICE().getName());
         bobNode = mockNet.createPartyNode(TestConstants.getBOB().getName());
+        bob = singleIdentity(bobNode.getInfo());
     }
 
     @After
@@ -37,7 +39,7 @@ public class FlowsInJavaTest {
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
         bobNode.getInternals().registerInitiatedFlow(SendHelloAndThenReceive.class);
-        Future<String> result = startFlow(aliceNode.getServices(), new SendInUnwrapFlow(chooseIdentity(bobNode.getInfo()))).getResultFuture();
+        Future<String> result = startFlow(aliceNode.getServices(), new SendInUnwrapFlow(bob)).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
@@ -52,7 +54,7 @@ public class FlowsInJavaTest {
     }
 
     private void primitiveReceiveTypeTest(Class<?> receiveType) throws InterruptedException {
-        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(chooseIdentity(bobNode.getInfo()), receiveType);
+        PrimitiveReceiveFlow flow = new PrimitiveReceiveFlow(bob, receiveType);
         Future<?> result = startFlow(aliceNode.getServices(), flow).getResultFuture();
         mockNet.runNetwork();
         try {

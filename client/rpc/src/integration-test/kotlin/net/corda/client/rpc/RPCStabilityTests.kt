@@ -6,16 +6,12 @@ import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.NodeState
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
-import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.User
 import net.corda.testing.driver.poll
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -239,30 +235,6 @@ class RPCStabilityTests {
             assertEquals("pong", pingFuture.getOrThrow(10.seconds))
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
-    }
-
-    @Test
-    fun `clients receive notifications that node is shutting down`() {
-        val alice = User("Alice", "Alice", setOf(invokeRpc(CordaRPCOps::nodeStateObservable)))
-        val bob = User("Bob", "Bob", setOf(invokeRpc(CordaRPCOps::nodeStateObservable)))
-        val slagathor = User("Slagathor", "Slagathor", setOf(invokeRpc(CordaRPCOps::nodeStateObservable)))
-        val userList = listOf(alice, bob, slagathor)
-        val expectedMessages = ArrayList<NodeState>()
-
-        rpcDriver(startNodesInProcess = true) {
-            val node = startNode(rpcUsers = listOf(alice, bob, slagathor)).getOrThrow()
-            userList.forEach {
-                val connection = node.rpcClientToNode().start(it.username, it.password)
-                val nodeStateObservable = connection.proxy.nodeStateObservable()
-                nodeStateObservable.subscribe { update ->
-                    expectedMessages.add(update)
-                }
-            }
-
-            node.stop()
-        }
-        assertEquals(userList.size, expectedMessages.size)
-        assertEquals(NodeState.SHUTTING_DOWN, expectedMessages.first())
     }
 
     interface TrackSubscriberOps : RPCOps {

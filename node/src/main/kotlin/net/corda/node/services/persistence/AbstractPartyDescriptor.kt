@@ -3,7 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.hibernate.type.descriptor.WrapperOptions
 import org.hibernate.type.descriptor.java.AbstractTypeDescriptor
 import org.hibernate.type.descriptor.java.ImmutableMutabilityPlan
@@ -11,7 +11,7 @@ import org.hibernate.type.descriptor.java.MutabilityPlan
 
 class AbstractPartyDescriptor(identitySvc: () -> IdentityService) : AbstractTypeDescriptor<AbstractParty>(AbstractParty::class.java) {
     companion object {
-        private val log = loggerFor<AbstractPartyDescriptor>()
+        private val log = contextLogger()
     }
 
     private val identityService: IdentityService by lazy(identitySvc)

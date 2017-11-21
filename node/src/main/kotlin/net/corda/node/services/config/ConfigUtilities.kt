@@ -8,12 +8,12 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.*
 import net.corda.nodeapi.config.SSLConfiguration
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.security.KeyStore
 
@@ -21,8 +21,7 @@ fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
 
 object ConfigHelper {
-    private val log = loggerFor<ConfigHelper>()
-
+    private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
                    configFile: Path = baseDirectory / "node.conf",
                    allowMissingConfig: Boolean = false,

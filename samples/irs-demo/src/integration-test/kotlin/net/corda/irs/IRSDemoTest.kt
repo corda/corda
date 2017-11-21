@@ -14,8 +14,8 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.Party
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.toFuture
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
@@ -35,7 +35,7 @@ import java.time.LocalDate
 
 class IRSDemoTest {
     companion object {
-        val log = loggerFor<IRSDemoTest>()
+        private val log = contextLogger()
     }
 
     private val rpcUsers = listOf(User("user", "password", setOf("ALL")))

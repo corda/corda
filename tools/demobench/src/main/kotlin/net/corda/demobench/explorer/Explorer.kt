@@ -3,7 +3,7 @@ package net.corda.demobench.explorer
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.list
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.demobench.model.JVMConfig
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeConfigWrapper
@@ -16,7 +16,7 @@ import java.util.concurrent.Executors
 
 class Explorer internal constructor(private val explorerController: ExplorerController) : AutoCloseable {
     private companion object {
-        val log = loggerFor<Explorer>()
+        private val log = contextLogger()
     }
 
     private val executor = Executors.newSingleThreadExecutor()

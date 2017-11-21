@@ -1,6 +1,7 @@
 package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -9,6 +10,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
+import org.hibernate.annotations.Type
 import java.io.Serializable
 import java.time.Instant
 import java.util.*
@@ -27,7 +29,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
         mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
     @Entity
     @Table(name = "vault_states",
-            indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status")))
+            indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status"),
+                    Index(name = "lock_id_idx", columnList = "lock_id, state_status")))
     class VaultStates(
             /** NOTE: serialized transaction state (including contract state) is now resolved from transaction store */
             // TODO: create a distinct table to hold serialized state data (once DBTransactionStore is encrypted)
@@ -131,7 +134,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            @Column(name = "issuer_reference")
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :

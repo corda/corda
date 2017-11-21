@@ -9,7 +9,7 @@ import javax.ws.rs.ext.Provider
 @Provider
 class AllExceptionMapper : ExceptionMapper<Exception> {
     companion object {
-        val logger = loggerFor<APIServerImpl>()
+        private val logger = loggerFor<APIServerImpl>() // XXX: Really?
     }
 
     override fun toResponse(exception: Exception?): Response {

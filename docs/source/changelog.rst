@@ -6,10 +6,16 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
 * ``AttachmentStorage`` now allows providing metadata on attachments upload - username and filename, currently as plain
   strings. Those can be then used for querying, utilizing ``queryAttachments`` method of the same interface.
 
+* ``SSH Server`` - The node can now expose shell via SSH server with proper authorization and permissioning built in.
+
 * ``CordaRPCOps`` implementation now checks permissions for any function invocation, rather than just when starting flows.
+
+* ``wellKnownPartyFromAnonymous()`` now always resolve the key to a ``Party``, then the party to the well known party.
+  Previously if it was passed a ``Party`` it would use its name as-is without verifying the key matched that name.
 
 * ``OpaqueBytes.bytes`` now returns a clone of its underlying ``ByteArray``, and has been redeclared as ``final``.
   This is a minor change to the public API, but is required to ensure that classes like ``SecureHash`` are immutable.

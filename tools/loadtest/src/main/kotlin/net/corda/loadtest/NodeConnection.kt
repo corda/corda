@@ -11,7 +11,7 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.addShutdownHook
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
@@ -27,7 +27,7 @@ import java.util.concurrent.ForkJoinPool
  */
 class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Session, private val localTunnelAddress: NetworkHostAndPort) : Closeable {
     companion object {
-        val log = loggerFor<NodeConnection>()
+        private val log = contextLogger()
     }
 
     init {

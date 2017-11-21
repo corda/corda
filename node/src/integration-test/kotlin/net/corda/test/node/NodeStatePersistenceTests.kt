@@ -40,26 +40,30 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                // Ensure the notary node has finished starting up, before starting a flow that needs a notary
+                defaultNotaryNode.getOrThrow()
                 nodeHandle.rpcClientToNode().start(user.username, user.password).use {
-                    it.proxy.startFlow(::SendMessageFlow, message).returnValue.getOrThrow()
+                    it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
                 }
                 nodeHandle.stop()
                 nodeName
             }()
 
             val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-            nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+            val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
-                val stateAndRef = page.states.singleOrNull()
-                assertNotNull(stateAndRef)
-                val retrievedMessage = stateAndRef!!.state.data.message
-                assertEquals(message, retrievedMessage)
+                page.states.singleOrNull()
             }
+            nodeHandle.stop()
+            result
         }
+        assertNotNull(stateAndRef)
+        val retrievedMessage = stateAndRef!!.state.data.message
+        assertEquals(message, retrievedMessage)
     }
 }
 
@@ -126,7 +130,7 @@ open class MessageContract : Contract {
 }
 
 @StartableByRPC
-class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransaction>() {
+class SendMessageFlow(private val message: Message, private val notary: Party) : FlowLogic<SignedTransaction>() {
     companion object {
         object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
         object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
@@ -142,8 +146,6 @@ class SendMessageFlow(private val message: Message) : FlowLogic<SignedTransactio
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val notary = serviceHub.networkMapCache.notaryIdentities.first()
-
         progressTracker.currentStep = GENERATING_TRANSACTION
 
         val messageState = MessageState(message = message, by = ourIdentity)

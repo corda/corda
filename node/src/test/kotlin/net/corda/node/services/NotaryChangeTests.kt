@@ -17,6 +17,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.NotarySpec
+import net.corda.testing.node.MockNodeParameters
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
@@ -27,25 +28,31 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
+    companion object {
+        private val DUMMY_NOTARY_SERVICE_NAME: CordaX500Name = DUMMY_NOTARY.name.copy(commonName = "corda.notary.validating")
+    }
+
     private lateinit var mockNet: MockNetwork
     private lateinit var oldNotaryNode: StartedNode<MockNetwork.MockNode>
     private lateinit var clientNodeA: StartedNode<MockNetwork.MockNode>
     private lateinit var clientNodeB: StartedNode<MockNetwork.MockNode>
     private lateinit var newNotaryParty: Party
     private lateinit var oldNotaryParty: Party
+    private lateinit var clientA: Party
 
     @Before
     fun setUp() {
-        val oldNotaryName = DUMMY_REGULATOR.name
+        val oldNotaryName = DUMMY_NOTARY.name.copy(organisation = "Old Dummy Notary")
         mockNet = MockNetwork(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name), NotarySpec(oldNotaryName)),
                 cordappPackages = listOf("net.corda.testing.contracts")
         )
-        clientNodeA = mockNet.createNode()
-        clientNodeB = mockNet.createNode()
+        clientNodeA = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
+        clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        clientA = clientNodeA.info.singleIdentity()
         oldNotaryNode = mockNet.notaryNodes[1]
-        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY.name)!!
-        oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(oldNotaryName)!!
+        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME)!!
+        oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY_SERVICE_NAME.copy(organisation = "Old Dummy Notary"))!!
     }
 
     @After
@@ -55,7 +62,7 @@ class NotaryChangeTests {
 
     @Test
     fun `should change notary for a state with single participant`() {
-        val state = issueState(clientNodeA, oldNotaryParty)
+        val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
         assertEquals(state.state.notary, oldNotaryParty)
         val newState = changeNotary(state, clientNodeA, newNotaryParty)
         assertEquals(newState.state.notary, newNotaryParty)
@@ -93,7 +100,7 @@ class NotaryChangeTests {
 
     @Test
     fun `should not break encumbrance links`() {
-        val issueTx = issueEncumberedState(clientNodeA, oldNotaryParty)
+        val issueTx = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
 
         val state = StateAndRef(issueTx.outputs.first(), StateRef(issueTx.id, 0))
         val newNotary = newNotaryParty
@@ -127,7 +134,7 @@ class NotaryChangeTests {
 
     @Test
     fun `notary change and regular transactions are properly handled during resolution in longer chains`() {
-        val issued = issueState(clientNodeA, oldNotaryParty)
+        val issued = issueState(clientNodeA.services, clientA, oldNotaryParty)
         val moved = moveState(issued, clientNodeA, clientNodeB)
 
         // We don't to tx resolution when moving state to another node, so need to add the issue transaction manually
@@ -166,8 +173,8 @@ class NotaryChangeTests {
         return finalTransaction.tx.outRef(0)
     }
 
-    private fun issueEncumberedState(node: StartedNode<*>, notaryIdentity: Party): WireTransaction {
-        val owner = node.info.chooseIdentity().ref(0)
+    private fun issueEncumberedState(services: ServiceHub, nodeIdentity: Party, notaryIdentity: Party): WireTransaction {
+        val owner = nodeIdentity.ref(0)
         val stateA = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
         val stateB = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
         val stateC = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
@@ -178,9 +185,9 @@ class NotaryChangeTests {
             addOutputState(stateC, DummyContract.PROGRAM_ID, notaryIdentity)
             addOutputState(stateB, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 1) // Encumbered by stateC
         }
-        val stx = node.services.signInitialTransaction(tx)
-        node.services.recordTransactions(stx)
-        return tx.toWireTransaction(node.services)
+        val stx = services.signInitialTransaction(tx)
+        services.recordTransactions(stx)
+        return tx.toWireTransaction(services)
     }
 
     // TODO: Add more test cases once we have a general flow/service exception handling mechanism:
@@ -192,10 +199,10 @@ class NotaryChangeTests {
     //       - The transaction type is not a notary change transaction at all.
 }
 
-fun issueState(node: StartedNode<*>, notaryIdentity: Party): StateAndRef<DummyContract.SingleOwnerState> {
-    val tx = DummyContract.generateInitial(Random().nextInt(), notaryIdentity, node.info.chooseIdentity().ref(0))
-    val stx = node.services.signInitialTransaction(tx)
-    node.services.recordTransactions(stx)
+fun issueState(services: ServiceHub, nodeIdentity: Party, notaryIdentity: Party): StateAndRef<DummyContract.SingleOwnerState> {
+    val tx = DummyContract.generateInitial(Random().nextInt(), notaryIdentity, nodeIdentity.ref(0))
+    val stx = services.signInitialTransaction(tx)
+    services.recordTransactions(stx)
     return stx.tx.outRef(0)
 }
 
