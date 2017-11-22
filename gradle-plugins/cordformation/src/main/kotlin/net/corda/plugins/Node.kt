@@ -119,14 +119,10 @@ class Node(private val project: Project) : CordformNode() {
             project.logger.error("Node has a null name - cannot create node")
             throw IllegalStateException("Node has a null name - cannot create node")
         }
-        val dirName = try {
-            // Parsing O= part directly because importing BouncyCastle provider in Cordformation causes problems
-            // with loading our custom X509EdDSAEngine.
-            name.trim().split(",").filter { it.startsWith("O=") }.first().substringAfter("=")
-        } catch(_ : NoSuchElementException) {
-            // Can't parse as an X500 name or no organisation part, use the full string
-            name
-        }
+        // Parsing O= part directly because importing BouncyCastle provider in Cordformation causes problems
+        // with loading our custom X509EdDSAEngine.
+        val organizationName = name.trim().split(",").filter { it.startsWith("O=") }.firstOrNull()?.substringAfter("=")
+        val dirName = organizationName ?: name
         nodeDir = File(rootDir.toFile(), dirName)
     }
 
