@@ -211,7 +211,7 @@ class NodeTabView : Fragment() {
                 error("Node with this name already exists")
             } else {
                 try {
-                    LegalNameValidator.validateLegalName(LegalNameValidator.normaliseLegalName(it))
+                    LegalNameValidator.validateOrganisation(LegalNameValidator.normaliseLegalName(it))
                     null
                 } catch (e: IllegalArgumentException) {
                     error(e.message)

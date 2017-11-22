@@ -7,7 +7,23 @@ import javax.security.auth.x500.X500Principal
 
 object LegalNameValidator {
     /**
-     * The validation function will validate the input string using the following rules:
+     * The validation function validates a string for use as part of a legal name. It applies the following rules:
+     *
+     * - No blacklisted words like "node", "server".
+     * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce
+     *   names over the phone, and character confusability attacks.
+     * - No commas or equals signs.
+     * - No dollars or quote marks, we might need to relax the quote mark constraint in future to handle Irish company names.
+     *
+     * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
+     */
+    fun validateNameAttribute(normalizedLegalName: String) {
+        Rule.baseNameRules.forEach { it.validate(normalizedLegalName) }
+    }
+
+    /**
+     * The validation function validates a string for use as the organisation attribute of a name, which includes additional
+     * constraints over basic name attribute checks. It applies the following rules:
      *
      * - No blacklisted words like "node", "server".
      * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce
@@ -18,7 +34,7 @@ object LegalNameValidator {
      *
      * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
      */
-    fun validateLegalName(normalizedLegalName: String) {
+    fun validateOrganisation(normalizedLegalName: String) {
         Rule.legalNameRules.forEach { it.validate(normalizedLegalName) }
     }
 
@@ -35,15 +51,17 @@ object LegalNameValidator {
 
     sealed class Rule<in T> {
         companion object {
-            val legalNameRules: List<Rule<String>> = listOf(
+            val baseNameRules: List<Rule<String>> = listOf(
                     UnicodeNormalizationRule(),
                     CharacterRule(',', '=', '$', '"', '\'', '\\'),
                     WordRule("node", "server"),
                     LengthRule(maxLength = 255),
                     // TODO: Implement confusable character detection if we add more scripts.
                     UnicodeRangeRule(LATIN, COMMON, INHERITED),
+                    X500NameRule()
+            )
+            val legalNameRules: List<Rule<String>> = baseNameRules + listOf(
                     CapitalLetterRule(),
-                    X500NameRule(),
                     MustHaveAtLeastTwoLettersRule()
             )
         }
