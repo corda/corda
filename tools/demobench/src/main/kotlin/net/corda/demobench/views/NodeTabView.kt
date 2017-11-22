@@ -207,11 +207,11 @@ class NodeTabView : Fragment() {
         validator {
             if (it == null) {
                 error("Node name is required")
-            } else if (nodeController.nameExists(LegalNameValidator.normaliseLegalName(it))) {
+            } else if (nodeController.nameExists(LegalNameValidator.normalize(it))) {
                 error("Node with this name already exists")
             } else {
                 try {
-                    LegalNameValidator.validateLegalName(LegalNameValidator.normaliseLegalName(it))
+                    LegalNameValidator.validateOrganization(LegalNameValidator.normalize(it))
                     null
                 } catch (e: IllegalArgumentException) {
                     error(e.message)
