@@ -54,4 +54,4 @@ Nodes expect to find a serialized ``SignedData<NodeInfo>`` object, the same obje
 
 Whenever a node starts it writes on disk a file containing its own ``NodeInfo``, this file is called ``nodeInfo-XXX`` where ``XXX`` is a long string.
 
-Hence if an operators wants node A to see node B they can pick A's ``NodeInfo`` file from A base directory and drop it into B's ``additional-node-infos`` directory.
+Hence if an operators wants node A to see node B they can pick B's ``NodeInfo`` file from B base directory and drop it into A's ``additional-node-infos`` directory.
