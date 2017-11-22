@@ -13,6 +13,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.model.ObjectFactory
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -21,7 +22,7 @@ import java.nio.file.Path
 /**
  * Represents a node that will be installed.
  */
-open class Node @Inject constructor(private val project: Project, private val objectFactory: ObjectFactory) : CordformNode() {
+open class Node @Inject constructor(private val project: Project) : CordformNode() {
     private data class ResolvedCordapp(val jarFile: File, val config: String?)
 
     companion object {
@@ -42,15 +43,12 @@ open class Node @Inject constructor(private val project: Project, private val ob
         @Deprecated("Use cordapp instead - setter will be removed by Corda V4.0")
         set(value) {
             value.forEach {
-                cordapp({
-                    coordinates = it.toString()
-                })
+                cordapp(it.toString())
             }
         }
 
     private val internalCordapps = mutableListOf<Cordapp>()
-
-    internal var additionalCordapps = mutableListOf<File>()
+    private val releaseVersion = project.rootProject.ext<String>("corda_release_version")
     internal lateinit var nodeDir: File
         private set
     internal lateinit var rootDir: File
@@ -81,15 +79,90 @@ open class Node @Inject constructor(private val project: Project, private val ob
      *
      * @param sshdPort The port for SSH server to listen on
      */
-    fun sshdPort(sshdPort: Int?) {
-        config = config.withValue("sshd.port", ConfigValueFactory.fromAnyRef(sshdPort))
+    fun sshdPort(sshdPort: Int) {
+        config = config.withValue("sshdAddress",
+                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$sshdPort"))
     }
+
+    /**
+     * Configures the default cordapp automatically added to this node
+     *
+     * @param configureClosure A groovy closure to configure a [Cordapp] object
+     * @return The created and inserted [Cordapp]
+     */
+    fun cordapp(configureClosure: Closure<in Cordapp>): Cordapp {
+        project.configure(builtCordapp, configureClosure) as Cordapp
+        return builtCordapp
+    }
+
+    /**
+     * Install a cordapp to this node
+     *
+     * @param coordinates The coordinates of the [Cordapp]
+     * @param configureClosure A groovy closure to configure a [Cordapp] object
+     * @return The created and inserted [Cordapp]
+     */
+    fun cordapp(coordinates: String, configureClosure: Closure<in Cordapp>): Cordapp {
+        val cordapp = project.configure(Cordapp(coordinates), configureClosure) as Cordapp
+        internalCordapps += cordapp
+        return cordapp
+    }
+
+    /**
+     * Install a cordapp to this node
+     *
+     * @param cordappProject A project that produces a cordapp JAR
+     * @param configureClosure A groovy closure to configure a [Cordapp] object
+     * @return The created and inserted [Cordapp]
+     */
+    fun cordapp(cordappProject: Project, configureClosure: Closure<in Cordapp>): Cordapp {
+        val cordapp = project.configure(Cordapp(cordappProject), configureClosure) as Cordapp
+        internalCordapps += cordapp
+        return cordapp
+    }
+
+    /**
+     * Install a cordapp to this node
+     *
+     * @param cordappProject A project that produces a cordapp JAR
+     * @return The created and inserted [Cordapp]
+     */
+    fun cordapp(cordappProject: Project): Cordapp {
+        return Cordapp(cordappProject).apply {
+            internalCordapps += this
+        }
+    }
+
+    /**
+     * Install a cordapp to this node
+     *
+     * @param coordinates The coordinates of the [Cordapp]
+     * @return The created and inserted [Cordapp]
+     */
+    fun cordapp(coordinates: String): Cordapp {
+        return Cordapp(coordinates).apply {
+            internalCordapps += this
+        }
+    }
+
+    /**
+     * Install a cordapp to this node
+     *
+     * @param configureFunc A lambda to configure a [Cordapp] object
+     * @return The created and inserted [Cordapp]
+     */
+    fun cordapp(coordinates: String, configureFunc: Cordapp.() -> Unit): Cordapp {
+        return Cordapp(coordinates).apply {
+            configureFunc()
+            internalCordapps += this
+        }
+    }
+
 
     internal fun build() {
         if (config.hasPath("webAddress")) {
             installWebserverJar()
         }
-        installAgentJar()
         installBuiltCordapp()
         installCordapps()
         installConfig()
@@ -135,19 +208,6 @@ open class Node @Inject constructor(private val project: Project, private val ob
     }
 
     /**
-     * Installs this project's cordapp to this directory.
-     */
-    private fun installBuiltCordapp() {
-        val cordappsDir = File(nodeDir, "cordapps")
-        project.copy {
-            it.apply {
-                from(project.tasks.getByName("jar"))
-                into(cordappsDir)
-            }
-        }
-    }
-
-    /**
      * Installs the jolokia monitoring agent JAR to the node/drivers directory
      */
     private fun installCordapps() {
@@ -156,7 +216,7 @@ open class Node @Inject constructor(private val project: Project, private val ob
         project.copy {
             it.apply {
                 from(cordapps.map { it.jarFile })
-                into(cordappsDir)
+                into(project.file(cordappsDir))
             }
         }
 
@@ -187,7 +247,8 @@ open class Node @Inject constructor(private val project: Project, private val ob
     }
 
     private fun installCordappConfigs(cordapps: Collection<ResolvedCordapp>) {
-        val cordappsDir = File(nodeDir, "cordapps")
+        val cordappsDir = project.file(File(nodeDir, "cordapps"))
+        cordappsDir.mkdirs()
         cordapps.filter { it.config != null }
                 .map { Pair<String, String>("${FilenameUtils.removeExtension(it.jarFile.name)}.conf", it.config!!) }
                 .forEach { project.file(File(cordappsDir, it.first)).writeText(it.second) }
@@ -301,27 +362,34 @@ open class Node @Inject constructor(private val project: Project, private val ob
      *
      * @return List of this node's cordapps.
      */
-    private fun getCordappList(): Collection<ResolvedCordapp> {
-        val cordappConfiguration = project.configuration("cordapp")
-        // Cordapps can sometimes contain a GString instance which fails the equality test with the Java string
-        @Suppress("RemoveRedundantCallsOfConversionMethods")
-        return internalCordapps.map { cordapp ->
-            val cordappName = cordapp.coordinates!!.toString()
-            val cordappFile = cordappConfiguration.files { cordappName == (it.group + ":" + it.name + ":" + it.version) }
+    private fun getCordappList(): Collection<ResolvedCordapp> =
+            internalCordapps.map { cordapp -> resolveCordapp(cordapp) } + resolveBuiltCordapp()
 
+    private fun resolveCordapp(cordapp: Cordapp): ResolvedCordapp {
+        val cordappConfiguration = project.configuration("cordapp")
+        val cordappName = if(cordapp.project != null) cordapp.project.name else cordapp.coordinates
+        val cordappFile = cordappConfiguration.files {
             when {
-                cordappFile.size == 0 -> throw GradleException("Cordapp $cordappName not found in cordapps configuration.")
-                cordappFile.size > 1 -> throw GradleException("Multiple files found for $cordappName")
-                else -> ResolvedCordapp(cordappFile.single(), cordapp.config)
+                it is ProjectDependency -> it.dependencyProject == cordapp.project!!
+                cordapp.coordinates != null -> {
+                    // Cordapps can sometimes contain a GString instance which fails the equality test with the Java string
+                    @Suppress("RemoveRedundantCallsOfConversionMethods")
+                    val coordinates = cordapp.coordinates.toString()
+                    coordinates == (it.group + ":" + it.name + ":" + it.version)
+                }
+                else -> false
             }
+        }
+
+        return when {
+            cordappFile.size == 0 -> throw GradleException("Cordapp $cordappName not found in cordapps configuration.")
+            cordappFile.size > 1 -> throw GradleException("Multiple files found for $cordappName")
+            else -> ResolvedCordapp(cordappFile.single(), cordapp.config)
         }
     }
 
-    private fun addCordapp(cordapp: Cordapp) {
-        // TODO: Use gradle @Input annotation to make this required in the build script
-        if (cordapp.coordinates == null) {
-            throw GradleException("cordapp is missing coordinates field")
-        }
-        internalCordapps += cordapp
+    private fun resolveBuiltCordapp(): ResolvedCordapp {
+        val projectCordappFile = project.tasks.getByName("jar").outputs.files.singleFile
+        return ResolvedCordapp(projectCordappFile, builtCordapp.config)
     }
 }

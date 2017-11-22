@@ -22,6 +22,7 @@ class CordformTest {
 
     private companion object {
         val cordaFinanceJarName = "corda-finance-3.0-SNAPSHOT"
+        val localCordappJarName = "locally-built-cordapp"
         val notaryNodeName = "Notary Service"
     }
 
@@ -36,8 +37,6 @@ class CordformTest {
 
         val result = runner.build()
 
-        File(testProjectDir.root, "build/nodes/Notary Service/cordapps/").listFiles().forEach { println(it) }
-
         assertThat(result.task(":deployNodes")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
         assertThat(getNodeCordappJar(notaryNodeName, cordaFinanceJarName)).exists()
     }
@@ -48,13 +47,20 @@ class CordformTest {
 
         val result = runner.build()
 
-        File(testProjectDir.root, "build/nodes/Notary Service/cordapps").listFiles().forEach {
-            println(it)
-        }
-
         assertThat(result.task(":deployNodes")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
         assertThat(getNodeCordappJar(notaryNodeName, cordaFinanceJarName)).exists()
         assertThat(getNodeCordappConfig(notaryNodeName, cordaFinanceJarName)).exists()
+    }
+
+    @Test
+    fun `deploy the locally built cordapp with cordapp config`() {
+        val runner = getStandardGradleRunnerFor("DeploySingleNodeWithLocallyBuildCordappAndConfig.gradle")
+
+        val result = runner.build()
+
+        assertThat(result.task(":deployNodes")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+        assertThat(getNodeCordappJar(notaryNodeName, localCordappJarName)).exists()
+        assertThat(getNodeCordappConfig(notaryNodeName, localCordappJarName)).exists()
     }
 
     private fun createBuildFile(buildFileResourceName: String) = IOUtils.copy(javaClass.getResourceAsStream(buildFileResourceName), buildFile!!.outputStream())

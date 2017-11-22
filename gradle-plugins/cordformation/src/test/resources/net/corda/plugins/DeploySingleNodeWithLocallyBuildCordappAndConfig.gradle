@@ -18,13 +18,17 @@ dependencies {
     cordapp "$corda_group:corda-finance:$corda_release_version"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform) {
+jar {
+    baseName "locally-built-cordapp"
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [jar]) {
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
         p2pPort 10002
         rpcPort 10003
-        cordapp "$corda_group:corda-finance:$corda_release_version", {
+        cordapp {
             config "a=b"
         }
     }
