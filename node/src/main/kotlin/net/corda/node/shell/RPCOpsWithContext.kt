@@ -11,26 +11,26 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
 fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, rpcPermissions: RpcPermissions) : CordaRPCOps {
-
-    class RPCContextRunner<T>(val block:() -> T) : Thread() {
-        private var result: CompletableFuture<T> = CompletableFuture()
-        override fun run() {
-            CURRENT_RPC_CONTEXT.set(RpcAuthContext(invocationContext, rpcPermissions))
-            try {
-                result.complete(block())
-            } catch (e:Throwable) {
-                result.completeExceptionally(e)
-            }
-            CURRENT_RPC_CONTEXT.remove()
-        }
-
-        fun get(): Future<T> {
-            start()
-            join()
-            return result
-        }
-    }
     return Proxy.newProxyInstance(CordaRPCOps::class.java.classLoader, arrayOf(CordaRPCOps::class.java), { proxy, method, args ->
-            RPCContextRunner { method.invoke(cordaRPCOps, args) }.get().getOrThrow()
+            RPCContextRunner(invocationContext, rpcPermissions) { method.invoke(cordaRPCOps, *args) }.get().getOrThrow()
         }) as CordaRPCOps
+}
+
+private class RPCContextRunner<T>(val invocationContext:InvocationContext, val rpcPermissions: RpcPermissions, val block:() -> T) : Thread() {
+    private var result: CompletableFuture<T> = CompletableFuture()
+    override fun run() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(invocationContext, rpcPermissions))
+        try {
+            result.complete(block())
+        } catch (e:Throwable) {
+            result.completeExceptionally(e)
+        }
+        CURRENT_RPC_CONTEXT.remove()
+    }
+
+    fun get(): Future<T> {
+        start()
+        join()
+        return result
+    }
 }
