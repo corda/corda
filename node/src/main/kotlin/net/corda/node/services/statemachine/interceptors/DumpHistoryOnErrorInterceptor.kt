@@ -35,13 +35,13 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
         }
 
         if (nextState.checkpoint.errorState is ErrorState.Errored) {
-            log.warn("Flow ${fiber.id} dirtied, dumping all transitions:\n${record!!.joinToString("\n")}")
+            log.warn("Flow ${fiber.id} errored, dumping all transitions:\n${record!!.joinToString("\n")}")
             for (error in nextState.checkpoint.errorState.errors) {
                 log.warn("Flow ${fiber.id} error", error.exception)
             }
         }
 
-        if (transition.newState.isRemoved) {
+        if (nextState.isRemoved) {
             records.remove(fiber.id)
         }
 

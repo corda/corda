@@ -8,9 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
@@ -224,6 +222,7 @@ class ProtonWrapperTests {
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+            doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
         artemisConfig.configureWithDevSSLCertificate()
 

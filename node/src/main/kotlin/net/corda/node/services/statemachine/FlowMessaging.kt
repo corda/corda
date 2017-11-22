@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine
 
+import co.paralleluniverse.fibers.Suspendable
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
@@ -20,7 +21,8 @@ interface FlowMessaging {
      * Send [message] to [party] using [deduplicationId]. Optionally [acknowledgementHandler] may be specified to
      * listen on the send acknowledgement.
      */
-    fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId, acknowledgementHandler: (() -> Unit)?)
+    @Suspendable
+    fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId)
 
     /**
      * Start the messaging using the [onMessage] message handler.
@@ -45,7 +47,8 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
         }
     }
 
-    override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId, acknowledgementHandler: (() -> Unit)?) {
+    @Suspendable
+    override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId) {
         log.trace { "Sending message $deduplicationId $message to party $party" }
         val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId)
         val partyInfo = serviceHub.networkMapCache.getPartyInfo(party) ?: throw IllegalArgumentException("Don't know about $party")
@@ -54,7 +57,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             is InitialSessionMessage -> message.initiatorSessionId
             is ExistingSessionMessage -> message.recipientSessionId
         }
-        serviceHub.networkService.send(networkMessage, address, sequenceKey = sequenceKey, acknowledgementHandler = acknowledgementHandler)
+        serviceHub.networkService.send(networkMessage, address, sequenceKey = sequenceKey)
     }
 
     private fun serializeSessionMessage(message: SessionMessage): SerializedBytes<SessionMessage> {

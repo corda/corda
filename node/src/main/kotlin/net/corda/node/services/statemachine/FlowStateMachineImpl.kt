@@ -7,7 +7,6 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
 import com.codahale.metrics.Counter
-import com.codahale.metrics.Metric
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.*
@@ -43,10 +42,7 @@ class TransientReference<out A>(@Transient val value: A)
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
-                              scheduler: FiberScheduler,
-                              private val totalSuccessMetric: Counter,
-                              private val totalErrorMetric: Counter
-                              // Store the Party rather than the full cert path with PartyAndCertificate
+                              scheduler: FiberScheduler
 ) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R>, FlowFiber {
     companion object {
         /**
@@ -55,18 +51,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
 
         private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
-
-        @Suspendable
-        private fun abortFiber(): Nothing {
-            Fiber.park()
-            throw IllegalStateException("Ended fiber unparked")
-        }
-
-        private fun extractThreadLocalTransaction(): TransientReference<DatabaseTransaction> {
-            val transaction = contextTransaction
-            contextTransactionOrNull = null
-            return TransientReference(transaction)
-        }
     }
 
     override val serviceHub get() = getTransientField(TransientValues::serviceHub)
@@ -88,6 +72,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun <A> getTransientField(field: KProperty1<TransientValues, A>): A {
         val suppliedValues = transientValues ?: throw IllegalStateException("${field.name} wasn't supplied!")
         return field.get(suppliedValues.value)
+    }
+
+    private fun extractThreadLocalTransaction(): TransientReference<DatabaseTransaction> {
+        val transaction = contextTransaction
+        contextTransactionOrNull = null
+        return TransientReference(transaction)
     }
 
     /**
@@ -145,8 +135,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val startTime = System.nanoTime()
         val resultOrError = try {
             val result = logic.call()
-            // TODO expose maySkipCheckpoint here
-            suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = false)
+            suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
         } catch (throwable: Throwable) {
             logger.warn("Flow threw exception", throwable)
@@ -154,15 +143,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
         val finalEvent = when (resultOrError) {
             is Try.Success -> {
-                totalSuccessMetric.inc()
                 Event.FlowFinish(resultOrError.value)
             }
             is Try.Failure -> {
-                totalErrorMetric.inc()
                 Event.Error(resultOrError.exception)
             }
         }
-        processEvent(getTransientField(TransientValues::transitionExecutor), finalEvent)
+        scheduleEvent(finalEvent)
         processEventsUntilFlowIsResumed()
 
         recordDuration(startTime)
@@ -190,6 +177,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.InitiateFlow(party)
         ) as FlowContinuation.Resume
         return resume.result as FlowSession
+    }
+
+    @Suspendable
+    private fun abortFiber(): Nothing {
+        while (true) {
+            Fiber.park()
+        }
     }
 
     // TODO Dummy implementation of access to application specific permission controls and audit logging
@@ -257,7 +251,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             require(processEvent(transitionExecutor.value, event) == FlowContinuation.ProcessEvents)
             Fiber.unparkDeserialized(this, scheduler)
         }
-        return processEventsUntilFlowIsResumed() as R
+        return uncheckedCast(processEventsUntilFlowIsResumed())
     }
 
     @Suspendable

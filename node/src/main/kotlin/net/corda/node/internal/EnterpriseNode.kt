@@ -4,24 +4,36 @@ import com.codahale.metrics.MetricFilter
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.graphite.GraphiteReporter
 import com.codahale.metrics.graphite.PickledGraphite
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.GraphiteOptions
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
+import net.corda.node.services.statemachine.MultiThreadedStateMachineManager
+import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
+import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
 import java.net.InetAddress
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class EnterpriseNode(configuration: NodeConfiguration,
-                     versionInfo: VersionInfo) : Node(configuration, versionInfo) {
+open class EnterpriseNode(configuration: NodeConfiguration,
+                     versionInfo: VersionInfo,
+                     initialiseSerialization: Boolean = true,
+                     cordappLoader: CordappLoader = makeCordappLoader(configuration)
+) : Node(configuration, versionInfo, initialiseSerialization, cordappLoader) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
 
@@ -143,5 +155,30 @@ D""".trimStart()
         val started = super.start()
         registerOptionalMetricsReporter(configuration, started.services.monitoringService.metrics)
         return started
+    }
+
+    private fun makeStateMachineExecutorService(): ExecutorService {
+        return Executors.newFixedThreadPool(
+                configuration.enterpriseConfiguration.tuning.flowThreadPoolSize,
+                ThreadFactoryBuilder().setNameFormat("flow-executor-%d").build()
+        )
+    }
+
+    override fun makeStateMachineManager(database: CordaPersistence): StateMachineManager {
+        if (configuration.enterpriseConfiguration.useMultiThreadedSMM) {
+            val executor = makeStateMachineExecutorService()
+            runOnStop += { executor.shutdown() }
+            return MultiThreadedStateMachineManager(
+                    services,
+                    checkpointStorage,
+                    executor,
+                    database,
+                    newSecureRandom(),
+                    busyNodeLatch,
+                    cordappLoader.appClassLoader
+            )
+        } else {
+            return super.makeStateMachineManager(database)
+        }
     }
 }

@@ -122,7 +122,6 @@ class ActionExecutorImpl(
             val exception = error.flowException
             log.debug("Propagating error", exception)
         }
-        val pendingSendAcks = CountUpDownLatch(0)
         for (sessionState in action.sessions) {
             // We cannot propagate if the session isn't live.
             if (sessionState.initiatedState !is InitiatedSessionState.Live) {
@@ -133,14 +132,9 @@ class ActionExecutorImpl(
                 val sinkSessionId = sessionState.initiatedState.peerSinkSessionId
                 val existingMessage = ExistingSessionMessage(sinkSessionId, errorMessage)
                 val deduplicationId = DeduplicationId.createForError(errorMessage.errorId, sinkSessionId)
-                pendingSendAcks.countUp()
-                flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, deduplicationId) {
-                    pendingSendAcks.countDown()
-                }
+                flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, deduplicationId)
             }
         }
-        // TODO we simply block here, perhaps this should be explicit in the worker state
-        pendingSendAcks.await()
     }
 
     @Suspendable
@@ -163,12 +157,12 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendInitial(action: Action.SendInitial) {
-        flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId, null)
+        flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId)
     }
 
     @Suspendable
     private fun executeSendExisting(action: Action.SendExisting) {
-        flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationId, null)
+        flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationId)
     }
 
     @Suspendable

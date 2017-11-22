@@ -5,9 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
@@ -143,6 +141,7 @@ class AMQPBridgeTest {
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+            doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
         artemisConfig.configureWithDevSSLCertificate()
         val artemisServer = ArtemisMessagingServer(artemisConfig, artemisPort, MAX_MESSAGE_SIZE)

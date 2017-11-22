@@ -1,17 +1,12 @@
 package net.corda.node.services.messaging
 
+import com.codahale.metrics.MetricRegistry
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.concurrent.CordaFuture
-import com.codahale.metrics.MetricRegistry
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -73,6 +68,7 @@ class ArtemisMessagingTest {
             doReturn("").whenever(it).exportJMXto
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(5).whenever(it).messageRedeliveryDelaySeconds
+            doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock())
@@ -176,6 +172,7 @@ class ArtemisMessagingTest {
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
                     networkMapCache,
+                    MetricRegistry(),
                     maxMessageSize = maxMessageSize).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this

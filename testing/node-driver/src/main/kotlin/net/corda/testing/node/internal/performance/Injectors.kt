@@ -1,10 +1,14 @@
 package net.corda.testing.node.internal.performance
 
+
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
 import com.google.common.base.Stopwatch
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.internal.performance.Rate
 import net.corda.testing.node.internal.ShutdownManager
+import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -16,6 +20,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
+private val log = LoggerFactory.getLogger("TightLoopInjector")
 fun startTightLoopInjector(
         parallelism: Int,
         numberOfInjections: Int,
@@ -34,7 +39,11 @@ fun startTightLoopInjector(
             while (true) {
                 if (leftToSubmit.getAndDecrement() == 0) break
                 executor.submit {
-                    work()
+                    try {
+                        work()
+                    } catch (exception: Exception) {
+                        log.error("Error while executing injection", exception)
+                    }
                     if (queuedCount.decrementAndGet() < queueBound / 2) {
                         lock.withLock {
                             canQueueAgain.signal()
@@ -60,11 +69,13 @@ fun startPublishingFixedRateInjector(
         parallelism: Int,
         overallDuration: Duration,
         injectionRate: Rate,
+        workBound: Int,
         queueSizeMetricName: String = "QueueSize",
         workDurationMetricName: String = "WorkDuration",
-        work: () -> Unit
+        work: () -> CordaFuture<*>
 ) {
     val workSemaphore = Semaphore(0)
+    val workBoundSemaphore = Semaphore(workBound)
     metricRegistry.register(queueSizeMetricName, Gauge { workSemaphore.availablePermits() })
     val workDurationTimer = metricRegistry.timer(workDurationMetricName)
     ShutdownManager.run {
@@ -72,19 +83,16 @@ fun startPublishingFixedRateInjector(
         registerShutdown { executor.shutdown() }
         val workExecutor = Executors.newFixedThreadPool(parallelism)
         registerShutdown { workExecutor.shutdown() }
-        val timings = Collections.synchronizedList(ArrayList<Long>())
         for (i in 1..parallelism) {
             workExecutor.submit {
                 try {
                     while (true) {
                         workSemaphore.acquire()
+                        workBoundSemaphore.acquire()
                         workDurationTimer.time {
-                            timings.add(
-                                    Stopwatch.createStarted().apply {
-                                        work()
-                                    }.stop().elapsed(TimeUnit.MICROSECONDS)
-                            )
+                            work().getOrThrow()
                         }
+                        workBoundSemaphore.release()
                     }
                 } catch (throwable: Throwable) {
                     throwable.printStackTrace()
@@ -105,4 +113,3 @@ fun startPublishingFixedRateInjector(
         Thread.sleep(overallDuration.toMillis())
     }
 }
-

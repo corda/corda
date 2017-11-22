@@ -20,6 +20,6 @@ interface TransitionExecutor {
 }
 
 /**
- * An interceptor of a transition. These are currently explicitly hooked up in [StateMachineManagerImpl].
+ * An interceptor of a transition. These are currently explicitly hooked up in [MultiThreadedStateMachineManager].
  */
 typealias TransitionInterceptor = (TransitionExecutor) -> TransitionExecutor

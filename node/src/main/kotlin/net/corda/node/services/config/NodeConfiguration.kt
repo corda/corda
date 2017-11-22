@@ -209,6 +209,16 @@ data class NodeConfigurationImpl(
         if (dataSourceUrl.contains(":sqlserver:") && !dataSourceUrl.contains("sendStringParametersAsUnicode", true)) {
             dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = dataSourceUrl + ";sendStringParametersAsUnicode=false"
         }
+
+        // Adjust connection pool size depending on N=flow thread pool size.
+        // If there is no configured pool size set it to N + 1, otherwise check that it's greater than N.
+        val flowThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize
+        val maxConnectionPoolSize = dataSourceProperties.getProperty("maximumPoolSize")
+        if (maxConnectionPoolSize == null) {
+            dataSourceProperties.setProperty("maximumPoolSize", (flowThreadPoolSize + 1).toString())
+        } else {
+            require(maxConnectionPoolSize.toInt() > flowThreadPoolSize)
+        }
     }
 }
 

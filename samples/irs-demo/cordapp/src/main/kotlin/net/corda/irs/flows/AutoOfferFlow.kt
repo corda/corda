@@ -71,8 +71,8 @@ object AutoOfferFlow {
             // and because in a real life app you'd probably have more complex logic here e.g. describing why the report
             // was filed, checking that the reportee is a regulated entity and not some random node from the wrong
             // country and so on.
-            val regulator = serviceHub.identityService.partiesFromName("Regulator", true).single()
-            subFlow(ReportToRegulatorFlow(regulator, finalTx))
+            // val regulator = serviceHub.identityService.partiesFromName("Regulator", true).single()
+            // subFlow(ReportToRegulatorFlow(regulator, finalTx))
             return finalTx
         }
 

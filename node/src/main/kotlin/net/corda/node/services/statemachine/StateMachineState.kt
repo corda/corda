@@ -169,7 +169,7 @@ sealed class FlowState {
             val flowStart: FlowStart,
             val frozenFlowLogic: SerializedBytes<FlowLogic<*>>
     ) : FlowState() {
-        override fun toString() = "Unstarted(flowStart=$flowStart, frozenFlowLogic=${frozenFlowLogic.hash}"
+        override fun toString() = "Unstarted(flowStart=$flowStart, frozenFlowLogic=${frozenFlowLogic.hash})"
     }
 
     /**
@@ -182,7 +182,7 @@ sealed class FlowState {
             val flowIORequest: FlowIORequest<*>,
             val frozenFiber: SerializedBytes<FlowStateMachineImpl<*>>
     ) : FlowState() {
-        override fun toString() = "Started(flowIORequest=$flowIORequest, frozenFiber=${frozenFiber.hash}"
+        override fun toString() = "Started(flowIORequest=$flowIORequest, frozenFiber=${frozenFiber.hash})"
     }
 }
 

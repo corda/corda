@@ -1,10 +1,7 @@
 package net.corda.node.services.events
 
-import com.google.common.util.concurrent.MoreExecutors
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -58,7 +55,6 @@ class NodeSchedulerServiceTest {
             database,
             flowStarter,
             stateLoader,
-            serverThread = MoreExecutors.directExecutor(),
             flowLogicRefFactory = flowLogicRefFactory,
             log = log,
             scheduledStates = mutableMapOf()).apply { start() }

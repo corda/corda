@@ -72,10 +72,6 @@ class FlowFrameworkTests {
     private lateinit var alice: Party
     private lateinit var bob: Party
 
-    private fun StartedNode<*>.flushSmm() {
-        (this.smm as StateMachineManagerImpl).executor.flush()
-    }
-
     @Before
     fun start() {
         mockNet = MockNetwork(
@@ -165,7 +161,6 @@ class FlowFrameworkTests {
         aliceNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         bobNode.services.startFlow(ReceiveFlow(alice).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
-        bobNode.flushSmm()
         bobNode.internals.disableDBCloseOnStop()
         bobNode.dispose() // kill receiver
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
@@ -191,7 +186,6 @@ class FlowFrameworkTests {
             assertEquals(1, bobNode.checkpointStorage.checkpoints().size)
         }
         // Make sure the add() has finished initial processing.
-        bobNode.flushSmm()
         bobNode.internals.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         bobNode.dispose()
@@ -204,7 +198,6 @@ class FlowFrameworkTests {
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
         mockNet.runNetwork()
-        node2b.flushSmm()
         fut1.getOrThrow()
 
         val receivedCount = receivedSessionMessages.count { it.isPayloadTransfer }
@@ -575,7 +568,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `customised client flow which has annotated @InitiatingFlow again`() {
-        assertThatExceptionOfType(ExecutionException::class.java).isThrownBy {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             aliceNode.services.startFlow(IncorrectCustomSendFlow("Hello", bob)).resultFuture
         }.withMessageContaining(InitiatingFlow::class.java.simpleName)
     }

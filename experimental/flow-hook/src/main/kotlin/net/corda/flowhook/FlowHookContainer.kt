@@ -1,17 +1,35 @@
 package net.corda.flowhook
 
 import co.paralleluniverse.fibers.Fiber
+import net.corda.core.internal.declaredField
 import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.InitialSessionMessage
+import net.corda.node.services.statemachine.SessionMessage
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import org.apache.activemq.artemis.core.io.buffer.TimedBuffer
 import java.sql.Connection
+import java.util.concurrent.TimeUnit
 
 @Suppress("UNUSED")
 object FlowHookContainer {
 
     @JvmStatic
     @Hook("co.paralleluniverse.fibers.Fiber")
-    fun park() {
+    fun park1(blocker: Any?, postParkAction: Any?, timeout: Long?, unit: TimeUnit?) {
         FiberMonitor.newEvent(MonitorEvent(MonitorEventType.FiberParking, keys = listOf(Fiber.currentFiber())))
+    }
+
+    @JvmStatic
+    @Hook("co.paralleluniverse.fibers.Fiber", passThis = true)
+    fun exec(fiber: Any) {
+        FiberMonitor.newEvent(MonitorEvent(MonitorEventType.FiberResuming, keys = listOf(fiber)))
+    }
+
+    @JvmStatic
+    @Hook("co.paralleluniverse.fibers.Fiber", passThis = true)
+    fun onParked(fiber: Any) {
+        FiberMonitor.newEvent(MonitorEvent(MonitorEventType.FiberParked, keys = listOf(fiber)))
     }
 
     @JvmStatic
@@ -148,6 +166,36 @@ object FlowHookContainer {
             val event = event
             val transition = transition
         }))
+    }
+
+    @JvmStatic
+    @Hook("net.corda.node.services.statemachine.FlowMessagingImpl")
+    fun sendSessionMessage(party: Any, message: Any, deduplicationId: Any) {
+        message as SessionMessage
+        val sessionId = when (message) {
+            is InitialSessionMessage -> {
+                message.initiatorSessionId
+            }
+            is ExistingSessionMessage -> {
+                message.recipientSessionId
+            }
+        }
+        FiberMonitor.newEvent(MonitorEvent(MonitorEventType.SendSessionMessage, keys = listOf(currentFiberOrThread(), sessionId)))
+    }
+
+    @JvmStatic
+    @Hook("org.apache.activemq.artemis.core.io.buffer.TimedBuffer", passThis = true)
+    fun flush(buffer: Any, force: Boolean): () -> Unit {
+        buffer as TimedBuffer
+        val thread = Thread.currentThread()
+        FiberMonitor.newEvent(MonitorEvent(MonitorEventType.BrokerFlushStart, keys = listOf(thread), extra = object {
+            val force = force
+            val pendingSync = buffer.declaredField<Boolean>("pendingSync").value
+        }))
+
+        return {
+            FiberMonitor.newEvent(MonitorEvent(MonitorEventType.BrokerFlushEnd, keys = listOf(thread)))
+        }
     }
 
     private fun currentFiberOrThread(): Any {

@@ -6,7 +6,6 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.fibers.instrument.SuspendableHelper
 import co.paralleluniverse.strands.channels.Channels
 import com.codahale.metrics.Gauge
-import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowException
@@ -46,6 +45,7 @@ import rx.subjects.PublishSubject
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
 import kotlin.streams.toList
@@ -55,14 +55,14 @@ import kotlin.streams.toList
  * thread actually starts them via [startFlow].
  */
 @ThreadSafe
-class StateMachineManagerImpl(
+class SingleThreadedStateMachineManager(
         val serviceHub: ServiceHubInternal,
         val checkpointStorage: CheckpointStorage,
-        val executor: AffinityExecutor,
+        val executor: ExecutorService,
         val database: CordaPersistence,
         val secureRandom: SecureRandom,
         private val unfinishedFibers: ReusableLatch = ReusableLatch(),
-        private val classloader: ClassLoader = StateMachineManagerImpl::class.java.classLoader
+        private val classloader: ClassLoader = SingleThreadedStateMachineManager::class.java.classLoader
 ) : StateMachineManager, StateMachineManagerInternal {
     companion object {
         private val logger = contextLogger()
@@ -145,7 +145,7 @@ class StateMachineManagerImpl(
     }
 
     /**
-     * Start the shutdown process, bringing the [StateMachineManagerImpl] to a controlled stop.  When this method returns,
+     * Start the shutdown process, bringing the [SingleThreadedStateMachineManager] to a controlled stop.  When this method returns,
      * all Fibers have been suspended and checkpointed, or have completed.
      *
      * @param allowedUnsuspendedFiberCount Optional parameter is used in some tests.
@@ -328,7 +328,6 @@ class StateMachineManagerImpl(
 
     private fun onExistingSessionMessage(sessionMessage: ExistingSessionMessage, acknowledgeHandle: AcknowledgeHandle, sender: Party) {
         try {
-            executor.checkOnThread()
             val recipientId = sessionMessage.recipientSessionId
             val flowId = sessionToFlow[recipientId]
             if (flowId == null) {
@@ -381,7 +380,7 @@ class StateMachineManagerImpl(
         }
 
         if (replyError != null) {
-            flowMessaging.sendSessionMessage(sender, replyError, DeduplicationId.createRandom(secureRandom), null)
+            flowMessaging.sendSessionMessage(sender, replyError, DeduplicationId.createRandom(secureRandom))
             acknowledgeHandle.acknowledge()
         }
     }
@@ -439,7 +438,7 @@ class StateMachineManagerImpl(
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
-        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler, totalSuccessFlows, totalErrorFlows)
+        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
         val resultFuture = openFuture<Any?>()
         flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
         flowLogic.stateMachine = flowStateMachineImpl
@@ -523,7 +522,7 @@ class StateMachineManagerImpl(
                         isRemoved = false,
                         flowLogic = logic
                 )
-                val fiber = FlowStateMachineImpl(id, logic, scheduler, totalSuccessFlows, totalErrorFlows)
+                val fiber = FlowStateMachineImpl(id, logic, scheduler)
                 fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
                 fiber.transientState = TransientReference(state)
                 fiber.logic.stateMachine = fiber
@@ -651,6 +650,7 @@ class StateMachineManagerImpl(
         while (true) {
             val event = flow.fiber.transientValues!!.value.eventQueue.tryReceive() ?: return
             when (event) {
+                is Event.DoRemainingWork -> {}
                 is Event.DeliverSessionMessage -> {
                     // Acknowledge the message so it doesn't leak in the broker.
                     event.acknowledgeHandle.acknowledge()
@@ -670,5 +670,3 @@ class StateMachineManagerImpl(
         }
     }
 }
-
-class SessionRejectException(reason: String) : CordaException(reason)

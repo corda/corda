@@ -327,20 +327,18 @@ class InMemoryMessagingNetwork internal constructor(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, acknowledgementHandler: (() -> Unit)?) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
             check(running)
             msgSend(this, message, target)
-            acknowledgementHandler?.invoke()
             if (!sendManuallyPumped) {
                 pumpSend(false)
             }
         }
 
-        override fun send(addressedMessages: List<MessagingService.AddressedMessage>, acknowledgementHandler: (() -> Unit)?) {
+        override fun send(addressedMessages: List<MessagingService.AddressedMessage>) {
             for ((message, target, retryId, sequenceKey) in addressedMessages) {
-                send(message, target, retryId, sequenceKey, null)
+                send(message, target, retryId, sequenceKey)
             }
-            acknowledgementHandler?.invoke()
         }
 
         override fun stop() {

@@ -65,7 +65,7 @@ class NodeVaultService(
         val updatesPublisher: rx.Observer<Vault.Update<ContractState>> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
     }
 
-    private val mutex = ThreadBox(InnerState())
+    private val concurrentBox = ConcurrentBox(InnerState())
 
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
@@ -103,10 +103,10 @@ class NodeVaultService(
     }
 
     override val rawUpdates: Observable<Vault.Update<ContractState>>
-        get() = mutex.locked { _rawUpdatesPublisher }
+        get() = concurrentBox.content._rawUpdatesPublisher
 
     override val updates: Observable<Vault.Update<ContractState>>
-        get() = mutex.locked { _updatesInDbTx }
+        get() = concurrentBox.content._updatesInDbTx
 
     override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
         if (statesToRecord == StatesToRecord.NONE)
@@ -205,7 +205,7 @@ class NodeVaultService(
     private fun processAndNotify(update: Vault.Update<ContractState>) {
         if (!update.isEmpty()) {
             recordUpdate(update)
-            mutex.locked {
+            concurrentBox.concurrent {
                 // flowId required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) update.copy(flowId = uuid) else update
@@ -387,7 +387,7 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
-        log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
+        log.debug {"Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting" }
         // calculate total results where a page specification has been defined
         var totalStates = -1L
         if (!paging.isDefault) {
@@ -468,7 +468,7 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return mutex.locked {
+        return concurrentBox.exclusive {
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
             val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
             DataFeed(snapshotResults, updates)
