@@ -41,6 +41,11 @@ interface CertificationRequestStorage {
     fun getRequests(requestStatus: RequestStatus): List<CertificateSigningRequest>
 
     /**
+     * Persist the fact that a ticket has been created for the given [requestId].
+     */
+    fun markRequestTicketCreated(requestId: String)
+    
+    /**
      * Approve the given request if it has not already been approved. Otherwise do nothing.
      * @param requestId id of the certificate signing request
      * @param approvedBy authority (its identifier) approving this request.
@@ -72,7 +77,30 @@ sealed class CertificateResponse {
 }
 
 enum class RequestStatus {
-    NEW, APPROVED, REJECTED, SIGNED
+    /**
+     * The request has been received, this is the initial state in which a request has been created.
+     */
+    NEW,
+
+    /**
+     * A ticket has been created but has not yet been approved nor rejected.
+     */
+    TICKET_CREATED,
+
+    /**
+     * The request has been approved, but not yet signed.
+     */
+    APPROVED,
+
+    /**
+     * The request has been rejected, this is a terminal state, once a request gets in this state it won't change anymore.
+     */
+    REJECTED,
+
+    /**
+     * The request has been signed, this is a terminal state, once a request gets in this state it won't change anymore.
+     */
+    SIGNED
 }
 
 enum class CertificateStatus {

@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.x500Name
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.DatabaseTransaction
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.hibernate.Session
@@ -57,13 +58,34 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
         return requestId
     }
 
+    private fun DatabaseTransaction.findRequest(requestId: String,
+                                                requestStatus: RequestStatus? = null): CertificateSigningRequestEntity? {
+        return singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
+            val idClause = builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
+            if (requestStatus == null) {
+                idClause
+            } else {
+                val statusClause = builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), requestStatus)
+                builder.and(idClause, statusClause)
+            }
+        }
+    }
+
+    override fun markRequestTicketCreated(requestId: String) {
+        return database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
+            val request = findRequest(requestId, RequestStatus.NEW)
+            request ?: throw IllegalArgumentException("Error when creating request ticket with id: $requestId. Request does not exist or its status is not NEW.")
+            val update = request.copy(
+                    modifiedAt = Instant.now(),
+                    status = RequestStatus.TICKET_CREATED)
+            session.merge(update)
+        }
+    }
+
     override fun approveRequest(requestId: String, approvedBy: String) {
         return database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
-            val request = singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
-                builder.and(builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId),
-                        builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), RequestStatus.NEW))
-            }
-            request ?: throw IllegalArgumentException("Error when approving request with id: $requestId. Request does not exist or its status is not NEW.")
+            val request = findRequest(requestId, RequestStatus.TICKET_CREATED)
+            request ?: throw IllegalArgumentException("Error when approving request with id: $requestId. Request does not exist or its status is not TICKET_CREATED.")
             val update = request.copy(
                     modifiedBy = listOf(approvedBy),
                     modifiedAt = Instant.now(),
@@ -74,9 +96,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
 
     override fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String) {
         database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
-            val request = singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
-                builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
-            }
+            val request = findRequest(requestId)
             request ?: throw IllegalArgumentException("Error when rejecting request with id: $requestId. Request does not exist.")
             val update = request.copy(
                     modifiedBy = listOf(rejectedBy),
@@ -90,9 +110,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
 
     override fun getRequest(requestId: String): CertificateSigningRequest? {
         return database.transaction {
-            singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
-                builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
-            }?.toCertificateSigningRequest()
+            findRequest(requestId)?.toCertificateSigningRequest()
         }
     }
 

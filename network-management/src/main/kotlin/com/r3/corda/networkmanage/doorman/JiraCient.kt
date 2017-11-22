@@ -2,6 +2,7 @@ package com.r3.corda.networkmanage.doorman
 
 import com.atlassian.jira.rest.client.api.JiraRestClient
 import com.atlassian.jira.rest.client.api.domain.Field
+import com.atlassian.jira.rest.client.api.domain.Issue
 import com.atlassian.jira.rest.client.api.domain.IssueType
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder
 import com.atlassian.jira.rest.client.api.domain.input.TransitionInput
@@ -27,6 +28,12 @@ class JiraClient(private val restClient: JiraRestClient, private val projectCode
     private val taskIssueType: IssueType = restClient.metadataClient.issueTypes.claim().find { it.name == "Task" } ?: throw IllegalArgumentException("Task issue type field not found in JIRA '$projectCode'")
 
     fun createRequestTicket(requestId: String, signingRequest: PKCS10CertificationRequest) {
+        // Check there isn't already a ticket for this request.
+        if (getIssueById(requestId) != null) {
+            logger.warn("There is already a ticket corresponding to request Id $requestId, not creating a new one.")
+            return
+        }
+
         // Make sure request has been accepted.
         val request = StringWriter()
         JcaPEMWriter(request).use {
@@ -63,7 +70,7 @@ class JiraClient(private val restClient: JiraRestClient, private val projectCode
         signedRequests.forEach { (id, certPath) ->
             val certificate = certPath.certificates.first()
             // Jira only support ~ (contains) search for custom textfield.
-            val issue = restClient.searchClient.searchJql("'Request ID' ~ $id").claim().issues.firstOrNull()
+            val issue = getIssueById(id)
             if (issue != null) {
                 restClient.issueClient.transition(issue, TransitionInput(doneTransitionCode)).fail { logger.error("Exception when transiting JIRA status.", it) }.claim()
                 restClient.issueClient.addAttachment(issue.attachmentsUri, certificate?.encoded?.inputStream(), "${X509Utilities.CORDA_CLIENT_CA}.cer")
@@ -71,4 +78,7 @@ class JiraClient(private val restClient: JiraRestClient, private val projectCode
             }
         }
     }
+
+    private fun getIssueById(requestId: String): Issue? =
+            restClient.searchClient.searchJql("'Request ID' ~ $requestId").claim().issues.firstOrNull()
 }

@@ -194,6 +194,9 @@ fun startDoorman(hostAndPort: NetworkHostAndPort,
     val approvalThread = Runnable {
         try {
             DoormanServer.serverStatus.lastRequestCheckTime = Instant.now()
+            // Create tickets for requests which don't have one yet.
+            requestProcessor.createTickets()
+            // Process Jira approved tickets.
             requestProcessor.processApprovedRequests()
         } catch (e: Exception) {
             // Log the error and carry on.
@@ -238,6 +241,7 @@ private fun buildLocalSigner(parameters: DoormanParameters): LocalSigner? {
 private class ApproveAllCertificateRequestStorage(private val delegate: CertificationRequestStorage) : CertificationRequestStorage by delegate {
     override fun saveRequest(request: PKCS10CertificationRequest): String {
         val requestId = delegate.saveRequest(request)
+        delegate.markRequestTicketCreated(requestId)
         approveRequest(requestId, DOORMAN_SIGNATURE)
         return requestId
     }

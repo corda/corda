@@ -56,6 +56,7 @@ class DBNetworkMapStorageTest : TestBase() {
         // Create node info.
         val organisation = "Test"
         val requestId = requestStorage.saveRequest(createRequest(organisation).first)
+        requestStorage.markRequestTicketCreated(requestId)
         requestStorage.approveRequest(requestId, "TestUser")
         val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val clientCert = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisation, locality = "London", country = "GB"), keyPair.public)
@@ -126,6 +127,7 @@ class DBNetworkMapStorageTest : TestBase() {
         // Create node info.
         val organisationA = "TestA"
         val requestIdA = requestStorage.saveRequest(createRequest(organisationA).first)
+        requestStorage.markRequestTicketCreated(requestIdA)
         requestStorage.approveRequest(requestIdA, "TestUser")
         val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val clientCertA = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationA, locality = "London", country = "GB"), keyPair.public)
@@ -133,6 +135,7 @@ class DBNetworkMapStorageTest : TestBase() {
         requestStorage.putCertificatePath(requestIdA, certPathA, emptyList())
         val organisationB = "TestB"
         val requestIdB = requestStorage.saveRequest(createRequest(organisationB).first)
+        requestStorage.markRequestTicketCreated(requestIdB)
         requestStorage.approveRequest(requestIdB, "TestUser")
         val clientCertB = X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, CordaX500Name(organisation = organisationB, locality = "London", country = "GB"), Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME).public)
         val certPathB = buildCertPath(clientCertB.toX509Certificate(), intermediateCACert.toX509Certificate(), rootCACert.toX509Certificate())

@@ -58,6 +58,8 @@ class DBCertificateRequestStorageTest : TestBase() {
         assertEquals(1, storage.getRequests(RequestStatus.NEW).size)
         // Certificate should be empty.
         assertNull(storage.getRequest(requestId)!!.certData)
+        // Signal that a ticket has been created for the request.
+        storage.markRequestTicketCreated(requestId)
         // Store certificate to DB.
         storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         // Check request is not ready yet.
@@ -72,6 +74,7 @@ class DBCertificateRequestStorageTest : TestBase() {
         val (request, _) = createRequest("LegalName")
         // Add request to DB.
         val requestId = storage.saveRequest(request)
+        storage.markRequestTicketCreated(requestId)
         storage.approveRequest(requestId, "ApproverA")
 
         var thrown: Exception? = null
@@ -94,6 +97,7 @@ class DBCertificateRequestStorageTest : TestBase() {
         assertEquals(1, storage.getRequests(RequestStatus.NEW).size)
         // Certificate should be empty.
         assertNull(storage.getRequest(requestId)!!.certData)
+        storage.markRequestTicketCreated(requestId)
         // Store certificate to DB.
         storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         // Check request is not ready yet.
@@ -119,6 +123,7 @@ class DBCertificateRequestStorageTest : TestBase() {
         // Add request to DB.
         val requestId = storage.saveRequest(csr)
         // Store certificate to DB.
+        storage.markRequestTicketCreated(requestId)
         storage.approveRequest(requestId, DOORMAN_SIGNATURE)
         storage.putCertificatePath(requestId, JcaPKCS10CertificationRequest(csr).run {
             val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -159,6 +164,7 @@ class DBCertificateRequestStorageTest : TestBase() {
         assertEquals(RequestStatus.REJECTED, storage.getRequest(requestId2)!!.status)
         assertThat(storage.getRequest(requestId2)!!.remark).containsIgnoringCase("duplicate")
         // Make sure the first request is processed properly
+        storage.markRequestTicketCreated(requestId1)
         storage.approveRequest(requestId1, DOORMAN_SIGNATURE)
         assertThat(storage.getRequest(requestId1)!!.status).isEqualTo(RequestStatus.APPROVED)
     }
@@ -166,6 +172,7 @@ class DBCertificateRequestStorageTest : TestBase() {
     @Test
     fun `request with the same legal name as a previously approved request`() {
         val requestId1 = storage.saveRequest(createRequest("BankA").first)
+        storage.markRequestTicketCreated(requestId1)
         storage.approveRequest(requestId1, DOORMAN_SIGNATURE)
         val requestId2 = storage.saveRequest(createRequest("BankA").first)
         assertThat(storage.getRequest(requestId2)!!.remark).containsIgnoringCase("duplicate")
@@ -177,6 +184,7 @@ class DBCertificateRequestStorageTest : TestBase() {
         storage.rejectRequest(requestId1, DOORMAN_SIGNATURE, "Because I said so!")
         val requestId2 = storage.saveRequest(createRequest("BankA").first)
         assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(requestId2)
+        storage.markRequestTicketCreated(requestId2)
         storage.approveRequest(requestId2, DOORMAN_SIGNATURE)
         assertThat(storage.getRequest(requestId2)!!.status).isEqualTo(RequestStatus.APPROVED)
     }
@@ -188,6 +196,7 @@ class DBCertificateRequestStorageTest : TestBase() {
 
         // when
         val requestId = storage.saveRequest(createRequest("BankA").first)
+        storage.markRequestTicketCreated(requestId)
         storage.approveRequest(requestId, approver)
 
         // then
@@ -196,7 +205,12 @@ class DBCertificateRequestStorageTest : TestBase() {
             val newRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 1)
             assertEquals(RequestStatus.NEW, newRevision.status)
             assertTrue(newRevision.modifiedBy.isEmpty())
-            val approvedRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 2)
+
+            val ticketCreatedRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 2)
+            assertEquals(RequestStatus.TICKET_CREATED, ticketCreatedRevision.status)
+            assertTrue(ticketCreatedRevision.modifiedBy.isEmpty())
+
+            val approvedRevision = auditReader.find(CertificateSigningRequestEntity::class.java, requestId, 3)
             assertEquals(RequestStatus.APPROVED, approvedRevision.status)
             assertEquals(approver, approvedRevision.modifiedBy.first())
         }
