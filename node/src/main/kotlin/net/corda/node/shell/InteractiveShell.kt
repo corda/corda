@@ -101,10 +101,10 @@ object InteractiveShell {
         this.nodeLegalName = configuration.myLegalName
         this.database = database
         val dir = configuration.baseDirectory
-        val runSshDeamon = configuration.sshd != null
+        val runSshDaemon = configuration.sshd != null
 
         val config = Properties()
-        if (runSshDeamon) {
+        if (runSshDaemon) {
             val sshKeysDir = dir / "sshkey"
             sshKeysDir.toFile().mkdirs()
 
@@ -120,7 +120,7 @@ object InteractiveShell {
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
         shell = ShellLifecycle(dir).start(config)
 
-        if (runSshDeamon) {
+        if (runSshDaemon) {
             Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
         }
     }
@@ -182,7 +182,7 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, RPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), RpcPermissions.ALL), StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, makeRPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), RpcPermissions.ALL), StdoutANSIProgressRenderer))
         }
     }
 

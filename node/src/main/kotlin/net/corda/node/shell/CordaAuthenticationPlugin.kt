@@ -25,7 +25,7 @@ class CordaAuthenticationPlugin(val rpcOps:CordaRPCOps, val userService:RPCUserS
 
         if (user != null && user.password == credential) {
             val actor = Actor(Actor.Id(username), userService.id, nodeLegalName)
-            return CordaSSHAuthInfo(true, RPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), RpcPermissions(user.permissions)))
+            return CordaSSHAuthInfo(true, makeRPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), RpcPermissions(user.permissions)))
         }
 
         return AuthInfo.UNSUCCESSFUL;
