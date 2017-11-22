@@ -24,8 +24,9 @@ private class RPCContextRunner<T>(val invocationContext:InvocationContext, val r
             result.complete(block())
         } catch (e:Throwable) {
             result.completeExceptionally(e)
+        } finally {
+            CURRENT_RPC_CONTEXT.remove()
         }
-        CURRENT_RPC_CONTEXT.remove()
     }
 
     fun get(): Future<T> {
