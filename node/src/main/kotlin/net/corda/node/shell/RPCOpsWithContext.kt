@@ -12,7 +12,7 @@ import java.util.concurrent.Future
 
 fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, rpcPermissions: RpcPermissions) : CordaRPCOps {
     return Proxy.newProxyInstance(CordaRPCOps::class.java.classLoader, arrayOf(CordaRPCOps::class.java), { proxy, method, args ->
-            RPCContextRunner(invocationContext, rpcPermissions) { method.invoke(cordaRPCOps, *args) }.get().getOrThrow()
+            RPCContextRunner(invocationContext, rpcPermissions) { method.invoke(cordaRPCOps, *(args ?: arrayOf())) }.get().getOrThrow()
         }) as CordaRPCOps
 }
 
