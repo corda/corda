@@ -12,7 +12,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
@@ -53,8 +53,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     }
 
     companion object {
-        private val logger = loggerFor<CordappLoader>()
-
+        private val logger = contextLogger()
         /**
          * Default cordapp dir name
          */

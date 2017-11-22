@@ -96,14 +96,14 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     /**
-     * Set the SSHD port for this node.
+     * Enables SSH access on given port
      *
-     * @param sshdPort The SSHD port.
+     * @param sshdPort The port for SSH server to listen on
      */
-    fun sshdPort(sshdPort: Int) {
-        config = config.withValue("sshdAddress",
-                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$sshdPort"))
+    fun sshdPort(sshdPort: Int?) {
+        config = config.withValue("sshd.port", ConfigValueFactory.fromAnyRef(sshdPort))
     }
+
 
     internal fun build() {
         configureProperties()

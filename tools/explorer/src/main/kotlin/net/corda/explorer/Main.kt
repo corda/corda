@@ -11,7 +11,7 @@ import jfxtras.resources.JFXtrasFontRoboto
 import joptsimple.OptionParser
 import net.corda.client.jfx.model.Models
 import net.corda.client.jfx.model.observableValue
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
@@ -30,7 +30,7 @@ class Main : App(MainView::class) {
     private val fullscreen by observableValue(SettingsModel::fullscreenProperty)
 
     companion object {
-        val log = loggerFor<Main>()
+        internal val log = contextLogger()
     }
 
     override fun start(stage: Stage) {

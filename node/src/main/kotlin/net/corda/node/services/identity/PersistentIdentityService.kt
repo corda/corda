@@ -10,11 +10,10 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import net.corda.core.utilities.contextLogger
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import net.corda.node.utilities.X509Utilities
 import org.bouncycastle.cert.X509CertificateHolder
 import java.io.ByteArrayInputStream
 import java.security.InvalidAlgorithmParameterException
@@ -36,7 +35,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
                 trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
 
     companion object {
-        private val log = loggerFor<PersistentIdentityService>()
+        private val log = contextLogger()
         private val certFactory: CertificateFactory = CertificateFactory.getInstance("X.509")
 
         fun createPKMap(): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {

@@ -11,10 +11,7 @@ import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
+import net.corda.core.utilities.*
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
@@ -45,7 +42,7 @@ import kotlin.test.assertTrue
 
 class StandaloneCordaRPClientTest {
     private companion object {
-        val log = loggerFor<StandaloneCordaRPClientTest>()
+        private val log = contextLogger()
         val user = User("user1", "test", permissions = setOf("ALL"))
         val port = AtomicInteger(15200)
         const val attachmentSize = 2116

@@ -3,8 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.internal.castIfPossible
 import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.api.SchemaService
 import net.corda.node.utilities.DatabaseTransactionManager
@@ -29,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class HibernateConfiguration(val schemaService: SchemaService, private val databaseProperties: Properties, private val createIdentityService: () -> IdentityService) {
     companion object {
-        val logger = loggerFor<HibernateConfiguration>()
+        private val logger = contextLogger()
     }
 
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.

@@ -4,8 +4,8 @@ import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.irs.contract.InterestRateSwap
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.*
@@ -33,8 +33,9 @@ import net.corda.irs.flows.AutoOfferFlow
 @RestController
 @RequestMapping("/api/irs")
 class InterestRateSwapAPI {
-
-    private val logger = loggerFor<InterestRateSwapAPI>()
+    companion object {
+        private val logger = contextLogger()
+    }
 
     private fun generateDealLink(deal: InterestRateSwap.State) = "/api/irs/deals/" + deal.common.tradeID
 

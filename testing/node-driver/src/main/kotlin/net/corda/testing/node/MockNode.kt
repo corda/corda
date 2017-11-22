@@ -12,6 +12,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -20,8 +21,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
@@ -44,8 +44,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.setGlobalSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.slf4j.Logger
-import java.io.Closeable
+import org.apache.sshd.common.util.security.SecurityUtils
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
@@ -122,9 +121,17 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                   private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
+                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
+
+    init {
+        // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
+        // This SFTP support loads BouncyCastle, which we want to avoid.
+        // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
+        SecurityUtils.setAPrioriDisabledProvider("BC", true)
+    }
+
     var nextNodeId = 0
         private set
     private val filesystem = Jimfs.newFileSystem(unix())
@@ -214,13 +221,15 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
             args.network.busyLatch
     ) {
+        companion object {
+            private val staticLog = contextLogger()
+        }
+
         val mockNet = args.network
         val id = args.id
         private val entropyRoot = args.entropyRoot
         var counter = entropyRoot
-
-        override val log: Logger = loggerFor<MockNode>()
-
+        override val log get() = staticLog
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode) {
                     ServiceAffinityExecutor("Mock node $id thread", 1)
@@ -256,8 +265,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                     serverThread,
                     myNotaryIdentity,
                     myLegalName,
-                    database
-            ).start().getOrThrow()
+                    database).also { runOnStop += it::stop }
         }
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
@@ -266,6 +274,10 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
 
         override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
             return E2ETestKeyManagementService(identityService, keyPairs)
+        }
+
+        override fun startShell(rpcOps: CordaRPCOps) {
+            //No mock shell
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {
@@ -410,6 +422,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
         serializationEnv.unset()
+        messagingNetwork.stop()
     }
 
     // Test method to block until all scheduled activity, active flows
@@ -418,29 +431,18 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         busyLatch.await()
     }
 
-    override fun close() {
-        stopNodes()
-    }
-
     data class NotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
         constructor(name: CordaX500Name) : this(name, validating = true)
     }
 }
 
-fun network(nodesCount: Int, action: MockNetwork.(List<StartedNode<MockNetwork.MockNode>>) -> Unit) {
-    MockNetwork().use { mockNet ->
-        val nodes = (1..nodesCount).map { mockNet.createPartyNode() }
-        mockNet.action(nodes)
-    }
-}
-
 /**
- * Extend this class in order to intercept and modify messages passing through the [MessagingService] when using the [InMemoryNetwork].
+ * Extend this class in order to intercept and modify messages passing through the [MessagingService] when using the [InMemoryMessagingNetwork].
  */
 open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
 
 /**
- * Attach a [MessagingServiceSpy] to the [MockNode] allowing interception and modification of messages.
+ * Attach a [MessagingServiceSpy] to the [MockNetwork.MockNode] allowing interception and modification of messages.
  */
 fun StartedNode<MockNetwork.MockNode>.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
     internals.setMessagingServiceSpy(messagingServiceSpy)

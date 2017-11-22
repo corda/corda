@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -17,7 +17,9 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     open val kotlinConstructor = constructorForDeserialization(clazz)
     val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
 
-    private val logger = loggerFor<ObjectSerializer>()
+    companion object {
+        private val logger = contextLogger()
+    }
 
     open internal val propertySerializers: Collection<PropertySerializer> by lazy {
         propertiesForSerialization(kotlinConstructor, clazz, factory)
