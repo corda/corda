@@ -1,11 +1,14 @@
 Upgrade notes
 =============
 
-These notes provide helpful instructions to upgrade your Corda Applications (CorDapps) from previous versions, starting
-from our first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelog_v1>`
+These notes provide instructions for upgrading your CorDapps from previous versions, starting with the upgrade from our
+first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelog_v1>`.
 
-General
--------
+.. contents::
+   :depth: 3
+
+General rules
+-------------
 Always remember to update the version identifiers in your project gradle file:
 
 .. sourcecode:: shell
@@ -29,7 +32,7 @@ UNRELEASED
 ----------
 
 Testing
-^^^^^^^
+~~~~~~~
 
 * The registration mechanism for CorDapps in ``MockNetwork`` unit tests has changed.
 
@@ -38,10 +41,24 @@ Testing
   package names of the CorDapps containing the contract verification code you wish to load.
   The ``unsetCordappPackages`` method is now redundant and has been removed.
 
-:ref:`Milestone 14 <changelog_m14>`
+V1.0 to V2.0
 ------------
 
-Build 
+You only need to update the ``corda_release_version`` identifier in your project gradle file. The
+corda_gradle_plugins_version should remain at 1.0.0:
+
+.. sourcecode:: shell
+
+    ext.corda_release_version = '2.0.0'
+    ext.corda_gradle_plugins_version = '1.0.0'
+
+Public Beta (M12) to V1.0
+-------------------------
+
+:ref:`From Milestone 14 <changelog_m14>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Build
 ^^^^^
 
 * MockNetwork has moved.
@@ -151,7 +168,7 @@ Flow framework
   Note that ``SwapIdentitiesFlow`` must be imported from the *confidential-identities** package ''net.corda.confidential''
 
 Node services (ServiceHub)
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * VaultQueryService: unresolved reference to `vaultQueryService`.
 
@@ -243,8 +260,8 @@ Gotchas
   The 3rd parameter to ``CashIssueFlow`` should be the ** notary ** (not the ** node identity **)
 
 
-:ref:`Milestone 13 <changelog_m13>`
-------------
+:ref:`From Milestone 13 <changelog_m13>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Core data structures
 ^^^^^^^^^^^^^^^^^^^^
@@ -266,7 +283,7 @@ Core data structures
 * No longer need to override Contract ``contract()`` function.
 
 Node services (ServiceHub)
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ServiceHub API method changes.
 
@@ -311,8 +328,8 @@ Testing
   ``CordaX500Name``, instead of using ``getX509Name``
 
 
-:ref:`Milestone 12 <changelog_m12>` (First Public Beta)
------------------------------------
+:ref:`From Milestone 12 (First Public Beta) <changelog_m12>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Core data structures
 ^^^^^^^^^^^^^^^^^^^^
@@ -338,7 +355,7 @@ Build
     compile "net.corda:rpc:$corda_release_version" -> compile "net.corda:corda-rpc:$corda_release_version"
 
 Node services (ServiceHub)
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ServiceHub API changes.
 
