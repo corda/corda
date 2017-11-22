@@ -29,6 +29,7 @@ import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.sql.Connection
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashMap
@@ -238,7 +239,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
         //  network map registration on network map node)
         database.dataSource.connection.use {
             val session = database.entityManagerFactory.withOptions().connection(it.apply {
-                transactionIsolation = 1
+                transactionIsolation = Connection.TRANSACTION_READ_COMMITTED
             }).openSession()
             session.use {
                 val tx = session.beginTransaction()

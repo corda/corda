@@ -103,7 +103,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_cert_binary")
             val partyCertBinary: ByteArray,
 
-
             val isMain: Boolean,
 
             @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = arrayOf(CascadeType.ALL)) // ManyToMany because of distributed services.

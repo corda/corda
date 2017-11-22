@@ -1,7 +1,10 @@
 Node database
 =============
 
-Currently, nodes store their data in an H2 database. In the future, we plan to support a wide range of databases.
+Default in-memory database
+--------------------------
+
+By default nodes store their data in an H2 database.
 
 You can connect directly to a running node's database to see its stored states, transactions and attachments as
 follows:
@@ -26,3 +29,32 @@ follows:
 
 You will be presented with a web interface that shows the contents of your node's storage and vault, and provides an
 interface for you to query them using SQL.
+
+Standalone database
+-------------------
+
+To run a node against a remote database modify node JDBC connection properties in `dataSourceProperties` entry
+and Hibernate properties in `database` entry - see `:ref:`dataSourceProperties`.
+
+SQL Azure and SQL Server
+````````````````````````
+Corda supports SQL Server 2017 adn SQL Azure.
+The minimum transaction isolation level ``database.transactionIsolationLevel`` is 'readCommitted'.
+The property ``database.schema`` is optional.
+Corda ships with Microsoft JDBC Driver 6.2 for SQLServer out-of-the-box.
+
+Example node configuration for SQL Azure:
+
+.. sourcecode:: none
+
+dataSourceProperties {
+    dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
+    dataSourceProperties.dataSource.url = "jdbc:sqlserver://[DATABASE_SERVER].database.windows.net:1433;databaseName=[DATABASE];
+        encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
+    dataSourceProperties.dataSource.user = [USER]
+    dataSourceProperties.dataSource.password = [PASSWORD]
+}
+database {
+    transactionIsolationLevel = "readCommitted"
+    schema = [SCHEMA]
+}

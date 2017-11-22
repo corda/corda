@@ -60,6 +60,11 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())
 
+        if (databaseProperties.getProperty("schema") != null) {
+            // This property helps 'hibernate.hbm2ddl.auto' to work properly when many schemas have similar table names.
+            config.setProperty("hibernate.default_schema", databaseProperties.getProperty("schema"))
+        }
+
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }

@@ -72,6 +72,19 @@ path to the node's base directory.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
+:database:  This section is used to configure JDBC and Hibernate related properties:
+
+        :initDatabase: ``true`` - triggers creation of the database schema at a node startup, ``false`` - existing database schema is not altered,
+                    the value is mapped to Hibernate property 'hibernate.hbm2ddl.auto' (``true`` -> update, ``false`` -> validate)
+
+        :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
+             (the value is passed to Hibernate property 'hibernate.hbm2ddl.auto').
+
+        :transactionIsolationLevel: Database transaction isolation level ( allowed values ``none``, ``readUncommitted, ``readCommitted``,
+             ``repeatableRead``, ``serializable``), the default isolation level is ``repeatableRead``.
+
+        :serverNameTablePrefix: (optional) A prefix added to each database table.
+
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
 :p2pAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
