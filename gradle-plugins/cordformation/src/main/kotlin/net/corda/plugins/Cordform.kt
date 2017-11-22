@@ -27,7 +27,7 @@ open class Cordform : DefaultTask() {
      */
     @Suppress("MemberVisibilityCanPrivate")
     var definitionClass: String? = null
-    private val parametersClass: String = "net.corda.node.internal.networkParametersGenerator.TestNetworkParametersGenerator"
+    private val networkParametersGenClass: String = "net.corda.node.internal.networkParametersGenerator.TestNetworkParametersGenerator"
     private var directory = Paths.get("build", "nodes")
     private val nodes = mutableListOf<Node>()
 
@@ -121,7 +121,7 @@ open class Cordform : DefaultTask() {
         val classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
         val urls = classpath.files.map { it.toURI().toURL() }.toTypedArray()
         return URLClassLoader(urls, NetworkParametersGenerator::class.java.classLoader)
-                .loadClass(parametersClass)
+                .loadClass(networkParametersGenClass)
                 .asSubclass(NetworkParametersGenerator::class.java)
                 .newInstance()
     }
