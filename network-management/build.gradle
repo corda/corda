@@ -11,6 +11,7 @@ description 'Network management module encapsulating components such as Doorman,
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-jpa'
+apply plugin: 'maven-publish'
 
 repositories {
     mavenLocal()
@@ -133,4 +134,14 @@ dependencies {
     }
     // Needed by jira rest client
     compile "com.atlassian.fugue:fugue:2.6.1"
+}
+
+publishing {
+    publications {
+        doorman(MavenPublication) {
+            artifact buildDoormanJAR {
+                classifier ""
+            }
+        }
+    }
 }
