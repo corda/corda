@@ -323,7 +323,13 @@ class P2PMessagingClient(config: NodeConfiguration,
         }
     }
 
-    override fun stop() {
+    /**
+     * Initiates shutdown: if called from a thread that isn't controlled by the executor passed to the constructor
+     * then this will block until all in-flight messages have finished being handled and acknowledged. If called
+     * from a thread that's a part of the [net.corda.node.utilities.AffinityExecutor] given to the constructor,
+     * it returns immediately and shutdown is asynchronous.
+     */
+    fun stop() {
         val running = state.locked {
             // We allow stop() to be called without a run() in between, but it must have at least been started.
             check(artemis.started != null)
