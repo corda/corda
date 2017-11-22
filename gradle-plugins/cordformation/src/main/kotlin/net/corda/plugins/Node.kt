@@ -3,7 +3,15 @@ package net.corda.plugins
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
+import groovy.lang.Closure
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValueFactory
 import net.corda.cordform.CordformNode
+import org.apache.commons.io.FilenameUtils
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import java.io.File
 import java.nio.charset.StandardCharsets
@@ -14,6 +22,8 @@ import java.nio.file.Path
  * Represents a node that will be installed.
  */
 open class Node @Inject constructor(private val project: Project, private val objectFactory: ObjectFactory) : CordformNode() {
+    private data class ResolvedCordapp(val jarFile: File, val config: String?)
+
     companion object {
         @JvmStatic
         val webJarName = "corda-webserver.jar"
@@ -27,8 +37,9 @@ open class Node @Inject constructor(private val project: Project, private val ob
      * @note Your app will be installed by default and does not need to be included here.
      * @note Type is any due to gradle's use of "GStrings" - each value will have "toString" called on it
      */
-    @Deprecated("Use cordapp instead - will be removed by Corda V4.0")
-    var cordapps: MutableList<Any> = mutableListOf<Any>()
+    var cordapps: MutableList<Any>
+        get() = internalCordapps as MutableList<Any>
+        @Deprecated("Use cordapp instead - setter will be removed by Corda V4.0")
         set(value) {
             value.forEach {
                 cordapp({
@@ -139,6 +150,22 @@ open class Node @Inject constructor(private val project: Project, private val ob
     /**
      * Installs the jolokia monitoring agent JAR to the node/drivers directory
      */
+    private fun installCordapps() {
+        val cordapps = getCordappList()
+        val cordappsDir = File(nodeDir, "cordapps")
+        project.copy {
+            it.apply {
+                from(cordapps.map { it.jarFile })
+                into(cordappsDir)
+            }
+        }
+
+        installCordappConfigs(cordapps)
+    }
+
+    /**
+     * Installs the jolokia monitoring agent JAR to the node/drivers directory
+     */
     private fun installAgentJar() {
         val jolokiaVersion = project.rootProject.ext<String>("jolokia_version")
         val agentJar = project.configuration("runtime").files {
@@ -157,6 +184,13 @@ open class Node @Inject constructor(private val project: Project, private val ob
                 }
             }
         }
+    }
+
+    private fun installCordappConfigs(cordapps: Collection<ResolvedCordapp>) {
+        val cordappsDir = File(nodeDir, "cordapps")
+        cordapps.filter { it.config != null }
+                .map { Pair<String, String>("${FilenameUtils.removeExtension(it.jarFile.name)}.conf", it.config!!) }
+                .forEach { project.file(File(cordappsDir, it.first)).writeText(it.second) }
     }
 
     private fun createTempConfigFile(): File {
@@ -267,25 +301,25 @@ open class Node @Inject constructor(private val project: Project, private val ob
      *
      * @return List of this node's cordapps.
      */
-    private fun getCordappList(): Collection<File> {
+    private fun getCordappList(): Collection<ResolvedCordapp> {
         val cordappConfiguration = project.configuration("cordapp")
         // Cordapps can sometimes contain a GString instance which fails the equality test with the Java string
         @Suppress("RemoveRedundantCallsOfConversionMethods")
-        val cordapps: List<String> = cordapps.map { it.toString() } + internalCordapps.map { it.coordinates!! }
-        return cordapps.map { cordappName ->
+        return internalCordapps.map { cordapp ->
+            val cordappName = cordapp.coordinates!!.toString()
             val cordappFile = cordappConfiguration.files { cordappName == (it.group + ":" + it.name + ":" + it.version) }
 
             when {
                 cordappFile.size == 0 -> throw GradleException("Cordapp $cordappName not found in cordapps configuration.")
                 cordappFile.size > 1 -> throw GradleException("Multiple files found for $cordappName")
-                else -> cordappFile.single()
+                else -> ResolvedCordapp(cordappFile.single(), cordapp.config)
             }
         }
     }
 
     private fun addCordapp(cordapp: Cordapp) {
         // TODO: Use gradle @Input annotation to make this required in the build script
-        if(cordapp.coordinates == null) {
+        if (cordapp.coordinates == null) {
             throw GradleException("cordapp is missing coordinates field")
         }
         internalCordapps += cordapp

@@ -39,11 +39,11 @@ dependencies {
     compile project(":cordapp")
     compile project(':cordform-common')
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "commons-io:commons-io:2.6"
 
     noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     testCompile "junit:junit:4.12" // TODO: Unify with core
-    testCompile "commons-io:commons-io:2.6"
     testCompile "org.assertj:assertj-core:3.8.0"
 }
 

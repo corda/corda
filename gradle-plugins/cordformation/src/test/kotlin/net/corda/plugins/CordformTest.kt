@@ -20,6 +20,11 @@ class CordformTest {
     val testProjectDir = TemporaryFolder()
     private var buildFile: File? = null
 
+    private companion object {
+        val cordaFinanceJarName = "corda-finance-3.0-SNAPSHOT"
+        val notaryNodeName = "Notary Service"
+    }
+
     @Before
     fun setup() {
         buildFile = testProjectDir.newFile("build.gradle")
@@ -31,7 +36,10 @@ class CordformTest {
 
         val result = runner.build()
 
+        File(testProjectDir.root, "build/nodes/Notary Service/cordapps/").listFiles().forEach { println(it) }
+
         assertThat(result.task(":deployNodes")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+        assertThat(getNodeCordappJar(notaryNodeName, cordaFinanceJarName)).exists()
     }
 
     @Test
@@ -40,7 +48,13 @@ class CordformTest {
 
         val result = runner.build()
 
+        File(testProjectDir.root, "build/nodes/Notary Service/cordapps").listFiles().forEach {
+            println(it)
+        }
+
         assertThat(result.task(":deployNodes")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+        assertThat(getNodeCordappJar(notaryNodeName, cordaFinanceJarName)).exists()
+        assertThat(getNodeCordappConfig(notaryNodeName, cordaFinanceJarName)).exists()
     }
 
     private fun createBuildFile(buildFileResourceName: String) = IOUtils.copy(javaClass.getResourceAsStream(buildFileResourceName), buildFile!!.outputStream())
@@ -51,4 +65,6 @@ class CordformTest {
                 .withArguments("deployNodes", "-s")
                 .withPluginClasspath()
     }
+    private fun getNodeCordappJar(nodeName: String, cordappJarName: String) = File(testProjectDir.root, "build/nodes/$nodeName/cordapps/$cordappJarName.jar")
+    private fun getNodeCordappConfig(nodeName: String, cordappJarName: String) = File(testProjectDir.root, "build/nodes/$nodeName/cordapps/$cordappJarName.conf")
 }
