@@ -67,7 +67,7 @@ private fun deserialise(reqBytes: ByteArray): LedgerTransaction {
 // Note: This is only here for debugging purposes
 fun main(args: Array<String>) {
     Log.TRACE()
-    Class.forName("com.r3.enclaves.txverify.KryoVerifierSerializationScheme")
+    Class.forName("com.r3.enclaves.txverify.EnclaveletSerializationScheme")
     val reqBytes = File(args[0]).readBytes()
     verifyInEnclave(reqBytes)
 }
