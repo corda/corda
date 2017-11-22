@@ -326,7 +326,9 @@ object InteractiveShell {
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
-        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        database.transaction {
+            stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        }
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {
@@ -348,7 +350,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>): Any? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps): Any? {
         val parser = StringToMethodCallParser(CordaRPCOps::class.java, context.attributes["mapper"] as ObjectMapper)
 
         val cmd = input.joinToString(" ").trim { it <= ' ' }
@@ -363,7 +365,7 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val call = database.transaction { parser.parse(context.attributes["ops"] as CordaRPCOps, cmd) }
+            val call = database.transaction { parser.parse(cordaRPCOps, cmd) }
             result = call.call()
             if (result != null && result !is kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)
