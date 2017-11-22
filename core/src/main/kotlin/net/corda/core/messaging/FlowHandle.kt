@@ -27,6 +27,8 @@ interface FlowHandle<A> : AutoCloseable {
  * [FlowProgressHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
  *
  * @property progress The stream of progress tracker events.
+ * @property stepsTreeIndexFeed [DataFeed] of current step in the steps tree, see [ProgressTracker]
+ * @property stepsTreeFeed [DataFeed] of current steps tree, see [ProgressTracker]
  */
 interface FlowProgressHandle<A> : FlowHandle<A> {
     val progress: Observable<String>

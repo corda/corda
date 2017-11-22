@@ -99,6 +99,7 @@ class ProgressTracker(vararg steps: Step) {
             field = value
         }
 
+    /** The zero-bases index of the current step in a [allStepsLabels] list */
     var stepsTreeIndex: Int = -1
         private set(value) {
             field = value
@@ -226,6 +227,10 @@ class ProgressTracker(vararg steps: Step) {
      */
     val allSteps: List<Pair<Int, Step>> get() = _allStepsCache
 
+    /**
+     * A list of all steps label in this ProgressTracker and the children, with the indent level provided starting at zero.
+     * Note that UNSTARTED is never counted, and DONE is only counted at the calling level.
+     */
     val allStepsLabels: List<Pair<Int, String>> get() = _allStepsLabels()
 
     private var curChangeSubscription: Subscription? = null
@@ -245,8 +250,14 @@ class ProgressTracker(vararg steps: Step) {
      */
     val changes: Observable<Change> get() = _changes
 
+    /**
+     * An observable stream of changes to the [allStepsLabels]
+     */
     val stepsTreeChanges: Observable<List<Pair<Int,String>>> get() = _stepsTreeChanges
 
+    /**
+     * An observable stream of changes to the [stepsTreeIndex]
+     */
     val stepsTreeIndexChanges: Observable<Int> get() = _stepsTreeIndexChanges
 
     /** Returns true if the progress tracker has ended, either by reaching the [DONE] step or prematurely with an error */
