@@ -93,35 +93,12 @@ class NodeInfoWatcher(private val nodePath: Path,
     fun saveToFile(signedNodeInfo: SignedData<NodeInfo>) = Companion.saveToFile(nodePath, signedNodeInfo)
 
     /**
-     * Loads latest NodeInfo files stored in node's base directory.
-     * Scans main directory and [CordformNode.NODE_INFO_DIRECTORY].
-     * Signatures are checked before returning a value. The latest value stored for a given name is returned.
-     *
-     * @return list of latest [NodeInfo]s
-     */
-    fun getAllNodeInfos(): List<NodeInfo> {
-        val nodeInfos = loadFromDirectory()
-        // NodeInfos are currently stored in 2 places: in [CordformNode.NODE_INFO_DIRECTORY] and in baseDirectory of the node.
-        val myFiles = nodePath.list { it.filter { "nodeInfo-" in it.toString() }.toList() }
-        val myNodeInfos = myFiles.mapNotNull { processFile(it) }
-        val infosMap = mutableMapOf<CordaX500Name, NodeInfo>()
-        // Running deployNodes more than once produces new NodeInfos. We need to load the latest NodeInfos based on serial field.
-        for (info in nodeInfos + myNodeInfos) {
-            val name = info.legalIdentities.first().name
-            val prevInfo = infosMap[name]
-            if(prevInfo == null || prevInfo.serial < info.serial)
-                infosMap.put(name, info)
-        }
-        return infosMap.values.toList()
-    }
-
-    /**
      * Loads all the files contained in a given path and returns the deserialized [NodeInfo]s.
      * Signatures are checked before returning a value.
      *
      * @return a list of [NodeInfo]s
      */
-    private fun loadFromDirectory(): List<NodeInfo> {
+    fun loadFromDirectory(): List<NodeInfo> {
         if (!nodeInfoDirectory.isDirectory()) {
             return emptyList()
         }
@@ -143,7 +120,7 @@ class NodeInfoWatcher(private val nodePath: Path,
         return result
     }
 
-    private fun processFile(file: Path): NodeInfo? {
+    fun processFile(file: Path): NodeInfo? {
         return try {
             logger.info("Reading NodeInfo from file: $file")
             val signedData = file.readAll().deserialize<SignedData<NodeInfo>>()
