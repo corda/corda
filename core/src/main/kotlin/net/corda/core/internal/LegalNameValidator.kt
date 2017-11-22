@@ -6,6 +6,9 @@ import java.util.regex.Pattern
 import javax.security.auth.x500.X500Principal
 
 object LegalNameValidator {
+    @Deprecated("Use validateOrganization instead", replaceWith = ReplaceWith("validateOrganization(normalizedLegalName)"))
+    fun validateLegalName(normalizedLegalName: String) = validateOrganization(normalizedLegalName)
+
     /**
      * The validation function validates a string for use as part of a legal name. It applies the following rules:
      *
@@ -17,12 +20,12 @@ object LegalNameValidator {
      *
      * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
      */
-    fun validateNameAttribute(normalizedLegalName: String) {
-        Rule.baseNameRules.forEach { it.validate(normalizedLegalName) }
+    fun validateNameAttribute(normalizedNameAttribute: String) {
+        Rule.baseNameRules.forEach { it.validate(normalizedNameAttribute) }
     }
 
     /**
-     * The validation function validates a string for use as the organisation attribute of a name, which includes additional
+     * The validation function validates a string for use as the organization attribute of a name, which includes additional
      * constraints over basic name attribute checks. It applies the following rules:
      *
      * - No blacklisted words like "node", "server".
@@ -34,16 +37,19 @@ object LegalNameValidator {
      *
      * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
      */
-    fun validateOrganisation(normalizedLegalName: String) {
-        Rule.legalNameRules.forEach { it.validate(normalizedLegalName) }
+    fun validateOrganization(normalizedOrganization: String) {
+        Rule.legalNameRules.forEach { it.validate(normalizedOrganization) }
     }
+
+    @Deprecated("Use normalize instead", replaceWith = ReplaceWith("normalize(legalName)"))
+    fun normalizeLegalName(legalName: String): String = normalize(legalName)
 
     /**
      * The normalize function will trim the input string, replace any multiple spaces with a single space,
      * and normalize the string according to NFKC normalization form.
      */
-    fun normaliseLegalName(legalName: String): String {
-        val trimmedLegalName = legalName.trim().replace(WHITESPACE, " ")
+    fun normalize(nameAttribute: String): String {
+        val trimmedLegalName = nameAttribute.trim().replace(WHITESPACE, " ")
         return Normalizer.normalize(trimmedLegalName, Normalizer.Form.NFKC)
     }
 
@@ -70,7 +76,7 @@ object LegalNameValidator {
 
         private class UnicodeNormalizationRule : Rule<String>() {
             override fun validate(legalName: String) {
-                require(legalName == normaliseLegalName(legalName)) { "Legal name must be normalized. Please use 'normaliseLegalName' to normalize the legal name before validation." }
+                require(legalName == normalize(legalName)) { "Legal name must be normalized. Please use 'normalize' to normalize the legal name before validation." }
             }
         }
 
