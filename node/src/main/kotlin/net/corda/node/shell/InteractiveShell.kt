@@ -236,7 +236,7 @@ object InteractiveShell {
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz,args -> rpcOps.startTrackedFlowDynamic (clazz, *args) }, inputData, clazz)
+            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, clazz)
 
             val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, { latch.countDown() })
@@ -247,7 +247,6 @@ object InteractiveShell {
             } catch (e: InterruptedException) {
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
-
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }

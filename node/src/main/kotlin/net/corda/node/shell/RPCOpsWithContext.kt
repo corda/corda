@@ -6,13 +6,21 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.node.services.messaging.RpcPermissions
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
 fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, rpcPermissions: RpcPermissions) : CordaRPCOps {
     return Proxy.newProxyInstance(CordaRPCOps::class.java.classLoader, arrayOf(CordaRPCOps::class.java), { proxy, method, args ->
-            RPCContextRunner(invocationContext, rpcPermissions) { method.invoke(cordaRPCOps, *(args ?: arrayOf())) }.get().getOrThrow()
+            RPCContextRunner(invocationContext, rpcPermissions) {
+                try {
+                    method.invoke(cordaRPCOps, *(args ?: arrayOf()))
+                } catch (e: InvocationTargetException) {
+                    // Unpack exception.
+                    throw e.targetException
+                }
+            }.get().getOrThrow()
         }) as CordaRPCOps
 }
 
