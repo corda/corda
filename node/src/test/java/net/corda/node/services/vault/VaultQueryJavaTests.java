@@ -37,7 +37,6 @@ import rx.Observable;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyPair;
 import java.security.cert.CertificateException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -64,15 +63,14 @@ public class VaultQueryJavaTests {
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        ArrayList<KeyPair> keys = new ArrayList<>();
-        keys.add(getMEGA_CORP_KEY());
-        keys.add(getDUMMY_NOTARY_KEY());
         IdentityService identitySvc = new InMemoryIdentityService(
-                Arrays.asList(getMEGA_CORP_IDENTITY(), getMINI_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY()),
+                Arrays.asList(getMEGA_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY()),
                 Collections.emptySet(),
                 getDEV_TRUST_ROOT());
-        @SuppressWarnings("unchecked")
-        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(keys, () -> identitySvc, cordappPackages);
+        Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
+                Arrays.asList(getMEGA_CORP_KEY(), getDUMMY_NOTARY_KEY()),
+                () -> identitySvc,
+                cordappPackages);
         issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
