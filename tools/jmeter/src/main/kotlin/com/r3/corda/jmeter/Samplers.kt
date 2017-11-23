@@ -1,11 +1,11 @@
 package com.r3.corda.jmeter
 
+import com.r3.corda.enterprise.perftestcordapp.DOLLARS
+import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.finance.DOLLARS
-import net.corda.finance.flows.CashIssueFlow
 import org.apache.jmeter.config.Argument
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext
 
