@@ -9,6 +9,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
@@ -26,6 +27,10 @@ import java.util.concurrent.TimeUnit
 
 class NetworkMapClient(compatibilityZoneURL: URL) {
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
+
+    companion object {
+        val log = loggerFor<NetworkMapClient>()
+    }
 
     fun publish(signedNodeInfo: SignedData<NodeInfo>) {
         val publishURL = URL("$networkMapUrl/publish")
@@ -57,9 +62,14 @@ class NetworkMapClient(compatibilityZoneURL: URL) {
         }
     }
 
-    fun myPublicHostname(): String {
-        val conn = URL("$networkMapUrl/my-hostname").openHttpConnection()
-        return conn.inputStream.bufferedReader().use(BufferedReader::readLine)
+    fun myPublicHostname(): String? {
+        try {
+            val conn = URL("$networkMapUrl/my-hostname").openHttpConnection()
+            return conn.inputStream.bufferedReader().use(BufferedReader::readLine)
+        } catch (e: Exception) {
+            log.warn("Error while retrieving the node public host name", e)
+            return null
+        }
     }
 }
 
