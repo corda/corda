@@ -616,7 +616,7 @@ class InterestRateSwap : Contract {
 
             // This is perhaps not how we should determine the time point in the business day, but instead expect the schedule to detail some of these aspects
             val instant = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay).fromTime!!
-            return ScheduledActivity(flowLogicRefFactory.create(FixingFlow.FixingRoleDecider::class.java, thisStateRef), instant)
+            return ScheduledActivity(flowLogicRefFactory.create("net.corda.irs.flows.FixingFlow\$FixingRoleDecider", thisStateRef), instant)
         }
         // DOCEND 1
 

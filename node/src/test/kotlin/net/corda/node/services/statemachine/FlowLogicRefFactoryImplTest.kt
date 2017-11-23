@@ -1,17 +1,19 @@
-package net.corda.node.services.events
+package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.IllegalFlowLogicException
-import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
+import net.corda.core.flows.SchedulableFlow
 import org.junit.Test
 import java.time.Duration
+import kotlin.test.assertEquals
 
-class FlowLogicRefTest {
+class FlowLogicRefFactoryImplTest {
 
     data class ParamType1(val value: Int)
     data class ParamType2(val value: String)
 
     @Suppress("UNUSED_PARAMETER", "unused") // Things are used via reflection.
+    @SchedulableFlow
     class KotlinFlowLogic(A: ParamType1, b: ParamType2) : FlowLogic<Unit>() {
         constructor() : this(ParamType1(1), ParamType2("2"))
 
@@ -26,6 +28,7 @@ class FlowLogicRefTest {
         override fun call() = Unit
     }
 
+    @SchedulableFlow
     class KotlinNoArgFlowLogic : FlowLogic<Unit>() {
         override fun call() = Unit
     }
@@ -41,7 +44,7 @@ class FlowLogicRefTest {
     }
 
     @Test
-    fun `create kotlin`() {
+    fun `should create kotlin types`() {
         val args = mapOf(Pair("A", ParamType1(1)), Pair("b", ParamType2("Hello Jack")))
         flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, args)
     }
