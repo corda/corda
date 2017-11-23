@@ -98,7 +98,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      *
      * @return a list of [NodeInfo]s
      */
-    fun loadFromDirectory(): List<NodeInfo> {
+    private fun loadFromDirectory(): List<NodeInfo> {
         if (!nodeInfoDirectory.isDirectory()) {
             return emptyList()
         }
@@ -120,7 +120,7 @@ class NodeInfoWatcher(private val nodePath: Path,
         return result
     }
 
-    fun processFile(file: Path): NodeInfo? {
+    private fun processFile(file: Path): NodeInfo? {
         return try {
             logger.info("Reading NodeInfo from file: $file")
             val signedData = file.readAll().deserialize<SignedData<NodeInfo>>()

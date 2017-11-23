@@ -121,7 +121,7 @@ class Node(private val project: Project) : CordformNode() {
         }
         // Parsing O= part directly because importing BouncyCastle provider in Cordformation causes problems
         // with loading our custom X509EdDSAEngine.
-        val organizationName = name.trim().split(",").firstOrNull { it.startsWith("O=") } ?.substringAfter("=")
+        val organizationName = name.trim().split(",").firstOrNull { it.startsWith("O=") }?.substringAfter("=")
         val dirName = organizationName ?: name
         nodeDir = File(rootDir.toFile(), dirName)
     }

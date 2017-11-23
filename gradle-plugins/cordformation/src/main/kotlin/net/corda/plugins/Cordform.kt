@@ -27,7 +27,7 @@ open class Cordform : DefaultTask() {
      */
     @Suppress("MemberVisibilityCanPrivate")
     var definitionClass: String? = null
-    private val networkParametersGenClass: String = "net.corda.node.internal.networkParametersGenerator.TestNetworkParametersGenerator"
+    private val networkParametersGenClass: String = "net.corda.nodeapi.internal.TestNetworkParametersGenerator"
     private var directory = Paths.get("build", "nodes")
     private val nodes = mutableListOf<Node>()
 
@@ -158,14 +158,8 @@ open class Cordform : DefaultTask() {
 
     private fun generateAndInstallNetworkParameters() {
         project.logger.info("Generating and installing network parameters")
-        val notaryMap = gatherNotaries()
         val networkParamsGenerator = loadParametersGenerator()
-        networkParamsGenerator.run(notaryMap, nodes.map { it.fullPath() })
-    }
-
-    private fun gatherNotaries(): Map<String, Boolean> {
-        val notaryNodes = nodes.filter { it.notary != null }
-        return notaryNodes.associateBy ({ it.name }, { it.notary.getOrDefault("validating", false) as Boolean })
+        networkParamsGenerator.run(nodes.map { it.fullPath() })
     }
 
     private fun generateAndInstallNodeInfos() {
