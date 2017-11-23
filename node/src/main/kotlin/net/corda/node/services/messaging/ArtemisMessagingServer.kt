@@ -236,11 +236,12 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
         // Each RPC user must have its own role and its own queue. This prevents users accessing each other's queues
         // and stealing RPC responses.
-        for ((username) in userService.users) {
-            securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#"] = setOf(
-                    nodeInternalRole,
-                    restrictedRole("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username", consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true))
-        }
+        // TODO: unsecure hack
+//        for ((username) in userService.users) {
+        securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#"] = setOf(
+                nodeInternalRole,
+                restrictedRole(RPC_ROLE, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true))
+//        }
         securityRoles[VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, consume = true))
         securityRoles["${VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX}.#"] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, send = true))
     }
@@ -616,12 +617,7 @@ class NodeLoginModule : LoginModule {
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
-        val rpcUser = userService.getUser(username) ?: throw FailedLoginException("User does not exist")
-        if (password != rpcUser.password) {
-            // TODO Switch to hashed passwords
-            // TODO Retrieve client IP address to include in exception message
-            throw FailedLoginException("Password for user $username does not match")
-        }
+        userService.authenticate(username, password.toCharArray())
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses
         return username

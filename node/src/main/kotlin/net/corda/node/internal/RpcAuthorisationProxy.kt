@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import net.corda.client.rpc.PermissionException
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -162,7 +163,9 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
     private inline fun <RESULT> guard(methodName: String, args: List<Any?>, action: () -> RESULT): RESULT {
 
-        context().requireEitherPermission(permissionsAllowing.invoke(methodName, args))
+        if (!context().authorizer.isPermitted(methodName, *args.map {it.toString()}.toTypedArray())) {
+            throw PermissionException("User not entitled to requested action")
+        }
         return action()
     }
 }

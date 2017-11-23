@@ -15,9 +15,8 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.security.RPCUserServiceFactory
 import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.node.services.RPCUserService
-import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
@@ -132,7 +131,7 @@ open class Node(configuration: NodeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
-        userService = RPCUserServiceImpl(configuration.rpcUsers)
+        userService = RPCUserServiceFactory().build(configuration)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val advertisedAddress = info.addresses.single()

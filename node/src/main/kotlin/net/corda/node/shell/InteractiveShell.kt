@@ -22,16 +22,14 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.security.AdminSubject
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
-import net.corda.node.services.messaging.RpcPermissions
 import net.corda.node.utilities.ANSIProgressRenderer
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.StdoutANSIProgressRenderer
@@ -132,7 +130,8 @@ object InteractiveShell {
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
             // Give whoever has local shell access administrator access to the node.
-            val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(), RpcPermissions.ALL)
+            val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(),
+                                         AdminSubject("SHELL_USER"))
             CURRENT_RPC_CONTEXT.set(context)
             Emoji.renderIfSupported {
                 jlineProcessor.run()
@@ -182,7 +181,7 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, RPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), RpcPermissions.ALL), StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, RPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER")), StdoutANSIProgressRenderer))
         }
     }
 

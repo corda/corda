@@ -25,10 +25,10 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
+import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -354,9 +354,6 @@ class RPCServer(
         observableMap.cleanUp()
     }
 
-    // TODO remove this User once webserver doesn't need it
-    private val nodeUser = User(NODE_USER, NODE_USER, setOf())
-
     private fun ClientMessage.context(sessionId: Trace.SessionId): RpcAuthContext {
         val trace = Trace.newInstance(sessionId = sessionId)
         val externalTrace = externalTrace()
@@ -365,19 +362,12 @@ class RPCServer(
         return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor), rpcActor.second)
     }
 
-    private fun actorFrom(message: ClientMessage): Pair<Actor, RpcPermissions> {
+    private fun actorFrom(message: ClientMessage): Pair<Actor, AuthorizingSubject> {
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
         val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
-        // TODO switch userService based on targetLegalIdentity
-        val rpcUser = userService.getUser(validatedUser)
-        return if (rpcUser != null) {
-            Actor(Id(rpcUser.username), userService.id, targetLegalIdentity) to RpcPermissions(rpcUser.permissions)
-        } else if (CordaX500Name.parse(validatedUser) == nodeLegalName) {
-            // TODO remove this after Shell and WebServer will no longer need it
-            Actor(Id(nodeUser.username), userService.id, targetLegalIdentity) to RpcPermissions(nodeUser.permissions)
-        } else {
-            throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")
-        }
+        return Pair(
+            Actor(Id(validatedUser), userService.id, targetLegalIdentity),
+            userService.resolveSubject(validatedUser))
     }
 }
 

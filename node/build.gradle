@@ -176,6 +176,9 @@ dependencies {
     testCompile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    // Core of Apache Shiro framework
+    compile "org.apache.shiro:shiro-core:${shiro_version}"
 }
 
 task integrationTest(type: Test) {
