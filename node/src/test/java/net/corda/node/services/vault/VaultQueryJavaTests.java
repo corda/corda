@@ -20,6 +20,7 @@ import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.contracts.asset.CashUtilities;
 import net.corda.finance.schemas.CashSchemaV1;
+import net.corda.node.services.identity.InMemoryIdentityService;
 import net.corda.node.utilities.CordaPersistence;
 import net.corda.node.utilities.DatabaseTransaction;
 import net.corda.testing.SerializationEnvironmentRule;
@@ -50,7 +51,6 @@ import static net.corda.finance.contracts.asset.CashUtilities.*;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.*;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
-import static net.corda.testing.node.MockServices.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests {
@@ -67,15 +67,16 @@ public class VaultQueryJavaTests {
         ArrayList<KeyPair> keys = new ArrayList<>();
         keys.add(getMEGA_CORP_KEY());
         keys.add(getDUMMY_NOTARY_KEY());
-        IdentityService identitySvc = makeTestIdentityService();
+        IdentityService identitySvc = new InMemoryIdentityService(
+                Arrays.asList(getMEGA_CORP_IDENTITY(), getMINI_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY()),
+                Collections.emptySet(),
+                getDEV_TRUST_ROOT());
         @SuppressWarnings("unchecked")
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(keys, () -> identitySvc, cordappPackages);
         issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         services = databaseAndServices.getSecond();
         vaultService = services.getVaultService();
-        services.getIdentityService().verifyAndRegisterIdentity(getDUMMY_CASH_ISSUER_IDENTITY());
-        services.getIdentityService().verifyAndRegisterIdentity(getDUMMY_NOTARY_IDENTITY());
     }
 
     @After
