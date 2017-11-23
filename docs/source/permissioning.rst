@@ -12,9 +12,9 @@ In development mode (i.e. when ``devMode = true``, see ":doc:`corda-configuratio
 pre-configured keystores are used if the required keystores do not exist. This ensures that developers can get the
 nodes working as quickly as possible.
 
-However, these pre-configured keystores are not secure. For a real network, you need to create your own certificate
-authority that will creates these keystores for nodes joining the network. The instructions below explain how to do
-this.
+However, these pre-configured keystores are not secure. For a real network, you need to create a certificate authority
+that will be used in the creation of these keystores for each node joining the network. The instructions below explain
+how to do this.
 
 Creating the certificate authority
 ----------------------------------
