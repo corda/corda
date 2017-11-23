@@ -13,6 +13,7 @@ dependencies {
     compile group: 'com.jcraft', name: 'jsch.agentproxy.core', version: '0.0.9'
     compile group: 'com.jcraft', name: 'jsch.agentproxy.sshagent', version: '0.0.9'
     compile group: 'com.jcraft', name: 'jsch.agentproxy.usocket-jna', version: '0.0.9'
+    compile group: 'com.jcraft', name: 'jsch.agentproxy.pageant', version: '0.0.9'
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
@@ -60,8 +61,13 @@ task(runServer, dependsOn: 'classes', type: JavaExec) {
 task(runSsh, dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'com.r3.corda.jmeter.Ssh'
+    if ( project.hasProperty("sshUser") ){
+        args+= "-XsshUser"
+        args+= Eval.me(sshUser)
+    }
     if ( project.hasProperty("jmeterHosts") ) {
-        args Eval.me(jmeterHosts)
+        args+= "-Xssh"
+        args+= Eval.me(jmeterHosts)
     }
     standardInput = System.in
 }
@@ -84,6 +90,10 @@ run {
              "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
     if ( project.hasProperty("jmeterArgs") ) {
         args+= Eval.me(jmeterHosts)
+    }
+    if ( project.hasProperty("sshUser") ){
+        args+= "-XsshUser"
+        args+= Eval.me(sshUser)
     }
     if ( project.hasProperty("jmeterHosts") ) {
         args+= "-Xssh"

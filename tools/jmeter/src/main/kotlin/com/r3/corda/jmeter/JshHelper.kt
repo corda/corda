@@ -5,6 +5,7 @@ import com.jcraft.jsch.Identity
 import com.jcraft.jsch.IdentityRepository
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.agentproxy.AgentProxy
+import com.jcraft.jsch.agentproxy.connector.PageantConnector
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory
 import org.slf4j.LoggerFactory
@@ -16,7 +17,11 @@ private val log = LoggerFactory.getLogger(Ssh::class.java)
  * Creates a new [JSch] instance with identities loaded from the running SSH agent.
  */
 fun setupJSchWithSshAgent(): JSch {
-    val connector = SSHAgentConnector(JNAUSocketFactory())
+    val connector =
+            if (System.getenv("SSH_AUTH_SOCK") == null)
+                PageantConnector()
+            else
+                SSHAgentConnector(JNAUSocketFactory())
     val agentProxy = AgentProxy(connector)
     val identities = agentProxy.identities
     require(identities.isNotEmpty()) { "No SSH identities found, please add one to the agent" }

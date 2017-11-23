@@ -1,5 +1,6 @@
 package com.r3.corda.jmeter
 
+import com.sun.javaws.exceptions.InvalidArgumentException
 import net.corda.core.internal.div
 import org.apache.jmeter.JMeter
 import org.slf4j.LoggerFactory
@@ -54,19 +55,29 @@ class Launcher {
             }
         }
 
-        private fun maybeOpenSshTunnels(args: Array<String>): Array<String> {
+        fun maybeOpenSshTunnels(args: Array<String>): Array<String> {
             // We trim the args at the point "-Xssh" appears in the array of args.  Anything after that is a host to
-            // SSH tunnel to.
+            // SSH tunnel to. Also get and remove the "-XsshUser" argument if it appears.
             var index = 0
-            for (arg in args) {
-                if (arg == "-Xssh") {
+            var userName = System.getProperty("user.name")
+            val returnArgs = mutableListOf<String>()
+            while (index < args.size) {
+                if (args[index] == "-XsshUser") {
+                    ++index
+                    if (index == args.size || args[index].startsWith("-")) {
+                        throw InvalidArgumentException(args)
+                    }
+                    userName = args[index]
+                } else if (args[index] == "-Xssh") {
                     // start ssh
-                    Ssh.main(args.copyOfRange(index + 1, args.size), false)
-                    return if (index == 0) emptyArray() else args.copyOfRange(0, index)
+                    Ssh.createSshTunnels(args.copyOfRange(index + 1, args.size), userName, false)
+                    return returnArgs.toTypedArray()
+                } else {
+                    returnArgs.add(args[index])
                 }
                 index++
             }
-            return args
+            return returnArgs.toTypedArray()
         }
     }
 }

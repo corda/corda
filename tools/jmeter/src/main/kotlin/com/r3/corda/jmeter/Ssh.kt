@@ -2,6 +2,7 @@ package com.r3.corda.jmeter
 
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
+import com.sun.javaws.exceptions.InvalidArgumentException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.addShutdownHook
 import org.slf4j.LoggerFactory
@@ -17,9 +18,30 @@ class Ssh {
         val log = LoggerFactory.getLogger(this::class.java)
 
         @JvmStatic
-        @JvmOverloads
-        fun main(args: Array<String>, wait: Boolean = true) {
-            val userName = System.getProperty("user.name")
+        fun main(args: Array<String>) {
+            // parse the args and call createSshTunnels
+            // the only arguments recognised are "-XsshUser" for the remote user name
+            // and "-Xssh" - everything after this will be treated as a remote host name
+            var userName = System.getProperty("user.name")
+            var index = 0
+            while (index < args.size) {
+                if (args[index] == "-XsshUser") {
+                    ++index
+                    if (index == args.size || args[index].startsWith("-")) {
+                        throw InvalidArgumentException(args)
+                    }
+                    userName = args[index]
+                } else if (args[index] == "-Xssh") {
+                    createSshTunnels(args.copyOfRange(index + 1, args.size), userName, true)
+                    return
+                }
+            }
+            log.info("Nothing to be done - did you specify hosts to tunnel to with -Xssh?")
+        }
+
+
+        fun createSshTunnels(hosts: Array<String>, userName: String, wait: Boolean) {
+            log.info("User name for ssh: ${userName}")
             val jsch = setupJSchWithSshAgent()
             val sessions = mutableListOf<Session>()
 
@@ -34,7 +56,7 @@ class Ssh {
 
             // Where JMeter driver will try to connect for remote agents (should all be localhost so can ssh tunnel).
             val localHostsAndPorts = jmeterProps.getProperty("remote_hosts", "").split(',').map { it.trim() }
-            args.zip(localHostsAndPorts) { remoteHost, localHostAndPortString ->
+            hosts.zip(localHostsAndPorts) { remoteHost, localHostAndPortString ->
                 // Actual remote host and port we will tunnel to.
                 log.info("Creating tunnels for $remoteHost")
                 val localHostAndPort = NetworkHostAndPort.parse(localHostAndPortString)
