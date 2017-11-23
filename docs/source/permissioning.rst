@@ -1,58 +1,84 @@
 Network Permissioning
 =====================
 
-The keystores located in ``<workspace>/certificates/`` are required to connect to the Corda network securely.
-In development mode (when ``devMode = true``, see ":doc:`corda-configuration-file`" for more information) a pre-configured
-keystore will be used if the keystore does not exist. This is to ensure developers can get the nodes working as quickly
-as possible.
+Corda networks are *permissioned*. A node needs three keystores in its ``<workspace>/certificates/`` folder to connect
+to the network:
 
-However this is not secure for the real network and must be protected within a firewall. This documentation will explain
-the procedure of setting up a permissioned Corda network with your own certificate authority.
+* truststore.jks
+* nodekeystore.jks
+* sslkeystore.jks
 
-To create your onw private network, you will need to create a certificate authority (CA) to issue certificates for the
-nodes to join the network.
+In development mode (i.e. when ``devMode = true``, see ":doc:`corda-configuration-file`" for more information),
+pre-configured keystores are used if the required keystores do not exist. This ensures that developers can get the
+nodes working as quickly as possible.
 
-You can use any standard key tools or Corda's ``X509Utilities`` (which uses Bouncy Castle) to create the public private
-keypair and certificates.
+However, these pre-configured keystores are not secure. For a real network, you need to create your own certificate
+authority that will issue certificates to nodes joining the network. The instructions below explain how to do this.
 
-Create the certificate authority
---------------------------------
+Creating the certificate authority
+----------------------------------
 
-* Create root CAs and truststore
-1, Create a new keypair
-2, Self sign the certificate, with basic constraints extension set to ``true``, this will be used asthe root CA keys and root CA certificate.
-3, Store the root keypair and the certificate to a keystore for later use.
-4, Store the root CA's certificate with to a java keystore with alias "cordarootca" and name the keystore "truststore.jks",
-this will need to be distributed to every node.
+You can use any standard key tools or Corda's ``X509Utilities`` (which uses Bouncy Castle) to create the required
+public/private keypairs and certificates.
 
-.. warning:: The root's private key should be protected and kept safe.
+Creating the root CA and truststore
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* Create Intermediate CA
-1, Create a new keypair for intermediate CA
-2, Sign the certificate with the root CA key, with basic constraints extension set to ``true``.
-3, Store the intermediate keypair and the certificate chain (Intermediate CA certificate and Root CA certificate) to a keystore for later use.
+1. Create a new keypair
 
-.. note:: The intermediate CA is used instead of the root CA for day-to-day key signing, this is to reduce the risk of
-compromising the root private key.
+   * This will be used as the root CA's keypair
 
-Create node identity keystore and TLS keystore
-----------------------------------------------
+2. Self-sign the certificate, with the basic constraints extension set to ``true``
 
-* Create Node CA and TLS keystore
-1, On each node, create a new keypair.
-2, Sign the certificate using the intermediate CA key with basic constraints extension set to ``true``
-3, Store the keypair in a java keystore using alias "cordaclientca", and name the keystore "nodekeystore.jks".
+   * This will be used as the root CA's certificate
 
-.. note:: We call this "Node CA" because it has the authority to issue child certificates, this is used to sign identity keys and anonymous keys
+3. Store the root CA's keypair and certificate in a keystore for later use
 
-* Create Node TLS Certificate and SSL keystore
-1, On each node, create a new keypair.
-2, Sign the certificate with the Node CA key with basic constraints extension set to ``false``.
-3, Store the key and certificates in a java keystore with alias "cordaclienttls", name the keystore "sslkeystore.jks".
+4. Store the root CA's certificate in a java keystore named "truststore.jks" using the alias "cordarootca"
 
-* Finally, copy "nodekeystore.jks", "sslkeystore.jks" and "truststore.jks" created in previous steps to corda node's certificate directory.
+.. warning:: The root CA's private key should be protected and kept safe.
 
-Joining the R3 network
-----------------------
+Creating the intermediate CA
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1. Create a new keypair
 
+   * This will be used as the intermediate CA's keypair
+
+2. Sign the certificate with the root CA key, with the basic constraints extension set to ``true``
+
+   * This will be used as the intermediate CA's certificate
+
+3. Store the intermediate CA's keypair and certificate chain (i.e. the intermediate CA certificate *and* the root CA
+   certificate) in a keystore for later use
+
+.. note:: The intermediate CA is used instead of the root CA for day-to-day key signing. This is to reduce the risk of
+   the root CA's private key being compromised.
+
+Creating the node identity keystore and TLS keystore
+----------------------------------------------------
+
+Creating the node CAs and TLS keystores
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. On each node, create a new keypair
+
+2. Sign the certificate using the intermediate CA key with the basic constraints extension set to ``true``
+
+3. Store the keypair in a java keystore named "nodekeystore.jks" using the alias "cordaclientca"
+
+.. note:: Each node is considered a "node CA" because it has the authority to issue child certificates that are used to
+   sign identity keys and anonymous keys
+
+Creating the node TLS certificate and SSL keystores
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. On each node, create a new keypair
+
+2. Sign the certificate with the node CA key with the basic constraints extension set to ``false``
+
+3. Store the key and certificates in a java keystore named "sslkeystore.jks" using the alias "cordaclienttls"
+
+4. Copy the "nodekeystore.jks" and "sslkeystore.jks" keystores to the node's certificate directory
+
+5. Copy the "truststore.jks" keystore created by the root CA to the node's certificate directory
