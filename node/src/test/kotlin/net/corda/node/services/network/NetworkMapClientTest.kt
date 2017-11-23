@@ -3,11 +3,9 @@ package net.corda.node.services.network
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.network.TestNodeInfoFactory.createNodeInfo
 import net.corda.node.utilities.CertificateType
@@ -15,7 +13,6 @@ import net.corda.node.utilities.X509Utilities
 import net.corda.testing.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -24,17 +21,11 @@ import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.net.InetSocketAddress
 import java.net.URL
-import java.security.cert.CertPath
-import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
@@ -53,15 +44,14 @@ class NetworkMapClientTest {
     private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey.public)
 
-    @Before
-    fun setUp() {
+    fun setUpServer(component: Any) {
         server = Server(InetSocketAddress("localhost", 0)).apply {
             handler = HandlerCollection().apply {
                 addHandler(ServletContextHandler().apply {
                     contextPath = "/"
                     val resourceConfig = ResourceConfig().apply {
                         // Add your API provider classes (annotated for JAX-RS) here
-                        register(MockNetworkMapServer())
+                        register(component)
                     }
                     val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
                     addServlet(jerseyServlet, "/*")
@@ -69,10 +59,6 @@ class NetworkMapClientTest {
             }
         }
         server.start()
-
-        while (!server.isStarted) {
-            Thread.sleep(100)
-        }
 
         val hostAndPort = server.connectors.mapNotNull { it as? ServerConnector }.first()
         networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.localPort}"))
@@ -85,6 +71,7 @@ class NetworkMapClientTest {
 
     @Test
     fun `registered node is added to the network map`() {
+        setUpServer(MockNetworkMapServer())
         // Create node info.
         val signedNodeInfo = createNodeInfo("Test1")
         val nodeInfo = signedNodeInfo.verified()
@@ -108,7 +95,14 @@ class NetworkMapClientTest {
 
     @Test
     fun `get hostname string from http response correctly`() {
-       assertEquals("test.host.name", networkMapClient.myPublicHostname())
+        setUpServer(MockNetworkMapServer())
+        assertEquals("test.host.name", networkMapClient.myPublicHostname())
+    }
+
+    @Test
+    fun `get hostname string return null if doorman returns http 500`() {
+        setUpServer(Mock500NetworkMapServer())
+        assertEquals(null, networkMapClient.myPublicHostname())
     }
 }
 
@@ -149,5 +143,17 @@ internal class MockNetworkMapServer {
     @Path("my-hostname")
     fun getHostName(): Response {
         return Response.ok("test.host.name").build()
+    }
+}
+
+/**
+ * A network map server which returns 500 on the path /my-hostname
+ */
+@Path("network-map")
+internal class Mock500NetworkMapServer {
+    @GET
+    @Path("my-hostname")
+    fun getHostName(): Response {
+        return Response.serverError().build()
     }
 }
