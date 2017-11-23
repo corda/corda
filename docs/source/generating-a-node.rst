@@ -1,5 +1,7 @@
-Deploying a node
-================
+Generating a node
+=================
+
+.. contents::
 
 Node structure
 --------------
@@ -129,8 +131,8 @@ of the project:
 * Windows: ``gradlew.bat deployNodes``
 
 This will create the nodes in the ``build/nodes`` folder. There will be a node folder generated for each node defined
-in the ``deployNodes`` task, plus a ``runnodes`` shell script (or batch file on Windows) to run all the nodes at once.
-If you make any changes to your CorDapp source or ``deployNodes`` task, you will need to re-run the task to see the
-changes take effect.
+in the ``deployNodes`` task, plus a ``runnodes`` shell script (or batch file on Windows) to run all the nodes at once
+for testing and development purposes. If you make any changes to your CorDapp source or ``deployNodes`` task, you will
+need to re-run the task to see the changes take effect.
 
 You can now run the nodes by following the instructions in :doc:`Running a node <running-a-node>`.
