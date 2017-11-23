@@ -8,55 +8,55 @@ class LegalNameValidatorTest {
     @Test
     fun `no double spaces`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("Test Legal  Name")
+            LegalNameValidator.validateOrganization("Test Legal  Name")
         }
-        LegalNameValidator.validateLegalName(LegalNameValidator.normaliseLegalName("Test Legal  Name"))
+        LegalNameValidator.validateOrganization(LegalNameValidator.normalize("Test Legal  Name"))
     }
 
     @Test
     fun `no trailing white space`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("Test ")
+            LegalNameValidator.validateOrganization("Test ")
         }
     }
 
     @Test
     fun `no prefixed white space`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName(" Test")
+            LegalNameValidator.validateOrganization(" Test")
         }
     }
 
     @Test
     fun `blacklisted words`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("Test Server")
+            LegalNameValidator.validateOrganization("Test Server")
         }
     }
 
     @Test
     fun `blacklisted characters`() {
-        LegalNameValidator.validateLegalName("Test")
+        LegalNameValidator.validateOrganization("Test")
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("\$Test")
+            LegalNameValidator.validateOrganization("\$Test")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("\"Test")
+            LegalNameValidator.validateOrganization("\"Test")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("\'Test")
+            LegalNameValidator.validateOrganization("\'Test")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("=Test")
+            LegalNameValidator.validateOrganization("=Test")
         }
     }
 
     @Test
     fun `unicode range`() {
-        LegalNameValidator.validateLegalName("Test A")
+        LegalNameValidator.validateOrganization("Test A")
         assertFailsWith(IllegalArgumentException::class) {
             // Greek letter A.
-            LegalNameValidator.validateLegalName("Test Α")
+            LegalNameValidator.validateOrganization("Test Α")
         }
     }
 
@@ -66,37 +66,37 @@ class LegalNameValidatorTest {
         while (longLegalName.length < 255) {
             longLegalName.append("A")
         }
-        LegalNameValidator.validateLegalName(longLegalName.toString())
+        LegalNameValidator.validateOrganization(longLegalName.toString())
 
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName(longLegalName.append("A").toString())
+            LegalNameValidator.validateOrganization(longLegalName.append("A").toString())
         }
     }
 
     @Test
     fun `legal name should be capitalized`() {
-        LegalNameValidator.validateLegalName("Good legal name")
+        LegalNameValidator.validateOrganization("Good legal name")
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("bad name")
+            LegalNameValidator.validateOrganization("bad name")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("bad Name")
+            LegalNameValidator.validateOrganization("bad Name")
         }
     }
 
     @Test
     fun `correctly handle whitespaces`() {
-        assertEquals("Legal Name With Tab", LegalNameValidator.normaliseLegalName("Legal Name With\tTab"))
-        assertEquals("Legal Name With Unicode Whitespaces", LegalNameValidator.normaliseLegalName("Legal Name\u2004With\u0009Unicode\u0020Whitespaces"))
-        assertEquals("Legal Name With Line Breaks", LegalNameValidator.normaliseLegalName("Legal Name With\n\rLine\nBreaks"))
+        assertEquals("Legal Name With Tab", LegalNameValidator.normalize("Legal Name With\tTab"))
+        assertEquals("Legal Name With Unicode Whitespaces", LegalNameValidator.normalize("Legal Name\u2004With\u0009Unicode\u0020Whitespaces"))
+        assertEquals("Legal Name With Line Breaks", LegalNameValidator.normalize("Legal Name With\n\rLine\nBreaks"))
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("Legal Name With\tTab")
+            LegalNameValidator.validateOrganization("Legal Name With\tTab")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("Legal Name\u2004With\u0009Unicode\u0020Whitespaces")
+            LegalNameValidator.validateOrganization("Legal Name\u2004With\u0009Unicode\u0020Whitespaces")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateLegalName("Legal Name With\n\rLine\nBreaks")
+            LegalNameValidator.validateOrganization("Legal Name With\n\rLine\nBreaks")
         }
     }
 }

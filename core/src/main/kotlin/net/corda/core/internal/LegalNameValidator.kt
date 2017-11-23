@@ -6,8 +6,27 @@ import java.util.regex.Pattern
 import javax.security.auth.x500.X500Principal
 
 object LegalNameValidator {
+    @Deprecated("Use validateOrganization instead", replaceWith = ReplaceWith("validateOrganization(normalizedLegalName)"))
+    fun validateLegalName(normalizedLegalName: String) = validateOrganization(normalizedLegalName)
+
     /**
-     * The validation function will validate the input string using the following rules:
+     * The validation function validates a string for use as part of a legal name. It applies the following rules:
+     *
+     * - No blacklisted words like "node", "server".
+     * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce
+     *   names over the phone, and character confusability attacks.
+     * - No commas or equals signs.
+     * - No dollars or quote marks, we might need to relax the quote mark constraint in future to handle Irish company names.
+     *
+     * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
+     */
+    fun validateNameAttribute(normalizedNameAttribute: String) {
+        Rule.baseNameRules.forEach { it.validate(normalizedNameAttribute) }
+    }
+
+    /**
+     * The validation function validates a string for use as the organization attribute of a name, which includes additional
+     * constraints over basic name attribute checks. It applies the following rules:
      *
      * - No blacklisted words like "node", "server".
      * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce
@@ -18,16 +37,19 @@ object LegalNameValidator {
      *
      * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
      */
-    fun validateLegalName(normalizedLegalName: String) {
-        Rule.legalNameRules.forEach { it.validate(normalizedLegalName) }
+    fun validateOrganization(normalizedOrganization: String) {
+        Rule.legalNameRules.forEach { it.validate(normalizedOrganization) }
     }
+
+    @Deprecated("Use normalize instead", replaceWith = ReplaceWith("normalize(legalName)"))
+    fun normalizeLegalName(legalName: String): String = normalize(legalName)
 
     /**
      * The normalize function will trim the input string, replace any multiple spaces with a single space,
      * and normalize the string according to NFKC normalization form.
      */
-    fun normaliseLegalName(legalName: String): String {
-        val trimmedLegalName = legalName.trim().replace(WHITESPACE, " ")
+    fun normalize(nameAttribute: String): String {
+        val trimmedLegalName = nameAttribute.trim().replace(WHITESPACE, " ")
         return Normalizer.normalize(trimmedLegalName, Normalizer.Form.NFKC)
     }
 
@@ -35,15 +57,17 @@ object LegalNameValidator {
 
     sealed class Rule<in T> {
         companion object {
-            val legalNameRules: List<Rule<String>> = listOf(
+            val baseNameRules: List<Rule<String>> = listOf(
                     UnicodeNormalizationRule(),
                     CharacterRule(',', '=', '$', '"', '\'', '\\'),
                     WordRule("node", "server"),
                     LengthRule(maxLength = 255),
                     // TODO: Implement confusable character detection if we add more scripts.
                     UnicodeRangeRule(LATIN, COMMON, INHERITED),
+                    X500NameRule()
+            )
+            val legalNameRules: List<Rule<String>> = baseNameRules + listOf(
                     CapitalLetterRule(),
-                    X500NameRule(),
                     MustHaveAtLeastTwoLettersRule()
             )
         }
@@ -52,7 +76,7 @@ object LegalNameValidator {
 
         private class UnicodeNormalizationRule : Rule<String>() {
             override fun validate(legalName: String) {
-                require(legalName == normaliseLegalName(legalName)) { "Legal name must be normalized. Please use 'normaliseLegalName' to normalize the legal name before validation." }
+                require(legalName == normalize(legalName)) { "Legal name must be normalized. Please use 'normalize' to normalize the legal name before validation." }
             }
         }
 

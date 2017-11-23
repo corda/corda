@@ -49,8 +49,17 @@ the minimum supported set for X.509 certificates (specified in RFC 3280), plus t
 * common name (CN) - used only for service identities
 
 The organisation, locality and country attributes are required, while state, organisational-unit and common name are
-optional. Attributes cannot be be present more than once in the name. The "country" code is strictly restricted to valid
-ISO 3166-1 two letter codes.
+optional. Attributes cannot be be present more than once in the name.
+
+All of these attributes have the following set of constraints applied for security reasons:
+
+ - No blacklisted words (currently "node" and "server").
+ - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and character confusability attacks.
+ - No commas or equals signs.
+ - No dollars or quote marks.
+
+Additionally the "organisation" attribute must consist of at least three letters and starting with a capital letter,
+and "country code" is strictly restricted to valid ISO 3166-1 two letter codes.
 
 Certificates
 ------------
