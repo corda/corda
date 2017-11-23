@@ -2,6 +2,9 @@ package net.corda.cordform;
 
 import static java.util.Collections.emptyList;
 import com.typesafe.config.*;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +57,7 @@ public class CordformNode implements NodeDefinition {
      */
     public void name(String name) {
         this.name = name;
-        config = config.withValue("myLegalName", ConfigValueFactory.fromAnyRef(name));
+        setValue("myLegalName", name);
     }
 
     /**
@@ -62,6 +65,7 @@ public class CordformNode implements NodeDefinition {
      *
      * @return This node's P2P address.
      */
+    @Nonnull
     public String getP2pAddress() {
         return config.getString("p2pAddress");
     }
@@ -71,8 +75,8 @@ public class CordformNode implements NodeDefinition {
      *
      * @param p2pPort The Artemis messaging queue port.
      */
-    public void p2pPort(Integer p2pPort) {
-        config = config.withValue("p2pAddress", ConfigValueFactory.fromAnyRef(DEFAULT_HOST + ':' + p2pPort));
+    public void p2pPort(int p2pPort) {
+        p2pAddress(DEFAULT_HOST + ':' + p2pPort);
     }
 
     /**
@@ -81,7 +85,15 @@ public class CordformNode implements NodeDefinition {
      * @param p2pAddress The Artemis messaging queue host and port.
      */
     public void p2pAddress(String p2pAddress) {
-        config = config.withValue("p2pAddress", ConfigValueFactory.fromAnyRef(p2pAddress));
+        setValue("p2pAddress", p2pAddress);
+    }
+
+    /**
+     * Returns the RPC address for this node, or null if one hasn't been specified.
+     */
+    @Nullable
+    public String getRpcAddress() {
+        return getOptionalString("rpcAddress");
     }
 
     /**
@@ -89,8 +101,8 @@ public class CordformNode implements NodeDefinition {
      *
      * @param rpcPort The Artemis RPC queue port.
      */
-    public void rpcPort(Integer rpcPort) {
-        config = config.withValue("rpcAddress", ConfigValueFactory.fromAnyRef(DEFAULT_HOST + ':' + rpcPort));
+    public void rpcPort(int rpcPort) {
+        rpcAddress(DEFAULT_HOST + ':' + rpcPort);
     }
 
     /**
@@ -99,7 +111,31 @@ public class CordformNode implements NodeDefinition {
      * @param rpcAddress The Artemis RPC queue host and port.
      */
     public void rpcAddress(String rpcAddress) {
-        config = config.withValue("rpcAddress", ConfigValueFactory.fromAnyRef(rpcAddress));
+        setValue("rpcAddress", rpcAddress);
+    }
+
+    /**
+     * Returns the address of the web server that will connect to the node, or null if one hasn't been specified.
+     */
+    @Nullable
+    public String getWebAddress() {
+        return getOptionalString("webAddress");
+    }
+
+    /**
+     * Configure a webserver to connect to the node via RPC. This port will specify the port it will listen on. The node
+     * must have an RPC address configured.
+     */
+    public void webPort(int webPort) {
+        webAddress(DEFAULT_HOST + ':' + webPort);
+    }
+
+    /**
+     * Configure a webserver to connect to the node via RPC. This address will specify the port it will listen on. The node
+     * must have an RPC address configured.
+     */
+    public void webAddress(String webAddress) {
+        setValue("webAddress", webAddress);
     }
 
     /**
@@ -108,6 +144,14 @@ public class CordformNode implements NodeDefinition {
      * @param configFile The file path.
      */
     public void configFile(String configFile) {
-        config = config.withValue("configFile", ConfigValueFactory.fromAnyRef(configFile));
+        setValue("configFile", configFile);
+    }
+
+    private String getOptionalString(String path) {
+        return config.hasPath(path) ? config.getString(path) : null;
+    }
+
+    private void setValue(String path, Object value) {
+        config = config.withValue(path, ConfigValueFactory.fromAnyRef(value));
     }
 }

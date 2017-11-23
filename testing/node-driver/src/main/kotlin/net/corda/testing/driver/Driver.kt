@@ -161,12 +161,6 @@ interface DriverDSLExposedInterface : CordformContext {
      */
     fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> = startNode(defaultParameters = parameters)
 
-    fun startNodes(
-            nodes: List<CordformNode>,
-            startInSameProcess: Boolean? = null,
-            maximumHeapSize: String = "200m"
-    ): List<CordaFuture<NodeHandle>>
-
     /** Call [startWebserver] with a default maximumHeapSize. */
     fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, "200m")
 
@@ -672,22 +666,21 @@ class DriverDSL(
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
     }
 
-    override fun startNodes(nodes: List<CordformNode>, startInSameProcess: Boolean?, maximumHeapSize: String): List<CordaFuture<NodeHandle>> {
-        return nodes.map { node ->
-            portAllocation.nextHostAndPort() // rpcAddress
-            val webAddress = portAllocation.nextHostAndPort()
-            val name = CordaX500Name.parse(node.name)
-            val rpcUsers = node.rpcUsers
-            val notary = if (node.notary != null) mapOf("notary" to node.notary) else emptyMap()
-            val config = ConfigHelper.loadConfig(
-                    baseDirectory = baseDirectory(name),
-                    allowMissingConfig = true,
-                    configOverrides = node.config + notary + mapOf(
-                            "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
-                    )
-            )
-            startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
-        }
+    internal fun startCordformNode(cordform: CordformNode): CordaFuture<NodeHandle> {
+        val name = CordaX500Name.parse(cordform.name)
+        // TODO We shouldn't have to allocate an RPC or web address if they're not specified. We're having to do this because of startNodeInternal
+        val rpcAddress = if (cordform.rpcAddress == null) mapOf("rpcAddress" to portAllocation.nextHostAndPort().toString()) else emptyMap()
+        val webAddress = cordform.webAddress?.let { NetworkHostAndPort.parse(it) } ?: portAllocation.nextHostAndPort()
+        val notary = if (cordform.notary != null) mapOf("notary" to cordform.notary) else emptyMap()
+        val rpcUsers = cordform.rpcUsers
+        val config = ConfigHelper.loadConfig(
+                baseDirectory = baseDirectory(name),
+                allowMissingConfig = true,
+                configOverrides = cordform.config + rpcAddress + notary + mapOf(
+                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
+                )
+        )
+        return startNodeInternal(config, webAddress, null, "200m")
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {

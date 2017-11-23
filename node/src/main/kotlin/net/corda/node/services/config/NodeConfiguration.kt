@@ -29,6 +29,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
+    // TODO Remove as this is only used by the driver
     val useHTTPS: Boolean
     val p2pAddress: NetworkHostAndPort
     val rpcAddress: NetworkHostAndPort?
