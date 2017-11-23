@@ -56,7 +56,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class VaultQueryJavaTests {
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
-    private MockServices services;
+    private VaultFiller vaultFiller;
     private MockServices issuerServices;
     private VaultService vaultService;
     private CordaPersistence database;
@@ -72,7 +72,8 @@ public class VaultQueryJavaTests {
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(keys, () -> identitySvc, cordappPackages);
         issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
-        services = databaseAndServices.getSecond();
+        MockServices services = databaseAndServices.getSecond();
+        vaultFiller = new VaultFiller(services);
         vaultService = services.getVaultService();
         services.getIdentityService().verifyAndRegisterIdentity(getDUMMY_CASH_ISSUER_IDENTITY());
         services.getIdentityService().verifyAndRegisterIdentity(getDUMMY_NOTARY_IDENTITY());
@@ -94,7 +95,7 @@ public class VaultQueryJavaTests {
     @Test
     public void unconsumedLinearStates() throws VaultQueryException {
         database.transaction(tx -> {
-            VaultFiller.fillWithSomeTestLinearStates(services, 3);
+            vaultFiller.fillWithSomeTestLinearStates(3);
             return tx;
         });
         database.transaction(tx -> {
@@ -112,8 +113,8 @@ public class VaultQueryJavaTests {
     public void unconsumedStatesForStateRefsSortedByTxnId() {
         Vault<LinearState> issuedStates =
                 database.transaction(tx -> {
-                    VaultFiller.fillWithSomeTestLinearStates(services, 8);
-                    return VaultFiller.fillWithSomeTestLinearStates(services, 2);
+                    vaultFiller.fillWithSomeTestLinearStates(8);
+                    return vaultFiller.fillWithSomeTestLinearStates(2);
                 });
         database.transaction(tx -> {
             Stream<StateRef> stateRefsStream = StreamSupport.stream(issuedStates.getStates().spliterator(), false).map(StateAndRef::getRef);
@@ -138,7 +139,7 @@ public class VaultQueryJavaTests {
     public void consumedCashStates() {
         Amount<Currency> amount = new Amount<>(100, Currency.getInstance("USD"));
         database.transaction(tx -> {
-            VaultFiller.fillWithSomeTestCash(services,
+            vaultFiller.fillWithSomeTestCash(
                     new Amount<Currency>(100, Currency.getInstance("USD")),
                     issuerServices,
                     TestConstants.getDUMMY_NOTARY(),
@@ -150,7 +151,7 @@ public class VaultQueryJavaTests {
             return tx;
         });
         database.transaction(tx -> {
-            VaultFiller.consumeCash(services, amount, getDUMMY_NOTARY());
+            vaultFiller.consumeCash(amount, getDUMMY_NOTARY());
             return tx;
         });
         database.transaction(tx -> {
@@ -171,17 +172,16 @@ public class VaultQueryJavaTests {
         @SuppressWarnings("unchecked")
         Triple<StateAndRef<LinearState>, UniqueIdentifier, Vault<DealState>> ids =
                 database.transaction((DatabaseTransaction tx) -> {
-                    Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
+                    Vault<LinearState> states = vaultFiller.fillWithSomeTestLinearStates(10, null);
                     StateAndRef<LinearState> linearState = states.getStates().iterator().next();
                     UniqueIdentifier uid = linearState.component1().getData().getLinearId();
-
-                    Vault<DealState> dealStates = VaultFiller.fillWithSomeTestDeals(services, dealIds);
+                    Vault<DealState> dealStates = vaultFiller.fillWithSomeTestDeals(dealIds);
                     return new Triple(linearState, uid, dealStates);
                 });
         database.transaction(tx -> {
             // consume states
-            VaultFiller.consumeDeals(services, (List<? extends StateAndRef<? extends DealState>>) ids.getThird().getStates(), getDUMMY_NOTARY());
-            VaultFiller.consumeLinearStates(services, Collections.singletonList(ids.getFirst()), getDUMMY_NOTARY());
+            vaultFiller.consumeDeals((List<? extends StateAndRef<? extends DealState>>) ids.getThird().getStates(), getDUMMY_NOTARY());
+            vaultFiller.consumeLinearStates(Collections.singletonList(ids.getFirst()), getDUMMY_NOTARY());
             return tx;
         });
         database.transaction(tx -> {
@@ -220,11 +220,10 @@ public class VaultQueryJavaTests {
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
             Amount<Currency> dollars10 = new Amount<>(10, Currency.getInstance("USD"));
             Amount<Currency> dollars1 = new Amount<>(1, Currency.getInstance("USD"));
-
-            VaultFiller.fillWithSomeTestCash(services, pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars10, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars1, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(dollars10, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(dollars1, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
             return tx;
         });
         database.transaction(tx -> {
@@ -261,7 +260,7 @@ public class VaultQueryJavaTests {
     @Test
     public void trackCashStates() {
         database.transaction(tx -> {
-            VaultFiller.fillWithSomeTestCash(services,
+            vaultFiller.fillWithSomeTestCash(
                     new Amount<>(100, Currency.getInstance("USD")),
                     issuerServices,
                     TestConstants.getDUMMY_NOTARY(),
@@ -295,10 +294,9 @@ public class VaultQueryJavaTests {
         List<String> dealIds = Arrays.asList("123", "456", "789");
         UniqueIdentifier uid =
                 database.transaction(tx -> {
-                    Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
+                    Vault<LinearState> states = vaultFiller.fillWithSomeTestLinearStates(10, null);
                     UniqueIdentifier _uid = states.getStates().iterator().next().component1().getData().getLinearId();
-
-                    VaultFiller.fillWithSomeTestDeals(services, dealIds);
+                    vaultFiller.fillWithSomeTestDeals(dealIds);
                     return _uid;
                 });
         database.transaction(tx -> {
@@ -342,13 +340,11 @@ public class VaultQueryJavaTests {
             Amount<Currency> dollars300 = new Amount<>(300, Currency.getInstance("USD"));
             Amount<Currency> pounds = new Amount<>(400, Currency.getInstance("GBP"));
             Amount<Currency> swissfrancs = new Amount<>(500, Currency.getInstance("CHF"));
-
-            VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, swissfrancs, issuerServices, TestConstants.getDUMMY_NOTARY(), 5, 5, new Random(0L), null, getDUMMY_CASH_ISSUER());
-
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(dollars300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(swissfrancs, issuerServices, TestConstants.getDUMMY_NOTARY(), 5, 5, new Random(0L), null, getDUMMY_CASH_ISSUER());
             return tx;
         });
         database.transaction(tx -> {
@@ -390,13 +386,11 @@ public class VaultQueryJavaTests {
             Amount<Currency> dollars300 = new Amount<>(300, Currency.getInstance("USD"));
             Amount<Currency> pounds = new Amount<>(400, Currency.getInstance("GBP"));
             Amount<Currency> swissfrancs = new Amount<>(500, Currency.getInstance("CHF"));
-
-            VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, swissfrancs, issuerServices, TestConstants.getDUMMY_NOTARY(), 5, 5, new Random(0L), null, getDUMMY_CASH_ISSUER());
-
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(dollars300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(pounds, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(swissfrancs, issuerServices, TestConstants.getDUMMY_NOTARY(), 5, 5, new Random(0L), null, getDUMMY_CASH_ISSUER());
             return tx;
         });
         database.transaction(tx -> {
@@ -453,12 +447,10 @@ public class VaultQueryJavaTests {
             Amount<Currency> dollars200 = new Amount<>(200, Currency.getInstance("USD"));
             Amount<Currency> pounds300 = new Amount<>(300, Currency.getInstance("GBP"));
             Amount<Currency> pounds400 = new Amount<>(400, Currency.getInstance("GBP"));
-
-            VaultFiller.fillWithSomeTestCash(services, dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), null, getBOC().ref(new OpaqueBytes("1".getBytes())));
-            VaultFiller.fillWithSomeTestCash(services, pounds300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), null, getDUMMY_CASH_ISSUER());
-            VaultFiller.fillWithSomeTestCash(services, pounds400, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), null, getBOC().ref(new OpaqueBytes("1".getBytes())));
-
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, TestConstants.getDUMMY_NOTARY(), 1, 1, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(dollars200, issuerServices, TestConstants.getDUMMY_NOTARY(), 2, 2, new Random(0L), null, getBOC().ref(new OpaqueBytes("1".getBytes())));
+            vaultFiller.fillWithSomeTestCash(pounds300, issuerServices, TestConstants.getDUMMY_NOTARY(), 3, 3, new Random(0L), null, getDUMMY_CASH_ISSUER());
+            vaultFiller.fillWithSomeTestCash(pounds400, issuerServices, TestConstants.getDUMMY_NOTARY(), 4, 4, new Random(0L), null, getBOC().ref(new OpaqueBytes("1".getBytes())));
             return tx;
         });
         database.transaction(tx -> {

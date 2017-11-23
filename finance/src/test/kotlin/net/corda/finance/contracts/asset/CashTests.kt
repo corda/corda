@@ -19,7 +19,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.After
@@ -81,14 +81,15 @@ class CashTests {
         }
 
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
-                database.transaction {
-            ourServices.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
+        database.transaction {
+            val vaultFiller = VaultFiller(ourServices)
+            vaultFiller.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
                     owner = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
-            ourServices.fillWithSomeTestCash(howMuch = 400.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
+            vaultFiller.fillWithSomeTestCash(howMuch = 400.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
                     owner = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
-            ourServices.fillWithSomeTestCash(howMuch = 80.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
+            vaultFiller.fillWithSomeTestCash(howMuch = 80.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
                     owner = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
-            ourServices.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
+            vaultFiller.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
                     owner = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
         }
         database.transaction {

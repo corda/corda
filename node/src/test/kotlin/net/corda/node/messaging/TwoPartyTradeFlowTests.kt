@@ -38,7 +38,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
-import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -106,7 +106,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
+                VaultFiller(bobNode.services).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
                         issuedBy = cashIssuer)
             }
 
@@ -156,7 +156,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             val cashStates = bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, notary, 3, 3,
+                VaultFiller(bobNode.services).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, notary, 3, 3,
                         issuedBy = issuer)
             }
 
@@ -216,7 +216,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val issuer = bank.ref(1, 2, 3)
 
             bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
+                VaultFiller(bobNode.services).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
                         issuedBy = issuer)
             }
             val alicesFakePaper = aliceNode.database.transaction {
