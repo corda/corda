@@ -26,12 +26,21 @@ class RPCPermissionsTests : AbstractRPCTest() {
      * RPC operation.
      */
     interface TestOps : RPCOps {
-        fun validatePermission(str: String)
+        fun validatePermission(method : String, target : String? = null)
     }
 
     class TestOpsImpl : TestOps {
         override val protocolVersion = 1
-        override fun validatePermission(str: String) { rpcContext().requirePermission(str) }
+        override fun validatePermission(method : String, target : String?) {
+            val authorized = if (target == null) {
+                rpcContext().authorizer.isPermitted(method)
+            } else {
+                rpcContext().authorizer.isPermitted(method, target)
+            }
+            if (!authorized) {
+                throw PermissionException("RPC user not authorized")
+            }
+        }
     }
 
     /**
@@ -48,7 +57,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
             val proxy = testProxyFor(emptyUser)
             assertFailsWith(PermissionException::class,
                     "User ${emptyUser.username} should not be allowed to use $DUMMY_FLOW.",
-                    { proxy.validatePermission(DUMMY_FLOW) })
+                    { proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow") })
         }
     }
 
@@ -57,7 +66,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         rpcDriver {
             val adminUser = userOf("admin", setOf(ALL_ALLOWED))
             val proxy = testProxyFor(adminUser)
-            proxy.validatePermission(DUMMY_FLOW)
+            proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
         }
     }
 
@@ -66,7 +76,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
-            proxy.validatePermission(DUMMY_FLOW)
+            proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
         }
     }
 
@@ -77,34 +88,40 @@ class RPCPermissionsTests : AbstractRPCTest() {
             val proxy = testProxyFor(joeUser)
             assertFailsWith(PermissionException::class,
                     "User ${joeUser.username} should not be allowed to use $OTHER_FLOW",
-                    { proxy.validatePermission(OTHER_FLOW) })
+                    {
+                        proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
+                        proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
+                    })
         }
     }
 
     @Test
-    fun `check ALL is implemented the correct way round`() {
+    fun `joe user is not allowed to call other RPC methods`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
             assertFailsWith(PermissionException::class,
-                    "Permission $ALL_ALLOWED should not do anything for User ${joeUser.username}",
-                    { proxy.validatePermission(ALL_ALLOWED) })
+                    "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
+                    {
+                      proxy.validatePermission("nodeInfo")
+                      proxy.validatePermission("networkMapFeed")
+                    })
         }
     }
 
     @Test
-    fun `fine grained permissions are enforced`() {
-        val allPermissions = CordaRPCOps::class.declaredMemberFunctions.filter { it.visibility == KVisibility.PUBLIC }.map { invokeRpc(it) }
-        allPermissions.forEach { permission ->
-            rpcDriver {
-                val user = userOf("Mark", setOf(permission))
-                val proxy = testProxyFor(user)
-
-                proxy.validatePermission(permission)
-                (allPermissions - permission).forEach { notOwnedPermission ->
-                    assertFailsWith(PermissionException::class, { proxy.validatePermission(notOwnedPermission) })
-                }
-            }
+    fun `checking invokeRpc permissions entitlements`() {
+        rpcDriver {
+            val joeUser = userOf("joe", setOf("InvokeRpc.networkMapFeed"))
+            val proxy = testProxyFor(joeUser)
+            assertFailsWith(PermissionException::class,
+                    "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
+                    {
+                        proxy.validatePermission("nodeInfo")
+                        proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
+                    })
+            proxy.validatePermission("networkMapFeed")
         }
     }
+
 }

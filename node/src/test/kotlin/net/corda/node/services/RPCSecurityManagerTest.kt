@@ -1,6 +1,8 @@
 package net.corda.node.services
 
 
+import net.corda.core.context.AuthServiceId
+import net.corda.node.internal.security.RPCSecurityManagerInMemory
 import net.corda.nodeapi.User
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -15,6 +17,7 @@ class RPCSecurityManagerTest {
     }
 
     private fun configWithRPCUsername(username: String) {
-        RPCUserServiceImpl(listOf(User(username, "password", setOf())))
+        RPCSecurityManagerInMemory(users = listOf(User(username, "password", setOf())),
+                                   id = AuthServiceId("TEST"))
     }
 }
