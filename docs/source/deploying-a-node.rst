@@ -122,20 +122,15 @@ a single node to run the network map service, by putting their name in the ``net
 
 Running deployNodes
 -------------------
-To create the nodes defined in our ``deployNodes`` task, we'd run the following command in a terminal window from the
-root of the project:
+To create the nodes defined in our ``deployNodes`` task, run the following command in a terminal window from the root
+of the project:
 
 * Unix/Mac OSX: ``./gradlew deployNodes``
 * Windows: ``gradlew.bat deployNodes``
 
-This will create the nodes in the ``build/nodes`` folder.
-
-.. note:: During the build process each node generates a NodeInfo file which is written in its own root directory,
-   the plug-in proceeds and copies each node NodeInfo to every other node ``additional-node-infos`` directory.
-   The NodeInfo file contains a node hostname and port, legal name and security certificate.
-
-There will be a node folder generated for each node you defined, plus a ``runnodes`` shell script (or batch file on
-Windows) to run all the nodes at once. If you make any changes to your ``deployNodes`` task, you will need to re-run
-the task to see the changes take effect.
+This will create the nodes in the ``build/nodes`` folder. There will be a node folder generated for each node defined
+in the ``deployNodes`` task, plus a ``runnodes`` shell script (or batch file on Windows) to run all the nodes at once.
+If you make any changes to your CorDapp source or ``deployNodes`` task, you will need to re-run the task to see the
+changes take effect.
 
 You can now run the nodes by following the instructions in :doc:`Running a node <running-a-node>`.
