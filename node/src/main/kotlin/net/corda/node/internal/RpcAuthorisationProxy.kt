@@ -162,9 +162,17 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
 
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
     private inline fun <RESULT> guard(methodName: String, args: List<Any?>, action: () -> RESULT): RESULT {
-
-        if (!context().authorizer.isPermitted(methodName, *args.map {it.toString()}.toTypedArray())) {
-            throw PermissionException("User not entitled to requested action")
+        val authorizer = context().authorizer
+        val isAuthorized = args.singleOrNull().let {
+            when (it) {
+                is Class<*> -> authorizer.isPermitted(methodName, it.name)
+                is String -> authorizer.isPermitted(methodName, it)
+                null -> authorizer.isPermitted(methodName)
+                else -> throw IllegalArgumentException("Unrecognised target type")
+            }
+        }
+        if (!isAuthorized) {
+            throw PermissionException("User not authorized to perform RPC call $methodName with target $args")
         }
         return action()
     }
