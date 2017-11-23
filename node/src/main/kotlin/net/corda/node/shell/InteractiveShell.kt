@@ -26,7 +26,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.node.internal.security.AdminSubject
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
@@ -83,7 +83,7 @@ object InteractiveShell {
     @VisibleForTesting
     internal lateinit var database: CordaPersistence
     private lateinit var rpcOps:CordaRPCOps
-    private lateinit var userService:RPCUserService
+    private lateinit var securityManager: RPCSecurityManager
     private lateinit var identityService:IdentityService
     private var shell:Shell? = null
     private lateinit var nodeLegalName: CordaX500Name
@@ -92,9 +92,9 @@ object InteractiveShell {
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, userService: RPCUserService, identityService: IdentityService, database:CordaPersistence) {
+    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database:CordaPersistence) {
         this.rpcOps = cordaRPCOps
-        this.userService = userService
+        this.securityManager = securityManager
         this.identityService = identityService
         this.nodeLegalName = configuration.myLegalName
         this.database = database
@@ -170,7 +170,7 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, userService, nodeLegalName)
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps, securityManager, nodeLegalName)
                 }
             }
             val attributes = mapOf(

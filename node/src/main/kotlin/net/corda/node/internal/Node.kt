@@ -131,7 +131,7 @@ open class Node(configuration: NodeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
-        userService = RPCUserServiceFactory().build(configuration)
+        securityManager = RPCUserServiceFactory().build(configuration)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val advertisedAddress = info.addresses.single()
@@ -154,7 +154,7 @@ open class Node(configuration: NodeConfiguration,
 
     private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, userService)
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, securityManager)
             return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
@@ -205,7 +205,7 @@ open class Node(configuration: NodeConfiguration,
         }
         // Start up the MQ clients.
         rpcMessagingClient.run {
-            start(rpcOps, userService)
+            start(rpcOps, securityManager)
             runOnStop += this::stop
         }
         verifierMessagingClient?.run {

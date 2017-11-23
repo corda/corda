@@ -5,7 +5,7 @@ import net.corda.nodeapi.User
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
-class RPCUserServiceTest {
+class RPCSecurityManagerTest {
 
     @Test
     fun `Artemis special characters not permitted in RPC usernames`() {

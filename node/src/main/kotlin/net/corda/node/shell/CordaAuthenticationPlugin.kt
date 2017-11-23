@@ -4,12 +4,12 @@ import net.corda.core.context.Actor
 import net.corda.core.context.InvocationContext
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManager
 import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
 
-class CordaAuthenticationPlugin(val rpcOps:CordaRPCOps, val userService:RPCUserService, val nodeLegalName:CordaX500Name) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
+class CordaAuthenticationPlugin(val rpcOps:CordaRPCOps, val securityManager: RPCSecurityManager, val nodeLegalName:CordaX500Name) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
 
     override fun getImplementation(): AuthenticationPlugin<String> = this
 
@@ -20,9 +20,9 @@ class CordaAuthenticationPlugin(val rpcOps:CordaRPCOps, val userService:RPCUserS
             return AuthInfo.UNSUCCESSFUL
         }
 
-        val authorizinguSubject = userService.tryAuthenticate(username, credential.toCharArray())
+        val authorizinguSubject = securityManager.tryAuthenticate(username, credential.toCharArray())
         if (authorizinguSubject != null) {
-        val actor = Actor(Actor.Id(username), userService.id, nodeLegalName)
+        val actor = Actor(Actor.Id(username), securityManager.id, nodeLegalName)
             return CordaSSHAuthInfo(true, RPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), authorizinguSubject))
         }
 

@@ -14,7 +14,7 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.*
 import net.corda.node.internal.Node
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
@@ -94,7 +94,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val p2pPort: Int,
                              val rpcPort: Int?,
                              val networkMapCache: NetworkMapCache,
-                             val userService: RPCUserService) : SingletonSerializeAsToken() {
+                             val securityManager: RPCSecurityManager) : SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
         /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
@@ -237,7 +237,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         // Each RPC user must have its own role and its own queue. This prevents users accessing each other's queues
         // and stealing RPC responses.
         // TODO: unsecure hack
-//        for ((username) in userService.users) {
+//        for ((username) in securityManager.users) {
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#"] = setOf(
                 nodeInternalRole,
                 restrictedRole(RPC_ROLE, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true))
@@ -271,7 +271,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
-                        RPCUserService::class.java.name to userService,
+                        RPCSecurityManager::class.java.name to securityManager,
                         NodeLoginModule.CERT_CHAIN_CHECKS_OPTION_NAME to certChecks)
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
             }
@@ -546,7 +546,7 @@ class NodeLoginModule : LoginModule {
     private var loginSucceeded: Boolean = false
     private lateinit var subject: Subject
     private lateinit var callbackHandler: CallbackHandler
-    private lateinit var userService: RPCUserService
+    private lateinit var securityManager: RPCSecurityManager
     private lateinit var peerCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var nodeCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var verifierCertCheck: CertificateChainCheckPolicy.Check
@@ -555,7 +555,7 @@ class NodeLoginModule : LoginModule {
     override fun initialize(subject: Subject, callbackHandler: CallbackHandler, sharedState: Map<String, *>, options: Map<String, *>) {
         this.subject = subject
         this.callbackHandler = callbackHandler
-        userService = options[RPCUserService::class.java.name] as RPCUserService
+        securityManager = options[RPCSecurityManager::class.java.name] as RPCSecurityManager
         val certChainChecks: Map<String, CertificateChainCheckPolicy.Check> = uncheckedCast(options[CERT_CHAIN_CHECKS_OPTION_NAME])
         peerCertCheck = certChainChecks[PEER_ROLE]!!
         nodeCertCheck = certChainChecks[NODE_ROLE]!!
@@ -617,7 +617,7 @@ class NodeLoginModule : LoginModule {
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
-        userService.authenticate(username, password.toCharArray())
+        securityManager.authenticate(username, password.toCharArray())
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses
         return username

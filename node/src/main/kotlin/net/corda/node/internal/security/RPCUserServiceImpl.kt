@@ -1,7 +1,6 @@
 package net.corda.node.internal.security
 
 import net.corda.core.context.AuthServiceId
-import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.User
 import org.apache.shiro.authc.UsernamePasswordToken
 import org.apache.shiro.mgt.DefaultSecurityManager
@@ -10,10 +9,10 @@ import org.apache.shiro.subject.SimplePrincipalCollection
 import org.apache.shiro.subject.Subject
 
 /**
- * Implement [RPCUserService] adapting [org.apache.shiro.mgt.SecurityManager]
+ * Implement [RPCSecurityManager] adapting [org.apache.shiro.mgt.SecurityManager]
  */
-open class ShiroRPCUserService(override val id : AuthServiceId,
-                          private val manager : SecurityManager) : RPCUserService {
+open class ShiroRPCSecurityManager(override val id : AuthServiceId,
+                                   private val manager : SecurityManager) : RPCSecurityManager {
 
     override fun authenticate(principal : String, password : CharArray) : AuthorizingSubject {
         val authToken = UsernamePasswordToken(principal, password)
@@ -44,12 +43,12 @@ open class ShiroRPCUserService(override val id : AuthServiceId,
 }
 
 /**
- * An RPCUserService implementation serving data from a given list
+ * An RPCSecurityManager implementation serving data from a given list
  * of [User]
  */
-class RPCUserServiceInMemory(override val id : AuthServiceId,
-                             private val users : List<User>)
-    : ShiroRPCUserService(
+class RPCSecurityManagerInMemory(override val id : AuthServiceId,
+                                 private val users : List<User>)
+    : ShiroRPCSecurityManager(
         manager = DefaultSecurityManager(InMemoryRealm(users, id.value)),
         id = id)
 

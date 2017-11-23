@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.internal.security
 
 import net.corda.core.context.AuthServiceId
 import net.corda.node.internal.security.AuthorizingSubject
@@ -8,7 +8,7 @@ import javax.security.auth.login.FailedLoginException
  * Manage security of RPC users, providing logic for user
  * authentication and authorization.
  */
-interface RPCUserService {
+interface RPCSecurityManager {
 
     /**
      * Perform user authentication. If the authentication is successful
@@ -30,10 +30,6 @@ interface RPCUserService {
      * on the given principal.
      */
     fun resolveSubject(principal : String) : AuthorizingSubject
-
-    /**
-     * Create an admin user with all permissions
-     */
 
     /**
      * Expose list of all currently registered RPC users.

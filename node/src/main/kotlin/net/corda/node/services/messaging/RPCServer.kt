@@ -26,7 +26,7 @@ import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
 import net.corda.node.internal.security.AuthorizingSubject
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
 import org.apache.activemq.artemis.api.core.Message
@@ -83,7 +83,7 @@ class RPCServer(
         private val rpcServerUsername: String,
         private val rpcServerPassword: String,
         private val serverLocator: ServerLocator,
-        private val userService: RPCUserService,
+        private val securityManager: RPCSecurityManager,
         private val nodeLegalName: CordaX500Name,
         private val rpcConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
 ) {
@@ -366,8 +366,8 @@ class RPCServer(
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
         val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
         return Pair(
-            Actor(Id(validatedUser), userService.id, targetLegalIdentity),
-            userService.resolveSubject(validatedUser))
+            Actor(Id(validatedUser), securityManager.id, targetLegalIdentity),
+            securityManager.resolveSubject(validatedUser))
     }
 }
 

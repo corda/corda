@@ -5,7 +5,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.RPCUserService
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -54,7 +54,7 @@ class ArtemisMessagingTests {
 
     private lateinit var config: NodeConfiguration
     private lateinit var database: CordaPersistence
-    private lateinit var userService: RPCUserService
+    private lateinit var securityManager: RPCSecurityManager
     private lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
     private var messagingClient: P2PMessagingClient? = null
     private var messagingServer: ArtemisMessagingServer? = null
@@ -63,7 +63,7 @@ class ArtemisMessagingTests {
     @Before
     fun setUp() {
         val baseDirectory = temporaryFolder.root.toPath()
-        userService = RPCUserServiceImpl(emptyList())
+        securityManager = RPCUserServiceImpl(emptyList())
         config = testNodeConfiguration(
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
@@ -210,7 +210,7 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, rpc, networkMapCache, userService).apply {
+        return ArtemisMessagingServer(config, local, rpc, networkMapCache, securityManager).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }
