@@ -82,5 +82,4 @@ class CashIssueAndPaySampler : AbstractSampler() {
 
     override val additionalArgs: Set<Argument>
         get() = setOf(notary, otherParty)
-
 }
