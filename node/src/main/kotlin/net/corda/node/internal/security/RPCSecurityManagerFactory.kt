@@ -6,10 +6,9 @@ import net.corda.node.services.config.NodeConfiguration
 /**
  * Factory instanting [RPCSecurityManager] according to node settings
  */
-class RPCUserServiceFactory {
+class RPCSecurityManagerFactory {
 
     fun build(config : NodeConfiguration) : RPCSecurityManager {
-        // TODO: Externalised plugin
         return RPCSecurityManagerInMemory(
                 id = AuthServiceId("NODE_CONFIG_USERS"),
                 users = config.rpcUsers

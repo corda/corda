@@ -43,12 +43,10 @@ open class ShiroRPCSecurityManager(override val id : AuthServiceId,
 }
 
 /**
- * An RPCSecurityManager implementation serving data from a given list
- * of [User]
+ * An RPCSecurityManager implementation serving data from a given list of [User]
  */
 class RPCSecurityManagerInMemory(override val id : AuthServiceId,
                                  private val users : List<User>)
-    : ShiroRPCSecurityManager(
-        manager = DefaultSecurityManager(InMemoryRealm(users, id.value)),
-        id = id)
+    : ShiroRPCSecurityManager(manager = DefaultSecurityManager(InMemoryRealm(users, id.value)),
+                              id = id)
 

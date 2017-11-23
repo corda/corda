@@ -483,7 +483,7 @@ data class RPCDriverDSL(
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
             isUseGlobalPools = false
         }
-        val userService = object : RPCSecurityManager {
+        val rpcuserService = object : RPCSecurityManager {
             override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
             override val users: List<User> get() = listOf(rpcUser)
             override val id: AuthServiceId = AuthServiceId("RPC_DRIVER")
