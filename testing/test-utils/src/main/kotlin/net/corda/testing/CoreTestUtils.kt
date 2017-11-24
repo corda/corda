@@ -30,6 +30,7 @@ import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.CertificateFactory
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -188,5 +189,5 @@ class UndefinedMockBehaviorException(message: String) : RuntimeException(message
  */
 inline fun <reified T : Any> rigorousMock() = mock<T>(Answer {
     // Use ThrowsException to hack the stack trace, and lazily so we can customise the message:
-    ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it.")).answer(it)
+    ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it. Args: ${Arrays.toString(it.arguments)}")).answer(it)
 })

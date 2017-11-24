@@ -1,12 +1,17 @@
 package net.corda.node.services.persistence
 
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.CommonSchemaV1
@@ -17,10 +22,7 @@ import net.corda.core.utilities.toBase58String
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_NAME
-import net.corda.finance.contracts.asset.DummyFungibleContract
+import net.corda.finance.contracts.asset.*
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
@@ -84,7 +86,14 @@ class HibernateConfigurationTest {
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, ::rigorousMock)
+        val identityService = rigorousMock<IdentityService>().also { mock ->
+            doReturn(null).whenever(mock).wellKnownPartyFromAnonymous(any<AbstractParty>())
+            listOf(DUMMY_CASH_ISSUER_IDENTITY.party, DUMMY_NOTARY).forEach {
+                doReturn(it).whenever(mock).wellKnownPartyFromAnonymous(it)
+                doReturn(it).whenever(mock).wellKnownPartyFromX500Name(it.name)
+            }
+        }
+        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, { identityService })
         database.transaction {
             hibernateConfig = database.hibernateConfig
             // `consumeCash` expects we can self-notarise transactions
