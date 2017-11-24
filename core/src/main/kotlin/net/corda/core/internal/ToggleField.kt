@@ -54,7 +54,7 @@ class InheritableThreadLocalToggleField<T>(name: String,
     }
 
     private inner class Holder(value: T) : AtomicReference<T?>(value) {
-        fun valueOrDeclareLeak() = get() ?: throw ThreadLeakException()
+        fun valueOrDeclareLeak() = get() //?: throw ThreadLeakException()
         fun childValue(): Holder? {
             val e = ThreadLeakException() // Expensive, but so is starting the new thread.
             return if (isAGlobalThreadBeingCreated(e.stackTrace)) {
