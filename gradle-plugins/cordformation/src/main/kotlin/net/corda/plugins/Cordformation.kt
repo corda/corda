@@ -31,5 +31,12 @@ class Cordformation : Plugin<Project> {
 
     override fun apply(project: Project) {
         Utils.createCompileConfiguration("cordapp", project)
+        // Add runtime dependency to node-api except for the corda project itself to avoid a circular dependency of Corda with itself.
+        // It's used to pregenerate network parameters on deployNodes task.
+        if (project.rootProject.name != "corda-project") {
+            project.dependencies.add("runtime", "net.corda:corda-node-api:${project.rootProject.ext<String>("cordaVersion")}")
+        } else {
+            project.dependencies.add("runtime", project.project(":node-api"))
+        }
     }
 }
