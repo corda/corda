@@ -4,9 +4,9 @@ Network Permissioning
 Corda networks are *permissioned*. To connect to a network, a node needs three keystores in its
 ``<workspace>/certificates/`` folder:
 
-* truststore.jks
-* nodekeystore.jks
-* sslkeystore.jks
+* truststore.jks, which stores trusted public keys and certificates (in our case, the network root CA)
+* nodekeystore.jks, which stores the node’s identity key pairs and certificates
+* sslkeystore.jks, which stores the node’s TLS key pairs and certificates
 
 In development mode (i.e. when ``devMode = true``, see ":doc:`corda-configuration-file`" for more information),
 pre-configured keystores are used if the required keystores do not exist. This ensures that developers can get the
@@ -16,11 +16,15 @@ However, these pre-configured keystores are not secure. For a real network, you 
 that will be used in the creation of these keystores for each node joining the network. The instructions below explain
 how to do this.
 
-Creating the certificate authority
-----------------------------------
+Creating the node certificate authority
+---------------------------------------
 
 You can use any standard key tools or Corda's ``X509Utilities`` (which uses Bouncy Castle) to create the required
-public/private keypairs and certificates.
+public/private keypairs and certificates. The keypairs and certificates should obey the following restrictions:
+
+* The certificates must follow the X.509 v3 standard
+* The TLS keypairs must be ECDSA keypairs
+* We recommend that the other keypairs be EdDSA keypairs
 
 Creating the root CA's keystore and truststore
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
