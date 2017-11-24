@@ -1,30 +1,29 @@
 Pluggable Serializers for CorDapps
 ==================================
-
-To be serializable by Corda Java classes must be compiled with the -parameter switch to enable mathcing of ass property
-to constructor parameter. However, when this isn't possible CorDapps can provide custom proxy serialiszers that Corda
-can use to move from types it cannot serialiser to an interim represtnation that it can with the transformation to and
-from this proxy object being handled by the supplied serialiser.
+To be serializable by Corda Java classes must be compiled with the -parameter switch to enable matching of it's properties
+to constructor parameters. This is important because Corda's internal AMQP serialization scheme will only constuct
+objects using their constructors. However, when recompilation isn't possible, or classes are built in such a way that
+they cannot be easily modified for simple serailization, CorDapps can provide custom proxy serializers that Corda
+can use to move from types it cannot serializer to an interim representation that it can with the transformation to and
+from this proxy object being handled by the supplied serializer.
 
 Serializer Location
 -------------------
-Custom serializers should be placed in the plugins directory fo a CorDapp or a sub directory (placing it in a sub
-directory however does require that directory be added to the list of locations scanned within the jar)
+Custom serializers should be placed in the plugins directory of a CorDapp or a sub directory thereof. These
+classes will be scanned and loaded by the CorDapp loading process.
 
 Writing a Custom Serializer
---------------------------
-
+---------------------------
 Serializers must
  * Inherit from net.corda.core.serialization.SerializationCustomSerializer
  * Be annotated with the @CordaCustomSerializer annotation
- * Provide a proxy class to transform the objectto and from
+ * Provide a proxy class to transform the object to and from
  * Have that proxy class annotated with the @CordaCustomSerializerProxy annotation
 
 Serializers inheriting from SerializationCustomSerializer have to implement two methods and two types
 
 Example
 -------
-
 Consider this example class
 
 .. sourcecode:: java
@@ -43,7 +42,10 @@ Consider this example class
         public int getB() { return b; }
     }
 
-This would require a serialiser as follows
+Without a custom serializer we cannot serialise this class as there is no public constructor that facilitates the
+initialisation of al of its's properties.
+
+To be serializable by Corda this would require a custom serializer as follows
 
 .. sourcecode:: kotlin
     @CordaCustomSerializer
@@ -64,6 +66,9 @@ This would require a serialiser as follows
         override val ptype: Type get() = Proxy::class.java
     }
 
-
+Whitelisting
+------------
+By writing a custom serializer for a class it has the effect of adding that class to the whitelist, meaning such
+classes don't need explicitly adding to the CorDapp's whitelist
 
 

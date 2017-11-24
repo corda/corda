@@ -3,7 +3,10 @@ package net.corda.nodeapi.internal.serialization.amqp
 import org.junit.Test
 import net.corda.core.serialization.CordaCustomSerializer
 import net.corda.core.serialization.CordaCustomSerializerProxy
+import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationCustomSerializer
+import org.assertj.core.api.Assertions
+import java.io.NotSerializableException
 import java.lang.reflect.Type
 import kotlin.test.assertEquals
 
@@ -18,31 +21,25 @@ class CorDappSerializerTests {
         override val type: Type get()  = NeedsProxy::class.java
         override val ptype: Type get() = Proxy::class.java
 
-        override fun fromProxy(proxy: Any) : Any {
-            println ("NeedsProxyProxySerialiser - fromProxy")
-            return NeedsProxy((proxy as Proxy).proxy_a_)
-        }
-        override fun toProxy(obj: Any) : Any {
-            println ("NeedsProxyProxySerialiser - to Proxy")
-            return Proxy((obj as NeedsProxy).a)
-        }
+        override fun fromProxy(proxy: Any) : Any = NeedsProxy((proxy as Proxy).proxy_a_)
+        override fun toProxy(obj: Any) : Any = Proxy((obj as NeedsProxy).a)
     }
 
-    // Standard proxy serialiser used internally, here for comparison purposes
-    class InternalProxySerialiser(factory: SerializerFactory) :
-            CustomSerializer.Proxy<NeedsProxy, InternalProxySerialiser.Proxy> (
+    // Standard proxy serializer used internally, here for comparison purposes
+    class InternalProxySerializer(factory: SerializerFactory) :
+            CustomSerializer.Proxy<NeedsProxy, InternalProxySerializer.Proxy> (
                     NeedsProxy::class.java,
-                    InternalProxySerialiser.Proxy::class.java,
+                    InternalProxySerializer.Proxy::class.java,
                     factory) {
         data class Proxy(val proxy_a_: String)
 
         override fun toProxy(obj: NeedsProxy): Proxy {
-            println ("InternalProxySerialiser - toProxy")
+            println ("InternalProxySerializer - toProxy")
             return Proxy(obj.a)
         }
 
         override fun fromProxy(proxy: Proxy): NeedsProxy {
-            println ("InternalProxySerialiser - fromProxy")
+            println ("InternalProxySerializer - fromProxy")
             return NeedsProxy(proxy.proxy_a_)
         }
     }
@@ -56,7 +53,7 @@ class CorDappSerializerTests {
         val msg = "help"
 
         proxyFactory.registerExternal (CorDappCustomSerializer(NeedsProxyProxySerializer(), proxyFactory))
-        internalProxyFactory.register (InternalProxySerialiser(internalProxyFactory))
+        internalProxyFactory.register (InternalProxySerializer(internalProxyFactory))
 
         val needsProxy = NeedsProxy(msg)
 
@@ -88,5 +85,74 @@ class CorDappSerializerTests {
 
         assertEquals(tv1, objFromDefault.obj.a)
         assertEquals(tv2, objFromDefault.obj.b.a)
+    }
+
+    @Test
+    fun testWithWhitelistNotAllowed() {
+        data class A (val a: Int, val b: NeedsProxy)
+
+        class WL : ClassWhitelist {
+            private val allowedClasses = emptySet<String>()
+
+            override fun hasListed(type: Class<*>): Boolean = type.name in allowedClasses
+        }
+
+        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        factory.registerExternal (CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
+
+        val tv1 = 100
+        val tv2 = "pants schmants"
+        Assertions.assertThatThrownBy {
+            SerializationOutput(factory).serialize(A(tv1, NeedsProxy(tv2)))
+        }.isInstanceOf(NotSerializableException::class.java)
+    }
+
+    @Test
+    fun testWithWhitelistAllowed() {
+        data class A (val a: Int, val b: NeedsProxy)
+
+        class WL : ClassWhitelist {
+            private val allowedClasses = hashSetOf(
+                    A::class.java.name,
+                    NeedsProxy::class.java.name)
+
+            override fun hasListed(type: Class<*>): Boolean = type.name in allowedClasses
+        }
+
+        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        factory.registerExternal (CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
+
+        val tv1 = 100
+        val tv2 = "pants schmants"
+        val obj = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(A(tv1, NeedsProxy(tv2))))
+
+        assertEquals(tv1, obj.a)
+        assertEquals(tv2, obj.b.a)
+    }
+
+    // The custom type not being whitelisted won't matter here because the act of adding a
+    // custom serializer bypasses the whitelist
+    @Test
+    fun testWithWhitelistAllowedOuterOnly() {
+        data class A (val a: Int, val b: NeedsProxy)
+
+        class WL : ClassWhitelist {
+            // explicitly don't add NeedsProxy
+            private val allowedClasses = hashSetOf(A::class.java.name)
+
+            override fun hasListed(type: Class<*>): Boolean = type.name in allowedClasses
+        }
+
+        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        factory.registerExternal (CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
+
+        val tv1 = 100
+        val tv2 = "pants schmants"
+        val obj = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(A(tv1, NeedsProxy(tv2))))
+
+        assertEquals(tv1, obj.a)
+        assertEquals(tv2, obj.b.a)
     }
 }
