@@ -1,8 +1,6 @@
 package net.corda.core.internal
 
-import java.lang.Character.UnicodeScript.*
 import java.text.Normalizer
-import java.util.regex.Pattern
 import javax.security.auth.x500.X500Principal
 
 object LegalNameValidator {
@@ -26,19 +24,32 @@ object LegalNameValidator {
 
     /**
      * The validation function validates a string for use as the organization attribute of a name, which includes additional
-     * constraints over basic name attribute checks. It applies the following rules:
+     * constraints over basic name attribute checks. It applies the following additional rules:
      *
      * - No blacklisted words like "node", "server".
-     * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce
-     *   names over the phone, and character confusability attacks.
-     * - Must consist of at least three letters and should start with a capital letter.
-     * - No commas or equals signs.
-     * - No dollars or quote marks, we might need to relax the quote mark constraint in future to handle Irish company names.
+     * - Must consist of at least three letters.
      *
      * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
      */
     fun validateOrganization(normalizedOrganization: String) {
         Rule.legalNameRules.forEach { it.validate(normalizedOrganization) }
+    }
+
+    /**
+     * Perform  extended validation of a string for use as the organization attribute of a name, which includes additional
+     * constraints over the basic organization attribute checks. This is useful for getting an indication of whether the
+     * Doorman service is likely to accept a name for a certificate request. It applies the following rules:
+     *
+     * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce
+     *   names over the phone, and character confusability attacks.
+     * - Must start with a capital letter.
+     * - No commas or equals signs.
+     * - No dollars or quote marks, we might need to relax the quote mark constraint in future to handle Irish company names.
+     *
+     * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
+     */
+    fun validateFullOrganization(normalizedOrganization: String) {
+        Rule.legalNameFullRules.forEach { it.validate(normalizedOrganization) }
     }
 
     @Deprecated("Use normalize instead", replaceWith = ReplaceWith("normalize(legalName)"))
@@ -59,16 +70,18 @@ object LegalNameValidator {
         companion object {
             val baseNameRules: List<Rule<String>> = listOf(
                     UnicodeNormalizationRule(),
-                    CharacterRule(',', '=', '$', '"', '\'', '\\'),
-                    WordRule("node", "server"),
-                    LengthRule(maxLength = 255),
-                    // TODO: Implement confusable character detection if we add more scripts.
-                    UnicodeRangeRule(Character.UnicodeBlock.BASIC_LATIN),
-                    X500NameRule()
+                    LengthRule(maxLength = 255)
             )
             val legalNameRules: List<Rule<String>> = baseNameRules + listOf(
-                    CapitalLetterRule(),
-                    MustHaveAtLeastTwoLettersRule()
+                    WordRule("node", "server"),
+                    MustHaveAtLeastTwoLettersRule(),
+                    X500NameRule()
+            )
+            val legalNameFullRules: List<Rule<String>> = legalNameRules + listOf(
+                    CharacterRule(',', '=', '$', '"', '\'', '\\'),
+                    // TODO: Implement confusable character detection if we add more scripts.
+                    UnicodeRangeRule(Character.UnicodeBlock.BASIC_LATIN),
+                    CapitalLetterRule()
             )
         }
 
