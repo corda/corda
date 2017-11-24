@@ -14,6 +14,8 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.sample.businessnetwork.IOUFlow
+import net.corda.sample.businessnetwork.membership.ObtainMembershipListContentFlow
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
@@ -33,8 +35,10 @@ import java.util.*
 class ExplorerSimulation(private val options: OptionSet) {
     private val user = User("user1", "test", permissions = setOf(
             startFlow<CashPaymentFlow>(),
-            startFlow<CashConfigDataFlow>()
-    ))
+            startFlow<CashConfigDataFlow>(),
+            startFlow<IOUFlow>(),
+            startFlow<ObtainMembershipListContentFlow>())
+    )
     private val manager = User("manager", "test", permissions = setOf(
             startFlow<CashIssueAndPaymentFlow>(),
             startFlow<CashPaymentFlow>(),
@@ -53,18 +57,15 @@ class ExplorerSimulation(private val options: OptionSet) {
     private val issuers = HashMap<Currency, CordaRPCOps>()
     private val parties = ArrayList<Pair<Party, CordaRPCOps>>()
 
-    init {
-        startDemoNodes()
-    }
-
     private fun onEnd() {
         println("Closing RPC connections")
         RPCConnections.forEach { it.close() }
     }
 
-    private fun startDemoNodes() {
+    fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true) {
+        driver(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance", IOUFlow::class.java.`package`.name),
+                isDebug = true, waitForAllNodesToFinish = true) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE.name, rpcUsers = listOf(user))
             val bob = startNode(providedName = BOB.name, rpcUsers = listOf(user))

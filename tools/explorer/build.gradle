@@ -30,6 +30,9 @@ dependencies {
     compile project(':node-driver')
     compile project(':finance')
 
+    // Additional CorDapps that will be displayed in the GUI.
+    compile project(':samples:business-network-demo')
+
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"

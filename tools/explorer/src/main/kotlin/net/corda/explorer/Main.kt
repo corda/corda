@@ -16,6 +16,7 @@ import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
 import net.corda.explorer.views.cordapps.cash.CashViewer
+import net.corda.explorer.views.cordapps.iou.IOUViewer
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
@@ -104,6 +105,7 @@ class Main : App(MainView::class) {
             registerView<StateMachineViewer>()
             // CordApps Views.
             registerView<CashViewer>()
+            registerView<IOUViewer>()
             // Tools.
             registerView<Network>()
             registerView<Settings>()
@@ -128,5 +130,5 @@ class Main : App(MainView::class) {
 fun main(args: Array<String>) {
     val parser = OptionParser("SF")
     val options = parser.parse(*args)
-    ExplorerSimulation(options)
+    ExplorerSimulation(options).startDemoNodes()
 }
