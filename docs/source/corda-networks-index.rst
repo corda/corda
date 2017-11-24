@@ -6,4 +6,5 @@ Corda networks
 
    setting-up-a-corda-network
    permissioning
+   network-map
    versioning
