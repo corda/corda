@@ -7,12 +7,12 @@ See the Readme in under ``network-management`` for detailed building instruction
 
 Configuration file
 ------------------
-At startup Doorman reads a configuration file, passed with ``--configFile`` on the command line.
+At startup doorman reads a configuration file, passed with ``--configFile`` on the command line.
 
-This is an example of what a Doorman configuration file might look like:
+This is an example of what a doorman configuration file might look like:
     .. literalinclude:: ../../network-management/doorman.conf
 
-Invoke Doorman with ``-?`` for a full list of supported command-line arguments.
+Invoke doorman with ``-?`` for a full list of supported command-line arguments.
 
 
 Configuration parameters
@@ -51,7 +51,9 @@ Allowed parameters are:
 
     :doneTransitionCode: Jira status to put approved tickets in
 
-:keystorePath: Path for the keystore
+:keystorePath: Path for the keystore. If not set (or null is passed) doorman will NOT perform any signing.
+    This is required in case of the HSM integration where signing process is offloaded (from doorman) to an external service
+    that binds with an HSM.
 
 :rootStorePath: Path for the root keystore
 
@@ -61,7 +63,7 @@ Allowed parameters are:
 
 Bootstrapping the network parameters
 ------------------------------------
-When Doorman is running it will serve the current network parameters. The first time Doorman is
+When doorman is running it will serve the current network parameters. The first time doorman is
 started it will need to know the initial value for the network parameters.
 
 The initial values for the network parameters can be specified with a file, like this:
@@ -71,6 +73,21 @@ And the location of that file can be specified with: ``--initialNetworkParameter
 Note that when reading from file:
 
 1. ``epoch`` will always be set to 1,
-2. ``modifiedTime`` will be the Doorman startup time
+2. ``modifiedTime`` will be the doorman startup time
 
 ``epoch`` will increase by one every time the network parameters are updated.
+
+Bootstrapping the network map
+-----------------------------
+
+The network map is periodically refreshed, with frequency driven by the 'signInterval' parameter when local signing is in use.
+In case of an external signing service it depends on that service configuration. Due to the design decisions dictated by the security concerns
+around the external signing service, doorman is not allowed to connect directly with the signing sevice. Instead, the external service is
+expected to access the doorman database in order to obtain signature requiring data.
+Therefore, doorman takes a passive role considering all signing process related aspects.
+Network map refresh happens only if there is a change to the current one (i.e. most recently created version of the network map).
+See the :doc:`signing-service` for a more detailed description of the service.
+
+When dealing with a fresh deployment (i.e. no previous data is present in the doorman database),
+it may take some time until the network map is available. This is caused by the aforementioned decoupling of the signing
+process from doorman itself.

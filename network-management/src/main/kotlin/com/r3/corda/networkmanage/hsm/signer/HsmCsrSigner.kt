@@ -16,7 +16,6 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
                    private val caPrivateKeyPass: String?,
                    private val caParentCertificateName: String,
                    private val validDays: Int,
-                   private val keyStorePassword: String?,
                    private val authenticator: Authenticator) : CertificateSigningRequestSigner {
 
     /**
@@ -31,7 +30,7 @@ class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
      */
     override fun sign(toSign: List<ApprovedCertificateRequestData>) {
         authenticator.connectAndAuthenticate { provider, signers ->
-            val keyStore = getAndInitializeKeyStore(provider, keyStorePassword)
+            val keyStore = getAndInitializeKeyStore(provider)
             // This should be changed once we allow for more certificates in the chain. Preferably we should use
             // keyStore.getCertificateChain(String) and assume entire chain is stored in the HSM (depending on the support).
             val caParentCertificate = keyStore.getCertificate(caParentCertificateName)

@@ -17,9 +17,13 @@ import java.nio.file.Paths
 import java.time.Duration
 import java.util.*
 
-data class DoormanParameters(val keystorePassword: String?,
+data class DoormanParameters(// TODO Create a localSigning sub-config and put that there
+                             val keystorePassword: String?,
+                             // TODO Should be part of a localSigning sub-config
                              val caPrivateKeyPassword: String?,
+                             // TODO Should be part of a localSigning sub-config
                              val rootKeystorePassword: String?,
+                             // TODO Should be part of a localSigning sub-config
                              val rootPrivateKeyPassword: String?,
                              val host: String,
                              val port: Int,
@@ -28,10 +32,13 @@ data class DoormanParameters(val keystorePassword: String?,
                              val approveAll: Boolean = false,
                              val databaseProperties: Properties? = null,
                              val jiraConfig: JiraConfig? = null,
+                             // TODO Should be part of a localSigning sub-config
                              val keystorePath: Path? = null,
+                             // TODO Should be part of a localSigning sub-config
                              val rootStorePath: Path? = null,
                              // TODO Change these to Duration in the future
                              val approveInterval: Long = DEFAULT_APPROVE_INTERVAL,
+                             // TODO Should be part of a localSigning sub-config
                              val signInterval: Long = DEFAULT_SIGN_INTERVAL
 ) {
     enum class Mode {

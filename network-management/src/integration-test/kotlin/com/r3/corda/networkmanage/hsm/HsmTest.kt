@@ -23,7 +23,11 @@ class HsmTest {
             dataSourceProperties = mock(),
             device = "${hsmSimulator.port}@${hsmSimulator.host}",
             keySpecifier = 1,
-            keyGroup = "*"
+            csrPrivateKeyPassword = "",
+            networkMapPrivateKeyPassword = "",
+            rootPrivateKeyPassword = "",
+            keyGroup = "DEV.DOORMAN",
+            validDays = 3650
     )
 
     @Rule

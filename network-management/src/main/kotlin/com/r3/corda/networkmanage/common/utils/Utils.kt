@@ -21,7 +21,7 @@ fun PublicKey.hashString() = encoded.sha256().toString()
 
 fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Unit): Config {
     val parser = OptionParser()
-    val helpOption = parser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp();
+    val helpOption = parser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp()
     registerOptions(parser)
     val optionSet = parser.parse(*this)
     // Print help and exit on help option.

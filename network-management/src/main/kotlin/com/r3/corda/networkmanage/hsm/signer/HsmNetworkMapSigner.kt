@@ -7,7 +7,7 @@ import com.r3.corda.networkmanage.common.signer.SignatureAndCertPath
 import com.r3.corda.networkmanage.common.signer.Signer
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
-import com.r3.corda.networkmanage.hsm.utils.X509Utilities
+import com.r3.corda.networkmanage.hsm.utils.X509Utilities.getAndInitializeKeyStore
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.signData
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.verify
 import net.corda.core.utilities.loggerFor
@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit
 class HsmNetworkMapSigner(networkMapStorage: NetworkMapStorage,
                           private val caCertificateKeyName: String,
                           private val caPrivateKeyPass: String,
-                          private val keyStorePassword: String?,
                           private val authenticator: Authenticator,
                           private val signingPeriod: Duration = DEFAULT_SIGNING_PERIOD_MS) : Signer {
 
@@ -63,7 +62,7 @@ class HsmNetworkMapSigner(networkMapStorage: NetworkMapStorage,
     override fun sign(data: ByteArray): SignatureAndCertPath? {
         var result: SignatureAndCertPath? = null
         authenticator.connectAndAuthenticate { provider, _ ->
-            val keyStore = X509Utilities.getAndInitializeKeyStore(provider, keyStorePassword)
+            val keyStore = getAndInitializeKeyStore(provider)
             val caCertificateChain = keyStore.getCertificateChain(caCertificateKeyName)
             val caKey = keyStore.getKey(caCertificateKeyName, caPrivateKeyPass.toCharArray()) as PrivateKey
             val signature = signData(data, KeyPair(caCertificateChain.first().publicKey, caKey), provider)

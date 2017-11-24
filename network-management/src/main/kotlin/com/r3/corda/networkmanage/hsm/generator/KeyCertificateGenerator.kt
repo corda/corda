@@ -24,20 +24,17 @@ class KeyCertificateGenerator(private val authenticator: Authenticator,
     /**
      * Generates root and intermediate key and certificates and stores them in the key store given by provider.
      * If the keys and certificates already exists they will be overwritten.
-     * @param keyStorePassword password to the key store
-     * @param certificateKeyName name of the intermediate key/certificate
-     * @param privateKeyPassword password for the intermediate private key
+     * @param intermediateCertificatesCredentials name and password for the intermediate key/certificate
      * @param parentCertificateName name of the parent key/certificate
      * @param parentPrivateKeyPassword password for the parent private key
      * @param validDays days of certificate validity
      */
-    fun generateAllCertificates(keyStorePassword: String? = null,
-                                intermediateCertificatesCredentials: List<CertificateNameAndPass>,
+    fun generateAllCertificates(intermediateCertificatesCredentials: List<CertificateNameAndPass>,
                                 parentCertificateName: String,
                                 parentPrivateKeyPassword: String,
                                 validDays: Int) {
         authenticator.connectAndAuthenticate { provider, _ ->
-            val keyStore = getAndInitializeKeyStore(provider, keyStorePassword)
+            val keyStore = getAndInitializeKeyStore(provider)
             generateRootCertificate(provider, keyStore, parentCertificateName, parentPrivateKeyPassword, validDays)
             intermediateCertificatesCredentials.forEach {
                 generateIntermediateCertificate(provider, keyStore, it.certificateName, it.privateKeyPassword, parentCertificateName, parentPrivateKeyPassword, validDays)

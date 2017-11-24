@@ -34,31 +34,28 @@ fun run(parameters: Parameters) {
         val hsmNetworkMapSigningThread = HsmNetworkMapSigner(
                 networkMapStorage,
                 networkMapCertificateName,
-                networkMapPrivateKeyPass,
-                keyStorePass,
-                Authenticator(createProvider(), AuthMode.KEY_FILE, autoUsername, authKeyFilePath, authKeyFilePass, signAuthThreshold)).start()
+                networkMapPrivateKeyPassword,
+                Authenticator(createProvider(), AuthMode.KEY_FILE, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold)).start()
         val sign: (List<ApprovedCertificateRequestData>) -> Unit = {
             val signer = HsmCsrSigner(
                     csrStorage,
                     csrCertificateName,
-                    csrPrivateKeyPass,
+                    csrPrivateKeyPassword,
                     rootCertificateName,
                     validDays,
-                    keyStorePass,
-                    Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePass, signAuthThreshold))
+                    Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePassword, signAuthThreshold))
             signer.sign(it)
         }
         Menu().withExceptionHandler(::processError).addItem("1", "Generate root and intermediate certificates", {
             if (confirmedKeyGen()) {
                 val generator = KeyCertificateGenerator(
-                        Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePass, keyGenAuthThreshold),
+                        Authenticator(createProvider(), authMode, autoUsername, authKeyFilePath, authKeyFilePassword, keyGenAuthThreshold),
                         keySpecifier,
                         keyGroup)
                 generator.generateAllCertificates(
-                        keyStorePass,
-                        listOf(CertificateNameAndPass(csrCertificateName, csrPrivateKeyPass), CertificateNameAndPass(networkMapCertificateName, networkMapPrivateKeyPass)),
+                        listOf(CertificateNameAndPass(csrCertificateName, csrPrivateKeyPassword), CertificateNameAndPass(networkMapCertificateName, networkMapPrivateKeyPassword)),
                         rootCertificateName,
-                        rootPrivateKeyPass,
+                        rootPrivateKeyPassword,
                         validDays)
             }
         }).addItem("2", "Sign all approved and unsigned CSRs", {

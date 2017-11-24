@@ -24,7 +24,12 @@ import java.util.*
 fun main(args: Array<String>) {
     run(Parameters(
             dataSourceProperties = makeTestDataSourceProperties(),
-            databaseProperties = makeNotInitialisingTestDatabaseProperties()
+            databaseProperties = makeNotInitialisingTestDatabaseProperties(),
+            csrPrivateKeyPassword = "",
+            networkMapPrivateKeyPassword = "",
+            rootPrivateKeyPassword = "",
+            keyGroup = "DEV.DOORMAN",
+            validDays = 3650
     ))
 }
 

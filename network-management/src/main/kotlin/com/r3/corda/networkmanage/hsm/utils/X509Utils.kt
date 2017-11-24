@@ -237,14 +237,12 @@ object X509Utilities {
 
     /**
      * Creates and initializes a key store from the given crypto server provider.
-     * It uses the provided key store password to enable key store access.
      * @param provider crypto server provider to be used for the key store creation
-     * @param keyStorePassword key store password to be used for key store access authentication
      * @return created key store instance
      */
-    fun getAndInitializeKeyStore(provider: CryptoServerProvider, keyStorePassword: String?): KeyStore {
+    fun getAndInitializeKeyStore(provider: CryptoServerProvider): KeyStore {
         val keyStore = KeyStore.getInstance("CryptoServer", provider)
-        keyStore.load(null, keyStorePassword?.toCharArray())
+        keyStore.load(null, null)
         return keyStore
     }
 
