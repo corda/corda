@@ -166,7 +166,6 @@ class InMemoryRealm : AuthorizingRealm {
     override fun doGetAuthenticationInfo(token: AuthenticationToken) =
             authenticationInfoByUser.getValue(token.principal as String)
 
-
     override fun doGetAuthorizationInfo(principals: PrincipalCollection) =
             authorizationInfoByUser.getValue(principals.primaryPrincipal as String)
 
