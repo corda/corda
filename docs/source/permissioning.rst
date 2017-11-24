@@ -1,6 +1,8 @@
 Network Permissioning
 =====================
 
+.. contents::
+
 Corda networks are *permissioned*. To connect to a network, a node needs three keystores in its
 ``<workspace>/certificates/`` folder:
 
@@ -13,12 +15,10 @@ pre-configured keystores are used if the required keystores do not exist. This e
 nodes working as quickly as possible.
 
 However, these pre-configured keystores are not secure. For a real network, you need to create a certificate authority
-that will be used in the creation of these keystores for each node joining the network. The instructions below explain
-how to do this.
+that will be used in the creation of these keystores for each node joining the network.
 
-Creating the node certificate authority
----------------------------------------
-
+Creating the network keypairs and certificates
+----------------------------------------------
 You can use any standard key tools or Corda's ``X509Utilities`` (which uses Bouncy Castle) to create the required
 public/private keypairs and certificates. The keypairs and certificates should obey the following restrictions:
 
@@ -28,8 +28,13 @@ public/private keypairs and certificates. The keypairs and certificates should o
 
 * The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`_
 
+Creating the node certificate authority
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The node certificate authority is used to sign the node identity certificates. An intermediate CA is used instead of
+the root CA for day-to-day key signing to reduce the risk of the root CA's private key being compromised.
+
 Creating the root CA's keystore and truststore
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Create a new keypair
 
@@ -46,7 +51,7 @@ Creating the root CA's keystore and truststore
 .. warning:: The root CA's private key should be protected and kept safe.
 
 Creating the intermediate CA's keystore
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Create a new keypair
 
@@ -60,14 +65,13 @@ Creating the intermediate CA's keystore
 3. Store the intermediate CA's keypair and certificate chain (i.e. the intermediate CA certificate *and* the root CA
    certificate) in a keystore for later use
 
-.. note:: The intermediate CA is used instead of the root CA for day-to-day key signing. This is to reduce the risk of
-   the root CA's private key being compromised.
-
 Creating the node CA keystores and TLS keystores
-------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Each node serves as its own "node CA" in issuing the child certificates that it uses to sign its identity keys,
+anonymous keys and TLS certificates.
 
 Creating the node CA keystores
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. On each node, create a new keypair
 
@@ -76,11 +80,8 @@ Creating the node CA keystores
 
 3. Store the keypair in a Java keystore named ``nodekeystore.jks`` using the alias ``cordaclientca``
 
-.. note:: Each node is considered a "node CA" because it has the authority to issue child certificates that are used to
-   sign identity keys and anonymous keys
-
 Creating the node TLS keystores
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. On each node, create a new keypair
 
@@ -90,8 +91,7 @@ Creating the node TLS keystores
 3. Store the key and certificates in a Java keystore named ``sslkeystore.jks`` using the alias ``cordaclienttls``
 
 Installing the certificates on the nodes
-----------------------------------------
-
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 For each node:
 
 1. Copy the node's ``nodekeystore.jks`` and ``sslkeystore.jks`` keystores to the node's certificate directory
