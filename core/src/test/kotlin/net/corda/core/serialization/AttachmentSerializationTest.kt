@@ -148,7 +148,7 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int, sendData: Boolean = false) {
-        server.internals.internalRegisterFlowFactory(
+        server.internalRegisterFlowFactory(
                 ClientLogic::class.java,
                 InitiatedFlowFactory.Core { ServerLogic(it, sendData) },
                 ServerLogic::class.java,
