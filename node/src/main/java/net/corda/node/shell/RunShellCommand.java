@@ -30,7 +30,7 @@ public class RunShellCommand extends InteractiveShellCommand {
             return null;
         }
 
-        return InteractiveShell.runRPCFromString(command, out, context);
+        return InteractiveShell.runRPCFromString(command, out, context, ops());
     }
 
     private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {

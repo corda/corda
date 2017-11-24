@@ -4,7 +4,7 @@ package net.corda.node.shell;
 
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.node.utilities.ANSIProgressRenderer;
-import net.corda.node.utilities.CRaSHNSIProgressRenderer;
+import net.corda.node.utilities.CRaSHANSIProgressRenderer;
 import org.crsh.cli.*;
 import org.crsh.command.*;
 import org.crsh.text.*;
@@ -12,7 +12,6 @@ import org.crsh.text.ui.TableElement;
 
 import java.util.*;
 
-import static net.corda.node.services.messaging.RPCServerKt.CURRENT_RPC_CONTEXT;
 import static net.corda.node.shell.InteractiveShell.*;
 
 @Man(
@@ -49,7 +48,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
             return;
         }
         String inp = input == null ? "" : String.join(" ", input).trim();
-        runFlowByNameFragment(name, inp, out, rpcOps, ansiProgressRenderer != null ? ansiProgressRenderer : new CRaSHNSIProgressRenderer(out) );
+        runFlowByNameFragment(name, inp, out, rpcOps, ansiProgressRenderer != null ? ansiProgressRenderer : new CRaSHANSIProgressRenderer(out) );
     }
 
     @Command

@@ -169,7 +169,7 @@ abstract class ANSIProgressRenderer {
 
 }
 
-class CRaSHNSIProgressRenderer(val renderPrintWriter:RenderPrintWriter) : ANSIProgressRenderer() {
+class CRaSHANSIProgressRenderer(val renderPrintWriter:RenderPrintWriter) : ANSIProgressRenderer() {
 
     override fun printLine(line: String) {
         renderPrintWriter.println(line)
@@ -181,7 +181,7 @@ class CRaSHNSIProgressRenderer(val renderPrintWriter:RenderPrintWriter) : ANSIPr
     }
 
     override fun setup() {
-        //we assume SSH always use ansi
+        // We assume SSH always use ANSI.
         usingANSI = true
     }
 
