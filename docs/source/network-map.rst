@@ -1,8 +1,8 @@
 Network Map
 ===========
 
-The network map stores a collection of ``NodeInfo`` objects, each representing another node with with one can interact.
-There 2 sources from which a Corda node can retrieve ``NodeInfo`` objects:
+The network map stores a collection of ``NodeInfo`` objects, each representing another node with which the node can interact.
+There two sources from which a Corda node can retrieve ``NodeInfo`` objects:
 
 1. the REST protocol with the network map service, which also provides a publishing API,
 
