@@ -5,8 +5,8 @@ Corda networks are *permissioned*. To connect to a network, a node needs three k
 ``<workspace>/certificates/`` folder:
 
 * truststore.jks, which stores trusted public keys and certificates (in our case, the network root CA)
-* nodekeystore.jks, which stores the node’s identity key pairs and certificates
-* sslkeystore.jks, which stores the node’s TLS key pairs and certificates
+* nodekeystore.jks, which stores the node’s identity keypairs and certificates
+* sslkeystore.jks, which stores the node’s TLS keypairs and certificates
 
 In development mode (i.e. when ``devMode = true``, see ":doc:`corda-configuration-file`" for more information),
 pre-configured keystores are used if the required keystores do not exist. This ensures that developers can get the
