@@ -56,7 +56,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase", "true") == "true") "update" else "validate")
+                .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("createSchemaAutomatically", "true") == "true") "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())
 

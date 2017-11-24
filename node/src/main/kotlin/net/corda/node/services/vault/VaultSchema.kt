@@ -90,6 +90,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
+            @Type(type = "uuid-char")
             var uuid: UUID
     ) : PersistentState() {
         constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
