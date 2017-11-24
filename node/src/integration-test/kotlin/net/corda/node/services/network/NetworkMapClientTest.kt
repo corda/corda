@@ -34,7 +34,7 @@ class NetworkMapClientTest {
     @Test
     fun `nodes process network map add updates correctly when adding new node to network map`() {
         val (host, port) = NetworkMapServer(1.seconds, PortAllocation.RandomFree.nextHostAndPort()).start()
-        driver(compatibilityZoneURL = URL("http://$host:$port")) {
+        driver(compatibilityZoneURL = URL("http://$host:$port"), fileBasedNetworkMap = false) {
             val alice = startNode(providedName = ALICE.name)
             val notaryNode = defaultNotaryNode.get()
             val aliceNode = alice.get()
@@ -59,7 +59,7 @@ class NetworkMapClientTest {
         val networkMapServer = NetworkMapServer(1.seconds, PortAllocation.RandomFree.nextHostAndPort())
         val (host, port) = networkMapServer.start()
         driver(compatibilityZoneURL = URL("http://$host:$port")) {
-            val alice = startNode(providedName = ALICE.name, startInSameProcess = true)
+            val alice = startNode(providedName = ALICE.name)
             val bob = startNode(providedName = BOB.name)
 
             val notaryNode = defaultNotaryNode.get()

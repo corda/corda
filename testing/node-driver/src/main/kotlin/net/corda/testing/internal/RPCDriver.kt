@@ -238,6 +238,7 @@ fun <A> rpcDriver(
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         compatibilityZoneURL: URL? = null,
+        fileBasedNetworkMap: Boolean = true,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -252,7 +253,8 @@ fun <A> rpcDriver(
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs,
-                        compatibilityZoneURL = compatibilityZoneURL
+                        compatibilityZoneURL = compatibilityZoneURL,
+                        fileBasedNetworkMap = fileBasedNetworkMap
                 ), externalTrace
         ),
         coerce = { it },
@@ -266,6 +268,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
     override fun validateUser(user: String?, password: String?, remotingConnection: RemotingConnection?): String? {
         return validate(user, password)
     }
+
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
         return validate(user, password)
     }

@@ -81,8 +81,8 @@ class DriverTests {
         server.start()
 
         driver(compatibilityZoneURL = URL("http://localhost:$port")) {
-            // Wait for the notary to have started.
-            notaryHandles.first().nodeHandles.get()
+            // Wait for the node to have started.
+            startNode(initialRegistration = true).get()
         }
 
         // We're getting:
