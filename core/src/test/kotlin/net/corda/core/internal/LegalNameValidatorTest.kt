@@ -53,10 +53,22 @@ class LegalNameValidatorTest {
 
     @Test
     fun `unicode range`() {
-        LegalNameValidator.validateOrganization("Test A")
+        LegalNameValidator.validateOrganization("The quick brown fox jumped over the lazy dog.1234567890")
+        assertFailsWith(IllegalArgumentException::class) {
+            // Right to left direction override
+            LegalNameValidator.validateOrganization("\u202EdtL 3R")
+        }
         assertFailsWith(IllegalArgumentException::class) {
             // Greek letter A.
-            LegalNameValidator.validateOrganization("Test Α")
+            LegalNameValidator.validateOrganization("Test \u0391")
+        }
+        // Latin capital letter turned m
+        assertFailsWith<IllegalArgumentException> {
+            LegalNameValidator.validateOrganization( "Test\u019CLtd")
+        }
+        // Latin small letter turned e
+        assertFailsWith<IllegalArgumentException> {
+            LegalNameValidator.validateOrganization("Test\u01ddLtd")
         }
     }
 

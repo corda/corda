@@ -63,7 +63,7 @@ object LegalNameValidator {
                     WordRule("node", "server"),
                     LengthRule(maxLength = 255),
                     // TODO: Implement confusable character detection if we add more scripts.
-                    UnicodeRangeRule(LATIN, COMMON, INHERITED),
+                    UnicodeRangeRule(Character.UnicodeBlock.BASIC_LATIN),
                     X500NameRule()
             )
             val legalNameRules: List<Rule<String>> = baseNameRules + listOf(
@@ -80,18 +80,13 @@ object LegalNameValidator {
             }
         }
 
-        private class UnicodeRangeRule(vararg supportScripts: Character.UnicodeScript) : Rule<String>() {
-            private val pattern = supportScripts.map { "\\p{Is$it}" }.joinToString(separator = "", prefix = "[", postfix = "]*").let { Pattern.compile(it) }
+        private class UnicodeRangeRule(vararg supportScripts: Character.UnicodeBlock) : Rule<String>() {
+            val supportScriptsSet = supportScripts.toSet()
 
             override fun validate(legalName: String) {
-                require(pattern.matcher(legalName).matches()) {
-                    val illegalChars = legalName.replace(pattern.toRegex(), "").toSet()
-                    if (illegalChars.size > 1) {
-                        "Forbidden characters $illegalChars in \"$legalName\"."
-                    } else {
-                        "Forbidden character $illegalChars in \"$legalName\"."
-                    }
-                }
+                val illegalChars = legalName.toCharArray().filter { Character.UnicodeBlock.of(it) !in supportScriptsSet }.size
+                // We don't expose the characters or the legal name, for security reasons
+                require (illegalChars == 0) { "$illegalChars forbidden characters in legal name." }
             }
         }
 
