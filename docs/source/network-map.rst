@@ -1,6 +1,14 @@
 Network Map
 ===========
 
+The network map stores a collection of ``NodeInfo`` objects, each representing another node with which the node can interact.
+There two sources from which a Corda node can retrieve ``NodeInfo`` objects:
+
+1. the REST protocol with the network map service, which also provides a publishing API,
+
+2. the ``additional-node-infos`` directory.
+
+
 Protocol Design
 ---------------
 The node info publishing protocol:
@@ -36,3 +44,14 @@ Network Map service REST API:
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 TODO: Access control of the network map will be added in the future.
+
+
+The ``additional-node-infos`` directory
+---------------------------------------
+Each Corda node reads, and continuously polls, the files contained in a directory named ``additional-node-infos`` inside the node base directory.
+
+Nodes expect to find a serialized ``SignedData<NodeInfo>`` object, the same object which is sent to network map server.
+
+Whenever a node starts it writes on disk a file containing its own ``NodeInfo``, this file is called ``nodeInfo-XXX`` where ``XXX`` is a long string.
+
+Hence if an operator wants node A to see node B they can pick B's ``NodeInfo`` file from B base directory and drop it into A's ``additional-node-infos`` directory.
