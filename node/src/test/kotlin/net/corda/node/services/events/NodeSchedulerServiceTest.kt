@@ -23,6 +23,7 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -37,9 +38,11 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Clock
@@ -90,8 +93,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        val databaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, databaseProperties, rigorousMock())
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
         val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         kms = MockKeyManagementService(identityService, ALICE_KEY)
         val configuration = testNodeConfiguration(Paths.get("."), CordaX500Name("Alice", "London", "GB"))

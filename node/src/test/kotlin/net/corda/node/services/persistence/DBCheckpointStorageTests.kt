@@ -4,13 +4,13 @@ import com.google.common.primitives.Ints
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -31,13 +31,14 @@ class DBCheckpointStorageTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    lateinit var checkpointStorage: DBCheckpointStorage
-    lateinit var database: CordaPersistence
+
+    private lateinit var checkpointStorage: DBCheckpointStorage
+    private lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         newCheckpointStorage()
     }
 

@@ -10,16 +10,18 @@ import net.corda.core.internal.concurrent.asCordaFuture
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.DatabaseTransaction
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.rigorousMock
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -30,8 +32,8 @@ class DistributedImmutableMapTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
-    lateinit var cluster: List<Member>
-    lateinit var transaction: DatabaseTransaction
+
+    private lateinit var cluster: List<Member>
     private val databases: MutableList<CordaPersistence> = mutableListOf()
 
     @Before
@@ -86,7 +88,7 @@ class DistributedImmutableMapTests {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "PORT_${myAddress.port}_"), rigorousMock())
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(serverNameTablePrefix = "PORT_${myAddress.port}_"), rigorousMock())
         databases.add(database)
         val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createMap) }
 
