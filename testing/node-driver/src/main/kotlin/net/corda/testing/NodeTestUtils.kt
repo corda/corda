@@ -6,24 +6,24 @@ import com.nhaarman.mockito_kotlin.doCallRealMethod
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.Actor
+import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.Origin
-import net.corda.core.context.AuthServiceId
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.seconds
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.CertChainPolicyConfig
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import java.nio.file.Path
 
 /**
@@ -64,7 +64,7 @@ fun testNodeConfiguration(
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary
         doReturn(makeTestDataSourceProperties(myLegalName.organisation)).whenever(it).dataSourceProperties
-        doReturn(makeTestDatabaseProperties()).whenever(it).database
+        doReturn(DatabaseConfig()).whenever(it).database
         doReturn("").whenever(it).emailAddress
         doReturn("").whenever(it).exportJMXto
         doReturn(true).whenever(it).devMode
