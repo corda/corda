@@ -2,8 +2,10 @@
 
 We'd like to thank the following people for contributing ideas to Corda, 
 either during architecture review sessions of the R3 Architecture Working Group, 
-or in design reviews since Corda has been open-sourced. Please forgive any omissions, 
-and create a pull request, or email <james@r3.com>, if you wish to see changes to this list.
+or in design reviews since Corda has been open-sourced. Some people have moved to 
+a different organisation since their contribution. Please forgive any omissions, and 
+create a pull request, or email <james@r3.com>, if you wish to see 
+changes to this list.
 
 * Alberto Arri (R3)
 * Andras Slemmer (R3)
@@ -16,6 +18,7 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Arnaud Stevens (Natixis)
 * Arijit Das (Northern Trust)
 * Arun Battu (BNY Mellon)
+* Austin Moothart (R3)
 * Barry Childe (HSBC)
 * Barry Flower (Westpac)
 * Benjamin Abineri (R3)
@@ -24,7 +27,7 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Bob Crozier (AIA)
 * Bogdan Paunescu (R3)
 * Cais Manai (R3)
-* Carl Worral (BCS)
+* Carl Worrall (BCS)
 * Chaitanya Jadhav (HSBC)
 * Chris Akers (R3)
 * Chris Burlinchon (R3)
@@ -33,8 +36,12 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Christian Sailer (R3)
 * Christopher Saunders (Credit Suisse)
 * Christopher Swanson (US Bank)
+* Clark Thompson (R3)
+* Clay Ratliff (Thoughtworks)
+* Clemens Wan (R3)
 * Clinton Alexander (R3)
 * Daniel Roig (SEB)
+* Dave Hudson (R3)
 * David Lee (BCS)
 * Farzad Pezeshkpour (RBS)
 * Frederic Dalibard (Natixis)
@@ -45,8 +52,10 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Giuseppe Cardone (Intesa Sanpaolo)
 * Guy Hochstetler (IBM)
 * Ian Cusden (UBS)
+* Ian Grigg (R3)
 * Igor Nitto (R3)
 * Igor Panov (CIBC)
+* Ivan Schasny (R3)
 * James Brown (R3)
 * James Carlyle (R3)
 * Jared Harwayne-Gidansky (BNY Mellon)
@@ -59,6 +68,7 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Josh Lindl (BCS)
 * Justin Chapman (Northern Trust)
 * Kai-Michael Schramm (Credit Suisse)
+* Karel Hajek (Barclays Capital)
 * Kasia Streich (R3)
 * Kat Baker (R3)
 * Khaild Ahmed (Northern Trust)
@@ -69,6 +79,7 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Lee Braine (Barclays)
 * Lucas Salmen (Itau)
 * Maksymillian Pawlak (R3)
+* Marek Scocovsky (ABSA)
 * Mark Lauer (Westpac)
 * Mark Oldfield (R3)
 * Mark Raynes (Thomson Reuters)
@@ -80,6 +91,7 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Matthew Nesbit (R3)
 * Matthijs van den Bos (ING)
 * Michal Kit (R3)
+* Micheal Hinstridge (Thoughtworks)
 * Michelle Sollecito (R3)
 * Mike Hearn (R3)
 * Mike Reichelt (US Bank)
@@ -87,6 +99,7 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Nick Skinner (Northern Trust)
 * Nigel King (R3)
 * Nuam Athaweth (MUFG)
+* Oscar Zibordi de Paiva (Bradesco)
 * Patrick Kuo (R3)
 * Pekka Kaipio (OP Financial)
 * Piotr Piskorski (Nordea)
@@ -97,6 +110,7 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Rhett Brewer (Goldman Sachs)
 * Roberto Karpinski (Bradesco)
 * Robin Green (CIBC)
+* Rodrigo Bueno (Itau)
 * Roger Willis (R3)
 * Ross Burnett (Macquarie)
 * Ross Nicoll (R3)
@@ -112,6 +126,7 @@ and create a pull request, or email <james@r3.com>, if you wish to see changes t
 * Stephen Lane-Smith (BMO)
 * Thomas O'Donnell (Macquarie)
 * Thomas Schroeter (R3)
+* Tom Menner (R3)
 * Tudor Malene (R3)
 * Tim Swanson (R3)
 * Timothy Smith (Credit Suisse)
