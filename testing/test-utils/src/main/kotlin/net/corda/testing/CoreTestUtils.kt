@@ -16,17 +16,17 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.node.utilities.CertificateAndKeyPair
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
 import org.mockito.Mockito.mock
 import org.mockito.internal.stubbing.answers.ThrowsException
 import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.cert.CertificateFactory
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -129,9 +129,8 @@ fun configureTestSSL(legalName: CordaX500Name = MEGA_CORP.name): SSLConfiguratio
 }
 
 fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DEV_CA): PartyAndCertificate {
-    val certFactory = CertificateFactory.getInstance("X509")
     val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
-    val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
+    val certPath = X509CertificateFactory().delegate.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
     return PartyAndCertificate(certPath)
 }
 

@@ -74,7 +74,7 @@ public class StandaloneCordaRPCJavaClientTest {
     }
 
     private void copyFinanceCordapp() {
-        Path cordappsDir = (factory.baseDirectory(notaryConfig).resolve("cordapps"));
+        Path cordappsDir = (factory.baseDirectory(notaryConfig).resolve(NodeProcess.CORDAPPS_DIR_NAME));
         try {
             Files.createDirectories(cordappsDir);
         } catch (IOException ex) {

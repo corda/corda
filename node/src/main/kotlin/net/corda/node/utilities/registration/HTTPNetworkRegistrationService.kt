@@ -2,7 +2,7 @@ package net.corda.node.utilities.registration
 
 import com.google.common.net.MediaType
 import net.corda.core.internal.openHttpConnection
-import net.corda.node.utilities.CertificateStream
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import org.apache.commons.io.IOUtils
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.IOException
@@ -32,9 +32,9 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
         return when (conn.responseCode) {
             HTTP_OK -> ZipInputStream(conn.inputStream).use {
                 val certificates = ArrayList<Certificate>()
-                val stream = CertificateStream(it)
+                val factory = X509CertificateFactory()
                 while (it.nextEntry != null) {
-                    certificates.add(stream.nextCertificate())
+                    certificates += factory.generateCertificate(it)
                 }
                 certificates.toTypedArray()
             }
