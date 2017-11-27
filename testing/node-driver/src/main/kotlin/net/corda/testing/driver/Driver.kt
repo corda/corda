@@ -372,8 +372,7 @@ fun <A> driver(
                     waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    compatibilityZoneURL = compatibilityZoneURL,
-                    fileBasedNetworkMap = fileBasedNetworkMap
+                    compatibilityZoneURL = compatibilityZoneURL
             ),
             coerce = { it },
             dsl = dsl,
@@ -493,8 +492,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
                     waitForNodesToFinish = waitForNodesToFinish,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     notarySpecs = notarySpecs,
-                    compatibilityZoneURL = compatibilityZoneURL,
-                    fileBasedNetworkMap = fileBasedNetworkMap
+                    compatibilityZoneURL = compatibilityZoneURL
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -601,8 +599,7 @@ class DriverDSL(
         val waitForNodesToFinish: Boolean,
         extraCordappPackagesToScan: List<String>,
         val notarySpecs: List<NotarySpec>,
-        val compatibilityZoneURL: URL?,
-        val fileBasedNetworkMap: Boolean
+        val compatibilityZoneURL: URL?
 ) : DriverDSLInternalInterface {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -948,7 +945,7 @@ class DriverDSL(
         val baseDirectory = configuration.baseDirectory.createDirectories()
         // Distribute node info file using file copier when network map service URL (compatibilityZoneURL) is null.
         // TODO: need to implement the same in cordformation?
-        val nodeInfoFilesCopier = if (fileBasedNetworkMap) nodeInfoFilesCopier else null
+        val nodeInfoFilesCopier = if (compatibilityZoneURL == null) nodeInfoFilesCopier else null
 
         nodeInfoFilesCopier?.addConfig(baseDirectory)
         networkParameters.install(baseDirectory)

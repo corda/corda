@@ -1,25 +1,29 @@
 package net.corda.testing.driver
 
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpHandler
-import com.sun.net.httpserver.HttpServer
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.minutes
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.ProjectStructure.projectRootDir
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.net.InetSocketAddress
 import java.net.URL
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import javax.ws.rs.GET
+import javax.ws.rs.POST
+import javax.ws.rs.Path
+import javax.ws.rs.core.Response
+import javax.ws.rs.core.Response.ok
 
 class DriverTests {
     companion object {
@@ -58,29 +62,11 @@ class DriverTests {
 
     @Test
     fun `node registration`() {
-        // Very simple Http handler which counts the requests it has received and always returns the same payload.
-        val handler = object : HttpHandler {
-            private val _requests = mutableListOf<String>()
-            val requests: List<String>
-                get() = _requests.toList()
+        val handler = RegistrationHandler()
+        val networkMapServer = NetworkMapServer(1.minutes, NetworkHostAndPort("localHost", PortAllocation.RandomFree.nextPort()), handler)
+        val (host, port) = networkMapServer.start()
 
-            override fun handle(exchange: HttpExchange) {
-                val response = "reply"
-                _requests.add(exchange.requestURI.toString())
-                exchange.responseHeaders.set("Content-Type", "text/html; charset=" + Charsets.UTF_8)
-                exchange.sendResponseHeaders(200, response.length.toLong())
-                exchange.responseBody.use { it.write(response.toByteArray()) }
-            }
-        }
-
-        val inetSocketAddress = InetSocketAddress(0)
-        val server = HttpServer.create(inetSocketAddress, 0)
-        val port = server.address.port
-        server.createContext("/", handler)
-        server.executor = null // creates a default executor
-        server.start()
-
-        driver(compatibilityZoneURL = URL("http://localhost:$port")) {
+        driver(compatibilityZoneURL = URL("http://$host:$port")) {
             // Wait for the node to have started.
             startNode(initialRegistration = true).get()
         }
@@ -118,5 +104,22 @@ class DriverTests {
             (this as DriverDSL).baseDirectory(DUMMY_NOTARY.name)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
+    }
+}
+
+@Path("certificate")
+class RegistrationHandler {
+    val requests = mutableListOf<String>()
+    @POST
+    fun registration(): Response {
+        requests += "/certificate"
+        return ok("reply").build()
+    }
+
+    @GET
+    @Path("reply")
+    fun reply(): Response {
+        requests += "/certificate/reply"
+        return ok().build()
     }
 }

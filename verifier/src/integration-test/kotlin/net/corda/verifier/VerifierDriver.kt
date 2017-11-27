@@ -87,7 +87,6 @@ fun <A> verifierDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         compatibilityZoneURL: URL? = null,
-        fileBasedNetworkMap: Boolean = true,
         dsl: VerifierExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -102,8 +101,7 @@ fun <A> verifierDriver(
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs,
-                        compatibilityZoneURL = compatibilityZoneURL,
-                        fileBasedNetworkMap = fileBasedNetworkMap
+                        compatibilityZoneURL = compatibilityZoneURL
                 )
         ),
         coerce = { it },

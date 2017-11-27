@@ -24,7 +24,7 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 
-class NetworkMapServer(cacheTimeout: Duration, hostAndPort: NetworkHostAndPort) : Closeable {
+class NetworkMapServer(cacheTimeout: Duration, hostAndPort: NetworkHostAndPort, vararg additionalServices: Any) : Closeable {
     private val server: Server
 
     private val service = InMemoryNetworkMapService(cacheTimeout)
@@ -37,6 +37,7 @@ class NetworkMapServer(cacheTimeout: Duration, hostAndPort: NetworkHostAndPort) 
                     val resourceConfig = ResourceConfig().apply {
                         // Add your API provider classes (annotated for JAX-RS) here
                         register(service)
+                        additionalServices.forEach { register(it) }
                     }
                     val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
                     addServlet(jerseyServlet, "/*")

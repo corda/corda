@@ -238,7 +238,6 @@ fun <A> rpcDriver(
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         compatibilityZoneURL: URL? = null,
-        fileBasedNetworkMap: Boolean = true,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -253,8 +252,7 @@ fun <A> rpcDriver(
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs,
-                        compatibilityZoneURL = compatibilityZoneURL,
-                        fileBasedNetworkMap = fileBasedNetworkMap
+                        compatibilityZoneURL = compatibilityZoneURL
                 ), externalTrace
         ),
         coerce = { it },
