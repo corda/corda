@@ -3,7 +3,7 @@
 We'd like to thank the following people for contributing ideas to Corda, 
 either during architecture review sessions of the R3 Architecture Working Group, 
 or in design reviews since Corda has been open-sourced. Please forgive any omissions, 
-and use a pull request if you wish to see changes to this list.
+and create a pull request, or email <james@r3.com>, if you wish to see changes to this list.
 
 * Anthony Coates (Deutsche Bank)
 * Anton Semenov (Commerzbank)
