@@ -51,12 +51,12 @@
               </elementProp>
               <elementProp name="notaryName" elementType="Argument">
                 <stringProp name="Argument.name">notaryName</stringProp>
-                <stringProp name="Argument.value">O=Perf-10.155.0.7, OU=Corda, L=London, C=GB</stringProp>
+                <stringProp name="Argument.value">O=Perf-10.155.0.8, OU=Corda, L=London, C=GB</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="otherPartyName" elementType="Argument">
                 <stringProp name="Argument.name">otherPartyName</stringProp>
-                <stringProp name="Argument.value">L=London, C=GB, O=Perf-Networkmap, OU=Corda</stringProp>
+                <stringProp name="Argument.value">O=Perf-10.155.0.7, OU=Corda, L=London, C=GB</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
