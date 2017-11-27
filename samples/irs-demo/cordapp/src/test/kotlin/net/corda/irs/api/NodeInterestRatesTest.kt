@@ -209,8 +209,8 @@ class NodeInterestRatesTest {
         val mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
-            internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
-            internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
+            registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+            registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
                 services.cordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
             }

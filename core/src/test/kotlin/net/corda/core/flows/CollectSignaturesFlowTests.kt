@@ -50,7 +50,7 @@ class CollectSignaturesFlowTests {
 
     private fun registerFlowOnAllNodes(flowClass: KClass<out FlowLogic<*>>) {
         listOf(aliceNode, bobNode, charlieNode).forEach {
-            it.internals.registerInitiatedFlow(flowClass.java)
+            it.registerInitiatedFlow(flowClass.java)
         }
     }
 
