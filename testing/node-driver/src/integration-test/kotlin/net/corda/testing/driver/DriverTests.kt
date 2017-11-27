@@ -4,7 +4,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.internal.NodeStartup
@@ -40,6 +39,7 @@ class DriverTests {
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }
+        private val portAllocation = PortAllocation.Incremental(20000)
     }
 
     @Test
@@ -53,7 +53,7 @@ class DriverTests {
 
     @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
+        val nodeHandle = driver(portAllocation = portAllocation) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A.name)
             nodeMustBeUp(nodeInfo)
         }
@@ -62,11 +62,12 @@ class DriverTests {
 
     @Test
     fun `node registration`() {
+
         val handler = RegistrationHandler()
-        val networkMapServer = NetworkMapServer(1.minutes, NetworkHostAndPort("localHost", PortAllocation.RandomFree.nextPort()), handler)
+        val networkMapServer = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), handler)
         val (host, port) = networkMapServer.start()
 
-        driver(compatibilityZoneURL = URL("http://$host:$port")) {
+        driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
             // Wait for the node to have started.
             startNode(initialRegistration = true).get()
         }

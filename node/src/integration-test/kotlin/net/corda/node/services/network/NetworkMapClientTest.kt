@@ -14,9 +14,12 @@ import org.junit.Test
 import java.net.URL
 
 class NetworkMapClientTest {
+
+    private val portAllocation = PortAllocation.Incremental(20000)
+
     @Test
     fun `nodes can see each other using the http network map`() {
-        val (host, port) = NetworkMapServer(1.minutes, PortAllocation.RandomFree.nextHostAndPort()).start()
+        val (host, port) = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort()).start()
         driver(compatibilityZoneURL = URL("http://$host:$port")) {
             val alice = startNode(providedName = ALICE.name)
             val bob = startNode(providedName = BOB.name)
@@ -33,7 +36,7 @@ class NetworkMapClientTest {
 
     @Test
     fun `nodes process network map add updates correctly when adding new node to network map`() {
-        val (host, port) = NetworkMapServer(1.seconds, PortAllocation.RandomFree.nextHostAndPort()).start()
+        val (host, port) = NetworkMapServer(1.seconds, portAllocation.nextHostAndPort()).start()
         driver(compatibilityZoneURL = URL("http://$host:$port")) {
             val alice = startNode(providedName = ALICE.name)
             val notaryNode = defaultNotaryNode.get()
@@ -56,7 +59,7 @@ class NetworkMapClientTest {
 
     @Test
     fun `nodes process network map remove updates correctly`() {
-        val networkMapServer = NetworkMapServer(1.seconds, PortAllocation.RandomFree.nextHostAndPort())
+        val networkMapServer = NetworkMapServer(1.seconds, portAllocation.nextHostAndPort())
         val (host, port) = networkMapServer.start()
         driver(compatibilityZoneURL = URL("http://$host:$port")) {
             val alice = startNode(providedName = ALICE.name)
