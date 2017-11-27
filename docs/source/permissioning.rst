@@ -95,7 +95,7 @@ Creating the node CA keystores
 
 1. For each node, create a new keypair
 
-2. Obtain a certificate for the keypair signed with the intermediate CA key. The basic constraints extension must be
+2. Obtain a certificate for the keypair signed with the intermediate network CA key. The basic constraints extension must be
    set to ``true``
 
 3. Create a new Java keystore named ``nodekeystore.jks`` and store the keypair in it using the alias ``cordaclientca``
