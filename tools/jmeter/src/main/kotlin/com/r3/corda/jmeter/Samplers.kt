@@ -74,7 +74,7 @@ class CashIssueAndPaySampler : AbstractSampler() {
 
     override fun createFlowInvoke(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext): FlowInvoke<*> {
         val amount = 2_000_000.POUNDS
-        return FlowInvoke<CashIssueAndPaymentFlow>(CashIssueAndPaymentFlow::class.java, arrayOf(amount, OpaqueBytes.of(1), notaryIdentity, counterParty))
+        return FlowInvoke<CashIssueAndPaymentFlow>(CashIssueAndPaymentFlow::class.java, arrayOf(amount, OpaqueBytes.of(1), notaryIdentity, true, counterParty))
     }
 
     override fun teardownTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
