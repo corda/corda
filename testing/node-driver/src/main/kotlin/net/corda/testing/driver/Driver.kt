@@ -47,6 +47,7 @@ import okhttp3.Request
 import org.slf4j.Logger
 import rx.Observable
 import rx.observables.ConnectableObservable
+import rx.schedulers.Schedulers
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -636,6 +637,9 @@ class DriverDSL(
         }
         _shutdownManager?.shutdown()
         _executorService?.shutdownNow()
+        if (startNodesInProcess) {
+            Schedulers.reset()
+        }
     }
 
     private fun establishRpc(config: NodeConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {

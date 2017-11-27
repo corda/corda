@@ -39,7 +39,7 @@ class DriverTests {
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }
-        private val portAllocation = PortAllocation.Incremental(20000)
+        private val portAllocation = PortAllocation.Incremental(10000)
     }
 
     @Test
@@ -62,7 +62,6 @@ class DriverTests {
 
     @Test
     fun `node registration`() {
-
         val handler = RegistrationHandler()
         val networkMapServer = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), handler)
         val (host, port) = networkMapServer.start()
