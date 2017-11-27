@@ -26,7 +26,7 @@ import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, private val databaseProperties: Properties, private val createIdentityService: () -> IdentityService) {
+class HibernateConfiguration(val schemaService: SchemaService, private val databaseProperties: Properties, private val identityService: IdentityService) {
     companion object {
         private val logger = contextLogger()
     }
@@ -41,7 +41,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
         // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
         // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
         // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
-        JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(createIdentityService))
+        JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
         sessionFactoryForSchemas(it)
     }
 
@@ -80,7 +80,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(createIdentityService))
+            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identityService))
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)

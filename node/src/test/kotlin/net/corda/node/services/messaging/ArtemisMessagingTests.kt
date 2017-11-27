@@ -19,7 +19,6 @@ import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -68,7 +67,7 @@ class ArtemisMessagingTests {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
         networkMapRegistrationFuture = doneFuture(Unit)
         networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database), rigorousMock())
     }

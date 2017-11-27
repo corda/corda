@@ -20,7 +20,6 @@ import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -42,7 +41,7 @@ class DBTransactionStorageTests {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), rigorousMock())
         database.transaction {
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultServiceInternal
