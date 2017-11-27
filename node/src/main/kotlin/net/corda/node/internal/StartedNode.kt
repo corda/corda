@@ -2,6 +2,8 @@ package net.corda.node.internal
 
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.StateLoader
@@ -13,6 +15,7 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.CordaPersistence
+import rx.Observable
 
 interface StartedNode<out N : AbstractNode> {
     val internals: N
@@ -26,7 +29,20 @@ interface StartedNode<out N : AbstractNode> {
     val rpcOps: CordaRPCOps
     val notaryService: NotaryService?
     fun dispose() = internals.stop()
-    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(initiatedFlowClass)
+    /**
+     * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
+     * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
+     * @return An [Observable] of the initiated flows started by counter-parties.
+     */
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(smm, initiatedFlowClass)
+
+    @VisibleForTesting
+    fun <F : FlowLogic<*>> internalRegisterFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                                       flowFactory: InitiatedFlowFactory<F>,
+                                                       initiatedFlowClass: Class<F>,
+                                                       track: Boolean): Observable<F> {
+        return internals.internalRegisterFlowFactory(smm, initiatingFlowClass, flowFactory, initiatedFlowClass, track)
+    }
 }
 
 class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : StateLoader {
