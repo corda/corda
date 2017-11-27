@@ -35,6 +35,7 @@ We start with the empty ledger:
 
     .. sourcecode:: java
 
+        import kotlin.Unit;
         import org.junit.Test;
 
         import static net.corda.testing.NodeTestUtils.ledger;
