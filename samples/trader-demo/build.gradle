@@ -15,11 +15,20 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
+    systemTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/system-test/kotlin')
+        }
+    }
 }
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+    systemTestCompile.extendsFrom testCompile
+    systemTestRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -39,6 +48,9 @@ dependencies {
     testCompile project(':test-utils')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
+
+    systemTestCompile "net.sf.expectit:expectit-core:${expectit_version}"
+    systemTestCompile "com.github.sgreben:regex-builder:${regex_builder_version}"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
@@ -78,6 +90,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task systemTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.systemTest.output.classesDirs
+    classpath = sourceSets.systemTest.runtimeClasspath
 }
 
 idea {
