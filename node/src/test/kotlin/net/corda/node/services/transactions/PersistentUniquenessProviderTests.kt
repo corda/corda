@@ -2,11 +2,11 @@ package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.UniquenessException
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -18,15 +18,16 @@ class PersistentUniquenessProviderTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    val identity = MEGA_CORP
-    val txID = SecureHash.randomSHA256()
 
-    lateinit var database: CordaPersistence
+    private val identity = MEGA_CORP
+    private val txID = SecureHash.randomSHA256()
+
+    private lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
     }
 
     @After

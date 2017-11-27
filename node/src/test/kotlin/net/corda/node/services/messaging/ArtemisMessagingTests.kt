@@ -7,6 +7,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
@@ -18,7 +19,6 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -67,7 +67,7 @@ class ArtemisMessagingTests {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         networkMapRegistrationFuture = doneFuture(Unit)
         networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database), rigorousMock())
     }

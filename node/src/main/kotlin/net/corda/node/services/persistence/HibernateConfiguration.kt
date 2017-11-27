@@ -6,8 +6,8 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.api.SchemaService
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.node.utilities.parserTransactionIsolationLevel
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
@@ -23,10 +23,9 @@ import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.sql.Connection
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class HibernateConfiguration(val schemaService: SchemaService, private val databaseProperties: Properties, private val identityService: IdentityService) {
+class HibernateConfiguration(val schemaService: SchemaService, private val databaseConfig: DatabaseConfig, private val identityService: IdentityService) {
     companion object {
         private val logger = contextLogger()
     }
@@ -34,7 +33,6 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
     private val sessionFactories = ConcurrentHashMap<Set<MappedSchema>, SessionFactory>()
 
-    private val transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel") ?: "")
     val sessionFactoryForRegisteredSchemas = schemaService.schemaOptions.keys.let {
         logger.info("Init HibernateConfiguration for schemas: $it")
         // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
@@ -56,16 +54,16 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", if (databaseProperties.getProperty("initDatabase", "true") == "true") "update" else "validate")
+                .setProperty("hibernate.hbm2ddl.auto", if (databaseConfig.initDatabase) "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
-                .setProperty("hibernate.connection.isolation", transactionIsolationLevel.toString())
+                .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, databaseProperties.getProperty("serverNameTablePrefix", ""))
+        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix)
         logger.info("Created session factory for schemas: $schemas")
         return sessionFactory
     }
@@ -132,11 +130,13 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
         private val LOG_SIZE_LIMIT = 1024
 
         override fun extractLoggableRepresentation(value: ByteArray?): String {
-            return if (value == null) super.extractLoggableRepresentation(value) else {
+            return if (value == null) {
+                super.extractLoggableRepresentation(value)
+            } else {
                 if (value.size <= LOG_SIZE_LIMIT) {
-                    return "[size=${value.size}, value=${value.toHexString()}]"
+                    "[size=${value.size}, value=${value.toHexString()}]"
                 } else {
-                    return "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
+                    "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
                 }
             }
         }
