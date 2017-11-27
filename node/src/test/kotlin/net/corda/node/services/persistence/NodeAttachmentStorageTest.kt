@@ -13,12 +13,12 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Before
@@ -36,15 +36,15 @@ import kotlin.test.assertNull
 
 class NodeAttachmentStorageTest {
     // Use an in memory file system for testing attachment storage.
-    lateinit var fs: FileSystem
-    lateinit var database: CordaPersistence
+    private lateinit var fs: FileSystem
+    private lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties(), rigorousMock())
+        database = configureDatabase(dataSourceProperties, DatabaseConfig(), rigorousMock())
         fs = Jimfs.newFileSystem(Configuration.unix())
     }
 
@@ -82,9 +82,9 @@ class NodeAttachmentStorageTest {
 
     @Test
     fun `metadata can be used to search`() {
-        val (jarA,hashA) = makeTestJar()
-        val (jarB,hashB) = makeTestJar(listOf(Pair("file","content")))
-        val (jarC,hashC) = makeTestJar(listOf(Pair("magic_file","magic_content_puff")))
+        val (jarA, _) = makeTestJar()
+        val (jarB, hashB) = makeTestJar(listOf(Pair("file","content")))
+        val (jarC, hashC) = makeTestJar(listOf(Pair("magic_file","magic_content_puff")))
 
         database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())

@@ -11,13 +11,13 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.node.services.api.SchemaService
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.utilities.DatabaseTransactionManager
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Before
@@ -25,9 +25,7 @@ import org.junit.Test
 import rx.subjects.PublishSubject
 import kotlin.test.assertEquals
 
-
 class HibernateObserverTests {
-
     @Before
     fun setUp() {
         LogHelper.setLevel(HibernateObserver::class)
@@ -51,9 +49,8 @@ class HibernateObserverTests {
             get() = throw UnsupportedOperationException()
     }
 
-    // This method does not use back quotes for a nice name since it seems to kill the kotlin compiler.
     @Test
-    fun testChildObjectsArePersisted() {
+    fun `test child objects are persisted`() {
         val testSchema = TestSchema
         val rawUpdatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()
         val schemaService = object : SchemaService {
@@ -68,7 +65,7 @@ class HibernateObserverTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock(), schemaService)
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), schemaService)
         HibernateObserver.install(rawUpdatesPublisher, database.hibernateConfig)
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))

@@ -15,6 +15,7 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.irs.flows.RatesFixFlow
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
@@ -22,7 +23,6 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.createMockCordaService
 import org.junit.After
 import org.junit.Assert.*
@@ -68,7 +68,7 @@ class NodeInterestRatesTest {
 
     @Before
     fun setUp() {
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         database.transaction {
             oracle = createMockCordaService(services, NodeInterestRates::Oracle)
             oracle.knownFixes = TEST_DATA

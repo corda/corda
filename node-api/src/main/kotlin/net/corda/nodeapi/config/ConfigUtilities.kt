@@ -131,7 +131,13 @@ private fun Config.defaultToOldPath(property: KProperty<*>): String {
 
 private fun parseEnum(enumType: Class<*>, name: String): Enum<*> = enumBridge<Proxy.Type>(uncheckedCast(enumType), name) // Any enum will do
 
-private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T = java.lang.Enum.valueOf(clazz, name)
+private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T {
+    try {
+        return java.lang.Enum.valueOf(clazz, name)
+    } catch (e: IllegalArgumentException) {
+        throw IllegalArgumentException("$name is not one of { ${clazz.enumConstants.joinToString()} }")
+    }
+}
 
 /**
  * Convert the receiver object into a [Config]. This does the inverse action of [parseAs].

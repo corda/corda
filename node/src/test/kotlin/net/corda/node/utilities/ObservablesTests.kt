@@ -3,8 +3,8 @@ package net.corda.node.utilities
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -18,10 +18,10 @@ class ObservablesTests {
 
     private fun isInDatabaseTransaction(): Boolean = (DatabaseTransactionManager.currentOrNull() != null)
 
-    val toBeClosed = mutableListOf<Closeable>()
+    private val toBeClosed = mutableListOf<Closeable>()
 
-    fun createDatabase(): CordaPersistence {
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
+    private fun createDatabase(): CordaPersistence {
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         toBeClosed += database
         return database
     }

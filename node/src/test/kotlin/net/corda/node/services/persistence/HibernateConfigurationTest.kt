@@ -25,6 +25,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.CordaPersistence
@@ -36,7 +37,6 @@ import net.corda.testing.contracts.fillWithSomeTestDeals
 import net.corda.testing.contracts.fillWithSomeTestLinearStates
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import net.corda.testing.schemas.DummyLinearStateSchemaV2
@@ -84,8 +84,7 @@ class HibernateConfigurationTest {
         issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
-        val defaultDatabaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, makeTestIdentityService())
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), makeTestIdentityService())
         database.transaction {
             hibernateConfig = database.hibernateConfig
             // `consumeCash` expects we can self-notarise transactions

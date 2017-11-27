@@ -8,6 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
@@ -45,6 +46,14 @@ class ConfigParsingTest {
     @Test
     fun `Enum`() {
         testPropertyType<EnumData, EnumListData, TestEnum>(TestEnum.Value2, TestEnum.Value1, valuesToString = true)
+    }
+
+    @Test
+    fun `unknown Enum`() {
+        val config = config("value" to "UnknownValue")
+        assertThatThrownBy { config.parseAs<EnumData>() }
+                .hasMessageContaining(TestEnum.Value1.name)
+                .hasMessageContaining(TestEnum.Value2.name)
     }
 
     @Test

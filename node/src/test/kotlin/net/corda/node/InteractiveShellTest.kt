@@ -7,10 +7,10 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.configureDatabase
@@ -29,7 +29,7 @@ import kotlin.test.assertEquals
 class InteractiveShellTest {
     @Before
     fun setup() {
-        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), rigorousMock())
+        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
     }
 
     @After
@@ -92,6 +92,4 @@ class InteractiveShellTest {
 
     @Test
     fun party() = check("party: \"${MEGA_CORP.name}\"", MEGA_CORP.name.toString())
-
-    class DummyFSM(override val logic: FlowA) : FlowStateMachine<Any?> by rigorousMock()
 }

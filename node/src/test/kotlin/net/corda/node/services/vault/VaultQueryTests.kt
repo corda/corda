@@ -27,15 +27,14 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV3
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.schemas.DummyLinearStateSchemaV1
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.*
@@ -53,9 +52,16 @@ class VaultQueryTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val cordappPackages = setOf(
-            "net.corda.testing.contracts", "net.corda.finance.contracts",
-            CashSchemaV1::class.packageName, CommercialPaperSchemaV1::class.packageName, DummyLinearStateSchemaV1::class.packageName).toMutableList()
+
+    @Rule
+    @JvmField
+    val expectedEx: ExpectedException = ExpectedException.none()
+
+    private val cordappPackages = mutableListOf(
+            "net.corda.testing.contracts",
+            "net.corda.finance.contracts",
+            CashSchemaV1::class.packageName,
+            DummyLinearStateSchemaV1::class.packageName)
     private lateinit var services: MockServices
     private lateinit var notaryServices: MockServices
     private val vaultService: VaultService get() = services.vaultService
@@ -93,7 +99,7 @@ class VaultQueryTests {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), makeTestDatabaseProperties(), identitySvc)
+        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc)
         setUpDb(database, 5000)
 
         database.close()
@@ -128,9 +134,6 @@ class VaultQueryTests {
         props.setProperty("dataSource.password", "")
         return props
     }
-
-    @get:Rule
-    val expectedEx = ExpectedException.none()!!
 
     /**
      * Query API tests
@@ -1597,8 +1600,8 @@ class VaultQueryTests {
 
             val result = vaultService.queryBy<CommercialPaper.State>(criteria1)
 
-            Assertions.assertThat(result.states).hasSize(1)
-            Assertions.assertThat(result.statesMetadata).hasSize(1)
+            assertThat(result.states).hasSize(1)
+            assertThat(result.statesMetadata).hasSize(1)
         }
     }
 
@@ -1642,8 +1645,8 @@ class VaultQueryTests {
 
                 vaultService.queryBy<CommercialPaper.State>(criteria1.and(criteria3).and(criteria2))
             }
-            Assertions.assertThat(result.states).hasSize(1)
-            Assertions.assertThat(result.statesMetadata).hasSize(1)
+            assertThat(result.states).hasSize(1)
+            assertThat(result.statesMetadata).hasSize(1)
         }
     }
 
