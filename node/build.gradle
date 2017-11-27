@@ -53,6 +53,7 @@ dependencies {
     compile project(":confidential-identities")
     compile project(':client:rpc')
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
+    compile group: 'com.google.inject', name: 'guice', version: '4.0'
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 

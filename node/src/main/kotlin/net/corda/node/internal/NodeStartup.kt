@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import com.google.inject.Guice
 import com.jcabi.manifests.Manifests
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
@@ -24,10 +25,14 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import javax.inject.Inject
 import kotlin.system.exitProcess
 
+
 /** This class is responsible for starting a Node from command line arguments. */
-open class NodeStartup(val args: Array<String>) {
+open class NodeStartup @Inject constructor(private val argsParser: ArgsParser,
+                                           private val cmdlineOptions: CmdLineOptions,
+                                           private val versionInfo: VersionInfo) {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         val LOGS_DIRECTORY_NAME = "logs"
@@ -37,15 +42,12 @@ open class NodeStartup(val args: Array<String>) {
     open fun run() {
         val startTime = System.currentTimeMillis()
         assertCanNormalizeEmptyPath()
-        val (argsParser, cmdlineOptions) = parseArguments()
 
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
 
         initLogging(cmdlineOptions)
-
-        val versionInfo = getVersionInfo()
 
         if (cmdlineOptions.isVersion) {
             println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
@@ -142,7 +144,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
         logger.info("Main class: ${NodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
-        logger.info("Application Args: ${args.joinToString(" ")}")
+        logger.info("Application Args: ${cmdlineOptions}")
         logger.info("bootclasspath: ${info.bootClassPath}")
         logger.info("classpath: ${info.classPath}")
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
@@ -181,18 +183,6 @@ open class NodeStartup(val args: Array<String>) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     }
 
-    open protected fun getVersionInfo(): VersionInfo {
-        // Manifest properties are only available if running from the corda jar
-        fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
-
-        return VersionInfo(
-                manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
-                manifestValue("Corda-Release-Version") ?: "Unknown",
-                manifestValue("Corda-Revision") ?: "Unknown",
-                manifestValue("Corda-Vendor") ?: "Unknown"
-        )
-    }
-
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
         // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
@@ -216,18 +206,6 @@ open class NodeStartup(val args: Array<String>) {
         val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
         pidFileRw.setLength(0)
         pidFileRw.write(ourProcessID.toByteArray())
-    }
-
-    private fun parseArguments(): Pair<ArgsParser, CmdLineOptions> {
-        val argsParser = ArgsParser()
-        val cmdlineOptions = try {
-            argsParser.parse(*args)
-        } catch (ex: OptionException) {
-            println("Invalid command line arguments: ${ex.message}")
-            argsParser.printHelp(System.out)
-            exitProcess(1)
-        }
-        return Pair(argsParser, cmdlineOptions)
     }
 
     open protected fun initLogging(cmdlineOptions: CmdLineOptions) {
