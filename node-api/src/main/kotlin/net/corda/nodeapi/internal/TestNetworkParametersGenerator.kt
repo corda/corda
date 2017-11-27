@@ -27,6 +27,7 @@ import java.time.Instant
 import kotlin.streams.toList
 
 // This class is used by deployNodes task to generate NetworkParameters in [Cordformation].
+@Suppress("UNUSED")
 class TestNetworkParametersGenerator : NetworkParametersGenerator {
     companion object {
         private val logger = contextLogger()
@@ -93,6 +94,8 @@ class TestNetworkParametersGenerator : NetworkParametersGenerator {
 
     private fun NodeInfo.notaryIdentity() = if (legalIdentities.size == 2) legalIdentities[1] else legalIdentities[0]
 
+    // We need to to set serialization env, because generation of parameters is run from Cordform.
+    // KryoServerSerializationScheme is not accessible from nodeapi.
     private fun initialiseSerialization() {
         val context = if (java.lang.Boolean.getBoolean("net.corda.testing.amqp.enable")) AMQP_P2P_CONTEXT else KRYO_P2P_CONTEXT
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
