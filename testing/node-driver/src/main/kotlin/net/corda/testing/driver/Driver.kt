@@ -637,9 +637,6 @@ class DriverDSL(
         }
         _shutdownManager?.shutdown()
         _executorService?.shutdownNow()
-        if (startNodesInProcess) {
-            Schedulers.reset()
-        }
     }
 
     private fun establishRpc(config: NodeConfiguration, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
@@ -780,6 +777,9 @@ class DriverDSL(
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
         shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
+        if (startNodesInProcess) {
+            Schedulers.reset()
+        }
         val notaryInfos = generateNotaryIdentities()
         // The network parameters must be serialised before starting any of the nodes
         networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
