@@ -10,8 +10,8 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -37,7 +37,7 @@ class DBCheckpointStorageTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
         newCheckpointStorage()
     }
 

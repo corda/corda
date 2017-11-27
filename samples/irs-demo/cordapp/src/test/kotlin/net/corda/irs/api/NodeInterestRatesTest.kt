@@ -23,7 +23,6 @@ import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.node.createMockCordaService
 import org.junit.After
 import org.junit.Assert.*
@@ -69,7 +68,7 @@ class NodeInterestRatesTest {
 
     @Before
     fun setUp() {
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
         database.transaction {
             oracle = createMockCordaService(services, NodeInterestRates::Oracle)
             oracle.knownFixes = TEST_DATA

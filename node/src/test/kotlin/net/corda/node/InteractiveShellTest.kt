@@ -2,7 +2,6 @@ package net.corda.node
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import net.corda.client.jackson.JacksonSupport
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -10,8 +9,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.objectOrNewInstance
-import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -21,7 +18,6 @@ import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_IDENTITY
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Before
@@ -33,7 +29,7 @@ import kotlin.test.assertEquals
 class InteractiveShellTest {
     @Before
     fun setup() {
-        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), ::makeTestIdentityService)
+        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), rigorousMock())
     }
 
     @After

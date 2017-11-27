@@ -85,7 +85,7 @@ class HibernateConfigurationTest {
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val dataSourceProps = makeTestDataSourceProperties()
         val defaultDatabaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, makeTestIdentityService())
         database.transaction {
             hibernateConfig = database.hibernateConfig
             // `consumeCash` expects we can self-notarise transactions
