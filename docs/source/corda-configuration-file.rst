@@ -68,6 +68,13 @@ path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
+:database: Database configuration:
+
+        :initDatabase: Boolean on whether to initialise the database or just validate the schema. Defaults to true.
+        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
+        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
+            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
+
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.

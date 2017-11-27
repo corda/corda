@@ -93,6 +93,9 @@ UNRELEASED
 
 * ``waitForAllNodesToFinish()`` method in ``DriverDSLExposedInterface`` has instead become a parameter on driver creation.
 
+* ``database.transactionIsolationLevel`` values now follow the ``java.sql.Connection`` int constants but without the
+  "TRANSACTION_" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
+
 * Enterprise Corda only: Compatibility with SQL Server 2017 and SQL Azure databases.
 
 * Enterprise Corda only: node configuration property ``database.schema`` and documented existing database properties.

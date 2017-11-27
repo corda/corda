@@ -59,6 +59,8 @@
       <module name="finance_test" target="1.8" />
       <module name="gradle-plugins-cordform-common_main" target="1.8" />
       <module name="gradle-plugins-cordform-common_test" target="1.8" />
+      <module name="gradle-plugins-cordapp_main" target="1.8" />
+      <module name="gradle-plugins-cordapp_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
       <module name="intellij-plugin_main" target="1.8" />
