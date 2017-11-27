@@ -3,7 +3,7 @@ package net.corda.core.crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.toTypedArray
 import net.corda.core.internal.cert
-import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
@@ -50,7 +50,7 @@ class X509NameConstraintsTest {
 
         val nameConstraints = NameConstraints(acceptableNames, arrayOf())
         val pathValidator = CertPathValidator.getInstance("PKIX")
-        val certFactory = CertificateFactory.getInstance("X509")
+        val certFactory = X509CertificateFactory().delegate
 
         assertFailsWith(CertPathValidatorException::class) {
             val (keystore, trustStore) = makeKeyStores(X500Name("CN=Bank B"), nameConstraints)
@@ -85,7 +85,7 @@ class X509NameConstraintsTest {
                 .map { GeneralSubtree(GeneralName(X500Name(it))) }.toTypedArray()
 
         val nameConstraints = NameConstraints(acceptableNames, arrayOf())
-        val certFactory = CertificateFactory.getInstance("X509")
+        val certFactory = X509CertificateFactory().delegate
         Crypto.ECDSA_SECP256R1_SHA256
         val pathValidator = CertPathValidator.getInstance("PKIX", BouncyCastleProvider.PROVIDER_NAME)
 

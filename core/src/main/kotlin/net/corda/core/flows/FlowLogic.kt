@@ -348,6 +348,12 @@ abstract class FlowLogic<out T> {
         }
     }
 
+    /**
+     * Returns a pair of the current progress step index (as integer) in steps tree of current [progressTracker], and an observable
+     * of its upcoming changes.
+     *
+     * @return Returns null if this flow has no progress tracker.
+     */
     fun trackStepsTreeIndex(): DataFeed<Int, Int>? {
         // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
         return progressTracker?.let {
@@ -355,6 +361,12 @@ abstract class FlowLogic<out T> {
         }
     }
 
+    /**
+     * Returns a pair of the current steps tree of current [progressTracker] as pairs of zero-based depth and stringified step
+     * label and observable of upcoming changes to the structure.
+     *
+     * @return Returns null if this flow has no progress tracker.
+     */
     fun trackStepsTree(): DataFeed<List<Pair<Int,String>>, List<Pair<Int,String>>>? {
         // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
         return progressTracker?.let {
