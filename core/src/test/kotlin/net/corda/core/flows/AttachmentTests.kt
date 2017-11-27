@@ -52,10 +52,8 @@ class AttachmentTests {
         val bobNode = mockNet.createPartyNode(BOB.name)
 
         val alice = aliceNode.info.singleIdentity()
-
-        aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-
+        aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         // Insert an attachment into node zero's store directly.
         val id = aliceNode.database.transaction {
             aliceNode.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
@@ -85,10 +83,8 @@ class AttachmentTests {
     fun `missing`() {
         val aliceNode = mockNet.createPartyNode(ALICE.name)
         val bobNode = mockNet.createPartyNode(BOB.name)
-
-        aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-
+        aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         val alice = aliceNode.info.singleIdentity()
@@ -108,10 +104,8 @@ class AttachmentTests {
         })
         val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB.name))
         val alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
-
-        aliceNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-        bobNode.internals.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
-
+        aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
+        bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
         val id = aliceNode.database.transaction {
