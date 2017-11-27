@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
+import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
@@ -18,7 +19,8 @@ import kotlin.test.assertEquals
 //  5. Comment back out the generation code and uncomment the actual test
 class EvolvabilityTests {
     // When regenerating the test files this needs to be set to the file system location of the resource files
-    var localPath = "file:///<path>/<to>/<toplevel of>/corda/node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp"
+    var localPath = projectRootDir.toUri().resolve(
+            "node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp")
 
     @Test
     fun simpleOrderSwapSameType() {

@@ -27,14 +27,62 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
     Unknown({ UnknownTransform() }) {
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
+        override fun validate(l : List<Transform>, constants: Set<String>) { }
     },
     EnumDefault({ a -> EnumDefaultSchemaTransform((a as CordaSerializationTransformEnumDefault).old, a.new) }) {
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
+
+        /**
+         * Validates a list of constant additions to an enumerated types, to be valid a default (the value
+         * that should be used when we cannot use the new value) must refer to a constant that exists in the
+         * enum class as it exists now and it cannot refer to itself. 
+         *
+         * @param l The list of transforms representing new constants and the mapping from that constant to an
+         * existing value
+         * @param constants The list of enum constants on the type the transforms are being applied to
+         */
+        override fun validate(l : List<Transform>, constants: Set<String>) {
+            @Suppress("UNCHECKED_CAST") (l as List<EnumDefaultSchemaTransform>).forEach {
+                if (!constants.contains(it.old)) {
+                    throw NotSerializableException(
+                            "Enum extension defaults must be to a valid constant: ${it.new} -> ${it.old}. ${it.old} " +
+                                    "doesn't exist in constant set $constants")
+                }
+
+                if (it.old == it.new) {
+                    throw NotSerializableException("Enum extension ${it.new} cannot default to itself")
+                }
+            }
+        }
     },
     Rename({ a -> RenameSchemaTransform((a as CordaSerializationTransformRename).from, a.to) }) {
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
+
+        /**
+         * Validates a list of rename transforms is valid. Such a list isn't valid if we detect a cyclic chain,
+         * that is a constant is renamed to something that used to exist in the enum. We do this for both
+         * the same constant (i.e. C -> D -> C) and multiple constants (C->D, B->C)
+         *
+         * @param l The list of transforms representing the renamed constants and the mapping between their new
+         * and old values
+         * @param constants The list of enum constants on the type the transforms are being applied to
+         */
+        override fun validate(l : List<Transform>, constants: Set<String>) {
+            object : Any() {
+                    val from : MutableSet<String> = mutableSetOf()
+                    val to : MutableSet<String> = mutableSetOf() }.apply {
+                @Suppress("UNCHECKED_CAST") (l as List<RenameSchemaTransform>).forEach { rename ->
+                    if (rename.to in this.to || rename.from in this.from) {
+                        throw NotSerializableException("Cyclic renames are not allowed (${rename.to})")
+                    }
+
+                    this.to.add(rename.from)
+                    this.from.add(rename.to)
+                }
+            }
+        }
     }
     // Transform used to test the unknown handler, leave this at as the final constant, uncomment
     // when regenerating test cases - if Java had a pre-processor this would be much neater
@@ -44,6 +92,8 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
     //    override fun getDescribed(): Any = ordinal
     //}
     ;
+
+    abstract fun validate(l: List<Transform>, constants: Set<String>)
 
     companion object : DescribedTypeConstructor<TransformTypes> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_ELEMENT_KEY.amqpDescriptor

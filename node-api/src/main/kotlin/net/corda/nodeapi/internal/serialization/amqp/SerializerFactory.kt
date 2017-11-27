@@ -50,7 +50,7 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
         return serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, this)
-                is RestrictedType -> throw NotSerializableException("Enum evolution is not currently supported")
+                is RestrictedType -> EnumEvolutionSerializer.make(typeNotation, newSerializer, this, transforms)
             }
         }
     }
