@@ -8,67 +8,90 @@ class LegalNameValidatorTest {
     @Test
     fun `no double spaces`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("Test Legal  Name")
+            LegalNameValidator.validateOrganization("Test Legal  Name", LegalNameValidator.Validation.FULL)
         }
-        LegalNameValidator.validateFullOrganization(LegalNameValidator.normalize("Test Legal  Name"))
+        LegalNameValidator.validateOrganization(LegalNameValidator.normalize("Test Legal  Name"), LegalNameValidator.Validation.FULL)
     }
 
     @Test
     fun `no trailing white space`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("Test ")
+            LegalNameValidator.validateOrganization("Test ", LegalNameValidator.Validation.FULL)
         }
     }
 
     @Test
     fun `no prefixed white space`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization(" Test")
+            LegalNameValidator.validateOrganization(" Test", LegalNameValidator.Validation.FULL)
         }
     }
 
     @Test
     fun `blacklisted words`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("Test Server")
+            LegalNameValidator.validateOrganization("Test Server", LegalNameValidator.Validation.FULL)
         }
     }
 
     @Test
     fun `blacklisted characters`() {
-        LegalNameValidator.validateFullOrganization("Test")
+        LegalNameValidator.validateOrganization("Test", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("\$Test")
+            LegalNameValidator.validateOrganization("\$Test", LegalNameValidator.Validation.FULL)
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("\"Test")
+            LegalNameValidator.validateOrganization("\"Test", LegalNameValidator.Validation.FULL)
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("\'Test")
+            LegalNameValidator.validateOrganization("\'Test", LegalNameValidator.Validation.FULL)
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("=Test")
+            LegalNameValidator.validateOrganization("=Test", LegalNameValidator.Validation.FULL)
         }
     }
 
     @Test
-    fun `unicode range`() {
-        LegalNameValidator.validateFullOrganization("The quick brown fox jumped over the lazy dog.1234567890")
+    fun `unicode range in organization`() {
+        LegalNameValidator.validateOrganization("The quick brown fox jumped over the lazy dog.1234567890", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {
             // Right to left direction override
-            LegalNameValidator.validateFullOrganization("\u202EdtL 3R")
+            LegalNameValidator.validateOrganization("\u202EdtL 3R", LegalNameValidator.Validation.FULL)
         }
         assertFailsWith(IllegalArgumentException::class) {
             // Greek letter A.
-            LegalNameValidator.validateFullOrganization("Test \u0391")
+            LegalNameValidator.validateOrganization("Test \u0391", LegalNameValidator.Validation.FULL)
         }
         // Latin capital letter turned m
         assertFailsWith<IllegalArgumentException> {
-            LegalNameValidator.validateFullOrganization( "Test\u019CLtd")
+            LegalNameValidator.validateOrganization( "Test\u019CLtd", LegalNameValidator.Validation.FULL)
         }
         // Latin small letter turned e
         assertFailsWith<IllegalArgumentException> {
-            LegalNameValidator.validateFullOrganization("Test\u01ddLtd")
+            LegalNameValidator.validateOrganization("Test\u01ddLtd", LegalNameValidator.Validation.FULL)
+        }
+    }
+
+    @Test
+    fun `unicode range in general attributes`() {
+        LegalNameValidator.validateNameAttribute("The quick brown fox jumped over the lazy dog.1234567890", LegalNameValidator.Validation.FULL)
+        assertFailsWith(IllegalArgumentException::class) {
+            // Right to left direction override
+            LegalNameValidator.validateNameAttribute("\u202EdtL 3R", LegalNameValidator.Validation.FULL)
+        }
+        // Right to left direction override is okay with minimal validation though
+        LegalNameValidator.validateNameAttribute("\u202EdtL 3R", LegalNameValidator.Validation.MINIMAL)
+        assertFailsWith(IllegalArgumentException::class) {
+            // Greek letter A.
+            LegalNameValidator.validateNameAttribute("Test \u0391", LegalNameValidator.Validation.FULL)
+        }
+        // Latin capital letter turned m
+        assertFailsWith<IllegalArgumentException> {
+            LegalNameValidator.validateNameAttribute( "Test\u019CLtd", LegalNameValidator.Validation.FULL)
+        }
+        // Latin small letter turned e
+        assertFailsWith<IllegalArgumentException> {
+            LegalNameValidator.validateNameAttribute("Test\u01ddLtd", LegalNameValidator.Validation.FULL)
         }
     }
 
@@ -78,21 +101,21 @@ class LegalNameValidatorTest {
         while (longLegalName.length < 255) {
             longLegalName.append("A")
         }
-        LegalNameValidator.validateFullOrganization(longLegalName.toString())
+        LegalNameValidator.validateOrganization(longLegalName.toString(), LegalNameValidator.Validation.FULL)
 
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization(longLegalName.append("A").toString())
+            LegalNameValidator.validateOrganization(longLegalName.append("A").toString(), LegalNameValidator.Validation.FULL)
         }
     }
 
     @Test
     fun `legal name should be capitalized`() {
-        LegalNameValidator.validateFullOrganization("Good legal name")
+        LegalNameValidator.validateOrganization("Good legal name", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("bad name")
+            LegalNameValidator.validateOrganization("bad name", LegalNameValidator.Validation.FULL)
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("bad Name")
+            LegalNameValidator.validateOrganization("bad Name", LegalNameValidator.Validation.FULL)
         }
     }
 
@@ -102,13 +125,13 @@ class LegalNameValidatorTest {
         assertEquals("Legal Name With Unicode Whitespaces", LegalNameValidator.normalize("Legal Name\u2004With\u0009Unicode\u0020Whitespaces"))
         assertEquals("Legal Name With Line Breaks", LegalNameValidator.normalize("Legal Name With\n\rLine\nBreaks"))
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("Legal Name With\tTab")
+            LegalNameValidator.validateOrganization("Legal Name With\tTab", LegalNameValidator.Validation.FULL)
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("Legal Name\u2004With\u0009Unicode\u0020Whitespaces")
+            LegalNameValidator.validateOrganization("Legal Name\u2004With\u0009Unicode\u0020Whitespaces", LegalNameValidator.Validation.FULL)
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validateFullOrganization("Legal Name With\n\rLine\nBreaks")
+            LegalNameValidator.validateOrganization("Legal Name With\n\rLine\nBreaks", LegalNameValidator.Validation.FULL)
         }
     }
 }

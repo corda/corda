@@ -1,16 +1,26 @@
 package net.corda.core.internal
 
+import net.corda.core.internal.LegalNameValidator.normalize
 import java.text.Normalizer
 import javax.security.auth.x500.X500Principal
 
 object LegalNameValidator {
+    enum class Validation {
+        MINIMAL,
+        FULL
+    }
+
     @Deprecated("Use validateOrganization instead", replaceWith = ReplaceWith("validateOrganization(normalizedLegalName)"))
-    fun validateLegalName(normalizedLegalName: String) = validateOrganization(normalizedLegalName)
+    fun validateLegalName(normalizedLegalName: String) = validateOrganization(normalizedLegalName, Validation.FULL)
 
     /**
      * The validation function validates a string for use as part of a legal name. It applies the following rules:
      *
-     * - No blacklisted words like "node", "server".
+     * - Must be normalized (as per the [normalize] function).
+     * - Length must be 255 characters or shorter.
+     *
+     * Full validation (typically this is only done for names the Doorman approves) adds:
+     *
      * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce
      *   names over the phone, and character confusability attacks.
      * - No commas or equals signs.
@@ -18,27 +28,23 @@ object LegalNameValidator {
      *
      * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
      */
-    fun validateNameAttribute(normalizedNameAttribute: String) {
-        Rule.baseNameRules.forEach { it.validate(normalizedNameAttribute) }
+    fun validateNameAttribute(normalizedNameAttribute: String, validation: Validation) {
+        when (validation) {
+            Validation.MINIMAL -> Rule.attributeRules.forEach { it.validate(normalizedNameAttribute) }
+            Validation.FULL -> Rule.attributeFullRules.forEach { it.validate(normalizedNameAttribute) }
+        }
     }
 
     /**
      * The validation function validates a string for use as the organization attribute of a name, which includes additional
      * constraints over basic name attribute checks. It applies the following additional rules:
      *
+     * - Must be normalized (as per the [normalize] function).
+     * - Length must be 255 characters or shorter.
      * - No blacklisted words like "node", "server".
      * - Must consist of at least three letters.
      *
-     * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
-     */
-    fun validateOrganization(normalizedOrganization: String) {
-        Rule.legalNameRules.forEach { it.validate(normalizedOrganization) }
-    }
-
-    /**
-     * Perform  extended validation of a string for use as the organization attribute of a name, which includes additional
-     * constraints over the basic organization attribute checks. This is useful for getting an indication of whether the
-     * Doorman service is likely to accept a name for a certificate request. It applies the following rules:
+     * Full validation (typically this is only done for names the Doorman approves) adds:
      *
      * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce
      *   names over the phone, and character confusability attacks.
@@ -48,8 +54,11 @@ object LegalNameValidator {
      *
      * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
      */
-    fun validateFullOrganization(normalizedOrganization: String) {
-        Rule.legalNameFullRules.forEach { it.validate(normalizedOrganization) }
+    fun validateOrganization(normalizedOrganization: String, validation: Validation) {
+        when (validation) {
+            Validation.MINIMAL -> Rule.legalNameRules.forEach { it.validate(normalizedOrganization) }
+            Validation.FULL -> Rule.legalNameFullRules.forEach { it.validate(normalizedOrganization) }
+        }
     }
 
     @Deprecated("Use normalize instead", replaceWith = ReplaceWith("normalize(legalName)"))
@@ -68,13 +77,19 @@ object LegalNameValidator {
 
     sealed class Rule<in T> {
         companion object {
-            val baseNameRules: List<Rule<String>> = listOf(
+            val attributeRules: List<Rule<String>> = listOf(
                     UnicodeNormalizationRule(),
-                    LengthRule(maxLength = 255)
+                    LengthRule(maxLength = 255),
+                    MustHaveAtLeastTwoLettersRule()
             )
-            val legalNameRules: List<Rule<String>> = baseNameRules + listOf(
+            val attributeFullRules: List<Rule<String>> = attributeRules + listOf(
+                    CharacterRule(',', '=', '$', '"', '\'', '\\'),
+                    // TODO: Implement confusable character detection if we add more scripts.
+                    UnicodeRangeRule(Character.UnicodeBlock.BASIC_LATIN),
+                    CapitalLetterRule()
+            )
+            val legalNameRules: List<Rule<String>> = attributeRules + listOf(
                     WordRule("node", "server"),
-                    MustHaveAtLeastTwoLettersRule(),
                     X500NameRule()
             )
             val legalNameFullRules: List<Rule<String>> = legalNameRules + listOf(
