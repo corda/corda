@@ -26,13 +26,9 @@ import javax.persistence.Id
 import javax.persistence.Lob
 
 @ThreadSafe
-class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = emptySet(),
-                                confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                                override val trustRoot: X509Certificate,
+class PersistentIdentityService(override val trustRoot: X509Certificate,
                                 vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
-    constructor(wellKnownIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
+    constructor(trustRoot: X509CertificateHolder) : this(trustRoot.cert)
 
     companion object {
         private val log = contextLogger()
@@ -101,6 +97,10 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
+    }
+
+    /** Requires a database transaction. */
+    fun loadIdentities(identities: Iterable<PartyAndCertificate> = emptySet(), confidentialIdentities: Iterable<PartyAndCertificate> = emptySet()) {
         identities.forEach {
             val key = mapToKey(it)
             keyToParties.addWithDuplicatesAllowed(key, it, false)
@@ -136,7 +136,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
             val certificates = identity.certPath.certificates
             val idx = certificates.lastIndexOf(firstCertWithThisName)
             val certFactory = CertificateFactory.getInstance("X509")
-            val firstPath = certFactory.generateCertPath(certificates.slice(idx..certificates.size - 1))
+            val firstPath = certFactory.generateCertPath(certificates.slice(idx until certificates.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 

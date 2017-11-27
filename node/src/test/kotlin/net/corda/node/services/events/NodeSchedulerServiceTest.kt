@@ -38,7 +38,6 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.*
 import java.nio.file.Paths
@@ -92,7 +91,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
         val databaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, databaseProperties, ::makeTestIdentityService)
+        database = configureDatabase(dataSourceProps, databaseProperties, rigorousMock())
         val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         kms = MockKeyManagementService(identityService, ALICE_KEY)
         val configuration = testNodeConfiguration(Paths.get("."), CordaX500Name("Alice", "London", "GB"))

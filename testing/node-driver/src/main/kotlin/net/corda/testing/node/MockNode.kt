@@ -305,9 +305,11 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = testSerializationWhitelists
         private var dbCloser: (() -> Any?)? = null
-        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: (CordaPersistence) -> T) = super.initialiseDatabasePersistence(schemaService) { database ->
-            dbCloser = database::close
-            insideTransaction(database)
+        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
+            return super.initialiseDatabasePersistence(schemaService, identityService) { database ->
+                dbCloser = database::close
+                insideTransaction(database)
+            }
         }
 
         fun disableDBCloseOnStop() {

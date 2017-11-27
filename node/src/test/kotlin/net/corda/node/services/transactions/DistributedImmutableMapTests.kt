@@ -18,7 +18,7 @@ import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
+import net.corda.testing.rigorousMock
 import org.junit.*
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
@@ -86,7 +86,7 @@ class DistributedImmutableMapTests {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "PORT_${myAddress.port}_"), ::makeTestIdentityService)
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties("serverNameTablePrefix", "PORT_${myAddress.port}_"), rigorousMock())
         databases.add(database)
         val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createMap) }
 
