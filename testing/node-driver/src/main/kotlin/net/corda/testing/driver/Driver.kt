@@ -541,7 +541,7 @@ fun <A> poll(
         executorService: ScheduledExecutorService,
         pollName: String,
         pollInterval: Duration = 500.millis,
-        warnCount: Int = 120,
+        warnCount: Int = 10,
         check: () -> A?
 ): CordaFuture<A> {
     val resultFuture = openFuture<A>()
