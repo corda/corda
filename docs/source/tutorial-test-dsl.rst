@@ -43,7 +43,7 @@ We start with the empty ledger:
             @Test
             public void emptyLedger() {
                 ledger(l -> {
-                    return null;
+                    return Unit.INSTANCE;
                 });
             }
         }
