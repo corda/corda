@@ -85,6 +85,9 @@ class UnknownTransform : Transform() {
     override val name: String get() = typeName
 }
 
+/**
+ * Used by the unit testing framework
+ */
 class UnknownTestTransform(val a: Int, val b: Int, val c: Int) : Transform() {
     companion object : DescribedTypeConstructor<UnknownTestTransform> {
         val typeName = "UnknownTest"

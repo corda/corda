@@ -32,8 +32,8 @@ class EvolutionSerializer(
      * @param property object to read the actual property value
      */
     data class OldParam(val type: Type, val idx: Int, val property: PropertySerializer) {
-        fun readProperty(paramValues: List<*>, schema: Schema, input: DeserializationInput) =
-                property.readProperty(paramValues[idx], schema, input)
+        fun readProperty(paramValues: List<*>, schemas: SerializationSchemas, input: DeserializationInput) =
+                property.readProperty(paramValues[idx], schemas, input)
     }
 
     companion object {
@@ -121,10 +121,10 @@ class EvolutionSerializer(
      *
      * TODO: Object references
      */
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
-        return construct(readers.map { it?.readProperty(obj, schema, input) })
+        return construct(readers.map { it?.readProperty(obj, schemas, input) })
     }
 }
 
