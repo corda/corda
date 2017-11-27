@@ -91,7 +91,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
         val databaseProperties = makeTestDatabaseProperties()
-        database = configureDatabase(dataSourceProps, databaseProperties, ::rigorousMock)
+        database = configureDatabase(dataSourceProps, databaseProperties, rigorousMock())
         val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
         kms = MockKeyManagementService(identityService, ALICE_KEY)
         val configuration = testNodeConfiguration(Paths.get("."), CordaX500Name("Alice", "London", "GB"))

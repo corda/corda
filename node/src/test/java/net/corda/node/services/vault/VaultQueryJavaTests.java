@@ -69,7 +69,7 @@ public class VaultQueryJavaTests {
                 getDEV_TRUST_ROOT());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 Arrays.asList(getMEGA_CORP_KEY(), getDUMMY_NOTARY_KEY()),
-                () -> identitySvc,
+                identitySvc,
                 cordappPackages);
         issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();

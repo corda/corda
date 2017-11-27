@@ -93,7 +93,7 @@ class HibernateConfigurationTest {
                 doReturn(it).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }
         }
-        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, { identityService })
+        database = configureDatabase(dataSourceProps, defaultDatabaseProperties, identityService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
             // `consumeCash` expects we can self-notarise transactions

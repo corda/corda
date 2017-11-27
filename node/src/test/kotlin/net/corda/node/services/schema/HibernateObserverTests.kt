@@ -68,7 +68,7 @@ class HibernateObserverTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::rigorousMock, schemaService)
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock(), schemaService)
         HibernateObserver.install(rawUpdatesPublisher, database.hibernateConfig)
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))

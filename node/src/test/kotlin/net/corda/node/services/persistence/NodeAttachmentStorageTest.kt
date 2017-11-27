@@ -44,7 +44,7 @@ class NodeAttachmentStorageTest {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties(), ::rigorousMock)
+        database = configureDatabase(dataSourceProperties, makeTestDatabaseProperties(), rigorousMock())
         fs = Jimfs.newFileSystem(Configuration.unix())
     }
 

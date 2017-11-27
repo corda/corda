@@ -10,7 +10,6 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.internal.cert
-import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.utilities.CertificateAndKeyPair
 import net.corda.node.utilities.CertificateType
 import net.corda.node.utilities.CordaPersistence
@@ -21,7 +20,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.cert.CertificateFactory
-import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -37,7 +35,7 @@ class PersistentIdentityServiceTests {
 
     @Before
     fun setup() {
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), createIdentityService = { PersistentIdentityService(trustRoot = DEV_TRUST_ROOT) })
+        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), identityService = PersistentIdentityService(DEV_TRUST_ROOT))
         database = databaseAndServices.first
         services = databaseAndServices.second
         identityService = services.identityService
@@ -236,7 +234,7 @@ class PersistentIdentityServiceTests {
 
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = database.transaction {
-            PersistentIdentityService(trustRoot = DEV_TRUST_ROOT)
+            PersistentIdentityService(DEV_TRUST_ROOT)
         }
 
         database.transaction {

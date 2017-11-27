@@ -181,11 +181,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         initCertificate()
         val (keyPairs, info) = initNodeInfo()
         val schemaService = NodeSchemaService(cordappLoader)
+        val identityService = makeIdentityService(info)
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService) { database ->
+        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
+            identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database)
             val stateLoader = StateLoaderImpl(transactionStorage)
-            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader, database, info)
+            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader, database, info, identityService)
             val notaryService = makeNotaryService(nodeServices, database)
             smm = makeStateMachineManager(database)
             val flowStarter = FlowStarterImpl(serverThread, smm)
@@ -489,12 +491,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, stateLoader: StateLoader, database: CordaPersistence, info: NodeInfo): MutableList<Any> {
+    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, stateLoader: StateLoader, database: CordaPersistence, info: NodeInfo, identityService: IdentityService): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics)
         val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
-        val identityService = makeIdentityService(info)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
         _services = ServiceHubInternalImpl(
                 identityService,
@@ -548,10 +549,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
-    protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: (CordaPersistence) -> T): T {
+    protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            val database = configureDatabase(props, configuration.database, { _services.identityService }, schemaService)
+            val database = configureDatabase(props, configuration.database, identityService, schemaService)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
                 log.info("Connected to ${database.dataSource.connection.metaData.databaseProductName} database.")
@@ -611,13 +612,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeIdentityService(info: NodeInfo): IdentityService {
+    private fun makeIdentityService(info: NodeInfo): PersistentIdentityService {
         val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
         val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val trustRoot = trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
         val clientCa = caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
         val caCertificates = arrayOf(info.legalIdentitiesAndCerts[0].certificate, clientCa.certificate.cert)
-        return PersistentIdentityService(info.legalIdentitiesAndCerts, trustRoot = trustRoot, caCertificates = *caCertificates)
+        return PersistentIdentityService(trustRoot, *caCertificates)
     }
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService

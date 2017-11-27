@@ -41,7 +41,7 @@ class DBTransactionStorageTests {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), ::rigorousMock)
+        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), rigorousMock())
         database.transaction {
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultServiceInternal

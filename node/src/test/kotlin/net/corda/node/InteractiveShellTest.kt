@@ -29,7 +29,7 @@ import kotlin.test.assertEquals
 class InteractiveShellTest {
     @Before
     fun setup() {
-        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), ::rigorousMock)
+        InteractiveShell.database = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), rigorousMock())
     }
 
     @After

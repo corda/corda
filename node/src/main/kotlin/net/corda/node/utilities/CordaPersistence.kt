@@ -22,19 +22,19 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 //HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
 class CordaPersistence(var dataSource: HikariDataSource, private val schemaService: SchemaService,
-                       private val createIdentityService: () -> IdentityService, databaseProperties: Properties) : Closeable {
+                       private val identityService: IdentityService, databaseProperties: Properties) : Closeable {
     var transactionIsolationLevel = parserTransactionIsolationLevel(databaseProperties.getProperty("transactionIsolationLevel"))
 
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(schemaService, databaseProperties, createIdentityService)
+            HibernateConfiguration(schemaService, databaseProperties, identityService)
         }
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
 
     companion object {
-        fun connect(dataSource: HikariDataSource, schemaService: SchemaService, createIdentityService: () -> IdentityService, databaseProperties: Properties): CordaPersistence {
-            return CordaPersistence(dataSource, schemaService, createIdentityService, databaseProperties).apply {
+        fun connect(dataSource: HikariDataSource, schemaService: SchemaService, identityService: IdentityService, databaseProperties: Properties): CordaPersistence {
+            return CordaPersistence(dataSource, schemaService, identityService, databaseProperties).apply {
                 DatabaseTransactionManager(this)
             }
         }
@@ -120,11 +120,10 @@ class CordaPersistence(var dataSource: HikariDataSource, private val schemaServi
     }
 }
 
-fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, createIdentityService: () -> IdentityService, schemaService: SchemaService = NodeSchemaService(null)): CordaPersistence {
+fun configureDatabase(dataSourceProperties: Properties, databaseProperties: Properties?, identityService: IdentityService, schemaService: SchemaService = NodeSchemaService(null)): CordaPersistence {
     val config = HikariConfig(dataSourceProperties)
     val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence.connect(dataSource, schemaService, createIdentityService, databaseProperties ?: Properties())
-
+    val persistence = CordaPersistence.connect(dataSource, schemaService, identityService, databaseProperties ?: Properties())
     // Check not in read-only mode.
     persistence.transaction {
         persistence.dataSource.connection.use {
