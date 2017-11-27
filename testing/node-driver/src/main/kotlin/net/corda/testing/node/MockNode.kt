@@ -27,6 +27,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.BFTSMaRtConfiguration
+import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService
@@ -40,7 +41,6 @@ import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import net.corda.testing.setGlobalSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -364,7 +364,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                 baseDirectory = baseDirectory(id).createDirectories(),
                 myLegalName = parameters.legalName ?: CordaX500Name(organisation = "Mock Company $id", locality = "London", country = "GB")).also {
             doReturn(makeTestDataSourceProperties("node_$id", "net_$networkId")).whenever(it).dataSourceProperties
-            doReturn(makeTestDatabaseProperties("node_$id")).whenever(it).database
+            doReturn(DatabaseConfig()).whenever(it).database
             parameters.configOverrides(it)
         }
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot))

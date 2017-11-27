@@ -58,9 +58,9 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
-        if (databaseProperties.getProperty("schema") != null) {
+        if (databaseConfig.schema != null) {
             // This property helps 'hibernate.hbm2ddl.auto' to work properly when many schemas have similar table names.
-            config.setProperty("hibernate.default_schema", databaseProperties.getProperty("schema"))
+            config.setProperty("hibernate.default_schema", databaseConfig.schema)
         }
 
         schemas.forEach { schema ->

@@ -46,7 +46,8 @@ data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 data class DatabaseConfig(
         val initDatabase: Boolean = true,
         val serverNameTablePrefix: String = "",
-        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
+        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
+        val schema: String? = null
 )
 
 enum class TransactionIsolationLevel {
