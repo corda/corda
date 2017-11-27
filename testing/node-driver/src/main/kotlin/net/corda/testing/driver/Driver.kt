@@ -357,7 +357,6 @@ fun <A> driver(
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL,
-        fileBasedNetworkMap: Boolean = defaultParameters.fileBasedNetworkMap,
         dsl: DriverDSLExposedInterface.() -> A
 ): A {
     return genericDriver(
@@ -408,8 +407,7 @@ data class DriverParameters(
         val waitForNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
-        val compatibilityZoneURL: URL? = null,
-        val fileBasedNetworkMap: Boolean = true
+        val compatibilityZoneURL: URL? = null
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -475,7 +473,6 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL,
-        fileBasedNetworkMap: Boolean = defaultParameters.fileBasedNetworkMap,
         driverDslWrapper: (DriverDSL) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
