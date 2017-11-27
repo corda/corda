@@ -21,7 +21,8 @@ class NodeProcess(
         private val node: Process,
         private val client: CordaRPCClient
 ) : AutoCloseable {
-    private companion object {
+    companion object {
+        const val CORDAPPS_DIR_NAME = "cordapps"
         private val log = contextLogger()
     }
 
@@ -42,9 +43,11 @@ class NodeProcess(
         (nodeDir / "artemis").toFile().deleteRecursively()
     }
 
+    // TODO All use of this factory have duplicate code which is either bundling the calling module or a 3rd party module
+    // as a CorDapp for the nodes.
     class Factory(
-            private val buildDirectory: Path = Paths.get("build"),
-            private val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())
+            val buildDirectory: Path = Paths.get("build"),
+            val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())
     ) {
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
@@ -71,36 +74,37 @@ class NodeProcess(
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
-            val user = config.users[0]
+            waitForNode(process, config, client)
+            return NodeProcess(config, nodeDir, process, client)
+        }
 
-            val setupExecutor = Executors.newSingleThreadScheduledExecutor()
+        private fun waitForNode(process: Process, config: NodeConfig, client: CordaRPCClient) {
+            val executor = Executors.newSingleThreadScheduledExecutor()
             try {
-                setupExecutor.scheduleWithFixedDelay({
+                executor.scheduleWithFixedDelay({
                     try {
                         if (!process.isAlive) {
                             log.error("Node '${config.commonName}' has died.")
                             return@scheduleWithFixedDelay
                         }
-                        val conn = client.start(user.username, user.password)
-                        conn.close()
+                        val rpcConnection = config.users[0].let { client.start(it.username, it.password) }
+                        rpcConnection.close()
 
                         // Cancel the "setup" task now that we've created the RPC client.
-                        setupExecutor.shutdown()
+                        executor.shutdown()
                     } catch (e: Exception) {
                         log.warn("Node '{}' not ready yet (Error: {})", config.commonName, e.message)
                     }
                 }, 5, 1, SECONDS)
 
-                val setupOK = setupExecutor.awaitTermination(120, SECONDS)
+                val setupOK = executor.awaitTermination(120, SECONDS)
                 check(setupOK && process.isAlive) { "Failed to create RPC connection" }
             } catch (e: Exception) {
                 process.destroyForcibly()
                 throw e
             } finally {
-                setupExecutor.shutdownNow()
+                executor.shutdownNow()
             }
-
-            return NodeProcess(config, nodeDir, process, client)
         }
 
         private fun startNode(nodeDir: Path): Process {
