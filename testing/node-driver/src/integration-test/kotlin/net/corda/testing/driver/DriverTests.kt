@@ -6,6 +6,7 @@ import net.corda.core.internal.list
 import net.corda.core.internal.readLines
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
@@ -63,7 +64,7 @@ class DriverTests {
     @Test
     fun `node registration`() {
         val handler = RegistrationHandler()
-        NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), handler).use {
+        NetworkMapServer(1.seconds, portAllocation.nextHostAndPort(), handler).use {
             val (host, port) = it.start()
             driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
                 // Wait for the node to have started.

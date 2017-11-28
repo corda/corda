@@ -2,10 +2,15 @@ package net.corda.nodeapi
 
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.verify
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 
@@ -54,5 +59,23 @@ data class NotaryInfo(val identity: Party, val validating: Boolean)
  * A serialized [NetworkMap] and its signature and certificate. Enforces signature validity in order to deserialize the data
  * contained within.
  */
-class SignedNetworkMap(val rawNetworkMap: SerializedBytes<NetworkMap>, val signatureWithCert: DigitalSignature.WithCert)
-    : SignedData<NetworkMap>(rawNetworkMap, signatureWithCert)
+@CordaSerializable
+class SignedNetworkMap(val raw: SerializedBytes<NetworkMap>, val sig: DigitalSignatureWithCert) {
+    /**
+     * Return the deserialized NetworkMap if the signature and certificate can be verified.
+     *
+     * @throws CertPathValidatorException if the certificate path is invalid.
+     * @throws SignatureException if the signature is invalid.
+     */
+    @Throws(SignatureException::class)
+    fun verified(trustedRoot: X509Certificate): NetworkMap {
+        sig.by.publicKey.verify(raw.bytes, sig)
+        // Assume network map cert is issued by the root.
+        X509Utilities.validateCertificateChain(trustedRoot, sig.by, trustedRoot)
+        return raw.deserialize()
+    }
+}
+
+// TODO: This class should reside in the [DigitalSignature] class.
+/** A digital signature that identifies who the public key is owned by, and the certificate which provides prove of the identity */
+class DigitalSignatureWithCert(val by: X509Certificate, val signatureBytes: ByteArray) : DigitalSignature(signatureBytes)

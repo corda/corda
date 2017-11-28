@@ -52,7 +52,4 @@ open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
 
         fun withoutKey(): DigitalSignature = DigitalSignature(this.bytes)
     }
-
-    /** A digital signature that identifies who the public key is owned by, and the certificate which provides prove of the identity */
-    class WithCert(val certificate: X509Certificate, val signatureBytes: ByteArray) : WithKey(certificate.publicKey, signatureBytes)
 }

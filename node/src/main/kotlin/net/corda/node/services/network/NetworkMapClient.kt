@@ -47,9 +47,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
     fun getNetworkMap(): NetworkMapResponse {
         val conn = networkMapUrl.openHttpConnection()
         val signedNetworkMap = conn.inputStream.use { it.readBytes() }.deserialize<SignedNetworkMap>()
-        val networkMap = signedNetworkMap.verified()
-        // Verify certificate path is valid.
-        X509Utilities.validateCertificateChain(trustedRoot, signedNetworkMap.signatureWithCert.certificate, trustedRoot)
+        val networkMap = signedNetworkMap.verified(trustedRoot)
         val timeout = CacheControl.parse(Headers.of(conn.headerFields.filterKeys { it != null }.mapValues { it.value.first() })).maxAgeSeconds().seconds
         return NetworkMapResponse(networkMap, timeout)
     }
