@@ -24,6 +24,7 @@ import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import java.nio.file.Path
 
 /**
@@ -64,7 +65,7 @@ fun testNodeConfiguration(
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary
         doReturn(makeTestDataSourceProperties(myLegalName.organisation)).whenever(it).dataSourceProperties
-        doReturn(DatabaseConfig(serverNameTablePrefix = myLegalName.organisation)).whenever(it).database
+        doReturn(makeTestDatabaseProperties(myLegalName.organisation)).whenever(it).database
         doReturn("").whenever(it).emailAddress
         doReturn("").whenever(it).exportJMXto
         doReturn(true).whenever(it).devMode

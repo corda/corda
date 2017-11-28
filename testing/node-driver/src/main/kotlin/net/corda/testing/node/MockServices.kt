@@ -104,6 +104,15 @@ open class MockServices(
         }
 
         /**
+         * Make properties appropriate for creating a Database for unit tests.
+         *
+         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
+         */
+        @JvmStatic
+        fun makeTestDatabaseProperties(nodeName: String? = null): DatabaseConfig  =
+                DatabaseConfig(nodeOrganizationName = nodeName)
+
+        /**
          * Creates an instance of [InMemoryIdentityService] with [MOCK_IDENTITIES].
          */
         @JvmStatic
