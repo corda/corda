@@ -39,8 +39,8 @@ class DriverTests {
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }
-        private val portAllocation = PortAllocation.Incremental(10000)
     }
+    private val portAllocation = PortAllocation.Incremental(10000)
 
     @Test
     fun `simple node startup and shutdown`() {
@@ -63,14 +63,13 @@ class DriverTests {
     @Test
     fun `node registration`() {
         val handler = RegistrationHandler()
-        val networkMapServer = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), handler)
-        val (host, port) = networkMapServer.start()
-
-        driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
-            // Wait for the node to have started.
-            startNode(initialRegistration = true).get()
+        NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), handler).use {
+            val (host, port) = it.start()
+            driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
+                // Wait for the node to have started.
+                startNode(initialRegistration = true).get()
+            }
         }
-
         // We're getting:
         //   a request to sign the certificate then
         //   at least one poll request to see if the request has been approved.
