@@ -6,7 +6,8 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
-* Corda is now able to work with H2 and Hibernate when property Hibernate validates an existing schema, rather than creating it.
+* Corda is now able to work with H2 and Hibernate. In ``devMode`` Hibernate will try to create or update a schema, while
+  not in ``devMode`` Hibernate will validate the existing schema, failing if this is not found or not compliant.
 
 * Removed confusing property ``database.initDatabase``, enabling its guarded behaviour with the ``dev-mode``.
 
