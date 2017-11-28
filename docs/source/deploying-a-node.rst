@@ -3,14 +3,12 @@ Deploying a node
 
 .. contents::
 
-.. note:: These instructions are intended for people who want to deploy one or more CorDapps to a server,
-whether they have developed and tested a CorDapp following the instructions in :doc:`generating-a-node`
+.. note:: These instructions are intended for people who want to deploy a Corda node to a server,
+   whether they have developed and tested a CorDapp following the instructions in :doc:`generating-a-node`
    or are deploying a third-party CorDapp.
 
-.. note:: This example creates a node using the internal H2 database and connecting to TestNet.
-
 Installing and running Corda as a system service (Linux with systemd)
------------------------------------------------------------
+---------------------------------------------------------------------
 We recommend creating systemd services to run a node and its webserver. This provides logging and service handling,
 ensures the Corda service is run at boot, and means the Corda service stays running with no users connected to the
 server.
@@ -29,14 +27,14 @@ server.
       webAddress : "0.0.0.0:10004"
       h2port : 11000
       emailAddress : "you@example.com"
-      myLegalName : "O=Bank of Tea, L=London, C=GB"
+      myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
       keyStorePassword : "cordacadevpass"
       trustStorePassword : "trustpass"
       useHTTPS : false
       devMode : false
       networkMapService {
-          address="one-networkmap.corda.r3cev.com:10002"
-          legalName="O=TestNet NetworkMap, L=Dublin, C=IE"
+          address="networkmap.foo.bar.com:10002"
+          legalName="O=FooBar NetworkMap, L=Dublin, C=IE"
       }
       rpcUsers=[
           {
@@ -47,7 +45,6 @@ server.
               ]
           }
       ]
-      certificateSigningService="https://one-doorman.corda.r3cev.com"
 
 3. Make the following changes to ``/opt/corda/node.conf``:
 
@@ -84,7 +81,7 @@ server.
     * Set the maximum amount of memory available to the Corda process by changing the ``-Xmx2048m`` parameter
 
 .. note:: The Corda webserver provides a simple interface for interacting with your installed CorDapps in a browser.
-Running the webserver is optional.
+   Running the webserver is optional.
 
 6. Create a ``corda-webserver.service`` file based on the example below and save it in the ``/etc/systemd/system/``
    directory.
@@ -105,16 +102,7 @@ Running the webserver is optional.
        [Install]
        WantedBy=multi-user.target
 
-7. Run Corda in initial registration mode to get a certificate from the doorman:
-
-    .. code-block:: shell
-
-       java -jar corda.jar --initial-registration
-
-    Corda will send a certificate signing request (CSR) to the Doorman server and poll for a response. When the
-    certificate is returned, Corda will install it and others into ``/opt/corda/certificates`` and terminate. If you
-    terminate the process before the certificate has been supplied, run the above command again and Corda will retrieve
-    and install the certificates.
+7. Copy the required Java keystores to the node. See :doc:`permissioning`.
 
 8. You can now start a node and its webserver by running the following ``systemctl`` commands:
 
