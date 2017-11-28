@@ -13,7 +13,7 @@ We recommend creating systemd services to run a node and its webserver. This pro
 ensures the Corda service is run at boot, and means the Corda service stays running with no users connected to the
 server.
 
-Prerequisites:
+**Prerequisites**:
 
    * Oracle Java 8
 
@@ -24,7 +24,7 @@ Prerequisites:
 2. Download `Corda <https://r3.bintray.com/corda/net/corda/corda/2.0.0/corda-2.0.0.jar>`_
 
 3. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
-our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory.
+   our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory.
 
 4. Save the below as ``/opt/corda/node.conf``:
 
@@ -65,7 +65,7 @@ our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` direc
       * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
       * Location (``L=``) is your nearest city
       * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
-   *  Change the RPC username and password.
+   *  Change the RPC username and password
 
 6. Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/`` directory.
 
@@ -128,18 +128,18 @@ Windows: Installing and running Corda as a Windows service
 We recommend running Corda as a Windows service. This provides service handling, ensures the Corda service is run
 at boot, and means the Corda service stays running with no users connected to the server.
 
-Prerequisites:
+**Prerequisites**:
 
    * Oracle Java 8
 
-1. Create a Corda directory and download Corda. Example using PowerShell:
+1. Create a Corda directory and download Corda. Here's an example using PowerShell:
 
    .. code-block:: PowerShell
 
             mkdir C:\Corda
             wget http://jcenter.bintray.com/net/corda/corda/2.0.0/corda-2.0.0.jar -OutFile C:\Corda\corda.jar
 
-2. Save the below as C:\Corda\node.conf:
+2. Save the below as ``C:\Corda\node.conf``:
 
    .. code-block:: json
 
@@ -179,15 +179,15 @@ Prerequisites:
       * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
       * Location (``L=``) is your nearest city
       * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
-   *  Change the RPC username and password.
+   *  Change the RPC username and password
 
-4. Copy the required Java keystores to the node. See :doc:`permissioning`.
+4. Copy the required Java keystores to the node. See :doc:`permissioning`
 
-5. Download `NSSM (service manager)<nssm.cc>_`
+5. Download the `NSSM service manager <nssm.cc>`_
 
-6. Unzip nssm-2.24\win64\nssm.exe to C:\Corda
+6. Unzip ``nssm-2.24\win64\nssm.exe`` to ``C:\Corda``
 
-7. Save the following as C:\Corda\nssm.bat:
+7. Save the following as ``C:\Corda\nssm.bat``:
 
    .. code-block:: batch
 
@@ -198,18 +198,19 @@ Prerequisites:
       nssm set corda AppStderr C:\Corda\service.log
       sc start corda
 
-8. Run the batch file by clicking on it or from a command prompt.
+8. Run the batch file by clicking on it or from a command prompt
 
-9. Run services.msc and verify that a service called corda is present and running.
+9. Run services.msc and verify that a service called corda is present and running
 
-10. Run "netstat -ano" and check for the ports you configured in node.conf
+10. Run ``netstat -ano`` and check for the ports you configured in node.conf
 
-11. You may need to open the ports on the Windows Firewall.
+11. You may need to open the ports on the Windows Firewall
 
 Testing your installation
 -------------------------
 You can verify Corda is running by connecting to your RPC port from another host, e.g.:
 
-        telnet your-hostname.example.com 10002
+        ``telnet your-hostname.example.com 10002``
 
-If you receive the message "Escape character is ^]", Corda is running and accessible. Press Ctrl-] and Ctrl-D to exit telnet.
+If you receive the message "Escape character is ^]", Corda is running and accessible. Press Ctrl-] and Ctrl-D to exit
+telnet.
