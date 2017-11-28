@@ -14,73 +14,76 @@ import org.junit.Test
 import java.net.URL
 
 class NetworkMapClientTest {
-    companion object {
-        private val portAllocation = PortAllocation.Incremental(10000)
-    }
+    private val portAllocation = PortAllocation.Incremental(10000)
 
     @Test
     fun `nodes can see each other using the http network map`() {
-        val (host, port) = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort()).start()
-        driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
-            val alice = startNode(providedName = ALICE.name)
-            val bob = startNode(providedName = BOB.name)
+        NetworkMapServer(1.minutes, portAllocation.nextHostAndPort()).use {
+            val (host, port) = it.start()
+            driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
+                val alice = startNode(providedName = ALICE.name)
+                val bob = startNode(providedName = BOB.name)
 
-            val notaryNode = defaultNotaryNode.get()
-            val aliceNode = alice.get()
-            val bobNode = bob.get()
+                val notaryNode = defaultNotaryNode.get()
+                val aliceNode = alice.get()
+                val bobNode = bob.get()
 
-            notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+            }
         }
     }
 
     @Test
     fun `nodes process network map add updates correctly when adding new node to network map`() {
-        val (host, port) = NetworkMapServer(1.seconds, portAllocation.nextHostAndPort()).start()
-        driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
-            val alice = startNode(providedName = ALICE.name)
-            val notaryNode = defaultNotaryNode.get()
-            val aliceNode = alice.get()
+        NetworkMapServer(1.seconds, portAllocation.nextHostAndPort()).use {
+            val (host, port) = it.start()
+            driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
+                val alice = startNode(providedName = ALICE.name)
+                val notaryNode = defaultNotaryNode.get()
+                val aliceNode = alice.get()
 
-            notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
-            aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
+                notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
+                aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
 
-            val bob = startNode(providedName = BOB.name)
-            val bobNode = bob.get()
+                val bob = startNode(providedName = BOB.name)
+                val bobNode = bob.get()
 
-            // Wait for network map client to poll for the next update.
-            Thread.sleep(2.seconds.toMillis())
+                // Wait for network map client to poll for the next update.
+                Thread.sleep(2.seconds.toMillis())
 
-            bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+            }
         }
     }
 
     @Test
     fun `nodes process network map remove updates correctly`() {
-        val networkMapServer = NetworkMapServer(1.seconds, portAllocation.nextHostAndPort())
-        val (host, port) = networkMapServer.start()
-        driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
-            val alice = startNode(providedName = ALICE.name)
-            val bob = startNode(providedName = BOB.name)
+        NetworkMapServer(1.seconds, portAllocation.nextHostAndPort()).use {
+            val (host, port) = it.start()
+            driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
+                val alice = startNode(providedName = ALICE.name)
+                val bob = startNode(providedName = BOB.name)
 
-            val notaryNode = defaultNotaryNode.get()
-            val aliceNode = alice.get()
-            val bobNode = bob.get()
+                val notaryNode = defaultNotaryNode.get()
+                val aliceNode = alice.get()
+                val bobNode = bob.get()
 
-            notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+                bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
 
-            networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+                it.removeNodeInfo(aliceNode.nodeInfo)
 
-            // Wait for network map client to poll for the next update.
-            Thread.sleep(2.seconds.toMillis())
+                // Wait for network map client to poll for the next update.
+                Thread.sleep(2.seconds.toMillis())
 
-            notaryNode.onlySees(notaryNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(notaryNode.nodeInfo, bobNode.nodeInfo)
+                notaryNode.onlySees(notaryNode.nodeInfo, bobNode.nodeInfo)
+                bobNode.onlySees(notaryNode.nodeInfo, bobNode.nodeInfo)
+            }
         }
     }
 
