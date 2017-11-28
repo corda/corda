@@ -6,9 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
-* Corda is now able to work with H2 and Hibernate when property ``database.adjustSchemas`` is set to ``false``.
+* Corda is now able to work with H2 and Hibernate when property Hibernate validates an existing schema, rather than creating it.
 
-* Renamed confusing property ``database.initDatabase`` to ``database.adjustSchemas``.
+* Removed confusing property ``database.initDatabase``, enabling its guarded behaviour with the ``dev-mode``.
 
 * ``AttachmentStorage`` now allows providing metadata on attachments upload - username and filename, currently as plain
   strings. Those can be then used for querying, utilizing ``queryAttachments`` method of the same interface.

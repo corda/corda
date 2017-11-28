@@ -38,7 +38,6 @@ class NodeConfigurationImplTest {
             keyStorePassword = "cordacadevpass",
             trustStorePassword = "trustpass",
             dataSourceProperties = makeTestDataSourceProperties(ALICE.name.organisation),
-            database = DatabaseConfig(),
             rpcUsers = emptyList(),
             verifierType = VerifierType.InMemory,
             useHTTPS = false,
