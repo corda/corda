@@ -1,6 +1,7 @@
 package net.corda.node.utilities
 
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.util.*
 
 

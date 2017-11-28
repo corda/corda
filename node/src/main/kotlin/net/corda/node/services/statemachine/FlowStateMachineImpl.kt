@@ -7,6 +7,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.primitives.Primitives
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
@@ -15,7 +16,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.context.InvocationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
@@ -25,9 +25,9 @@ import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.node.services.statemachine.FlowSessionState.Initiating
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.DatabaseTransaction
-import net.corda.node.utilities.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths

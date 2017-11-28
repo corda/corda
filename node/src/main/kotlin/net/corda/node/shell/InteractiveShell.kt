@@ -22,9 +22,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.RPCUserService
@@ -33,8 +31,8 @@ import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.node.services.messaging.RpcPermissions
 import net.corda.node.utilities.ANSIProgressRenderer
-import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.StdoutANSIProgressRenderer
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
 import org.crsh.console.jline.TerminalFactory
@@ -94,7 +92,7 @@ object InteractiveShell {
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, userService: RPCUserService, identityService: IdentityService, database:CordaPersistence) {
+    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, userService: RPCUserService, identityService: IdentityService, database: CordaPersistence) {
         this.rpcOps = cordaRPCOps
         this.userService = userService
         this.identityService = identityService

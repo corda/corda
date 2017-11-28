@@ -1,13 +1,9 @@
-package net.corda.node.services.persistence
+package net.corda.nodeapi.internal.persistence
 
 import net.corda.core.internal.castIfPossible
-import net.corda.core.node.services.IdentityService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
-import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.DatabaseConfig
-import net.corda.node.utilities.DatabaseTransactionManager
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
@@ -18,14 +14,18 @@ import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
-import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
+import javax.persistence.AttributeConverter
 
-class HibernateConfiguration(val schemaService: SchemaService, private val databaseConfig: DatabaseConfig, private val identityService: IdentityService) {
+class HibernateConfiguration(
+        schemas: Set<MappedSchema>,
+        private val databaseConfig: DatabaseConfig,
+        private val attributeConverters: Collection<AttributeConverter<*, *>>
+) {
     companion object {
         private val logger = contextLogger()
     }
@@ -33,13 +33,8 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
     private val sessionFactories = ConcurrentHashMap<Set<MappedSchema>, SessionFactory>()
 
-    val sessionFactoryForRegisteredSchemas = schemaService.schemaOptions.keys.let {
+    val sessionFactoryForRegisteredSchemas = schemas.let {
         logger.info("Init HibernateConfiguration for schemas: $it")
-        // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
-        // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
-        // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
-        // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
-        JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
         sessionFactoryForSchemas(it)
     }
 
@@ -78,7 +73,7 @@ class HibernateConfiguration(val schemaService: SchemaService, private val datab
                 }
             })
             // register custom converters
-            applyAttributeConverter(AbstractPartyToX500NameAsStringConverter(identityService))
+            attributeConverters.forEach { applyAttributeConverter(it) }
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
             applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)

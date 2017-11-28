@@ -18,21 +18,22 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.node.VersionInfo
 import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshCertificate
 import net.corda.node.services.keys.getSigner
-import net.corda.node.services.persistence.HibernateConfiguration
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.*
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
@@ -78,6 +79,7 @@ open class MockServices(
         }
 
         private fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
+
         /**
          * Makes database and mock services appropriate for unit tests.
          * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
@@ -88,8 +90,9 @@ open class MockServices(
         @JvmStatic
         fun makeTestDatabaseAndMockServices(keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
                                             identityService: IdentityService = makeTestIdentityService(),
-                                            cordappPackages: List<String> = emptyList()): Pair<CordaPersistence, MockServices>
-            = makeTestDatabaseAndMockServices(keys, identityService, cordappPackages, MEGA_CORP.name)
+                                            cordappPackages: List<String> = emptyList()): Pair<CordaPersistence, MockServices> {
+            return makeTestDatabaseAndMockServices(keys, identityService, cordappPackages, MEGA_CORP.name)
+        }
 
         /**
          * Makes database and mock services appropriate for unit tests.
@@ -105,11 +108,12 @@ open class MockServices(
                                             initialIdentityName: CordaX500Name): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
-            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, NodeSchemaService(cordappLoader))
+            val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
+            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, initialIdentityName = initialIdentityName, keys = *(keys.toTypedArray())) {
                     override val identityService get() = identityService
-                    override val vaultService: VaultServiceInternal = makeVaultService(database.hibernateConfig)
+                    override val vaultService: VaultServiceInternal = makeVaultService(database.hibernateConfig, schemaService)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         for (stx in txs) {
@@ -161,13 +165,13 @@ open class MockServices(
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     lateinit var hibernatePersister: HibernateObserver
 
-    fun makeVaultService(hibernateConfig: HibernateConfiguration): VaultServiceInternal {
+    fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService): VaultServiceInternal {
         val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, stateLoader, hibernateConfig)
-        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, hibernateConfig)
+        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, hibernateConfig, schemaService)
         return vaultService
     }
 
-    val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
+    val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create<SerializeAsToken>()
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
         require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
         return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")

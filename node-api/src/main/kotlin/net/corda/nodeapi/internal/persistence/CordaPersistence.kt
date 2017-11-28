@@ -1,63 +1,79 @@
-package net.corda.node.utilities
+package net.corda.nodeapi.internal.persistence
 
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
-import net.corda.core.node.services.IdentityService
-import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.DatabaseConfig
-import net.corda.node.services.persistence.HibernateConfiguration
-import net.corda.node.services.schema.NodeSchemaService
+import net.corda.core.schemas.MappedSchema
 import rx.Observable
 import rx.Subscriber
 import rx.subjects.UnicastSubject
 import java.io.Closeable
 import java.sql.Connection
 import java.sql.SQLException
-import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
+import javax.persistence.AttributeConverter
+import javax.sql.DataSource
 
 /**
  * Table prefix for all tables owned by the node module.
  */
 const val NODE_DATABASE_PREFIX = "node_"
 
-//HikariDataSource implements Closeable which allows CordaPersistence to be Closeable
+// This class forms part of the node config and so any changes to it must be handled with care
+data class DatabaseConfig(
+        val initialiseSchema: Boolean = true,
+        val serverNameTablePrefix: String = "",
+        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
+)
+
+// This class forms part of the node config and so any changes to it must be handled with care
+enum class TransactionIsolationLevel {
+    NONE,
+    READ_UNCOMMITTED,
+    READ_COMMITTED,
+    REPEATABLE_READ,
+    SERIALIZABLE;
+
+    /**
+     * The JDBC constant value of the same name but prefixed with TRANSACTION_ defined in [java.sql.Connection].
+     */
+    val jdbcValue: Int = java.sql.Connection::class.java.getField("TRANSACTION_$name").get(null) as Int
+}
+
 class CordaPersistence(
-        val dataSource: HikariDataSource,
-        private val schemaService: SchemaService,
-        private val identityService: IdentityService,
-        databaseConfig: DatabaseConfig
+        val dataSource: DataSource,
+        databaseConfig: DatabaseConfig,
+        schemas: Set<MappedSchema>,
+        attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
 ) : Closeable {
-    val transactionIsolationLevel = databaseConfig.transactionIsolationLevel.jdbcValue
+    val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(schemaService, databaseConfig, identityService)
+            HibernateConfiguration(schemas, databaseConfig, attributeConverters)
         }
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
 
-    companion object {
-        fun connect(dataSource: HikariDataSource, schemaService: SchemaService, identityService: IdentityService, databaseConfig: DatabaseConfig): CordaPersistence {
-            return CordaPersistence(dataSource, schemaService, identityService, databaseConfig).apply {
-                DatabaseTransactionManager(this)
+    init {
+        DatabaseTransactionManager(this)
+        // Check not in read-only mode.
+        transaction {
+            dataSource.connection.use {
+                check(!it.metaData.isReadOnly) { "Database should not be readonly." }
             }
         }
     }
 
     /**
-     * Creates an instance of [DatabaseTransaction], with the given isolation level.
-     * @param isolationLevel isolation level for the transaction. If not specified the default (i.e. provided at the creation time) is used.
+     * Creates an instance of [DatabaseTransaction], with the given transaction isolation level.
      */
-    fun createTransaction(isolationLevel: Int): DatabaseTransaction {
+    fun createTransaction(isolationLevel: TransactionIsolationLevel): DatabaseTransaction {
         // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
         DatabaseTransactionManager.dataSource = this
         return DatabaseTransactionManager.currentOrNew(isolationLevel)
     }
 
     /**
-     * Creates an instance of [DatabaseTransaction], with the transaction isolation level specified at the creation time.
+     * Creates an instance of [DatabaseTransaction], with the default transaction isolation level.
      */
-    fun createTransaction(): DatabaseTransaction = createTransaction(transactionIsolationLevel)
+    fun createTransaction(): DatabaseTransaction = createTransaction(defaultIsolationLevel)
 
     fun createSession(): Connection {
         // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
@@ -71,7 +87,7 @@ class CordaPersistence(
      * @param isolationLevel isolation level for the transaction.
      * @param statement to be executed in the scope of this transaction.
      */
-    fun <T> transaction(isolationLevel: Int, statement: DatabaseTransaction.() -> T): T {
+    fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T {
         DatabaseTransactionManager.dataSource = this
         return transaction(isolationLevel, 3, statement)
     }
@@ -80,22 +96,21 @@ class CordaPersistence(
      * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
      * @param statement to be executed in the scope of this transaction.
      */
-    fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(transactionIsolationLevel, statement)
+    fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
 
-    private fun <T> transaction(transactionIsolation: Int, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
+    private fun <T> transaction(isolationLevel: TransactionIsolationLevel, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
         val outer = DatabaseTransactionManager.currentOrNull()
-
         return if (outer != null) {
             outer.statement()
         } else {
-            inTopLevelTransaction(transactionIsolation, repetitionAttempts, statement)
+            inTopLevelTransaction(isolationLevel, repetitionAttempts, statement)
         }
     }
 
-    private fun <T> inTopLevelTransaction(transactionIsolation: Int, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
+    private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, repetitionAttempts: Int, statement: DatabaseTransaction.() -> T): T {
         var repetitions = 0
         while (true) {
-            val transaction = DatabaseTransactionManager.currentOrNew(transactionIsolation)
+            val transaction = DatabaseTransactionManager.currentOrNew(isolationLevel)
             try {
                 val answer = transaction.statement()
                 transaction.commit()
@@ -116,21 +131,9 @@ class CordaPersistence(
     }
 
     override fun close() {
-        dataSource.close()
+        // DataSource doesn't implement AutoCloseable so we just have to hope that the implementation does so that we can close it
+        (dataSource as? AutoCloseable)?.close()
     }
-}
-
-fun configureDatabase(dataSourceProperties: Properties, databaseConfig: DatabaseConfig, identityService: IdentityService, schemaService: SchemaService = NodeSchemaService(null)): CordaPersistence {
-    val config = HikariConfig(dataSourceProperties)
-    val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence.connect(dataSource, schemaService, identityService, databaseConfig)
-    // Check not in read-only mode.
-    persistence.transaction {
-        persistence.dataSource.connection.use {
-            check(!it.metaData.isReadOnly) { "Database should not be readonly." }
-        }
-    }
-    return persistence
 }
 
 /**
@@ -144,7 +147,7 @@ fun configureDatabase(dataSourceProperties: Properties, databaseConfig: Database
  */
 fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
     val currentTxId = DatabaseTransactionManager.transactionId
-    val databaseTxBoundary: Observable<DatabaseTransactionManager.Boundary> = DatabaseTransactionManager.transactionBoundaries.filter { it.txId == currentTxId }.first()
+    val databaseTxBoundary: Observable<DatabaseTransactionManager.Boundary> = DatabaseTransactionManager.transactionBoundaries.first { it.txId == currentTxId }
     val subject = UnicastSubject.create<T>()
     subject.delaySubscription(databaseTxBoundary).subscribe(this)
     databaseTxBoundary.doOnCompleted { subject.onCompleted() }
@@ -183,14 +186,9 @@ private class DatabaseTransactionWrappingSubscriber<U>(val db: CordaPersistence?
 
 // A subscriber that wraps another but does not pass on observations to it.
 private class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
-    override fun onCompleted() {
-    }
-
-    override fun onError(e: Throwable?) {
-    }
-
-    override fun onNext(s: U) {
-    }
+    override fun onCompleted() {}
+    override fun onError(e: Throwable?) {}
+    override fun onNext(s: U) {}
 }
 
 /**

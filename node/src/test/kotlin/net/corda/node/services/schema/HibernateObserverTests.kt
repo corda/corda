@@ -11,9 +11,9 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.DatabaseConfig
-import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
 import net.corda.testing.LogHelper
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.contracts.DummyContract
@@ -66,7 +66,7 @@ class HibernateObserverTests {
             }
         }
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), schemaService)
-        HibernateObserver.install(rawUpdatesPublisher, database.hibernateConfig)
+        HibernateObserver.install(rawUpdatesPublisher, database.hibernateConfig, schemaService)
         database.transaction {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
             val parentRowCountResult = DatabaseTransactionManager.current().connection.prepareStatement("select count(*) from Parents").executeQuery()

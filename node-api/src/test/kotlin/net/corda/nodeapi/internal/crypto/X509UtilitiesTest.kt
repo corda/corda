@@ -1,4 +1,4 @@
-package net.corda.node.utilities
+package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
@@ -13,7 +13,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.config.createKeystoreForCordaNode
-import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl

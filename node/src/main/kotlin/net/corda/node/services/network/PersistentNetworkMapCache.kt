@@ -22,9 +22,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject

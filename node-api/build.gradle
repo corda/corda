@@ -3,7 +3,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda node Artemis API'
+description 'Corda node API'
 
 dependencies {
     compile project(":core")
