@@ -7,17 +7,26 @@ Deploying a node
    whether they have developed and tested a CorDapp following the instructions in :doc:`generating-a-node`
    or are deploying a third-party CorDapp.
 
-Installing and running Corda as a system service (Linux with systemd)
----------------------------------------------------------------------
+Linux (systemd): Installing and running Corda as a systemd service
+------------------------------------------------------------------
 We recommend creating systemd services to run a node and its webserver. This provides logging and service handling,
 ensures the Corda service is run at boot, and means the Corda service stays running with no users connected to the
 server.
+
+Prerequisites:
+
+   * Oracle Java 8
 
 1. Create a directory called ``/opt/corda`` and change its ownership to the user you want to use to run Corda:
 
    * ``mkdir /opt/corda; chown user:user /opt/corda``
 
-2. Save the below as ``/opt/corda/node.conf``:
+2. Download `Corda <https://r3.bintray.com/corda/net/corda/corda/2.0.0/corda-2.0.0.jar>`_
+
+3. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
+our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory.
+
+4. Save the below as ``/opt/corda/node.conf``:
 
    .. code-block:: json
 
@@ -46,7 +55,7 @@ server.
           }
       ]
 
-3. Make the following changes to ``/opt/corda/node.conf``:
+5. Make the following changes to ``/opt/corda/node.conf``:
 
    *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address
    *  Change the ports if necessary
@@ -56,8 +65,9 @@ server.
       * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
       * Location (``L=``) is your nearest city
       * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
+   *  Change the RPC username and password.
 
-4. Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/`` directory.
+6. Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/`` directory.
 
     .. code-block:: shell
 
@@ -75,7 +85,7 @@ server.
        [Install]
        WantedBy=multi-user.target
 
-5. Make the following changes to ``corda.service``:
+7. Make the following changes to ``corda.service``:
 
     * Change the username to the user account you want to use to run Corda. **We recommend that this is not root**
     * Set the maximum amount of memory available to the Corda process by changing the ``-Xmx2048m`` parameter
@@ -83,7 +93,7 @@ server.
 .. note:: The Corda webserver provides a simple interface for interacting with your installed CorDapps in a browser.
    Running the webserver is optional.
 
-6. Create a ``corda-webserver.service`` file based on the example below and save it in the ``/etc/systemd/system/``
+8. Create a ``corda-webserver.service`` file based on the example below and save it in the ``/etc/systemd/system/``
    directory.
 
     .. code-block:: shell
@@ -102,9 +112,9 @@ server.
        [Install]
        WantedBy=multi-user.target
 
-7. Copy the required Java keystores to the node. See :doc:`permissioning`.
+9. Copy the required Java keystores to the node. See :doc:`permissioning`.
 
-8. You can now start a node and its webserver by running the following ``systemctl`` commands:
+10. You can now start a node and its webserver by running the following ``systemctl`` commands:
 
    * ``systemctl daemon-reload``
    * ``systemctl corda start``
@@ -112,3 +122,94 @@ server.
 
 You can run multiple nodes by creating multiple directories and Corda services, modifying the ``node.conf`` and
 ``service`` files so they are unique.
+
+Windows: Installing and running Corda as a Windows service
+----------------------------------------------------------
+We recommend running Corda as a Windows service. This provides service handling, ensures the Corda service is run
+at boot, and means the Corda service stays running with no users connected to the server.
+
+Prerequisites:
+
+   * Oracle Java 8
+
+1. Create a Corda directory and download Corda. Example using PowerShell:
+
+   .. code-block:: PowerShell
+
+            mkdir C:\Corda
+            wget http://jcenter.bintray.com/net/corda/corda/2.0.0/corda-2.0.0.jar -OutFile C:\Corda\corda.jar
+
+2. Save the below as C:\Corda\node.conf:
+
+   .. code-block:: json
+
+        basedir : "C:\\Corda"
+        p2pAddress : "your-hostname.example.com:10002"
+        rpcAddress : "your-hostname.example.com:10003"
+        webAddress : "0.0.0.0:10004"
+        h2port : 11000
+        emailAddress: "you@example.com"
+        myLegalName : "O=A Bank, L=London, C=GB"
+        keyStorePassword : "cordacadevpass"
+        trustStorePassword : "trustpass"
+        extraAdvertisedServiceIds: [ "" ]
+        useHTTPS : false
+        devMode : false
+        networkMapService {
+            address="one-networkmap.corda.r3cev.com:10002"
+            legalName="O=TestNet NetworkMap, L=Dublin, C=IE"
+        }
+        rpcUsers=[
+            {
+                user=corda
+                password=your_password_here
+                permissions=[
+                    ALL
+                ]
+            }
+        ]
+
+3. Make the following changes to ``/opt/corda/node.conf``:
+
+   *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address
+   *  Change the ports if necessary
+   *  Enter an email address which will be used as a technical administrative contact
+   *  Enter your node's desired legal name
+
+      * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
+      * Location (``L=``) is your nearest city
+      * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
+   *  Change the RPC username and password.
+
+4. Copy the required Java keystores to the node. See :doc:`permissioning`.
+
+5. Download `NSSM (service manager)<nssm.cc>_`
+
+6. Unzip nssm-2.24\win64\nssm.exe to C:\Corda
+
+7. Save the following as C:\Corda\nssm.bat:
+
+   .. code-block:: batch
+
+      nssm install corda C:\ProgramData\Oracle\Java\javapath\java.exe
+      nssm set corda AppDirectory C:\Corda
+      nssm set corda AppParameters "-jar corda.jar -Xmx2048m --config-file=C:\corda\node.conf"
+      nssm set corda AppStdout C:\Corda\service.log
+      nssm set corda AppStderr C:\Corda\service.log
+      sc start corda
+
+8. Run the batch file by clicking on it or from a command prompt.
+
+9. Run services.msc and verify that a service called corda is present and running.
+
+10. Run "netstat -ano" and check for the ports you configured in node.conf
+
+11. You may need to open the ports on the Windows Firewall.
+
+Testing your installation
+-------------------------
+You can verify Corda is running by connecting to your RPC port from another host, e.g.:
+
+        telnet your-hostname.example.com 10002
+
+If you receive the message "Escape character is ^]", Corda is running and accessible. Press Ctrl-] and Ctrl-D to exit telnet.
