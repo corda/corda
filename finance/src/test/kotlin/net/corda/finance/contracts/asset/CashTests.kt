@@ -82,7 +82,7 @@ class CashTests {
 
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
         database.transaction {
-            val vaultFiller = VaultFiller(ourServices, Pair(DUMMY_NOTARY, DUMMY_NOTARY_KEY), rngFactory = ::Random)
+            val vaultFiller = VaultFiller(ourServices, DUMMY_NOTARY, DUMMY_NOTARY_KEY, rngFactory = ::Random)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
             vaultFiller.fillWithSomeTestCash(400.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
             vaultFiller.fillWithSomeTestCash(80.DOLLARS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)

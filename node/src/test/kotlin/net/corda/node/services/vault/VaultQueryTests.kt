@@ -83,8 +83,8 @@ class VaultQueryTests {
                 cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
-        vaultFiller = VaultFiller(services, Pair(DUMMY_NOTARY, DUMMY_NOTARY_KEY))
-        vaultFillerCashNotary = VaultFiller(services, Pair(DUMMY_NOTARY, DUMMY_NOTARY_KEY), CASH_NOTARY)
+        vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)
+        vaultFillerCashNotary = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, CASH_NOTARY)
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY, DUMMY_CASH_ISSUER_KEY, BOC_KEY, MEGA_CORP_KEY)
         identitySvc = services.identityService
         // Register all of the identities we're going to use

@@ -108,7 +108,7 @@ class HibernateConfigurationTest {
 
                 override fun jdbcSession() = database.createSession()
             }
-            vaultFiller = VaultFiller(services, Pair(DUMMY_NOTARY, DUMMY_NOTARY_KEY), notary, ::Random)
+            vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random)
             hibernatePersister = services.hibernatePersister
         }
 

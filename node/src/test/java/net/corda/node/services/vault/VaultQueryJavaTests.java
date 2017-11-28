@@ -72,7 +72,7 @@ public class VaultQueryJavaTests {
         issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
-        vaultFiller = new VaultFiller(services, new Pair<>(getDUMMY_NOTARY(), getDUMMY_NOTARY_KEY()));
+        vaultFiller = new VaultFiller(services, getDUMMY_NOTARY(), getDUMMY_NOTARY_KEY());
         vaultService = services.getVaultService();
     }
 

@@ -37,8 +37,9 @@ import java.util.*
  */
 class VaultFiller @JvmOverloads constructor(
         private val services: ServiceHub,
-        defaultNotary: Pair<Party, KeyPair>,
-        private val altNotary: Party = defaultNotary.first,
+        private val defaultNotary: Party,
+        private val defaultNotaryKeyPair: KeyPair,
+        private val altNotary: Party = defaultNotary,
         private val rngFactory: () -> Random = { Random(0L) }) {
     companion object {
         fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
@@ -70,8 +71,10 @@ class VaultFiller @JvmOverloads constructor(
         }
     }
 
-    private val defaultNotary = defaultNotary.first
-    private val defaultNotaryKeyPair = defaultNotary.second
+    init {
+        require(defaultNotary.owningKey == defaultNotaryKeyPair.public) { "Default notary public keys must match." }
+    }
+
     @JvmOverloads
     fun fillWithSomeTestDeals(dealIds: List<String>,
                               issuerServices: ServiceHub = services,
