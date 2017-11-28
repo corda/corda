@@ -266,6 +266,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
     override fun validateUser(user: String?, password: String?, remotingConnection: RemotingConnection?): String? {
         return validate(user, password)
     }
+
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
         return validate(user, password)
     }

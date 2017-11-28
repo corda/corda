@@ -184,11 +184,17 @@ open class Node(configuration: NodeConfiguration,
         return if (!AddressUtils.isPublic(host)) {
             val foundPublicIP = AddressUtils.tryDetectPublicIP()
             if (foundPublicIP == null) {
-                val retrievedHostName = networkMapClient?.myPublicHostname()
-                if (retrievedHostName != null) {
-                    log.info("Retrieved public IP from Network Map Service: $this. This will be used instead of the provided \"$host\" as the advertised address.")
+                try {
+                    val retrievedHostName = networkMapClient?.myPublicHostname()
+                    if (retrievedHostName != null) {
+                        log.info("Retrieved public IP from Network Map Service: $this. This will be used instead of the provided \"$host\" as the advertised address.")
+                    }
+                    retrievedHostName
+                } catch (ignore: Throwable) {
+                    // Cannot reach the network map service, ignore the exception and use provided P2P address instead.
+                    log.warn("Cannot connect to the network map service for public IP detection.")
+                    null
                 }
-                retrievedHostName
             } else {
                 log.info("Detected public IP: ${foundPublicIP.hostAddress}. This will be used instead of the provided \"$host\" as the advertised address.")
                 foundPublicIP.hostAddress

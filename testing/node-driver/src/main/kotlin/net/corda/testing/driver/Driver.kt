@@ -16,7 +16,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -48,6 +47,7 @@ import okhttp3.Request
 import org.slf4j.Logger
 import rx.Observable
 import rx.observables.ConnectableObservable
+import rx.schedulers.Schedulers
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -111,13 +111,14 @@ interface DriverDSLExposedInterface : CordformContext {
      * Returns the [NotaryHandle] for the single notary on the network. Throws if there are none or more than one.
      * @see notaryHandles
      */
-    val defaultNotaryHandle: NotaryHandle get() {
-        return when (notaryHandles.size) {
-            0 -> throw IllegalStateException("There are no notaries defined on the network")
-            1 -> notaryHandles[0]
-            else -> throw IllegalStateException("There is more than one notary defined on the network")
+    val defaultNotaryHandle: NotaryHandle
+        get() {
+            return when (notaryHandles.size) {
+                0 -> throw IllegalStateException("There are no notaries defined on the network")
+                1 -> notaryHandles[0]
+                else -> throw IllegalStateException("There is more than one notary defined on the network")
+            }
         }
-    }
 
     /**
      * Returns the identity of the single notary on the network. Throws if there are none or more than one.
@@ -131,11 +132,12 @@ interface DriverDSLExposedInterface : CordformContext {
      * @see defaultNotaryHandle
      * @see notaryHandles
      */
-    val defaultNotaryNode: CordaFuture<NodeHandle> get() {
-        return defaultNotaryHandle.nodeHandles.map {
-            it.singleOrNull() ?: throw IllegalStateException("Default notary is not a single node")
+    val defaultNotaryNode: CordaFuture<NodeHandle>
+        get() {
+            return defaultNotaryHandle.nodeHandles.map {
+                it.singleOrNull() ?: throw IllegalStateException("Default notary is not a single node")
+            }
         }
-    }
 
     /**
      * Start a node.
@@ -157,7 +159,9 @@ interface DriverDSLExposedInterface : CordformContext {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize): CordaFuture<NodeHandle>
+            maximumHeapSize: String = defaultParameters.maximumHeapSize,
+            initialRegistration: Boolean = defaultParameters.initialRegistration): CordaFuture<NodeHandle>
+
 
     /**
      * Helper function for starting a [Node] with custom parameters from Java.
@@ -297,7 +301,8 @@ data class NodeParameters(
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "200m"
+        val maximumHeapSize: String = "200m",
+        val initialRegistration: Boolean = false
 ) {
     fun setProvidedName(providedName: CordaX500Name?) = copy(providedName = providedName)
     fun setRpcUsers(rpcUsers: List<User>) = copy(rpcUsers = rpcUsers)
@@ -332,8 +337,9 @@ data class NodeParameters(
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
  *     not. Note that this may be overridden in [DriverDSLExposedInterface.startNode].
- * @param notarySpecs The notaries advertised  for this network. These nodes will be started
-  automatically and will be* available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.* @param compatibilityZoneURL if not null each node is started once in registration mode (which makes the node register and quit),
+ * @param notarySpecs The notaries advertised  for this network. These nodes will be started automatically and will be
+ * available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
+ * @param compatibilityZoneURL if not null each node is started once in registration mode (which makes the node register and quit),
  *     and then re-starts the node with the given parameters.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
@@ -601,7 +607,8 @@ class DriverDSL(
     // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
     // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
     // Investigate whether we can avoid that.
-    private val nodeInfoFilesCopier = NodeInfoFilesCopier()
+    // TODO: NodeInfoFilesCopier create observable threads in the init method, we should move that to a start method instead, changing this to lateinit instead to prevent that.
+    private lateinit var nodeInfoFilesCopier: NodeInfoFilesCopier
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
@@ -662,30 +669,42 @@ class DriverDSL(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
-            maximumHeapSize: String
+            maximumHeapSize: String,
+            initialRegistration: Boolean
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name(organisation = "${oneOf(names).organisation}-${p2pAddress.port}", locality = "London", country = "GB")
-        val registrationFuture = compatibilityZoneURL?.let { registerNode(name, it) } ?: doneFuture(Unit)
+
+        val registrationFuture = if (initialRegistration) {
+            compatibilityZoneURL ?: throw IllegalArgumentException("Compatibility zone URL must be provided for initial registration.")
+            registerNode(name, compatibilityZoneURL)
+        } else {
+            doneFuture(Unit)
+        }
+
         return registrationFuture.flatMap {
             val rpcAddress = portAllocation.nextHostAndPort()
             val webAddress = portAllocation.nextHostAndPort()
             val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
+            val configMap = configOf(
+                    "myLegalName" to name.toString(),
+                    "p2pAddress" to p2pAddress.toString(),
+                    "rpcAddress" to rpcAddress.toString(),
+                    "webAddress" to webAddress.toString(),
+                    "useTestClock" to useTestClock,
+                    "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
+                    "verifierType" to verifierType.name
+            ) + customOverrides
             val config = ConfigHelper.loadConfig(
                     baseDirectory = baseDirectory(name),
                     allowMissingConfig = true,
-                    configOverrides = configOf(
-                            "myLegalName" to name.toString(),
-                            "p2pAddress" to p2pAddress.toString(),
-                            "rpcAddress" to rpcAddress.toString(),
-                            "webAddress" to webAddress.toString(),
-                            "useTestClock" to useTestClock,
-                            "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
-                            "verifierType" to verifierType.name
-                    ) + customOverrides
+                    configOverrides = if (compatibilityZoneURL != null) {
+                        configMap + mapOf("compatibilityZoneURL" to compatibilityZoneURL.toString())
+                    } else {
+                        configMap
+                    }
             )
-
             startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
         }
     }
@@ -756,9 +775,15 @@ class DriverDSL(
     }
 
     override fun start() {
+        if (startNodesInProcess) {
+            Schedulers.reset()
+        }
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
+
+        nodeInfoFilesCopier = NodeInfoFilesCopier()
         shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
+
         val notaryInfos = generateNotaryIdentities()
         // The network parameters must be serialised before starting any of the nodes
         networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
@@ -923,10 +948,14 @@ class DriverDSL(
                                   maximumHeapSize: String): CordaFuture<NodeHandle> {
         val configuration = config.parseAsNodeConfiguration()
         val baseDirectory = configuration.baseDirectory.createDirectories()
+        // Distribute node info file using file copier when network map service URL (compatibilityZoneURL) is null.
+        // TODO: need to implement the same in cordformation?
+        val nodeInfoFilesCopier = if (compatibilityZoneURL == null) nodeInfoFilesCopier else null
+
+        nodeInfoFilesCopier?.addConfig(baseDirectory)
         networkParameters.install(baseDirectory)
-        nodeInfoFilesCopier.addConfig(baseDirectory)
         val onNodeExit: () -> Unit = {
-            nodeInfoFilesCopier.removeConfig(baseDirectory)
+            nodeInfoFilesCopier?.removeConfig(baseDirectory)
             countObservables.remove(configuration.myLegalName)
         }
         if (startInProcess ?: startNodesInProcess) {
@@ -1017,8 +1046,8 @@ class DriverDSL(
                     node.internals.run()
                 }
                 node to nodeThread
-            }.flatMap {
-                nodeAndThread -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress).map { nodeAndThread }
+            }.flatMap { nodeAndThread ->
+                addressMustBeBoundFuture(executorService, nodeConf.p2pAddress).map { nodeAndThread }
             }
         }
 
@@ -1063,7 +1092,7 @@ class DriverDSL(
                 }
             }.toList()
 
-           return ProcessUtilities.startCordaProcess(
+            return ProcessUtilities.startCordaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
