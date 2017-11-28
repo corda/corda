@@ -4,7 +4,9 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.nodeapi.internal.serialization.carpenter.*
+import net.corda.nodeapi.internal.serialization.carpenter.CarpenterMetaSchema
+import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
+import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -13,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
-data class SerializationSchemas (val schema: Schema, val transforms: TransformsSchema)
+data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
 
 /**
@@ -44,7 +46,7 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private fun getEvolutionSerializer(
             typeNotation: TypeNotation,
             newSerializer: AMQPSerializer<Any>,
-            transforms : TransformsSchema ): AMQPSerializer<Any> {
+            transforms: TransformsSchema): AMQPSerializer<Any> {
         return serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, this)

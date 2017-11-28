@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.SerializedBytes
+import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.File
@@ -12,7 +13,8 @@ import java.net.URI
 //       the new ones out, then change each test to write out the serialized bytes rather than read
 //       the file.
 class EnumEvolveTests {
-    var localPath = "file:///path/to/corda/node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp"
+    var localPath = projectRootDir.toUri().resolve(
+            "node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp")
 
     // Version of the class as it was serialised
     //
