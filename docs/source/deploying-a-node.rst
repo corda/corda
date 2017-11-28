@@ -183,11 +183,14 @@ at boot, and means the Corda service stays running with no users connected to th
 
 4. Copy the required Java keystores to the node. See :doc:`permissioning`
 
-5. Download the `NSSM service manager <nssm.cc>`_
+5. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
+   our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory.
 
-6. Unzip ``nssm-2.24\win64\nssm.exe`` to ``C:\Corda``
+6. Download the `NSSM service manager <nssm.cc>`_
 
-7. Save the following as ``C:\Corda\nssm.bat``:
+7. Unzip ``nssm-2.24\win64\nssm.exe`` to ``C:\Corda``
+
+8. Save the following as ``C:\Corda\nssm.bat``:
 
    .. code-block:: batch
 
@@ -198,13 +201,13 @@ at boot, and means the Corda service stays running with no users connected to th
       nssm set corda AppStderr C:\Corda\service.log
       sc start corda
 
-8. Run the batch file by clicking on it or from a command prompt
+9. Run the batch file by clicking on it or from a command prompt
 
-9. Run services.msc and verify that a service called corda is present and running
+10. Run services.msc and verify that a service called corda is present and running
 
-10. Run ``netstat -ano`` and check for the ports you configured in node.conf
+11. Run ``netstat -ano`` and check for the ports you configured in node.conf
 
-11. You may need to open the ports on the Windows Firewall
+12. You may need to open the ports on the Windows Firewall
 
 Testing your installation
 -------------------------
