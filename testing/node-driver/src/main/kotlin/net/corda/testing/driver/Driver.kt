@@ -607,7 +607,8 @@ class DriverDSL(
     // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
     // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
     // Investigate whether we can avoid that.
-    private val nodeInfoFilesCopier = NodeInfoFilesCopier()
+    // TODO: NodeInfoFilesCopier create observable threads in the init method, we should move that to a start method instead, changing this to lateinit instead to prevent that.
+    private lateinit var nodeInfoFilesCopier: NodeInfoFilesCopier
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
@@ -774,12 +775,15 @@ class DriverDSL(
     }
 
     override fun start() {
-        _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
-        _shutdownManager = ShutdownManager(executorService)
-        shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
         if (startNodesInProcess) {
             Schedulers.reset()
         }
+        _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
+        _shutdownManager = ShutdownManager(executorService)
+
+        nodeInfoFilesCopier = NodeInfoFilesCopier()
+        shutdownManager.registerShutdown { nodeInfoFilesCopier.close() }
+
         val notaryInfos = generateNotaryIdentities()
         // The network parameters must be serialised before starting any of the nodes
         networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
