@@ -1,18 +1,27 @@
 package net.corda.client.rpc
 
+import com.typesafe.config.ConfigFactory
+import net.corda.core.context.AuthServiceId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.services.messaging.rpcContext
 import net.corda.nodeapi.User
 import net.corda.testing.internal.RPCDriverExposedDSLInterface
 import net.corda.testing.internal.rpcDriver
+import org.apache.shiro.mgt.DefaultSecurityManager
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.util.*
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.declaredMemberFunctions
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
 class RPCPermissionsTests : AbstractRPCTest() {
@@ -97,7 +106,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
 
     @Test
     fun `joe user is not allowed to call other RPC methods`() {
-        rpcDriver {
+          rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
             assertFailsWith(PermissionException::class,
@@ -123,5 +132,4 @@ class RPCPermissionsTests : AbstractRPCTest() {
             proxy.validatePermission("networkMapFeed")
         }
     }
-
 }

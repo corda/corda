@@ -50,5 +50,6 @@ class NodeConfigurationImplTest {
             notary = null,
             certificateChainCheckPolicies = emptyList(),
             devMode = true,
+            securityDataSources = emptyList(),
             activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)))
 }

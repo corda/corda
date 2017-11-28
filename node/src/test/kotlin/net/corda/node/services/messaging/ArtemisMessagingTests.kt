@@ -7,7 +7,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.internal.security.RPCSecurityManagerInMemory
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
@@ -64,7 +64,9 @@ class ArtemisMessagingTests {
     @Before
     fun setUp() {
         val baseDirectory = temporaryFolder.root.toPath()
-        securityManager = RPCSecurityManagerInMemory(users = emptyList(), id = AuthServiceId("TEST"))
+        securityManager = RPCSecurityManagerImpl.buildInMemory(
+                users = emptyList(),
+                id = AuthServiceId("TEST"))
         config = testNodeConfiguration(
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)

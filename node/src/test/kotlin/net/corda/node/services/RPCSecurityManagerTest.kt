@@ -2,10 +2,12 @@ package net.corda.node.services
 
 
 import net.corda.core.context.AuthServiceId
-import net.corda.node.internal.security.RPCSecurityManagerInMemory
+import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.nodeapi.User
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.sql.Connection
+import java.sql.DriverManager
 
 class RPCSecurityManagerTest {
 
@@ -17,7 +19,8 @@ class RPCSecurityManagerTest {
     }
 
     private fun configWithRPCUsername(username: String) {
-        RPCSecurityManagerInMemory(users = listOf(User(username, "password", setOf())),
-                                   id = AuthServiceId("TEST"))
+        RPCSecurityManagerImpl.buildInMemory(
+                users = listOf(User(username, "password", setOf())),
+                id = AuthServiceId("TEST"))
     }
 }

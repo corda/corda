@@ -34,6 +34,11 @@ public class CordformNode implements NodeDefinition {
     public List<Map<String, Object>> rpcUsers = emptyList();
 
     /**
+     *
+     */
+    public List<Map<String, Object>> rpcSecutiryRealms = emptyList();
+
+    /**
      * Apply the notary configuration if this node is a notary. The map is the config structure of
      * net.corda.node.services.config.NotaryConfig
      */

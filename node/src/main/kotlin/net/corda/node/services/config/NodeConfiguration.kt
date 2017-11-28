@@ -23,6 +23,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val dataSourceProperties: Properties
     val database: Properties?
     val rpcUsers: List<User>
+    val securityDataSources: List<SecurityDataSourceConfig>
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
     val compatibilityZoneURL: URL?
@@ -111,7 +112,8 @@ data class NodeConfigurationImpl(
         override val activeMQServer: ActiveMqServerConfiguration,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
-        override val sshd: SSHDConfiguration? = null
+        override val sshd: SSHDConfiguration? = null,
+        override val securityDataSources : List<SecurityDataSourceConfig> = emptyList()
 
 ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
@@ -149,3 +151,43 @@ data class CertChainPolicyConfig(val role: String, private val policy: CertChain
 }
 
 data class SSHDConfiguration(val port: Int)
+
+/**
+ * Security data source type
+ */
+enum class SecurityDataSourceType {
+    /** External RDBMS */
+    JDBC,
+
+    /** List of users in configuration file */
+    EMBEDDED
+}
+
+/**
+ * Password encryption scheme
+ */
+enum class PasswordEncryption {
+    /** Password stored in clear */
+    NONE,
+
+    /** Password salt-hashed using SHA256 */
+    SHA256
+}
+
+/**
+ * Configure a generic security data source.
+ *
+ */
+data class SecurityDataSourceConfig(
+        val type : SecurityDataSourceType,
+        val passwordEncryption : PasswordEncryption = PasswordEncryption.SHA256,
+        val dataSourceProperties: Properties? = null,
+        val users : List<User>? = null) {
+
+    init {
+        when(type) {
+            SecurityDataSourceType.EMBEDDED -> require(users != null && dataSourceProperties == null)
+            SecurityDataSourceType.JDBC -> require(users == null && dataSourceProperties != null)
+        }
+    }
+}

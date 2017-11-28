@@ -32,13 +32,6 @@ interface RPCSecurityManager {
     fun resolveSubject(principal : String) : AuthorizingSubject
 
     /**
-     * Expose list of all currently registered RPC users.
-     *
-     * TODO: remove once not required anymore by Artemis component
-     */
-    //val usernames: List<String>
-
-    /**
      *  An identifier associated to this security service
      */
     val id: AuthServiceId

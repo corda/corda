@@ -141,9 +141,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     // Artemis IO errors
     @Throws(IOException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
-        val artemisConfig = createArtemisConfig()
-        val userLoginListener = artemisConfig.configureAddressSecurity()
-        val securityManager = createArtemisSecurityManager(userLoginListener)
+        val (artemisConfig, securityPlugin) = createArtemisConfig()
+        val securityManager = createArtemisSecurityManager(securityPlugin)
         activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
             // Throw any exceptions which are detected during startup
             registerActivationFailureListener { exception -> throw exception }
@@ -159,7 +158,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         }
     }
 
-    private fun createArtemisConfig(): Configuration = ConfigurationImpl().apply {
+    private fun createArtemisConfig() = ConfigurationImpl().apply {
         val artemisDir = config.baseDirectory / "artemis"
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
@@ -211,7 +210,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                     addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
                 }
         )
-    }
+    }.configureAddressSecurity()
 
     private fun queueConfig(name: String, address: String = name, filter: String? = null, durable: Boolean): CoreQueueConfiguration {
         return CoreQueueConfiguration().apply {
@@ -229,9 +228,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * 3. RPC users. These are only given sufficient access to perform RPC with us.
      * 4. Verifiers. These are given read access to the verification request queue and write access to the response queue.
      */
-    private fun Configuration.configureAddressSecurity() : UserLoginListener {
+    private fun ConfigurationImpl.configureAddressSecurity() : Pair<Configuration, LoginListener> {
         val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true)
-
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles[P2P_QUEUE] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
@@ -239,10 +237,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
         // Each RPC user must have its own role and its own queue. This prevents users accessing each other's queues
         // and stealing RPC responses.
-        securityRoles[VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, consume = true))
-        securityRoles["${VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX}.#"] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, send = true))
-
-        val onUserLogin = RPCUserRolesAdder {
+    	val onUserLogin = RolesAdderOnLogin {
             "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$it.#" to setOf(
                    nodeInternalRole,
                    restrictedRole("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$it",
@@ -250,10 +245,10 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                                   createNonDurableQueue = true,
                                   deleteNonDurableQueue = true))
         }
-
         securitySettingPlugins.add(onUserLogin)
-
-        return onUserLogin
+        securityRoles[VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, consume = true))
+        securityRoles["${VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX}.#"] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, send = true))
+	return Pair(this, onUserLogin)
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
@@ -264,7 +259,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     }
 
     @Throws(IOException::class, KeyStoreException::class)
-    private fun createArtemisSecurityManager(onUserLogin : UserLoginListener): ActiveMQJAASSecurityManager {
+    private fun createArtemisSecurityManager(loginListener : LoginListener): ActiveMQJAASSecurityManager {
         val keyStore = loadKeyStore(config.sslKeystore, config.keyStorePassword)
         val trustStore = loadKeyStore(config.trustStoreFile, config.trustStorePassword)
 
@@ -281,7 +276,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
-                        UserLoginListener::class.java.name to onUserLogin,
+                        LoginListener::class.java.name to loginListener,
                         RPCSecurityManager::class.java.name to securityManager,
                         NodeLoginModule.CERT_CHAIN_CHECKS_OPTION_NAME to certChecks)
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
@@ -558,7 +553,7 @@ class NodeLoginModule : LoginModule {
     private lateinit var subject: Subject
     private lateinit var callbackHandler: CallbackHandler
     private lateinit var securityManager: RPCSecurityManager
-    private lateinit var loginListener : UserLoginListener
+    private lateinit var loginListener: LoginListener
     private lateinit var peerCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var nodeCertCheck: CertificateChainCheckPolicy.Check
     private lateinit var verifierCertCheck: CertificateChainCheckPolicy.Check
@@ -568,7 +563,7 @@ class NodeLoginModule : LoginModule {
         this.subject = subject
         this.callbackHandler = callbackHandler
         securityManager = options[RPCSecurityManager::class.java.name] as RPCSecurityManager
-        loginListener = options[UserLoginListener::class.java.name] as UserLoginListener
+	    loginListener = options[LoginListener::class.java.name] as LoginListener
         val certChainChecks: Map<String, CertificateChainCheckPolicy.Check> = uncheckedCast(options[CERT_CHAIN_CHECKS_OPTION_NAME])
         peerCertCheck = certChainChecks[PEER_ROLE]!!
         nodeCertCheck = certChainChecks[NODE_ROLE]!!
@@ -630,8 +625,8 @@ class NodeLoginModule : LoginModule {
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
-        securityManager.authenticate(username, password.toCharArray())
-        loginListener.onUserLogin(username)
+	    securityManager.authenticate(username, password.toCharArray())
+	    loginListener.onLogin(username)
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses
         return username
@@ -687,35 +682,50 @@ class NodeLoginModule : LoginModule {
     }
 }
 
-typealias RolesRepository = HierarchicalRepository<MutableSet<Role>>
+private interface LoginListener {
 
-private interface UserLoginListener {
-
-    fun onUserLogin(username : String) : Unit
+    fun onLogin(username : String) : Unit
 
 }
 
-private class RPCUserRolesAdder(val rolesSource : (String) -> Pair<String, Set<Role>>)
-    : SecuritySettingPlugin
-    , UserLoginListener {
+typealias RolesRepository = HierarchicalRepository<MutableSet<Role>>
 
-    override fun onUserLogin(username : String) {
-        val entry = repository.getMatch(username)
+/**
+ * Helper class to dynamically assign security roles to RPC users
+ * on their authentication. This object is plugged into the server
+ * as [SecuritySettingPlugin]. It responds to authentication events
+ * from [NodeLoginModule] by adding the address -> roles association
+ * generated by the given [source], unless already done before.
+ */
+private class RolesAdderOnLogin(val source: (String) -> Pair<String, Set<Role>>)
+    : SecuritySettingPlugin, LoginListener {
+
+    /*
+     * Artemis internal container storing roles association
+     */
+    private lateinit var repository: RolesRepository
+
+    override fun onLogin(username: String) {
+        val (address, roles) = source(username)
+        val entry = repository.getMatch(address)
         if (entry == null || entry.isEmpty()) {
-            val (key, roles) = rolesSource(username)
-            repository.addMatch(key, roles.toMutableSet())
+            repository.addMatch(address, roles.toMutableSet())
         }
     }
 
-    override fun init(options: MutableMap<String, String>?) = this
-
+    /*
+     * Initializer called by the Artemis framework
+     */
     override fun setSecurityRepository(repository: RolesRepository) {
         this.repository = repository
     }
 
+    /*
+     * Part of SecuritySettingPlugin interface which is no-op in this case
+     */
     override fun stop() = this
 
-    override fun getSecurityRoles() = null
+    override fun init(options: MutableMap<String, String>?) = this
 
-    private lateinit var repository : RolesRepository
+    override fun getSecurityRoles() = null
 }
