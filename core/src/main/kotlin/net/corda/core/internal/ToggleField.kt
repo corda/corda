@@ -43,7 +43,7 @@ class ThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {
 }
 
 /** The named thread has leaked from a previous test. */
-class ThreadLeakException : RuntimeException("Leaked thread detected: ${Thread.currentThread().name}")
+class ThreadLeakException(valueToString: String) : RuntimeException("Leaked thread '${Thread.currentThread().name}' detected, value was: $valueToString")
 
 /** @param isAGlobalThreadBeingCreated whether a global thread (that should not inherit any value) is being created. */
 class InheritableThreadLocalToggleField<T>(name: String,
@@ -54,16 +54,12 @@ class InheritableThreadLocalToggleField<T>(name: String,
     }
 
     private inner class Holder(value: T) : AtomicReference<T?>(value) {
-        fun valueOrDeclareLeak() = get() ?: throw ThreadLeakException()
+        private val valueToString = value.toString() // We never set another non-null value.
+        fun valueOrDeclareLeak() = get() ?: throw ThreadLeakException(valueToString)
         fun childValue(): Holder? {
-            val e = ThreadLeakException() // Expensive, but so is starting the new thread.
-            return if (isAGlobalThreadBeingCreated(e.stackTrace)) {
-                get() ?: log.warn(e.message)
-                null
-            } else {
-                get() ?: log.error(e.message)
-                this
-            }
+            val e = ThreadLeakException(valueToString) // Expensive, but so is starting the new thread.
+            get() ?: log.warn(e.message)
+            return if (isAGlobalThreadBeingCreated(e.stackTrace)) null else this
         }
     }
 
