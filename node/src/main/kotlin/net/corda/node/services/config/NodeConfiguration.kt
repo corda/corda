@@ -130,7 +130,7 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
-        private val _database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode)
+        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode)
         ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
@@ -140,9 +140,6 @@ data class NodeConfigurationImpl(
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
         require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
     }
-
-    override val database: DatabaseConfig
-        get() = _database
 }
 
 enum class VerifierType {
