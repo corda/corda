@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.SerializedBytes
 import org.assertj.core.api.Assertions
 import org.junit.Test
@@ -16,14 +17,10 @@ class EnumEvolveTests {
     // Version of the class as it was serialised
     //
     // @CordaSerializationTransformEnumDefault("D", "C")
-    // enum class DeserializeNewerSetToUnknown {
-    //     A, B, C, D
-    // }
+    // enum class DeserializeNewerSetToUnknown { A, B, C, D }
     //
     // Version of the class as it's used in the test
-    enum class DeserializeNewerSetToUnknown {
-        A, B, C
-    }
+    enum class DeserializeNewerSetToUnknown { A, B, C }
 
     @Test
     fun deserialiseNewerSetToUnknown() {
@@ -33,11 +30,12 @@ class EnumEvolveTests {
         data class C (val e : DeserializeNewerSetToUnknown)
 
         // Uncomment to re-generate test files
-        //File(URI("$localPath/$resource")).writeBytes(
+        // File(URI("$localPath/$resource")).writeBytes(
         //        SerializationOutput(sf).serialize(C(DeserializeNewerSetToUnknown.D)).bytes)
 
         Assertions.assertThatThrownBy {
-            DeserializationInput(sf).deserialize(SerializedBytes<C>(File(URI("$localPath/$resource")).readBytes()))
+            DeserializationInput(sf).deserialize(SerializedBytes<C>(
+                    File(EvolvabilityTests::class.java.getResource(resource).toURI()).readBytes()))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 }
