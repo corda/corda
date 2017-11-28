@@ -519,7 +519,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                                   sellerNode: StartedNode<MockNetwork.MockNode>,
                                   buyerNode: StartedNode<MockNetwork.MockNode>,
                                   assetToSell: StateAndRef<OwnableState>): RunResult {
-        val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.internals.registerInitiatedFlow(BuyerAcceptor::class.java)
+        val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
         val seller = SellerInitiator(buyer, notary, assetToSell, 1000.DOLLARS, anonymous)
         val sellerResult = sellerNode.services.startFlow(seller).resultFuture

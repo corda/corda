@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.testing.common.internal
 
 import net.corda.core.internal.div
 import net.corda.core.internal.isDirectory

@@ -14,6 +14,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
+import net.corda.smoketesting.NodeProcess.Companion.CORDAPPS_DIR_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
@@ -22,7 +23,6 @@ import kotlin.streams.toList
 
 class CordappSmokeTest {
     private companion object {
-        private const val CORDAPPS_DIR_NAME = "cordapps"
         val user = User("user1", "test", permissions = setOf("ALL"))
         val port = AtomicInteger(15100)
     }
@@ -37,7 +37,6 @@ class CordappSmokeTest {
             isNotary = false,
             users = listOf(user)
     )
-
 
     @Test
     fun `FlowContent appName returns the filename of the CorDapp jar`() {

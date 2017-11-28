@@ -20,10 +20,10 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
-import net.corda.node.utilities.X509Utilities
-import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
-import net.corda.node.utilities.loadKeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
