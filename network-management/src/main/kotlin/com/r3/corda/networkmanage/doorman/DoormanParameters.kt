@@ -84,10 +84,11 @@ fun parseCommandLine(vararg args: String): CommandLineOptions {
     val helpOption = optionParser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp();
 
     val optionSet = optionParser.parse(*args)
-    // Print help and exit on help option.
-    if (optionSet.has(helpOption)) {
+    // Print help and exit on help option or if there are missing options.
+    if (optionSet.has(helpOption) || !optionSet.has(configFileArg) || !optionSet.has(initialNetworkParametersArg)) {
         throw ShowHelpException(optionParser)
     }
+
     val configFile = Paths.get(optionSet.valueOf(configFileArg)).toAbsolutePath()
     val initialNetworkParameters = Paths.get(optionSet.valueOf(initialNetworkParametersArg)).toAbsolutePath()
 
