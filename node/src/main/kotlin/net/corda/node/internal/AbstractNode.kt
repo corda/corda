@@ -58,7 +58,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.nodeapi.NetworkParameters
+import net.corda.core.node.NetworkParameters
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import rx.Observable

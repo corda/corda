@@ -25,7 +25,7 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.nodeapi.NotaryInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.testing.chooseIdentity
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters

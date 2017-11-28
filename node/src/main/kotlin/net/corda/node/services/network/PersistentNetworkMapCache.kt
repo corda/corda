@@ -24,7 +24,7 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
-import net.corda.nodeapi.NotaryInfo
+import net.corda.core.node.NotaryInfo
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject

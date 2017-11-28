@@ -31,7 +31,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.NodeInfoFilesCopier
-import net.corda.nodeapi.NotaryInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook

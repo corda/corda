@@ -1,4 +1,4 @@
-package net.corda.nodeapi
+package net.corda.core.node
 
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
@@ -7,7 +7,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
@@ -68,10 +67,8 @@ class SignedNetworkMap(val raw: SerializedBytes<NetworkMap>, val sig: DigitalSig
      * @throws SignatureException if the signature is invalid.
      */
     @Throws(SignatureException::class)
-    fun verified(trustedRoot: X509Certificate): NetworkMap {
+    fun verified(): NetworkMap {
         sig.by.publicKey.verify(raw.bytes, sig)
-        // Assume network map cert is issued by the root.
-        X509Utilities.validateCertificateChain(trustedRoot, sig.by, trustedRoot)
         return raw.deserialize()
     }
 }

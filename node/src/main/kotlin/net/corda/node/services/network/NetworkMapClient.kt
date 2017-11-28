@@ -4,7 +4,10 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.openHttpConnection
+import net.corda.core.node.NetworkMap
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.SignedNetworkMap
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -12,9 +15,6 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
-import net.corda.nodeapi.NetworkMap
-import net.corda.nodeapi.NetworkParameters
-import net.corda.nodeapi.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import okhttp3.CacheControl
 import okhttp3.Headers
@@ -47,7 +47,9 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509C
     fun getNetworkMap(): NetworkMapResponse {
         val conn = networkMapUrl.openHttpConnection()
         val signedNetworkMap = conn.inputStream.use { it.readBytes() }.deserialize<SignedNetworkMap>()
-        val networkMap = signedNetworkMap.verified(trustedRoot)
+        val networkMap = signedNetworkMap.verified()
+        // Assume network map cert is issued by the root.
+        X509Utilities.validateCertificateChain(trustedRoot, signedNetworkMap.sig.by, trustedRoot)
         val timeout = CacheControl.parse(Headers.of(conn.headerFields.filterKeys { it != null }.mapValues { it.value.first() })).maxAgeSeconds().seconds
         return NetworkMapResponse(networkMap, timeout)
     }
