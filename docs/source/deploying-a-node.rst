@@ -21,10 +21,11 @@ server.
 
    * ``mkdir /opt/corda; chown user:user /opt/corda``
 
-2. Download `Corda <https://r3.bintray.com/corda/net/corda/corda/2.0.0/corda-2.0.0.jar>`_
+2. Download the `Corda jar <https://r3.bintray.com/corda/net/corda/corda/2.0.0/corda-2.0.0.jar>`_ and place it in
+   ``/opt/corda``
 
 3. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
-   our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory.
+   our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory
 
 4. Save the below as ``/opt/corda/node.conf``:
 
@@ -112,7 +113,7 @@ server.
        [Install]
        WantedBy=multi-user.target
 
-9. Copy the required Java keystores to the node. See :doc:`permissioning`.
+9. Copy the required Java keystores to the node. See :doc:`permissioning`
 
 10. You can now start a node and its webserver by running the following ``systemctl`` commands:
 
@@ -132,14 +133,17 @@ at boot, and means the Corda service stays running with no users connected to th
 
    * Oracle Java 8
 
-1. Create a Corda directory and download Corda. Here's an example using PowerShell:
+1. Create a Corda directory and download the Corda jar. Here's an example using PowerShell:
 
    .. code-block:: PowerShell
 
             mkdir C:\Corda
             wget http://jcenter.bintray.com/net/corda/corda/2.0.0/corda-2.0.0.jar -OutFile C:\Corda\corda.jar
 
-2. Save the below as ``C:\Corda\node.conf``:
+2. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively,
+   download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory
+
+3. Save the below as ``C:\Corda\node.conf``:
 
    .. code-block:: json
 
@@ -169,7 +173,7 @@ at boot, and means the Corda service stays running with no users connected to th
             }
         ]
 
-3. Make the following changes to ``/opt/corda/node.conf``:
+4. Make the following changes to ``/opt/corda/node.conf``:
 
    *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address
    *  Change the ports if necessary
@@ -181,10 +185,7 @@ at boot, and means the Corda service stays running with no users connected to th
       * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
    *  Change the RPC username and password
 
-4. Copy the required Java keystores to the node. See :doc:`permissioning`
-
-5. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
-   our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory.
+5. Copy the required Java keystores to the node. See :doc:`permissioning`
 
 6. Download the `NSSM service manager <nssm.cc>`_
 
