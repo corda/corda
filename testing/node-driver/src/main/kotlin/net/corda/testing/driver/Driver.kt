@@ -980,7 +980,7 @@ class DriverDSL(
                     "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
                     Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator),
                     "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
-                    "log4j2.debug" to "true"
+                    "log4j2.debug" to if(debugPort != null) "true" else "false"
             )
             // See experimental/quasar-hook/README.md for how to generate.
             val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
