@@ -10,7 +10,7 @@ import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.internal.demorun.*

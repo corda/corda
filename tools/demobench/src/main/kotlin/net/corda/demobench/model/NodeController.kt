@@ -1,23 +1,22 @@
 package net.corda.demobench.model
 
 import javafx.beans.binding.IntegerExpression
-import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
 import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
@@ -34,7 +33,6 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
-import kotlin.streams.toList
 
 class NodeController(check: atRuntime = ::checkExists) : Controller() {
     companion object {
@@ -53,7 +51,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     private val nodes = LinkedHashMap<String, NodeConfigWrapper>()
     private var notaryIdentity: Party? = null
-    private lateinit var networkParametersCopier: NetworkParametersCopier
+    private var networkParametersCopier: NetworkParametersCopier? = null
     private val port = AtomicInteger(firstPort)
 
     val activeNodes: List<NodeConfigWrapper>
@@ -143,7 +141,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 makeNetworkParametersCopier(config)
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
-            networkParametersCopier.install(config.nodeDir)
+            networkParametersCopier?.install(config.nodeDir) ?: throw IllegalArgumentException("No network parameters specified")
             return true
         } catch (e: Exception) {
             log.log(Level.SEVERE, "Failed to launch Corda: ${e.message}", e)
@@ -151,24 +149,10 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         }
     }
 
-    // Slower version of generating notary identity for Demobench. It uses --just-generate-node-info flag only for one node
-    // which is notary. TODO After Shams changes use [ServiceIdentityGenerator] which is much faster and cleaner.
     private fun makeNetworkParametersCopier(config: NodeConfigWrapper) {
         if (notaryIdentity == null) {
-            val generateNodeInfoCommand = jvm.commandFor(cordaPath, "--just-generate-node-info").toTypedArray()
-            val paramsLog = baseDir.resolve("generate-params.log")
-            val process = ProcessBuilder(*generateNodeInfoCommand)
-                    .directory(config.nodeDir.toFile())
-                    .redirectErrorStream(true)
-                    .redirectOutput(paramsLog.toFile())
-                    .apply { jvm.setCapsuleCacheDir(environment()) }
-                    .start()
-            process.waitFor()
-            if (process.exitValue() != 0) {
-                throw IllegalArgumentException("Notary identity generation process exited with: ${process.exitValue()}")
-            }
             try {
-                initialiseSerialization()
+                if (nodeSerializationEnv == null) initialiseSerialization()
                 notaryIdentity = getNotaryIdentity(config)
                 networkParametersCopier = NetworkParametersCopier(NetworkParameters(
                         minimumPlatformVersion = 1,
@@ -180,7 +164,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                         epoch = 1
                 ))
             } finally {
-                _contextSerializationEnv.set(null)
+                if (_contextSerializationEnv.get() != null) _contextSerializationEnv.set(null)
             }
         }
     }
@@ -204,12 +188,12 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
     }
 
-    // Get the notary identity from node's NodeInfo file, don't check signature, it's only for demo purposes.
+    // Generate notary identity and save it into node's directory. This identity will be used in network parameters.
     private fun getNotaryIdentity(config: NodeConfigWrapper): Party {
-        val file = config.nodeDir.list { it.filter { "nodeInfo-" in it.toString() }.toList()[0] } // Take only the first NodeInfo file.
-        log.info("Reading NodeInfo from file: $file")
-        val info = file.readAll().deserialize<SignedData<NodeInfo>>().raw.deserialize()
-        return if (info.legalIdentities.size == 2) info.legalIdentities[1] else info.legalIdentities[0]
+        return ServiceIdentityGenerator.generateToDisk(
+                dirs = listOf(config.nodeDir),
+                serviceName = config.nodeConfig.myLegalName,
+                serviceId = "identity")
     }
 
     fun reset() {
@@ -219,6 +203,8 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         // Wipe out any knowledge of previous nodes.
         nodes.clear()
         nodeInfoFilesCopier.reset()
+        notaryIdentity = null
+        networkParametersCopier = null
     }
 
     /**

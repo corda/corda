@@ -32,7 +32,7 @@ import net.corda.node.services.config.*
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.RaftNonValidatingNotaryService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.NodeInfoFilesCopier

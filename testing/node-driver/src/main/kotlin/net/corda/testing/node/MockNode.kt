@@ -37,7 +37,7 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.nodeapi.internal.NetworkParametersCopier
