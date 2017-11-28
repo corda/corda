@@ -70,7 +70,6 @@ path to the node's base directory.
 
 :database: Database configuration:
 
-        :initDatabase: Boolean on whether to initialise the database or just validate the schema. Defaults to true.
         :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
@@ -141,7 +140,9 @@ path to the node's base directory.
 :devMode: This flag sets the node to run in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
     does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
     and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
-    bugs in the checkpointing process.
+    bugs in the checkpointing process. Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
+    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate an existing schema
+    failing on node start if this schema is either not present or not compatible.
 
 :detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network

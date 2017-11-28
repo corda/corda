@@ -65,6 +65,40 @@ class NodeStatePersistenceTests {
         val retrievedMessage = stateAndRef!!.state.data.message
         assertEquals(message, retrievedMessage)
     }
+
+    @Test
+    fun `persistent state survives node restart without reinitialising database schema`() {
+        // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
+        // More investigation is needed to establish why.
+        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
+
+        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
+        val message = Message("Hello world!")
+        val stateAndRef: StateAndRef<MessageState>? = driver(isDebug = true, startNodesInProcess = isQuasarAgentSpecified()) {
+            val nodeName = {
+                val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
+                val nodeName = nodeHandle.nodeInfo.chooseIdentity().name
+                // Ensure the notary node has finished starting up, before starting a flow that needs a notary
+                defaultNotaryNode.getOrThrow()
+                nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+                    it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
+                }
+                nodeHandle.stop()
+                nodeName
+            }()
+
+            val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to "false")).getOrThrow()
+            val result = nodeHandle.rpcClientToNode().start(user.username, user.password).use {
+                val page = it.proxy.vaultQuery(MessageState::class.java)
+                page.states.singleOrNull()
+            }
+            nodeHandle.stop()
+            result
+        }
+        assertNotNull(stateAndRef)
+        val retrievedMessage = stateAndRef!!.state.data.message
+        assertEquals(message, retrievedMessage)
+    }
 }
 
 fun isQuasarAgentSpecified(): Boolean {

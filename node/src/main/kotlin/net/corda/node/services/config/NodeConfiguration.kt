@@ -19,7 +19,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val emailAddress: String
     val exportJMXto: String
     val dataSourceProperties: Properties
-    val database: DatabaseConfig
     val rpcUsers: List<User>
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
@@ -38,12 +37,13 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
+    val database: DatabaseConfig
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 
 data class DatabaseConfig(
-        val initDatabase: Boolean = true,
+        val initialiseSchema: Boolean = true,
         val serverNameTablePrefix: String = "",
         val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
 )
@@ -108,7 +108,6 @@ data class NodeConfigurationImpl(
         override val keyStorePassword: String,
         override val trustStorePassword: String,
         override val dataSourceProperties: Properties,
-        override val database: DatabaseConfig = DatabaseConfig(),
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,
@@ -130,9 +129,9 @@ data class NodeConfigurationImpl(
         override val activeMQServer: ActiveMqServerConfiguration,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
-        override val sshd: SSHDConfiguration? = null
-
-) : NodeConfiguration {
+        override val sshd: SSHDConfiguration? = null,
+        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode)
+        ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
     init {
