@@ -1,5 +1,5 @@
-Generating a node
-=================
+Creating nodes locally
+======================
 
 .. contents::
 

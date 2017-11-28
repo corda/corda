@@ -96,24 +96,24 @@ path to the node's base directory.
 :notary: Optional configuration object which if present configures the node to run as a notary. If part of a Raft or BFT SMaRt
     cluster then specify ``raft`` or ``bftSMaRt`` respectively as described below. If a single node notary then omit both.
 
-        :validating: Boolean to determine whether the notary is a validating or non-validating one.
+    :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
-        :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
+    :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
 
-                :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
+        :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
                     separate transport layer for communication that does not integrate with ArtemisMQ messaging services.
 
-                :clusterAddresses: List of Raft cluster member addresses used to join the cluster. At least one of the specified
+        :clusterAddresses: List of Raft cluster member addresses used to join the cluster. At least one of the specified
                     members must be active and be able to communicate with the cluster leader for joining. If empty, a new
                     cluster will be bootstrapped.
 
-        :bftSMaRt: If part of a distributed BFT-SMaRt cluster specify this config object, with the following settings:
+    :bftSMaRt: If part of a distributed BFT-SMaRt cluster specify this config object, with the following settings:
 
-                :replicaId: The zero-based index of the current replica. All replicas must specify a unique replica id.
+        :replicaId: The zero-based index of the current replica. All replicas must specify a unique replica id.
 
-                :clusterAddresses: List of all BFT-SMaRt cluster member addresses.
+        :clusterAddresses: List of all BFT-SMaRt cluster member addresses.
 
-        :custom: If `true`, will load and install a notary service from a CorDapp. See :doc:`tutorial-custom-notary`.
+    :custom: If `true`, will load and install a notary service from a CorDapp. See :doc:`tutorial-custom-notary`.
 
     Only one of ``raft``, ``bftSMaRt`` or ``custom`` configuration values may be specified.
 
@@ -124,9 +124,9 @@ path to the node's base directory.
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:
 
-        :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
-        :password: The password
-        :permissions: A list of permission strings which RPC methods can use to control access
+    :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
+    :password: The password
+    :permissions: A list of permission strings which RPC methods can use to control access
 
     If this field is absent or an empty list then RPC is effectively locked down. Alternatively, if it contains the string
     ``ALL`` then the user is permitted to use *any* RPC method. This value is intended for administrator users and for developers.
@@ -156,4 +156,4 @@ path to the node's base directory.
 :sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials
         and permissions as RPC subsystem. It has one required parameter.
 
-            :port: - the port to start SSH server on
+    :port: The port to start SSH server on

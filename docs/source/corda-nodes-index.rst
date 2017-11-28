@@ -5,9 +5,9 @@ Corda nodes
    :maxdepth: 1
 
    generating-a-node
-   corda-configuration-file
    running-a-node
    deploying-a-node
+   corda-configuration-file
    clientrpc
    shell
    node-database

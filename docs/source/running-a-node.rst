@@ -1,5 +1,5 @@
-Running a node locally
-======================
+Running nodes locally
+=====================
 
 .. contents::
 

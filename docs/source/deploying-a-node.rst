@@ -19,7 +19,7 @@ server.
 
 1. Create a directory called ``/opt/corda`` and change its ownership to the user you want to use to run Corda:
 
-   * ``mkdir /opt/corda; chown user:user /opt/corda``
+   ``mkdir /opt/corda; chown USER_WHO_RUNS_CORDA:GROUP_WHO_RUNS_CORDA /opt/corda``
 
 2. Download the `Corda jar <https://r3.bintray.com/corda/net/corda/corda/2.0.0/corda-2.0.0.jar>`_ and place it in
    ``/opt/corda``
@@ -68,7 +68,7 @@ server.
       * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
    *  Change the RPC username and password
 
-6. Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/`` directory.
+6. Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/`` directory
 
     .. code-block:: shell
 
@@ -137,8 +137,8 @@ at boot, and means the Corda service stays running with no users connected to th
 
    .. code-block:: PowerShell
 
-            mkdir C:\Corda
-            wget http://jcenter.bintray.com/net/corda/corda/2.0.0/corda-2.0.0.jar -OutFile C:\Corda\corda.jar
+        mkdir C:\Corda
+        wget http://jcenter.bintray.com/net/corda/corda/2.0.0/corda-2.0.0.jar -OutFile C:\Corda\corda.jar
 
 2. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively,
    download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory
@@ -204,11 +204,11 @@ at boot, and means the Corda service stays running with no users connected to th
 
 9. Run the batch file by clicking on it or from a command prompt
 
-10. Run services.msc and verify that a service called corda is present and running
+10. Run ``services.msc`` and verify that a service called ``corda`` is present and running
 
-11. Run ``netstat -ano`` and check for the ports you configured in node.conf
+11. Run ``netstat -ano`` and check for the ports you configured in ``node.conf``
 
-12. You may need to open the ports on the Windows Firewall
+12. You may need to open the ports on the Windows firewall
 
 Testing your installation
 -------------------------
