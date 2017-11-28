@@ -35,13 +35,16 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
         }
     }
 
-    val env: SerializationEnvironment = createTestSerializationEnv()
-    override fun apply(base: Statement, description: Description?) = object : Statement() {
-        override fun evaluate() {
-            try {
-                env.asContextEnv(inheritable) { base.evaluate() }
-            } finally {
-                inVMExecutors.remove(env)
+    lateinit var env: SerializationEnvironment
+    override fun apply(base: Statement, description: Description): Statement {
+        env = createTestSerializationEnv(description.toString())
+        return object : Statement() {
+            override fun evaluate() {
+                try {
+                    env.asContextEnv(inheritable) { base.evaluate() }
+                } finally {
+                    inVMExecutors.remove(env)
+                }
             }
         }
     }
@@ -54,7 +57,7 @@ interface GlobalSerializationEnvironment : SerializationEnvironment {
 
 /** @param inheritable whether new threads inherit the environment, use sparingly. */
 fun <T> withTestSerialization(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
-    return createTestSerializationEnv().asContextEnv(inheritable, callable)
+    return createTestSerializationEnv("<context>").asContextEnv(inheritable, callable)
 }
 
 /**
@@ -77,7 +80,7 @@ fun <T> withoutTestSerialization(callable: () -> T): T {
  */
 fun setGlobalSerialization(armed: Boolean): GlobalSerializationEnvironment {
     return if (armed) {
-        object : GlobalSerializationEnvironment, SerializationEnvironment by createTestSerializationEnv() {
+        object : GlobalSerializationEnvironment, SerializationEnvironment by createTestSerializationEnv("<global>") {
             override fun unset() {
                 _globalSerializationEnv.set(null)
                 inVMExecutors.remove(this)
@@ -92,7 +95,7 @@ fun setGlobalSerialization(armed: Boolean): GlobalSerializationEnvironment {
     }
 }
 
-private fun createTestSerializationEnv() = SerializationEnvironmentImpl(
+private fun createTestSerializationEnv(label: String) = object : SerializationEnvironmentImpl(
         SerializationFactoryImpl().apply {
             registerScheme(KryoClientSerializationScheme())
             registerScheme(KryoServerSerializationScheme())
@@ -103,7 +106,9 @@ private fun createTestSerializationEnv() = SerializationEnvironmentImpl(
         KRYO_RPC_SERVER_CONTEXT,
         KRYO_RPC_CLIENT_CONTEXT,
         if (isAmqpEnabled()) AMQP_STORAGE_CONTEXT else KRYO_STORAGE_CONTEXT,
-        KRYO_CHECKPOINT_CONTEXT)
+        KRYO_CHECKPOINT_CONTEXT) {
+    override fun toString() = "testSerializationEnv($label)"
+}
 
 private const val AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
 
