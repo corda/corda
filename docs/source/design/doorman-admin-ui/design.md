@@ -67,4 +67,4 @@ Whilst expedient as a near-term solution, the long-term practicality of JIRA (sp
 
 | Heading                                  | Recommendation |
 | ---------------------------------------- | -------------- |
-| [Near-term solution](decisions/near-term.md) | Option A       |
+| [Near-term solution](decisions/near-term.md) | TBD     |
