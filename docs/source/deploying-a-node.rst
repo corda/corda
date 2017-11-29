@@ -9,19 +9,22 @@ Deploying a node
 
 Linux (systemd): Installing and running Corda as a systemd service
 ------------------------------------------------------------------
-We recommend creating systemd services to run a node and its webserver. This provides logging and service handling,
-ensures the Corda service is run at boot, and means the Corda service stays running with no users connected to the
-server.
+We recommend creating systemd services to run a node and the optional webserver. This provides logging and service handling,
+ensures the Corda service is run at boot.
 
 **Prerequisites**:
 
    * Oracle Java 8
 
-1. Create a directory called ``/opt/corda`` and change its ownership to the user you want to use to run Corda:
+1. Add a system user which will be used to run Corda:
 
-   ``mkdir /opt/corda; chown USER_WHO_RUNS_CORDA:GROUP_WHO_RUNS_CORDA /opt/corda``
+    ``sudo adduser --system --no-create-home --group corda``
 
-2. Download the `Corda jar <https://r3.bintray.com/corda/net/corda/corda/2.0.0/corda-2.0.0.jar>`_ and place it in
+2. Create a directory called ``/opt/corda`` and change its ownership to the user you want to use to run Corda:
+
+   ``mkdir /opt/corda; chown corda:corda /opt/corda``
+
+3. Download the `Corda jar <https://r3.bintray.com/corda/net/corda/corda/2.0.0/corda-2.0.0.jar>`_ and place it in
    ``/opt/corda``
 
 3. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
@@ -58,10 +61,13 @@ server.
 
 5. Make the following changes to ``/opt/corda/node.conf``:
 
-   *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address
-   *  Change the ports if necessary
-   *  Enter an email address which will be used as a technical administrative contact
-   *  Enter your node's desired legal name
+   *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address. This
+is the address other nodes or RPC interfaces will use to communicate with your node
+   *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below)
+   *  Enter an email address which will be used as an administrative contact during the registration process - this is
+only visible to the Doorman operator.
+   *  Enter your node's desired legal name. This will be used during the issuance of your certificate and should rarely change as it
+should represent the legal identity of your node.
 
       * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
       * Location (``L=``) is your nearest city
@@ -73,12 +79,12 @@ server.
     .. code-block:: shell
 
        [Unit]
-       Description=Corda Node
+       Description=Corda Node - Bank of Breakfast Tea
        Requires=network.target
 
        [Service]
        Type=simple
-       User=username
+       User=corda
        WorkingDirectory=/opt/corda
        ExecStart=/usr/bin/java -Xmx2048m -jar /opt/corda/corda.jar
        Restart=on-failure
@@ -88,8 +94,12 @@ server.
 
 7. Make the following changes to ``corda.service``:
 
+    * Make sure the service description is informative - particularly if you plan to run multiple nodes.
     * Change the username to the user account you want to use to run Corda. **We recommend that this is not root**
     * Set the maximum amount of memory available to the Corda process by changing the ``-Xmx2048m`` parameter
+    * Make sure the ``corda.service`` file is owned by root with the correct permissions:
+        * ``sudo chown root:root /etc/systemd/system/corda.service``
+        * ``sudo chmod 644 /etc/systemd/system/corda.service``
 
 .. note:: The Corda webserver provides a simple interface for interacting with your installed CorDapps in a browser.
    Running the webserver is optional.
@@ -100,7 +110,7 @@ server.
     .. code-block:: shell
 
        [Unit]
-       Description=Simple webserver for Corda
+       Description=Webserver for Corda Node - Bank of Breakfast Tea
        Requires=network.target
 
        [Service]
@@ -117,9 +127,9 @@ server.
 
 10. You can now start a node and its webserver by running the following ``systemctl`` commands:
 
-   * ``systemctl daemon-reload``
-   * ``systemctl corda start``
-   * ``systemctl corda-webserver start``
+   * ``sudo systemctl daemon-reload``
+   * ``sudo systemctl corda start``
+   * ``sudo systemctl corda-webserver start``
 
 You can run multiple nodes by creating multiple directories and Corda services, modifying the ``node.conf`` and
 ``service`` files so they are unique.
@@ -148,32 +158,32 @@ at boot, and means the Corda service stays running with no users connected to th
    .. code-block:: json
 
         basedir : "C:\\Corda"
-        p2pAddress : "your-hostname.example.com:10002"
-        rpcAddress : "your-hostname.example.com:10003"
+        p2pAddress : "example.com:10002"
+        rpcAddress : "example.com:10003"
         webAddress : "0.0.0.0:10004"
         h2port : 11000
         emailAddress: "you@example.com"
-        myLegalName : "O=A Bank, L=London, C=GB"
+        myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
         keyStorePassword : "cordacadevpass"
         trustStorePassword : "trustpass"
         extraAdvertisedServiceIds: [ "" ]
         useHTTPS : false
         devMode : false
         networkMapService {
-            address="one-networkmap.corda.r3cev.com:10002"
-            legalName="O=TestNet NetworkMap, L=Dublin, C=IE"
+                address="networkmap.foo.bar.com:10002"
+                legalName="O=FooBar NetworkMap, L=Dublin, C=IE"
         }
         rpcUsers=[
             {
                 user=corda
-                password=your_password_here
+                password=portal_password
                 permissions=[
                     ALL
                 ]
             }
         ]
 
-4. Make the following changes to ``/opt/corda/node.conf``:
+4. Make the following changes to ``C:\Corda\node.conf``:
 
    *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address
    *  Change the ports if necessary
@@ -195,16 +205,16 @@ at boot, and means the Corda service stays running with no users connected to th
 
    .. code-block:: batch
 
-      nssm install corda C:\ProgramData\Oracle\Java\javapath\java.exe
-      nssm set corda AppDirectory C:\Corda
-      nssm set corda AppParameters "-jar corda.jar -Xmx2048m --config-file=C:\corda\node.conf"
-      nssm set corda AppStdout C:\Corda\service.log
-      nssm set corda AppStderr C:\Corda\service.log
-      sc start corda
+      nssm install cordanode1 C:\ProgramData\Oracle\Java\javapath\java.exe
+      nssm set cordanode1 AppDirectory C:\Corda
+      nssm set cordanode1 AppParameters "-jar corda.jar -Xmx2048m --config-file=C:\corda\node.conf"
+      nssm set cordanode1 AppStdout C:\Corda\service.log
+      nssm set cordanode1 AppStderr C:\Corda\service.log
+      sc start cordanode1
 
 9. Run the batch file by clicking on it or from a command prompt
 
-10. Run ``services.msc`` and verify that a service called ``corda`` is present and running
+10. Run ``services.msc`` and verify that a service called ``cordanode1`` is present and running
 
 11. Run ``netstat -ano`` and check for the ports you configured in ``node.conf``
 
