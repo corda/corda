@@ -1,4 +1,4 @@
-create table link_nodeinfo_party (
+create table node_link_nodeinfo_party (
    node_info_id int not null,
     party_name varchar(255) not null
 );
@@ -206,13 +206,13 @@ create index transaction_id_index on vault_transaction_notes (transaction_id);
 create sequence hibernate_sequence start with 1 increment by 1;
 
 
-alter table link_nodeinfo_party
+alter table node_link_nodeinfo_party
    add constraint FK1ua3h6nwwfji0mn23c5d1xx8e
    foreign key (party_name)
    references node_info_party_cert;
 
 
-alter table link_nodeinfo_party
+alter table node_link_nodeinfo_party
    add constraint FK544l9wsec35ph7hxrtwfd2lws
    foreign key (node_info_id)
    references node_infos;
