@@ -1,6 +1,5 @@
 package net.corda.node.services.network
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
@@ -13,6 +12,10 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
+import net.corda.nodeapi.internal.NetworkMap
+import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.SignedNetworkMap
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import okhttp3.CacheControl
 import okhttp3.Headers
 import rx.Subscription
@@ -20,11 +23,12 @@ import java.io.BufferedReader
 import java.io.Closeable
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class NetworkMapClient(compatibilityZoneURL: URL) {
+class NetworkMapClient(compatibilityZoneURL: URL, private val trustedRoot: X509Certificate) {
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
 
     fun publish(signedNodeInfo: SignedData<NodeInfo>) {
@@ -42,14 +46,30 @@ class NetworkMapClient(compatibilityZoneURL: URL) {
 
     fun getNetworkMap(): NetworkMapResponse {
         val conn = networkMapUrl.openHttpConnection()
-        val response = conn.inputStream.bufferedReader().use(BufferedReader::readLine)
-        val networkMap = ObjectMapper().readValue(response, List::class.java).map { SecureHash.parse(it.toString()) }
+        val signedNetworkMap = conn.inputStream.use { it.readBytes() }.deserialize<SignedNetworkMap>()
+        val networkMap = signedNetworkMap.verified()
+        // Assume network map cert is issued by the root.
+        X509Utilities.validateCertificateChain(trustedRoot, signedNetworkMap.sig.by, trustedRoot)
         val timeout = CacheControl.parse(Headers.of(conn.headerFields.filterKeys { it != null }.mapValues { it.value.first() })).maxAgeSeconds().seconds
         return NetworkMapResponse(networkMap, timeout)
     }
 
     fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo? {
-        val conn = URL("$networkMapUrl/$nodeInfoHash").openHttpConnection()
+        val conn = URL("$networkMapUrl/node-info/$nodeInfoHash").openHttpConnection()
+        return if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+            null
+        } else {
+            val signedNodeInfo = conn.inputStream.use { it.readBytes() }.deserialize<SignedData<NodeInfo>>()
+            val nodeInfo = signedNodeInfo.verified()
+            // Verify node info is signed by node identity
+            // TODO : Validate multiple signatures when NodeInfo supports multiple identities.
+            require(nodeInfo.legalIdentities.any { it.owningKey == signedNodeInfo.sig.by }) { "NodeInfo must be signed by the node owning key." }
+            nodeInfo
+        }
+    }
+
+    fun getNetworkParameter(networkParameterHash: SecureHash): NetworkParameters? {
+        val conn = URL("$networkMapUrl/network-parameter/$networkParameterHash").openHttpConnection()
         return if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
             null
         } else {
@@ -63,7 +83,7 @@ class NetworkMapClient(compatibilityZoneURL: URL) {
     }
 }
 
-data class NetworkMapResponse(val networkMap: List<SecureHash>, val cacheMaxAge: Duration)
+data class NetworkMapResponse(val networkMap: NetworkMap, val cacheMaxAge: Duration)
 
 class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val fileWatcher: NodeInfoWatcher,
@@ -107,21 +127,28 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 val nextScheduleDelay = try {
                     val (networkMap, cacheTimeout) = networkMapClient.getNetworkMap()
                     val currentNodeHashes = networkMapCache.allNodeHashes
-                    (networkMap - currentNodeHashes).mapNotNull {
+                    val hashesFromNetworkMap = networkMap.nodeInfoHashes
+                    (hashesFromNetworkMap - currentNodeHashes).mapNotNull {
                         // Download new node info from network map
-                        networkMapClient.getNodeInfo(it)
+                        try {
+                            networkMapClient.getNodeInfo(it)
+                        } catch (t: Throwable) {
+                            // Failure to retrieve one node info shouldn't stop the whole update, log and return null instead.
+                            logger.warn("Error encountered when downloading node info '$it', skipping...", t)
+                            null
+                        }
                     }.forEach {
                         // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
                         networkMapCache.addNode(it)
                     }
                     // Remove node info from network map.
-                    (currentNodeHashes - networkMap - fileWatcher.processedNodeInfoHashes)
+                    (currentNodeHashes - hashesFromNetworkMap - fileWatcher.processedNodeInfoHashes)
                             .mapNotNull(networkMapCache::getNodeByHash)
                             .forEach(networkMapCache::removeNode)
-
+                    // TODO: Check NetworkParameter.
                     cacheTimeout
                 } catch (t: Throwable) {
-                    logger.warn("Error encountered while updating network map, will retry in $retryInterval", t)
+                    logger.warn("Error encountered while updating network map, will retry in ${retryInterval.seconds} seconds", t)
                     retryInterval
                 }
                 // Schedule the next update.
@@ -137,7 +164,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 try {
                     networkMapClient.publish(signedNodeInfo)
                 } catch (t: Throwable) {
-                    logger.warn("Error encountered while publishing node info, will retry in $retryInterval.", t)
+                    logger.warn("Error encountered while publishing node info, will retry in ${retryInterval.seconds} seconds.", t)
                     // TODO: Exponential backoff?
                     executor.schedule(this, retryInterval.toMillis(), TimeUnit.MILLISECONDS)
                 }

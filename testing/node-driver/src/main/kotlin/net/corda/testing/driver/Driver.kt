@@ -17,7 +17,6 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NotaryService
 import net.corda.core.toFuture
@@ -34,6 +33,7 @@ import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.common.internal.NetworkParametersCopier

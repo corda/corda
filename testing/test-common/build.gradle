@@ -3,6 +3,7 @@ apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     compile project(':core')
+    compile project(':node-api')
 }
 
 jar {

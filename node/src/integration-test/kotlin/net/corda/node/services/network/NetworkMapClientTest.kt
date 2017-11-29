@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
@@ -18,7 +17,7 @@ class NetworkMapClientTest {
 
     @Test
     fun `nodes can see each other using the http network map`() {
-        NetworkMapServer(1.minutes, portAllocation.nextHostAndPort()).use {
+        NetworkMapServer(1.seconds, portAllocation.nextHostAndPort()).use {
             val (host, port) = it.start()
             driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
                 val alice = startNode(providedName = ALICE.name)

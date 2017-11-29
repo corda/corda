@@ -13,6 +13,7 @@ import net.corda.core.crypto.SignedData
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
+import net.corda.nodeapi.internal.NetworkMap
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
@@ -95,7 +96,7 @@ class NetworkMapUpdaterTest {
                 val signedNodeInfo: SignedData<NodeInfo> = uncheckedCast(it.arguments.first())
                 nodeInfoMap.put(signedNodeInfo.verified().serialize().hash, signedNodeInfo)
             }
-            on { getNetworkMap() }.then { NetworkMapResponse(nodeInfoMap.keys.toList(), 100.millis) }
+            on { getNetworkMap() }.then { NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), SecureHash.randomSHA256()), 100.millis) }
             on { getNodeInfo(any()) }.then { nodeInfoMap[it.arguments.first()]?.verified() }
         }
 
@@ -149,7 +150,7 @@ class NetworkMapUpdaterTest {
                 val signedNodeInfo: SignedData<NodeInfo> = uncheckedCast(it.arguments.first())
                 nodeInfoMap.put(signedNodeInfo.verified().serialize().hash, signedNodeInfo)
             }
-            on { getNetworkMap() }.then { NetworkMapResponse(nodeInfoMap.keys.toList(), 100.millis) }
+            on { getNetworkMap() }.then { NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), SecureHash.randomSHA256()), 100.millis) }
             on { getNodeInfo(any()) }.then { nodeInfoMap[it.arguments.first()]?.verified() }
         }
 

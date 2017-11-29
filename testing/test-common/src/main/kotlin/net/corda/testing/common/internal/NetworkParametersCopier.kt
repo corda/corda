@@ -5,8 +5,8 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.sign
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
-import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
+import net.corda.nodeapi.internal.NetworkParameters
 import java.math.BigInteger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
