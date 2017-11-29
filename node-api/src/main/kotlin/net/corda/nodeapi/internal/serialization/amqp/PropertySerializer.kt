@@ -14,7 +14,7 @@ import kotlin.reflect.jvm.javaGetter
 sealed class PropertySerializer(val name: String, val readMethod: Method?, val resolvedType: Type) {
     abstract fun writeClassInfo(output: SerializationOutput)
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
-    abstract fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any?
+    abstract fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any?
 
     val type: String = generateType()
     val requires: List<String> = generateRequires()
@@ -91,8 +91,8 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
             }
         }
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? = ifThrowsAppend({ nameForDebug }) {
-            input.readObjectOrNull(obj, schema, resolvedType)
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? = ifThrowsAppend({ nameForDebug }) {
+            input.readObjectOrNull(obj, schemas, resolvedType)
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) = ifThrowsAppend({ nameForDebug }) {
@@ -108,7 +108,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
     class AMQPPrimitivePropertySerializer(name: String, readMethod: Method?, resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? {
             return if (obj is Binary) obj.array else obj
         }
 
@@ -131,7 +131,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method?, val r
             PropertySerializer(name, readMethod, Character::class.java) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
-        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? {
             return if (obj == null) null else (obj as Short).toChar()
         }
 
