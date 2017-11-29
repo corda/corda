@@ -2,8 +2,10 @@
 
 package net.corda.testing.driver
 
+import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.cordform.CordformContext
@@ -27,17 +29,22 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.config.*
+import net.corda.node.services.transactions.BFTNonValidatingNotaryService
+import net.corda.node.services.transactions.RaftNonValidatingNotaryService
+import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.nodeapi.User
+import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.driver.DriverDSL.ClusterType.*
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -62,6 +69,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 
 /**
@@ -607,7 +615,7 @@ class DriverDSL(
     private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
     private lateinit var _notaries: List<NotaryHandle>
     override val notaryHandles: List<NotaryHandle> get() = _notaries
-    private lateinit var networkParameters: NetworkParametersCopier
+    private var networkParameters: NetworkParametersCopier? = null
 
     class State {
         val processes = ArrayList<Process>()
@@ -724,7 +732,67 @@ class DriverDSL(
         }
     }
 
-    internal fun startCordformNode(cordform: CordformNode): CordaFuture<NodeHandle> {
+    private enum class ClusterType(val validating: Boolean, val clusterName: CordaX500Name) {
+        VALIDATING_RAFT(true, CordaX500Name(RaftValidatingNotaryService.id, "Raft", "Zurich", "CH")),
+        NON_VALIDATING_RAFT(false, CordaX500Name(RaftNonValidatingNotaryService.id, "Raft", "Zurich", "CH")),
+        NON_VALIDATING_BFT(false, CordaX500Name(BFTNonValidatingNotaryService.id, "BFT", "Zurich", "CH"))
+    }
+
+    internal fun startCordformNodes(cordforms: List<CordformNode>): CordaFuture<*> {
+        val clusterNodes = HashMultimap.create<ClusterType, CordaX500Name>()
+        val notaryInfos = ArrayList<NotaryInfo>()
+
+        // Go though the node definitions and pick out the notaries so that we can generate their identities to be used
+        // in the network parameters
+        for (cordform in cordforms) {
+            if (cordform.notary == null) continue
+            val name = CordaX500Name.parse(cordform.name)
+            val notaryConfig = ConfigFactory.parseMap(cordform.notary).parseAs<NotaryConfig>()
+            // We need to first group the nodes that form part of a cluser. We assume for simplicity that nodes of the
+            // same cluster type and validating flag are part of the same cluster.
+            if (notaryConfig.raft != null) {
+                val key = if (notaryConfig.validating) VALIDATING_RAFT else NON_VALIDATING_RAFT
+                clusterNodes.put(key, name)
+            } else if (notaryConfig.bftSMaRt != null) {
+                clusterNodes.put(NON_VALIDATING_BFT, name)
+            } else {
+                // We have all we need here to generate the identity for single node notaries
+                val identity = ServiceIdentityGenerator.generateToDisk(
+                        dirs = listOf(baseDirectory(name)),
+                        serviceName = name,
+                        serviceId = "identity"
+                )
+                notaryInfos += NotaryInfo(identity, notaryConfig.validating)
+            }
+        }
+
+        clusterNodes.asMap().forEach { type, nodeNames ->
+            val identity = ServiceIdentityGenerator.generateToDisk(
+                    dirs = nodeNames.map { baseDirectory(it) },
+                    serviceName = type.clusterName,
+                    serviceId = NotaryService.constructId(
+                            validating = type.validating,
+                            raft = type in setOf(VALIDATING_RAFT, NON_VALIDATING_RAFT),
+                            bft = type == NON_VALIDATING_BFT
+                    )
+            )
+            notaryInfos += NotaryInfo(identity, type.validating)
+        }
+
+        networkParameters = NetworkParametersCopier(testNetworkParameters(notaryInfos))
+
+        return cordforms.map {
+            val startedNode = startCordformNode(it)
+            if (it.webAddress != null) {
+                // Start a webserver if an address for it was specified
+                startedNode.flatMap { startWebserver(it) }
+            } else {
+                startedNode
+            }
+        }.transpose()
+    }
+
+    private fun startCordformNode(cordform: CordformNode): CordaFuture<NodeHandle> {
         val name = CordaX500Name.parse(cordform.name)
         // TODO We shouldn't have to allocate an RPC or web address if they're not specified. We're having to do this because of startNodeInternal
         val rpcAddress = if (cordform.rpcAddress == null) mapOf("rpcAddress" to portAllocation.nextHostAndPort().toString()) else emptyMap()
@@ -789,14 +857,17 @@ class DriverDSL(
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = listOf(baseDirectory(spec.name)),
                         serviceName = spec.name,
-                        serviceId = "identity")
+                        serviceId = "identity"
+                )
             } else {
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
                         serviceName = spec.name,
                         serviceId = NotaryService.constructId(
                                 validating = spec.validating,
-                                raft = spec.cluster is ClusterSpec.Raft))
+                                raft = spec.cluster is ClusterSpec.Raft
+                        )
+                )
             }
             NotaryInfo(identity, spec.validating)
         }
@@ -945,7 +1016,7 @@ class DriverDSL(
         val nodeInfoFilesCopier = if (compatibilityZoneURL == null) nodeInfoFilesCopier else null
 
         nodeInfoFilesCopier?.addConfig(baseDirectory)
-        networkParameters.install(baseDirectory)
+        networkParameters!!.install(baseDirectory)
         val onNodeExit: () -> Unit = {
             nodeInfoFilesCopier?.removeConfig(baseDirectory)
             countObservables.remove(configuration.myLegalName)
