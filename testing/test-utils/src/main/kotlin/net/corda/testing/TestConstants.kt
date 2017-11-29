@@ -73,7 +73,7 @@ val DEV_CA: CertificateAndKeyPair by lazy {
 
 val ROOT_CA: CertificateAndKeyPair by lazy {
     // TODO: Should be identity scheme
-    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+    val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
     caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, "cordacadevkeypass")
 }
 val DEV_TRUST_ROOT: X509CertificateHolder by lazy {

@@ -4,8 +4,6 @@ import javafx.beans.binding.IntegerExpression
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
@@ -15,7 +13,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
+import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
