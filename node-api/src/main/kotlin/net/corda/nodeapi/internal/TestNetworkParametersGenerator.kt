@@ -8,9 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readAll
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl

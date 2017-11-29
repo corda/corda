@@ -3,10 +3,8 @@ package net.corda.node.services.network
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -16,7 +14,6 @@ import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.io.IOException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.TimeUnit
