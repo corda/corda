@@ -10,7 +10,7 @@ Each Corda node has the following structure:
 .. sourcecode:: none
 
     .
-    ├── certificates            // The node's doorman certificates
+    ├── certificates            // The node's certificates
     ├── corda-webserver.jar     // The built-in node webserver
     ├── corda.jar               // The core Corda libraries
     ├── logs                    // The node logs
@@ -23,7 +23,7 @@ into the ``cordapps`` folder.
 
 Node naming
 -----------
-A node's name must be a valid X500 name that obeys the following additional constraints:
+A node's name must be a valid X.500 name that obeys the following additional constraints:
 
 * The fields of the name have the following maximum character lengths:
 
@@ -48,10 +48,11 @@ A node's name must be a valid X500 name that obeys the following additional cons
     * Is in NFKC normalization form
     * Only the latin, common and inherited unicode scripts are supported
 
-The deployNodes task
---------------------
-The CorDapp template defines a ``deployNodes`` task that allows you to automatically generate and configure a set of
-nodes:
+The Cordform task
+-----------------
+Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
+nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined in the
+`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V2/build.gradle#L97>`_:
 
 .. sourcecode:: groovy
 
@@ -66,7 +67,6 @@ nodes:
             rpcPort  10003
             // No webport property, so no webserver will be created.
             h2Port   10004
-            sshdPort 22
             // Includes the corda-finance CorDapp on our node.
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
         }
@@ -77,7 +77,6 @@ nodes:
             rpcPort  10006
             webPort  10007
             h2Port   10008
-            sshdPort 22
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
             // Grants user1 all RPC permissions.
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
@@ -89,7 +88,6 @@ nodes:
             rpcPort  10010
             webPort  10011
             h2Port   10012
-            sshdPort 22
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
             // Grants user1 the ability to start the MyFlow flow.
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
@@ -118,16 +116,16 @@ CorDapps are not listed in each node's ``cordapps`` entry. This means that runni
 template CorDapp, for example, would automatically build and add the template CorDapp to each node.
 
 You can extend ``deployNodes`` to generate additional nodes. The only requirement is that you must specify
-a single node to run the network map service, by putting their name in the ``networkMap`` field.
+a single node to run the network map service, by putting its name in the ``networkMap`` field.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
 Running deployNodes
 -------------------
 To create the nodes defined in our ``deployNodes`` task, run the following command in a terminal window from the root
-of the project:
+of the project where the ``deployNodes`` task is defined:
 
-* Unix/Mac OSX: ``./gradlew deployNodes``
+* Linux/macOS: ``./gradlew deployNodes``
 * Windows: ``gradlew.bat deployNodes``
 
 This will create the nodes in the ``build/nodes`` folder. There will be a node folder generated for each node defined

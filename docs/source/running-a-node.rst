@@ -16,11 +16,11 @@ Starting all nodes at once
 
 Start the nodes with ``runnodes`` by running the following command from the root of the project:
 
-* Unix/macOS: ``build/nodes/runnodes``
+* Linux/macOS: ``build/nodes/runnodes``
 * Windows: ``call build\nodes\runnodes.bat``
 
-.. warn:: On Unix/macOS, do not click/change focus until all the node terminal windows have opened, or some processes
-   may fail to start.
+.. warn:: On macOS, do not click/change focus until all the node terminal windows have opened, or some processes may
+   fail to start.
 
 Starting an individual Corda node
 ---------------------------------
