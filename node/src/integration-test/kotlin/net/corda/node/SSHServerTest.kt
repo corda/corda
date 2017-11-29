@@ -20,6 +20,7 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.assertj.core.api.Assertions.assertThat
 import java.util.regex.Pattern
+import kotlin.reflect.jvm.jvmName
 
 class SSHServerTest {
 
@@ -113,7 +114,7 @@ class SSHServerTest {
             channel.disconnect()
             session.disconnect()
 
-            assertThat(response).matches("(?s)User not permissioned with any of \\[[^]]*${flowNameEscaped}.*")
+            assertThat(response).matches("(?s)User not authorized to perform RPC call .*")
         }
     }
 
