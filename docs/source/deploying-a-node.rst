@@ -1,141 +1,242 @@
 Deploying a node
 ================
 
-Node structure
---------------
-Each Corda node has the following structure:
+.. contents::
 
-.. sourcecode:: none
+.. note:: These instructions are intended for people who want to deploy a Corda node to a server,
+   whether they have developed and tested a CorDapp following the instructions in :doc:`generating-a-node`
+   or are deploying a third-party CorDapp.
 
-    .
-    ├── certificates            // The node's doorman certificates
-    ├── corda-webserver.jar     // The built-in node webserver
-    ├── corda.jar               // The core Corda libraries
-    ├── logs                    // The node logs
-    ├── node.conf               // The node's configuration files
-    ├── persistence.mv.db       // The node's database
-    └── cordapps                // The CorDapps jars installed on the node
+Linux (systemd): Installing and running Corda as a systemd service
+------------------------------------------------------------------
+We recommend creating systemd services to run a node and the optional webserver. This provides logging and service
+handling, and ensures the Corda service is run at boot.
 
-The node is configured by editing its ``node.conf`` file. You install CorDapps on the node by dropping the CorDapp JARs
-into the ``cordapps`` folder.
+**Prerequisites**:
 
-Node naming
------------
-A node's name must be a valid X500 name that obeys the following additional constraints:
+   * Oracle Java 8. The supported versions are listed in :doc:`getting-set-up`
 
-* The fields of the name have the following maximum character lengths:
+1. Add a system user which will be used to run Corda:
 
-    * Common name: 64
-    * Organisation: 128
-    * Organisation unit: 64
-    * Locality: 64
-    * State: 64
+    ``sudo adduser --system --no-create-home --group corda``
 
-* The country code is a valid ISO 3166-1 two letter code in upper-case
+2. Create a directory called ``/opt/corda`` and change its ownership to the user you want to use to run Corda:
 
-* The organisation, locality and country attributes are present
+   ``mkdir /opt/corda; chown corda:corda /opt/corda``
 
-* The organisation field of the name obeys the following constraints:
+3. Download the `Corda jar <https://r3.bintray.com/corda/net/corda/corda/>`_
+   (under ``/VERSION_NUMBER/corda-VERSION_NUMBER.jar``) and place it in ``/opt/corda``
 
-    * Has at least two letters
-    * No leading or trailing whitespace
-    * No double-spacing
-    * Upper-case first letter
-    * Does not contain the words "node" or "server"
-    * Does not include the characters ',' or '=' or '$' or '"' or '\'' or '\\'
-    * Is in NFKC normalization form
-    * Only the latin, common and inherited unicode scripts are supported
+3. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
+   our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory
 
-The deployNodes task
---------------------
-The CorDapp template defines a ``deployNodes`` task that allows you to automatically generate and configure a set of
-nodes:
+4. Save the below as ``/opt/corda/node.conf``. See :doc:`corda-configuration-file` for a description of these options
 
-.. sourcecode:: groovy
+   .. code-block:: json
 
-    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-        directory "./build/nodes"
-        networkMap "O=Controller,L=London,C=GB"
-        node {
-            name "O=Controller,L=London,C=GB"
-            // The notary will offer a validating notary service.
-            notary = [validating : true]
-            p2pPort  10002
-            rpcPort  10003
-            // No webport property, so no webserver will be created.
-            h2Port   10004
-            sshdPort 22
-            // Includes the corda-finance CorDapp on our node.
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
+      basedir : "/opt/corda"
+      p2pAddress : "example.com:10002"
+      rpcAddress : "example.com:10003"
+      webAddress : "0.0.0.0:10004"
+      h2port : 11000
+      emailAddress : "you@example.com"
+      myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
+      keyStorePassword : "cordacadevpass"
+      trustStorePassword : "trustpass"
+      useHTTPS : false
+      devMode : false
+      networkMapService {
+          address="networkmap.foo.bar.com:10002"
+          legalName="O=FooBar NetworkMap, L=Dublin, C=IE"
+      }
+      rpcUsers=[
+          {
+              user=corda
+              password=portal_password
+              permissions=[
+                  ALL
+              ]
+          }
+      ]
+
+5. Make the following changes to ``/opt/corda/node.conf``:
+
+   *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address.
+      This is the address other nodes or RPC interfaces will use to communicate with your node
+   *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below)
+   *  Enter an email address which will be used as an administrative contact during the registration process. This is
+      only visible to the permissioning service
+   *  Enter your node's desired legal name. This will be used during the issuance of your certificate and should rarely
+      change as it should represent the legal identity of your node
+
+      * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
+      * Location (``L=``) is your nearest city
+      * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
+   *  Change the RPC username and password
+
+6. Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/`` directory
+
+    .. code-block:: shell
+
+       [Unit]
+       Description=Corda Node - Bank of Breakfast Tea
+       Requires=network.target
+
+       [Service]
+       Type=simple
+       User=corda
+       WorkingDirectory=/opt/corda
+       ExecStart=/usr/bin/java -Xmx2048m -jar /opt/corda/corda.jar
+       Restart=on-failure
+
+       [Install]
+       WantedBy=multi-user.target
+
+7. Make the following changes to ``corda.service``:
+
+    * Make sure the service description is informative - particularly if you plan to run multiple nodes.
+    * Change the username to the user account you want to use to run Corda. **We recommend that this is not root**
+    * Set the maximum amount of memory available to the Corda process by changing the ``-Xmx2048m`` parameter
+    * Make sure the ``corda.service`` file is owned by root with the correct permissions:
+        * ``sudo chown root:root /etc/systemd/system/corda.service``
+        * ``sudo chmod 644 /etc/systemd/system/corda.service``
+
+.. note:: The Corda webserver provides a simple interface for interacting with your installed CorDapps in a browser.
+   Running the webserver is optional.
+
+8. Create a ``corda-webserver.service`` file based on the example below and save it in the ``/etc/systemd/system/``
+   directory.
+
+    .. code-block:: shell
+
+       [Unit]
+       Description=Webserver for Corda Node - Bank of Breakfast Tea
+       Requires=network.target
+
+       [Service]
+       Type=simple
+       User=username
+       WorkingDirectory=/opt/corda
+       ExecStart=/usr/bin/java -jar /opt/corda/corda-webserver.jar
+       Restart=on-failure
+
+       [Install]
+       WantedBy=multi-user.target
+
+9. Provision the required certificates to your node. Contact the network permissioning service or see
+   :doc:`permissioning`
+
+10. You can now start a node and its webserver by running the following ``systemctl`` commands:
+
+   * ``sudo systemctl daemon-reload``
+   * ``sudo systemctl corda start``
+   * ``sudo systemctl corda-webserver start``
+
+You can run multiple nodes by creating multiple directories and Corda services, modifying the ``node.conf`` and
+``service`` files so they are unique.
+
+Windows: Installing and running Corda as a Windows service
+----------------------------------------------------------
+We recommend running Corda as a Windows service. This provides service handling, ensures the Corda service is run
+at boot, and means the Corda service stays running with no users connected to the server.
+
+**Prerequisites**:
+
+   * Oracle Java 8. The supported versions are listed in :doc:`getting-set-up`
+
+1. Create a Corda directory and download the Corda jar. Replace ``VERSION_NUMBER`` with the desired version. Here's an
+   example using PowerShell:
+
+   .. code-block:: PowerShell
+
+        mkdir C:\Corda
+        wget http://jcenter.bintray.com/net/corda/corda/VERSION_NUMBER/corda-VERSION_NUMBER.jar -OutFile C:\Corda\corda.jar
+
+2. Create a directory called ``plugins`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively,
+   download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``plugins`` directory
+
+3. Save the below as ``C:\Corda\node.conf``. See :doc:`corda-configuration-file` for a description of these options
+
+   .. code-block:: json
+
+        basedir : "C:\\Corda"
+        p2pAddress : "example.com:10002"
+        rpcAddress : "example.com:10003"
+        webAddress : "0.0.0.0:10004"
+        h2port : 11000
+        emailAddress: "you@example.com"
+        myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
+        keyStorePassword : "cordacadevpass"
+        trustStorePassword : "trustpass"
+        extraAdvertisedServiceIds: [ "" ]
+        useHTTPS : false
+        devMode : false
+        networkMapService {
+                address="networkmap.foo.bar.com:10002"
+                legalName="O=FooBar NetworkMap, L=Dublin, C=IE"
         }
-        node {
-            name "O=PartyA,L=London,C=GB"
-            advertisedServices = []
-            p2pPort  10005
-            rpcPort  10006
-            webPort  10007
-            h2Port   10008
-            sshdPort 22
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
-            // Grants user1 all RPC permissions.
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
-        }
-        node {
-            name "O=PartyB,L=New York,C=US"
-            advertisedServices = []
-            p2pPort  10009
-            rpcPort  10010
-            webPort  10011
-            h2Port   10012
-            sshdPort 22
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
-            // Grants user1 the ability to start the MyFlow flow.
-            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
-        }
-    }
+        rpcUsers=[
+            {
+                user=corda
+                password=portal_password
+                permissions=[
+                    ALL
+                ]
+            }
+        ]
 
-Running this task will create three nodes in the ``build/nodes`` folder:
+4. Make the following changes to ``C:\Corda\node.conf``:
 
-* A ``Controller`` node that:
+   *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address.
+      This is the address other nodes or RPC interfaces will use to communicate with your node
+   *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below)
+   *  Enter an email address which will be used as an administrative contact during the registration process. This is
+      only visible to the permissioning service
+   *  Enter your node's desired legal name. This will be used during the issuance of your certificate and should rarely
+      change as it should represent the legal identity of your node
 
-  * Serves as the network map
-  * Offers a validating notary service
-  * Will not have a webserver (since ``webPort`` is not defined)
-  * Is running the ``corda-finance`` CorDapp
+      * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
+      * Location (``L=``) is your nearest city
+      * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
+   *  Change the RPC username and password
 
-* ``PartyA`` and ``PartyB`` nodes that:
+5. Copy the required Java keystores to the node. See :doc:`permissioning`
 
-  * Are pointing at the ``Controller`` as the network map service
-  * Are not offering any services
-  * Will have a webserver (since ``webPort`` is defined)
-  * Are running the ``corda-finance`` CorDapp
-  * Have an RPC user, ``user1``, that can be used to log into the node via RPC
+6. Download the `NSSM service manager <nssm.cc>`_
 
-Additionally, all three nodes will include any CorDapps defined in the project's source folders, even though these
-CorDapps are not listed in each node's ``cordapps`` entry. This means that running the ``deployNodes`` task from the
-template CorDapp, for example, would automatically build and add the template CorDapp to each node.
+7. Unzip ``nssm-2.24\win64\nssm.exe`` to ``C:\Corda``
 
-You can extend ``deployNodes`` to generate additional nodes. The only requirement is that you must specify
-a single node to run the network map service, by putting their name in the ``networkMap`` field.
+8. Save the following as ``C:\Corda\nssm.bat``:
 
-.. warning:: When adding nodes, make sure that there are no port clashes!
+   .. code-block:: batch
 
-Running deployNodes
--------------------
-To create the nodes defined in our ``deployNodes`` task, we'd run the following command in a terminal window from the
-root of the project:
+      nssm install cordanode1 C:\ProgramData\Oracle\Java\javapath\java.exe
+      nssm set cordanode1 AppDirectory C:\Corda
+      nssm set cordanode1 AppParameters "-jar corda.jar -Xmx2048m --config-file=C:\corda\node.conf"
+      nssm set cordanode1 AppStdout C:\Corda\service.log
+      nssm set cordanode1 AppStderr C:\Corda\service.log
+      nssm set cordanode1 Description Corda Node - Bank of Breakfast Tea
+      sc start cordanode1
 
-* Unix/Mac OSX: ``./gradlew deployNodes``
-* Windows: ``gradlew.bat deployNodes``
+9. Modify the batch file:
 
-This will create the nodes in the ``build/nodes`` folder.
+    * If you are installing multiple nodes, use a different service name (``cordanode1``) for each node
+    * Set the amount of Java heap memory available to this node by modifying the -Xmx argument
+    * Set an informative description
 
-.. note:: During the build process each node generates a NodeInfo file which is written in its own root directory,
-   the plug-in proceeds and copies each node NodeInfo to every other node ``additional-node-infos`` directory.
-   The NodeInfo file contains a node hostname and port, legal name and security certificate.
+10. Run the batch file by clicking on it or from a command prompt
 
-There will be a node folder generated for each node you defined, plus a ``runnodes`` shell script (or batch file on
-Windows) to run all the nodes at once. If you make any changes to your ``deployNodes`` task, you will need to re-run
-the task to see the changes take effect.
+11. Run ``services.msc`` and verify that a service called ``cordanode1`` is present and running
 
-You can now run the nodes by following the instructions in :doc:`Running a node <running-a-node>`.
+12. Run ``netstat -ano`` and check for the ports you configured in ``node.conf``
+
+13. You may need to open the ports on the Windows firewall
+
+Testing your installation
+-------------------------
+You can verify Corda is running by connecting to your RPC port from another host, e.g.:
+
+        ``telnet your-hostname.example.com 10002``
+
+If you receive the message "Escape character is ^]", Corda is running and accessible. Press Ctrl-] and Ctrl-D to exit
+telnet.
