@@ -38,24 +38,20 @@ class PartialMerkleTreeTest {
         testLedger = ledger {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
-                output(Cash.PROGRAM_ID, "MEGA_CORP cash") {
+                output(Cash.PROGRAM_ID, "MEGA_CORP cash",
                     Cash.State(
                             amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                            owner = MEGA_CORP
-                    )
-                }
-                output(Cash.PROGRAM_ID, "dummy cash 1") {
+                            owner = MEGA_CORP))
+                output(Cash.PROGRAM_ID, "dummy cash 1",
                     Cash.State(
                             amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                            owner = MINI_CORP
-                    )
-                }
+                            owner = MINI_CORP))
             }
             transaction {
                 attachments(Cash.PROGRAM_ID)
                 input("MEGA_CORP cash")
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
-                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
