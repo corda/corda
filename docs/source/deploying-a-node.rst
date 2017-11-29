@@ -215,15 +215,22 @@ at boot, and means the Corda service stays running with no users connected to th
       nssm set cordanode1 AppParameters "-jar corda.jar -Xmx2048m --config-file=C:\corda\node.conf"
       nssm set cordanode1 AppStdout C:\Corda\service.log
       nssm set cordanode1 AppStderr C:\Corda\service.log
+      nssm set cordanode1 Description Corda Node - Bank of Breakfast Tea
       sc start cordanode1
 
-9. Run the batch file by clicking on it or from a command prompt
+9. Modify the batch file:
 
-10. Run ``services.msc`` and verify that a service called ``cordanode1`` is present and running
+    * If you are installing multiple nodes, use a different service name (``cordanode1``) for each node
+    * Set the amount of Java heap memory available to this node by modifying the -Xmx argument
+    * Set an informative description
 
-11. Run ``netstat -ano`` and check for the ports you configured in ``node.conf``
+10. Run the batch file by clicking on it or from a command prompt
 
-12. You may need to open the ports on the Windows firewall
+11. Run ``services.msc`` and verify that a service called ``cordanode1`` is present and running
+
+12. Run ``netstat -ano`` and check for the ports you configured in ``node.conf``
+
+13. You may need to open the ports on the Windows firewall
 
 Testing your installation
 -------------------------
