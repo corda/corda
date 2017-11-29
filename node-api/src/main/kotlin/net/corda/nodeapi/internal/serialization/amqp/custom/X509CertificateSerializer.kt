@@ -20,8 +20,8 @@ object X509CertificateSerializer : CustomSerializer.Implements<X509Certificate>(
         output.writeObject(obj.encoded, data, clazz)
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): X509Certificate {
-        val bits = input.readObject(obj, schema, ByteArray::class.java) as ByteArray
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): X509Certificate {
+        val bits = input.readObject(obj, schemas, ByteArray::class.java) as ByteArray
         return X509CertificateFactory().generateCertificate(bits.inputStream())
     }
 }

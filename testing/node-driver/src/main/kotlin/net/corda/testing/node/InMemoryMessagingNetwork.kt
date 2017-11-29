@@ -2,14 +2,14 @@ package net.corda.testing.node
 
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -17,7 +17,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
 import net.corda.node.services.messaging.*
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.LoggerFactory

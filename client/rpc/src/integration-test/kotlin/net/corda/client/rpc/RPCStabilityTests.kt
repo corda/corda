@@ -12,11 +12,14 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.poll
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -26,6 +29,14 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 
 class RPCStabilityTests {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+    private val pool = Executors.newFixedThreadPool(10, testThreadFactory())
+    @After
+    fun shutdown() {
+        pool.shutdown()
+    }
 
     object DummyOps : RPCOps {
         override val protocolVersion = 0
@@ -197,9 +208,9 @@ class RPCStabilityTests {
             val proxy = startRpcClient<LeakObservableOps>(server.get().broker.hostAndPort!!).get()
             // Leak many observables
             val N = 200
-            (1..N).toList().parallelStream().forEach {
-                proxy.leakObservable()
-            }
+            (1..N).map {
+                pool.fork { proxy.leakObservable(); Unit }
+            }.transpose().getOrThrow()
             // In a loop force GC and check whether the server is notified
             while (true) {
                 System.gc()
@@ -231,7 +242,7 @@ class RPCStabilityTests {
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            val pingFuture = ForkJoinPool.commonPool().fork(client::ping)
+            val pingFuture = pool.fork(client::ping)
             assertEquals("pong", pingFuture.getOrThrow(10.seconds))
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }

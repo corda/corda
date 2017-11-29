@@ -36,9 +36,9 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
-import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -106,8 +106,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
-                        issuedBy = cashIssuer)
+                VaultFiller(bobNode.services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, 10, cashIssuer)
             }
 
             val alicesFakePaper = aliceNode.database.transaction {
@@ -156,8 +155,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             val cashStates = bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, notary, 3, 3,
-                        issuedBy = issuer)
+                VaultFiller(bobNode.services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, issuer)
             }
 
             val alicesFakePaper = aliceNode.database.transaction {
@@ -216,8 +214,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val issuer = bank.ref(1, 2, 3)
 
             bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
-                        issuedBy = issuer)
+                VaultFiller(bobNode.services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, 10, issuer)
             }
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, issuer, alice,
@@ -519,7 +516,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                                   sellerNode: StartedNode<MockNetwork.MockNode>,
                                   buyerNode: StartedNode<MockNetwork.MockNode>,
                                   assetToSell: StateAndRef<OwnableState>): RunResult {
-        val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.internals.registerInitiatedFlow(BuyerAcceptor::class.java)
+        val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
         val seller = SellerInitiator(buyer, notary, assetToSell, 1000.DOLLARS, anonymous)
         val sellerResult = sellerNode.services.startFlow(seller).resultFuture

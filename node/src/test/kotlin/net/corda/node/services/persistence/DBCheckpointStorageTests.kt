@@ -4,10 +4,10 @@ import com.google.common.primitives.Ints
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
-import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.LogHelper
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties

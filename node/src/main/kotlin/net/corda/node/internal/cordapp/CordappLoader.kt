@@ -52,12 +52,14 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         }
     }
 
+    val cordappSchemas: Set<MappedSchema> get() = cordapps.flatMap { it.customSchemas }.toSet()
+
     companion object {
         private val logger = contextLogger()
         /**
          * Default cordapp dir name
          */
-        val CORDAPPS_DIR_NAME = "cordapps"
+        private const val CORDAPPS_DIR_NAME = "cordapps"
 
         /**
          * Creates a default CordappLoader intended to be used in non-dev or non-test environments.
@@ -79,7 +81,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         @VisibleForTesting
         fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
-            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
+            if (!configuration.devMode) {
+                logger.warn("Package scanning should only occur in dev mode!")
+            }
             val paths = getCordappsInDirectory(getCordappsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage)
             return cordappLoadersCache.computeIfAbsent(paths, { CordappLoader(paths) })
         }
@@ -92,8 +96,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * CorDapps.
          */
         @VisibleForTesting
-        fun createWithTestPackages(testPackages: List<String>)
-                = cordappLoadersCache.computeIfAbsent(testPackages, { CordappLoader(testPackages.flatMap(this::createScanPackage)) })
+        fun createWithTestPackages(testPackages: List<String>): CordappLoader {
+            return cordappLoadersCache.computeIfAbsent(testPackages, { CordappLoader(testPackages.flatMap(this::createScanPackage)) })
+        }
 
         /**
          * Creates a dev mode CordappLoader intended only to be used in test environments

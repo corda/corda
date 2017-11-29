@@ -10,12 +10,13 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.schema.HibernateObserver
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -40,13 +41,14 @@ class DBTransactionStorageTests {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
+        val schemaService = NodeSchemaService()
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock(), schemaService)
         database.transaction {
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultServiceInternal
                     get() {
                         val vaultService = NodeVaultService(clock, keyManagementService, stateLoader, database.hibernateConfig)
-                        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig)
+                        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig, schemaService)
                         return vaultService
                     }
 

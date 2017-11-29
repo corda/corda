@@ -2,9 +2,9 @@ package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.UniquenessException
-import net.corda.node.services.config.DatabaseConfig
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After

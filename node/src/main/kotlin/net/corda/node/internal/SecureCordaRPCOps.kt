@@ -5,7 +5,7 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.rpcContext
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 /**
  * Implementation of [CordaRPCOps] that checks authorisation.

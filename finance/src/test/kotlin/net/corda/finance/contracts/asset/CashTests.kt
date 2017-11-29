@@ -3,7 +3,10 @@ package net.corda.finance.contracts.asset
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -16,10 +19,10 @@ import net.corda.finance.utils.sumCashBy
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import org.junit.After
@@ -81,15 +84,12 @@ class CashTests {
         }
 
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
-                database.transaction {
-            ourServices.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    owner = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
-            ourServices.fillWithSomeTestCash(howMuch = 400.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    owner = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
-            ourServices.fillWithSomeTestCash(howMuch = 80.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    owner = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
-            ourServices.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    owner = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
+        database.transaction {
+            val vaultFiller = VaultFiller(ourServices, DUMMY_NOTARY, DUMMY_NOTARY_KEY, rngFactory = ::Random)
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(400.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(80.DOLLARS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(80.SWISS_FRANCS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)
         }
         database.transaction {
             vaultStatesUnconsumed = ourServices.vaultService.queryBy<Cash.State>().states

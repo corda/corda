@@ -5,19 +5,22 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.millis
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.internal.RPCDriverExposedDSLInterface
 import net.corda.testing.internal.rpcDriver
+import net.corda.testing.internal.testThreadFactory
+import org.apache.activemq.artemis.utils.collections.ConcurrentHashSet
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import rx.Observable
 import rx.subjects.UnicastSubject
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ForkJoinPool
+import java.util.concurrent.*
 
 @RunWith(Parameterized::class)
 class RPCConcurrencyTests : AbstractRPCTest() {
@@ -36,7 +39,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
         fun getParallelObservableTree(depth: Int, branchingFactor: Int): ObservableRose<Int>
     }
 
-    class TestOpsImpl : TestOps {
+    class TestOpsImpl(private val pool: Executor) : TestOps {
         private val latches = ConcurrentHashMap<Long, CountDownLatch>()
         override val protocolVersion = 0
 
@@ -68,24 +71,22 @@ class RPCConcurrencyTests : AbstractRPCTest() {
             val branches = if (depth == 0) {
                 Observable.empty<ObservableRose<Int>>()
             } else {
-                val publish = UnicastSubject.create<ObservableRose<Int>>()
-                ForkJoinPool.commonPool().fork {
-                    (1..branchingFactor).toList().parallelStream().forEach {
-                        publish.onNext(getParallelObservableTree(depth - 1, branchingFactor))
+                UnicastSubject.create<ObservableRose<Int>>().also { publish ->
+                    (1..branchingFactor).map {
+                        pool.fork { publish.onNext(getParallelObservableTree(depth - 1, branchingFactor)) }
+                    }.transpose().then {
+                        it.getOrThrow()
+                        publish.onCompleted()
                     }
-                    publish.onCompleted()
                 }
-                publish
             }
             return ObservableRose(depth, branches)
         }
     }
 
-    private lateinit var testOpsImpl: TestOpsImpl
     private fun RPCDriverExposedDSLInterface.testProxy(): TestProxy<TestOps> {
-        testOpsImpl = TestOpsImpl()
         return testProxy<TestOps>(
-                testOpsImpl,
+                TestOpsImpl(pool),
                 clientConfiguration = RPCClientConfiguration.default.copy(
                         reapInterval = 100.millis,
                         cacheConcurrencyLevel = 16
@@ -96,6 +97,12 @@ class RPCConcurrencyTests : AbstractRPCTest() {
         )
     }
 
+    private val pool = Executors.newFixedThreadPool(10, testThreadFactory())
+    @After
+    fun shutdown() {
+        pool.shutdown()
+    }
+
     @Test
     fun `call multiple RPCs in parallel`() {
         rpcDriver {
@@ -103,19 +110,17 @@ class RPCConcurrencyTests : AbstractRPCTest() {
             val numberOfBlockedCalls = 2
             val numberOfDownsRequired = 100
             val id = proxy.ops.newLatch(numberOfDownsRequired)
-            val done = CountDownLatch(numberOfBlockedCalls)
             // Start a couple of blocking RPC calls
-            (1..numberOfBlockedCalls).forEach {
-                ForkJoinPool.commonPool().fork {
+            val done = (1..numberOfBlockedCalls).map {
+                pool.fork {
                     proxy.ops.waitLatch(id)
-                    done.countDown()
                 }
-            }
+            }.transpose()
             // Down the latch that the others are waiting for concurrently
-            (1..numberOfDownsRequired).toList().parallelStream().forEach {
-                proxy.ops.downLatch(id)
-            }
-            done.await()
+            (1..numberOfDownsRequired).map {
+                pool.fork { proxy.ops.downLatch(id) }
+            }.transpose().getOrThrow()
+            done.getOrThrow()
         }
     }
 
@@ -146,7 +151,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
             fun ObservableRose<Int>.subscribeToAll() {
                 remainingLatch.countDown()
                 this.branches.subscribe { tree ->
-                    (tree.value + 1..treeDepth - 1).forEach {
+                    (tree.value + 1 until treeDepth).forEach {
                         require(it in depthsSeen) { "Got ${tree.value} before $it" }
                     }
                     depthsSeen.add(tree.value)
@@ -165,11 +170,11 @@ class RPCConcurrencyTests : AbstractRPCTest() {
             val treeDepth = 2
             val treeBranchingFactor = 10
             val remainingLatch = CountDownLatch((intPower(treeBranchingFactor, treeDepth + 1) - 1) / (treeBranchingFactor - 1))
-            val depthsSeen = Collections.synchronizedSet(HashSet<Int>())
+            val depthsSeen = ConcurrentHashSet<Int>()
             fun ObservableRose<Int>.subscribeToAll() {
                 remainingLatch.countDown()
                 branches.subscribe { tree ->
-                    (tree.value + 1..treeDepth - 1).forEach {
+                    (tree.value + 1 until treeDepth).forEach {
                         require(it in depthsSeen) { "Got ${tree.value} before $it" }
                     }
                     depthsSeen.add(tree.value)

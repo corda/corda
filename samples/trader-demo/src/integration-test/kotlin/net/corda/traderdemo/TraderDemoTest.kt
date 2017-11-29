@@ -38,8 +38,7 @@ class TraderDemoTest {
                     startNode(providedName = DUMMY_BANK_B.name, rpcUsers = listOf(demoUser)),
                     startNode(providedName = BOC.name, rpcUsers = listOf(bankUser))
             ).map { (it.getOrThrow() as NodeHandle.InProcess).node }
-
-            nodeA.internals.registerInitiatedFlow(BuyerFlow::class.java)
+            nodeA.registerInitiatedFlow(BuyerFlow::class.java)
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
                 val client = CordaRPCClient(it.internals.configuration.rpcAddress!!)
                 client.start(demoUser.username, demoUser.password).proxy

@@ -136,10 +136,8 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
                 .replace("oracleXXX", RatesOracleNode.RATES_SERVICE_NAME.toString()))
         irs.fixedLeg.fixedRatePayer = node1.info.chooseIdentity()
         irs.floatingLeg.floatingRatePayer = node2.info.chooseIdentity()
-
-        node1.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
-        node2.internals.registerInitiatedFlow(FixingFlow.Fixer::class.java)
-
+        node1.registerInitiatedFlow(FixingFlow.Fixer::class.java)
+        node2.registerInitiatedFlow(FixingFlow.Fixer::class.java)
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
                             val payload: AutoOffer) : FlowLogic<SignedTransaction>() {
@@ -152,9 +150,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         @InitiatedBy(StartDealFlow::class)
         class AcceptDealFlow(otherSession: FlowSession) : Acceptor(otherSession)
-
-        val acceptDealFlows: Observable<AcceptDealFlow> = node2.internals.registerInitiatedFlow(AcceptDealFlow::class.java)
-
+        val acceptDealFlows: Observable<AcceptDealFlow> = node2.registerInitiatedFlow(AcceptDealFlow::class.java)
         val acceptorTxFuture = acceptDealFlows.toFuture().toCompletableFuture().thenCompose {
             uncheckedCast<FlowStateMachine<*>, FlowStateMachine<SignedTransaction>>(it.stateMachine).resultFuture.toCompletableFuture()
         }

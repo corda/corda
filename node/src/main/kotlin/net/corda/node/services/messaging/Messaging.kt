@@ -190,11 +190,13 @@ fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): CordaFutu
     return messageFuture
 }
 
-fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
-        = send(TopicSession(topic, sessionID), payload, to, uuid)
+fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID()) {
+    send(TopicSession(topic, sessionID), payload, to, uuid)
+}
 
-fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID(), retryId: Long? = null)
-        = send(createMessage(topicSession, payload.serialize().bytes, uuid), to, retryId)
+fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID(), retryId: Long? = null) {
+    send(createMessage(topicSession, payload.serialize().bytes, uuid), to, retryId)
+}
 
 interface MessageHandlerRegistration
 
