@@ -17,9 +17,9 @@ import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
-import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
-import net.corda.node.utilities.currentDBSession
+import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.io.*
 import java.nio.file.Paths
 import java.time.Instant

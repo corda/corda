@@ -9,8 +9,8 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
+import net.corda.node.services.api.SchemaService.SchemaOptions
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
@@ -27,14 +27,12 @@ import net.corda.node.services.vault.VaultSchemaV1
 
 /**
  * Most basic implementation of [SchemaService].
- * @param cordappLoader if not null, custom schemas will be extracted from its cordapps.
  * TODO: support loading schema options from node configuration.
  * TODO: support configuring what schemas are to be selected for persistence.
  * TODO: support plugins for schema version upgrading or custom mapping not supported by original [QueryableState].
  * TODO: create whitelisted tables when a CorDapp is first installed
  */
-class NodeSchemaService(cordappLoader: CordappLoader?) : SchemaService, SingletonSerializeAsToken() {
-
+class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet()) : SchemaService, SingletonSerializeAsToken() {
     // Entities for compulsory services
     object NodeServices
 
@@ -60,17 +58,12 @@ class NodeSchemaService(cordappLoader: CordappLoader?) : SchemaService, Singleto
     // Required schemas are those used by internal Corda services
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
-            mapOf(Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
-                    Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
-                    Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
-                    Pair(NodeServicesV1, SchemaService.SchemaOptions()))
+            mapOf(Pair(CommonSchemaV1, SchemaOptions()),
+                    Pair(VaultSchemaV1, SchemaOptions()),
+                    Pair(NodeInfoSchemaV1, SchemaOptions()),
+                    Pair(NodeServicesV1, SchemaOptions()))
 
-    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = if (cordappLoader == null) {
-        requiredSchemas
-    } else {
-        val customSchemas = cordappLoader.cordapps.flatMap { it.customSchemas }.toSet()
-        requiredSchemas.plus(customSchemas.map { mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions()) })
-    }
+    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
 
     // Currently returns all schemas supported by the state, with no filtering or enrichment.
     override fun selectSchemas(state: ContractState): Iterable<MappedSchema> {

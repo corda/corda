@@ -3,6 +3,7 @@ package net.corda.node.services.events
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.context.Origin
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
@@ -12,7 +13,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.context.Origin
 import net.corda.core.internal.until
 import net.corda.core.node.StateLoader
 import net.corda.core.schemas.PersistentStateRef
@@ -24,9 +24,9 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.PersistentMap
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.utils.ReusableLatch
 import java.time.Clock
 import java.time.Instant

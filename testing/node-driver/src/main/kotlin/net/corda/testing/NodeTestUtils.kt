@@ -18,7 +18,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.User

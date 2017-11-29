@@ -3,6 +3,8 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
@@ -58,10 +60,12 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
 import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
@@ -181,7 +185,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         log.info("Node starting up ...")
         initCertificate()
         val (keyPairs, info) = initNodeInfo()
-        val schemaService = NodeSchemaService(cordappLoader)
+        val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val identityService = makeIdentityService(info)
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
@@ -207,7 +211,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, SECONDS)
                 }
             }
-            makeVaultObservers(schedulerService, database.hibernateConfig, smm)
+            makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService)
             val rpcOps = makeRPCOps(flowStarter, database, smm)
             startMessagingService(rpcOps)
             installCoreFlows()
@@ -513,10 +517,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(database: CordaPersistence): WritableTransactionStorage = DBTransactionStorage()
-    private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager) {
+
+    private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService) {
         VaultSoftLockManager.install(services.vaultService, smm)
         ScheduledActivityObserver.install(services.vaultService, schedulerService)
-        HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig)
+        HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
     }
 
     @VisibleForTesting
@@ -753,7 +758,23 @@ internal class FlowStarterImpl(private val serverThread: AffinityExecutor, priva
 }
 
 class ConfigurationException(message: String) : CordaException(message)
+
 /**
  * Thrown when a node is about to start and its network map cache doesn't contain any node.
  */
 internal class NetworkMapCacheEmptyException : Exception()
+
+fun configureDatabase(dataSourceProperties: Properties,
+                      databaseConfig: DatabaseConfig,
+                      identityService: IdentityService,
+                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
+    // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
+    // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
+    // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
+    // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
+    JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
+    val config = HikariConfig(dataSourceProperties)
+    val dataSource = HikariDataSource(config)
+    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
+    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
+}

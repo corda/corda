@@ -36,7 +36,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.*

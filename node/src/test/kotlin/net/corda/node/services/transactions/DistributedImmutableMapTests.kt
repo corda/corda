@@ -10,9 +10,9 @@ import net.corda.core.internal.concurrent.asCordaFuture
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.config.DatabaseConfig
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.LogHelper
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.freeLocalHostAndPort
