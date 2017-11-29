@@ -22,11 +22,8 @@ import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.CHARLIE
+import net.corda.testing.*
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.testNodeConfiguration
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.h2.tools.Server
 import org.junit.*
@@ -48,6 +45,10 @@ class SigningServiceIntegrationTest {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
 
     private lateinit var timer: Timer
 
@@ -92,7 +93,7 @@ class SigningServiceIntegrationTest {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         }, SchemaService())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 30, initialNetworkMapParameters = testNetworkParameters(emptyList()))
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 30, networkMapParameters = testNetworkParameters(emptyList()))
 
         // Start Corda network registration.
         val config = testNodeConfiguration(
@@ -148,7 +149,7 @@ class SigningServiceIntegrationTest {
             // Identity service not needed doorman, corda persistence is not very generic.
             throw UnsupportedOperationException()
         }, SchemaService())
-        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 10, initialNetworkMapParameters = testNetworkParameters(emptyList()))
+        val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 10, networkMapParameters = testNetworkParameters(emptyList()))
 
         thread(start = true, isDaemon = true) {
             val h2ServerArgs = arrayOf("-tcpPort", H2_TCP_PORT, "-tcpAllowOthers")

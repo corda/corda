@@ -1,20 +1,13 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
-import com.r3.corda.networkmanage.common.utils.toConfigWithOptions
-import com.r3.corda.networkmanage.doorman.DoormanParameters.Companion.DEFAULT_APPROVE_INTERVAL
-import com.r3.corda.networkmanage.doorman.DoormanParameters.Companion.DEFAULT_SIGN_INTERVAL
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import joptsimple.OptionParser
 import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.exists
-import net.corda.core.internal.div
-import net.corda.core.utilities.seconds
 import net.corda.nodeapi.config.parseAs
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Duration
 import java.util.*
 
 data class DoormanParameters(// TODO Create a localSigning sub-config and put that there
@@ -60,10 +53,12 @@ data class DoormanParameters(// TODO Create a localSigning sub-config and put th
 }
 
 data class CommandLineOptions(val configFile: Path,
-                              val initialNetworkParameters: Path) {
+                              val updateNetworkParametersFile: Path?) {
     init {
         check(configFile.isRegularFile()) { "Config file $configFile does not exist" }
-        check(initialNetworkParameters.isRegularFile()) { "Initial network parameters file $initialNetworkParameters does not exist" }
+        if (updateNetworkParametersFile != null) {
+            check(updateNetworkParametersFile.isRegularFile()) { "Update network parameters file $updateNetworkParametersFile does not exist" }
+        }
     }
 }
 
@@ -76,23 +71,26 @@ fun parseCommandLine(vararg args: String): CommandLineOptions {
             .accepts("config-file", "The path to the config file")
             .withRequiredArg()
             .describedAs("filepath")
-    val initialNetworkParametersArg = optionParser
-            .accepts("initial-network-parameters", "initial network parameters filepath")
+    val updateNetworkParametersArg = optionParser
+            .accepts("update-network-parameters", "Update network parameters filepath. Currently only network parameters initialisation is supported.")
             .withRequiredArg()
-            .describedAs("The initial network map")
+            .describedAs("The new network map")
             .describedAs("filepath")
     val helpOption = optionParser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp();
 
     val optionSet = optionParser.parse(*args)
     // Print help and exit on help option or if there are missing options.
-    if (optionSet.has(helpOption) || !optionSet.has(configFileArg) || !optionSet.has(initialNetworkParametersArg)) {
+    if (optionSet.has(helpOption) || !optionSet.has(configFileArg)) {
         throw ShowHelpException(optionParser)
     }
 
     val configFile = Paths.get(optionSet.valueOf(configFileArg)).toAbsolutePath()
-    val initialNetworkParameters = Paths.get(optionSet.valueOf(initialNetworkParametersArg)).toAbsolutePath()
+    val updateNetworkParametersOptionValue = optionSet.valueOf(updateNetworkParametersArg)
+    val updateNetworkParameters = updateNetworkParametersOptionValue?.let {
+        Paths.get(it).toAbsolutePath()
+    }
 
-    return CommandLineOptions(configFile, initialNetworkParameters)
+    return CommandLineOptions(configFile, updateNetworkParameters)
 }
 
 /**

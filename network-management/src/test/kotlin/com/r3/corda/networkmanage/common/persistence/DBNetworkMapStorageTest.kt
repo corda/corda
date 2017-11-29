@@ -118,7 +118,7 @@ class DBNetworkMapStorageTest : TestBase() {
         val result = networkMapStorage.getCurrentNetworkParameters()
 
         // then
-        assertEquals(1, result.minimumPlatformVersion)
+        assertEquals(1, result?.minimumPlatformVersion)
     }
 
     @Test

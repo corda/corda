@@ -67,9 +67,9 @@ When doorman is running it will serve the current network parameters. The first 
 started it will need to know the initial value for the network parameters.
 
 The initial values for the network parameters can be specified with a file, like this:
-    .. literalinclude:: ../../network-management/initial-network-parameters.conf
+    .. literalinclude:: ../../network-management/network-parameters.conf
 
-And the location of that file can be specified with: ``--initialNetworkParameters``.
+And the location of that file can be specified with: ``--update-network-parameters``.
 Note that when reading from file:
 
 1. ``epoch`` will always be set to 1,

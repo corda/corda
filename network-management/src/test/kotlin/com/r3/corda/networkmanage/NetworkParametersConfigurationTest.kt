@@ -11,13 +11,11 @@ import java.time.Instant
 
 class NetworkParametersConfigurationTest {
 
-    private val validInitialNetworkConfigPath = File(javaClass.getResource("/initial-network-parameters.conf").toURI())
+    private val validOverrideNetworkConfigPath = File("network-parameters.conf").toPath()
 
     @Test
     fun `reads an existing file`() {
-        val confFile = validInitialNetworkConfigPath.toPath()
-
-        val networkParameters = parseNetworkParametersFrom(confFile)
+        val networkParameters = parseNetworkParametersFrom(validOverrideNetworkConfigPath)
         assertThat(networkParameters.minimumPlatformVersion).isEqualTo(1)
         assertThat(networkParameters.eventHorizon).isEqualTo(100.days)
         val notaries = networkParameters.notaries

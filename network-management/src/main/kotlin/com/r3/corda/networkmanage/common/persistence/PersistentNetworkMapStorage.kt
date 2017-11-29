@@ -17,22 +17,18 @@ import org.hibernate.jpa.QueryHints
  * Database implementation of the [NetworkMapStorage] interface
  */
 class PersistentNetworkMapStorage(private val database: CordaPersistence) : NetworkMapStorage {
-    override fun getCurrentNetworkMap(): SignedNetworkMap = database.transaction {
+    override fun getCurrentNetworkMap(): SignedNetworkMap? = database.transaction {
         val networkMapEntity = getCurrentNetworkMapEntity(getNetworkMapWithNodeInfoAndParametersHint(session))
-        networkMapEntity ?: throw NoSuchElementException("Current Network Map does not exist.")
-        val nodeInfoHashes = networkMapEntity.nodeInfoList.map { it.nodeInfoHash }
-        val networkParameterHash = networkMapEntity.parameters.parametersHash
-        val signatureAndCertPath = networkMapEntity.signatureAndCertificate()
-        SignedNetworkMap(NetworkMap(nodeInfoHashes, networkParameterHash), signatureAndCertPath!!)
+        networkMapEntity?.let {
+            val nodeInfoHashes = it.nodeInfoList.map { it.nodeInfoHash }
+            val networkParameterHash = it.parameters.parametersHash
+            val signatureAndCertPath = it.signatureAndCertificate()
+            SignedNetworkMap(NetworkMap(nodeInfoHashes, networkParameterHash), signatureAndCertPath!!)
+        }
     }
 
-    override fun getCurrentNetworkParameters(): NetworkParameters = database.transaction {
-        val networkMapEntity = getCurrentNetworkMapEntity(getNetworkMapWithParametersHint(session))
-        if (networkMapEntity != null) {
-            networkMapEntity.parameters.networkParameters()
-        } else {
-            throw NoSuchElementException("Current Network Parameters do not exist.")
-        }
+    override fun getCurrentNetworkParameters(): NetworkParameters? = database.transaction {
+        getCurrentNetworkMapEntity(getNetworkMapWithParametersHint(session))?.parameters?.networkParameters()
     }
 
     override fun saveNetworkMap(signedNetworkMap: SignedNetworkMap) {
@@ -40,7 +36,7 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
             val networkMap = signedNetworkMap.networkMap
             val signatureAndCertPath = signedNetworkMap.signatureData
             val signature = signatureAndCertPath.signature
-            val networkParametersEntity = getNetworkParametersEntity(networkMap.parametersHash.toString())
+            val networkParametersEntity = getNetworkParametersEntity(networkMap.parametersHash)
             networkParametersEntity ?: throw IllegalArgumentException("Error when retrieving network parameters entity for network map signing! - Entity does not exist")
             val networkMapEntity = NetworkMapEntity(
                     parameters = networkParametersEntity,

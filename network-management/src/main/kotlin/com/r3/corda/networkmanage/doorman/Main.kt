@@ -159,7 +159,7 @@ fun generateCAKeyPair(keystorePath: Path, rootStorePath: Path, rootKeystorePass:
 fun startDoorman(hostAndPort: NetworkHostAndPort,
                  database: CordaPersistence,
                  approveAll: Boolean,
-                 initialNetworkMapParameters: NetworkParameters,
+                 networkMapParameters: NetworkParameters?,
                  signer: LocalSigner? = null,
                  approveInterval: Long,
                  signInterval: Long,
@@ -183,6 +183,16 @@ fun startDoorman(hostAndPort: NetworkHostAndPort,
     }
     val networkMapStorage = PersistentNetworkMapStorage(database)
     val nodeInfoStorage = PersistentNodeInfoStorage(database)
+
+    if (networkMapParameters != null) {
+        // Persisting new network parameters
+        val currentNetworkParameters = networkMapStorage.getCurrentNetworkParameters()
+        if (currentNetworkParameters == null) {
+            networkMapStorage.putNetworkParameters(networkMapParameters)
+        } else {
+            throw UnsupportedOperationException("Network parameters already exist. Updating them via the file config is not supported yet.")
+        }
+    }
 
     val doorman = DoormanServer(hostAndPort, RegistrationWebService(requestProcessor, DoormanServer.serverStatus), NodeInfoWebService(nodeInfoStorage, networkMapStorage))
     doorman.start()
@@ -266,8 +276,9 @@ fun main(args: Array<String>) {
                 DoormanParameters.Mode.DOORMAN -> {
                     val database = configureDatabase(dataSourceProperties, databaseProperties, { throw UnsupportedOperationException() }, SchemaService())
                     val signer = buildLocalSigner(this)
-
-                    val networkParameters = parseNetworkParametersFrom(commandLineOptions.initialNetworkParameters)
+                    val networkParameters = commandLineOptions.updateNetworkParametersFile?.let {
+                        parseNetworkParametersFrom(it)
+                    }
                     startDoorman(NetworkHostAndPort(host, port), database, approveAll, networkParameters, signer, approveInterval, signInterval, jiraConfig)
                 }
             }

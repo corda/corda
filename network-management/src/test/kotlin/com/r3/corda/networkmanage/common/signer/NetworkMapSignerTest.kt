@@ -73,4 +73,29 @@ class NetworkMapSignerTest : TestBase() {
         // Verify networkMapStorage is not called
         verify(networkMapStorage, never()).saveNetworkMap(any())
     }
+
+    @Test
+    fun `signNetworkMap creates a new network map if there is no current network map`() {
+        // given
+        val networkMapParameters = createNetworkParameters()
+        whenever(networkMapStorage.getCurrentNetworkMap()).thenReturn(null)
+        whenever(networkMapStorage.getCurrentNetworkMapNodeInfoHashes(any())).thenReturn(emptyList())
+        whenever(networkMapStorage.getDetachedAndValidNodeInfoHashes()).thenReturn(emptyList())
+        whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(networkMapParameters)
+        whenever(signer.sign(any())).thenReturn(mock())
+
+        // when
+        networkMapSigner.signNetworkMap()
+
+        // then
+        // Verify networkMapStorage calls
+        verify(networkMapStorage).getCurrentNetworkMapNodeInfoHashes(any())
+        verify(networkMapStorage).getDetachedAndValidNodeInfoHashes()
+        verify(networkMapStorage).getLatestNetworkParameters()
+        argumentCaptor<SignedNetworkMap>().apply {
+            verify(networkMapStorage).saveNetworkMap(capture())
+            val networkMap = firstValue.networkMap
+            assertEquals(networkMapParameters.serialize().hash.toString(), networkMap.parametersHash)
+        }
+    }
 }

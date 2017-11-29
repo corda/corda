@@ -47,21 +47,19 @@ internal data class NetworkParametersConfiguration(val minimumPlatformVersion: I
  * Parses a file and returns a [NetworkParameters] instance.
  *
  * @return a [NetworkParameters] with values read from [configFile] except:
- * an epoch of [DEFAULT_EPOCH],
- * an eventHorizon of [DEFAULT_EVENT_HORIZON], and
+ * an epoch of [DEFAULT_EPOCH] and
  * a modifiedTime initialized with [Instant.now].
- * If [configFile] is null [DEFAULT_NETWORK_PARAMETERS] is returned.
  */
-fun parseNetworkParametersFrom(configFile: Path): NetworkParameters {
+fun parseNetworkParametersFrom(configFile: Path, epoch: Int = DEFAULT_EPOCH): NetworkParameters {
     check(configFile.exists()) { "File $configFile does not exist" }
-    val initialNetworkParameters = ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults())
+    val networkParametersConfig = ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults())
             .parseAs(NetworkParametersConfiguration::class)
 
-    return NetworkParameters(initialNetworkParameters.minimumPlatformVersion,
-            initialNetworkParameters.notaries.map { it.toNotaryInfo() },
-            initialNetworkParameters.eventHorizonDays.days,
-            initialNetworkParameters.maxMessageSize,
-            initialNetworkParameters.maxTransactionSize,
+    return NetworkParameters(networkParametersConfig.minimumPlatformVersion,
+            networkParametersConfig.notaries.map { it.toNotaryInfo() },
+            networkParametersConfig.eventHorizonDays.days,
+            networkParametersConfig.maxMessageSize,
+            networkParametersConfig.maxTransactionSize,
             Instant.now(),
-            DEFAULT_EPOCH)
+            epoch)
 }

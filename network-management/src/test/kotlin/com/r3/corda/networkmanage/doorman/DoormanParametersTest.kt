@@ -9,23 +9,23 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class DoormanParametersTest {
-    private val validInitialNetworkConfigPath = File(javaClass.getResource("/initial-network-parameters.conf").toURI()).absolutePath
-    private val validConfigPath = File(javaClass.getResource("/doorman.conf").toURI()).absolutePath
+    private val validOverrideNetworkConfigPath = File("network-parameters.conf").absolutePath
+    private val validConfigPath = File("doorman.conf").absolutePath
     private val invalidConfigPath = File(javaClass.getResource("/doorman_fail.conf").toURI()).absolutePath
-    private val validArgs = arrayOf("--config-file", validConfigPath, "--initial-network-parameters", validInitialNetworkConfigPath)
+    private val validArgs = arrayOf("--config-file", validConfigPath, "--update-network-parameters", validOverrideNetworkConfigPath)
 
     @Test
     fun `should fail when initial network parameters file is missing`() {
         val message = assertFailsWith<IllegalStateException> {
-            parseCommandLine("--config-file", validConfigPath, "--initial-network-parameters", "not-here")
+            parseCommandLine("--config-file", validConfigPath, "--update-network-parameters", "not-here")
         }.message
-        assertThat(message).contains("Initial network parameters file ")
+        assertThat(message).contains("Update network parameters file ")
     }
 
     @Test
     fun `should fail when config file is missing`() {
         val message = assertFailsWith<IllegalStateException> {
-            parseCommandLine("--config-file", "not-existing-file", "--initial-network-parameters", validInitialNetworkConfigPath)
+            parseCommandLine("--config-file", "not-existing-file")
         }.message
         assertThat(message).contains("Config file ")
     }
@@ -40,7 +40,7 @@ class DoormanParametersTest {
     @Test
     fun `should fail when config missing`() {
         assertFailsWith<ConfigException.Missing> {
-            parseParameters(parseCommandLine("--config-file", invalidConfigPath, "--initial-network-parameters", validInitialNetworkConfigPath).configFile)
+            parseParameters(parseCommandLine("--config-file", invalidConfigPath).configFile)
         }
     }
 

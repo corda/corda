@@ -65,7 +65,12 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
     @GET
     fun getNetworkMap(): Response {
         // TODO: Cache the response?
-        return ok(networkMapStorage.getCurrentNetworkMap().serialize().bytes).build()
+        val currentNetworkMap = networkMapStorage.getCurrentNetworkMap()
+        return if (currentNetworkMap != null) {
+            ok(currentNetworkMap.serialize().bytes).build()
+        } else {
+            status(Response.Status.NOT_FOUND).build()
+        }
     }
 
     @GET

@@ -12,7 +12,7 @@ interface NetworkMapStorage {
      * Retrieves current network map. Current in this context means the one that has been most recently signed.
      * @return current network map
      */
-    fun getCurrentNetworkMap(): SignedNetworkMap
+    fun getCurrentNetworkMap(): SignedNetworkMap?
 
     /**
      * Retrieves current map node info hashes only. Hashes are further filtered by the [certificateStatuses] parameter
@@ -45,10 +45,10 @@ interface NetworkMapStorage {
     fun getNetworkParameters(parameterHash: SecureHash): NetworkParameters
 
     /**
-     * Retrieve network map parameters that are used in the current network map.
-     * @return current network map parameters
+     * Retrieve network map parameters.
+     * @return current network map parameters or null if they don't exist
      */
-    fun getCurrentNetworkParameters(): NetworkParameters
+    fun getCurrentNetworkParameters(): NetworkParameters?
 
     /**
      *  Persists given network parameters.
