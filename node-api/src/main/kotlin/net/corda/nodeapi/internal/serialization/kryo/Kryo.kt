@@ -22,6 +22,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.toFuture
 import net.corda.core.toObservable
 import net.corda.core.transactions.*
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.serializationContextKey
 import org.slf4j.Logger
@@ -486,8 +487,7 @@ object CertPathSerializer : Serializer<CertPath>() {
 @ThreadSafe
 object X509CertificateSerializer : Serializer<X509Certificate>() {
     override fun read(kryo: Kryo, input: Input, type: Class<X509Certificate>): X509Certificate {
-        val factory = CertificateFactory.getInstance("X.509")
-        return factory.generateCertificate(input.readBytesWithLength().inputStream()) as X509Certificate
+        return X509CertificateFactory().generateCertificate(input.readBytesWithLength().inputStream())
     }
 
     override fun write(kryo: Kryo, output: Output, obj: X509Certificate) {

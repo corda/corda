@@ -16,7 +16,7 @@ interface SerializationEnvironment {
     val checkpointContext: SerializationContext
 }
 
-class SerializationEnvironmentImpl(
+open class SerializationEnvironmentImpl(
         override val serializationFactory: SerializationFactory,
         override val p2pContext: SerializationContext,
         rpcServerContext: SerializationContext? = null,

@@ -8,8 +8,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.node.utilities.*
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints

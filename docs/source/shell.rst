@@ -35,9 +35,9 @@ Shell can also be accessible via SSH. By default SSH server is *disabled*. To en
 
 Authentication and authorization
 --------------------------------
-SSH require user to login first - using the same users as RPC system. In fact, shell serves as a proxy to RPC and communicates
-with node using RPC calls. This also means that RPC permissions are enforced. No permissions are required to allow the connection
-and login in.
+SSH requires users to login first - using the same users as RPC system. In fact, the shell serves as a proxy to RPC and communicates
+with the node using RPC calls. This also means that RPC permissions are enforced. No permissions are required to allow the connection
+and log in.
 Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed`` while starting flows requires
 ``InvokeRpc.startTrackedFlowDynamic`` and ``InvokeRpc.registeredFlows`` in addition to a permission for a particular flow.
 
@@ -51,7 +51,7 @@ errors.
 Connecting
 ----------
 
-Linux and MacOS computers usually come with SSH client preinstalled. On Windows it usually require extra download.
+Linux and MacOS computers usually come with SSH client preinstalled. On Windows it usually requires extra download.
 Usual connection syntax is ``ssh user@host -p 2222`` - where ``user`` is a RPC username, and ``-p`` specifies a port parameters -
 it's the same as setup in ``node.conf`` file. ``host`` should point to a node hostname, usually ``localhost`` if connecting and
 running node on the same computer. Password will be asked after establishing connection.

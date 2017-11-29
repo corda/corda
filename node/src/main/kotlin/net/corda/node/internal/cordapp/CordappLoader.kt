@@ -79,7 +79,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         @VisibleForTesting
         fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
-            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
+            if (!configuration.devMode) {
+                logger.warn("Package scanning should only occur in dev mode!")
+            }
             val paths = getCordappsInDirectory(getCordappsPath(configuration.baseDirectory)) + testPackages.flatMap(this::createScanPackage)
             return cordappLoadersCache.computeIfAbsent(paths, { CordappLoader(paths) })
         }

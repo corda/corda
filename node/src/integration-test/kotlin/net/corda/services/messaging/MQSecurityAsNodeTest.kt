@@ -2,11 +2,11 @@ package net.corda.services.messaging
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
-import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.messaging.SimpleMQClient

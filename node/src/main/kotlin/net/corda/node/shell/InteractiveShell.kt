@@ -101,10 +101,10 @@ object InteractiveShell {
         this.nodeLegalName = configuration.myLegalName
         this.database = database
         val dir = configuration.baseDirectory
-        val runSshDeamon = configuration.sshd != null
+        val runSshDaemon = configuration.sshd != null
 
         val config = Properties()
-        if (runSshDeamon) {
+        if (runSshDaemon) {
             val sshKeysDir = dir / "sshkey"
             sshKeysDir.toFile().mkdirs()
 
@@ -120,7 +120,7 @@ object InteractiveShell {
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
         shell = ShellLifecycle(dir).start(config)
 
-        if (runSshDeamon) {
+        if (runSshDaemon) {
             Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
         }
     }
@@ -182,7 +182,7 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, RPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), RpcPermissions.ALL), StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, makeRPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), RpcPermissions.ALL), StdoutANSIProgressRenderer))
         }
     }
 
@@ -236,7 +236,7 @@ object InteractiveShell {
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz,args -> rpcOps.startTrackedFlowDynamic (clazz, *args) }, inputData, clazz)
+            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, clazz)
 
             val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, { latch.countDown() })
@@ -247,7 +247,6 @@ object InteractiveShell {
             } catch (e: InterruptedException) {
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
-
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
@@ -326,7 +325,9 @@ object InteractiveShell {
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
-        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        database.transaction {
+            stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        }
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {
@@ -348,7 +349,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>): Any? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps): Any? {
         val parser = StringToMethodCallParser(CordaRPCOps::class.java, context.attributes["mapper"] as ObjectMapper)
 
         val cmd = input.joinToString(" ").trim { it <= ' ' }
@@ -363,7 +364,7 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val call = database.transaction { parser.parse(context.attributes["ops"] as CordaRPCOps, cmd) }
+            val call = database.transaction { parser.parse(cordaRPCOps, cmd) }
             result = call.call()
             if (result != null && result !is kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)

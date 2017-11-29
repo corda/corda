@@ -8,6 +8,7 @@ import net.corda.core.internal.cert
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.trace
+import net.corda.nodeapi.internal.crypto.*
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
