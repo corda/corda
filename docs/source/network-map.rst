@@ -37,6 +37,8 @@ Network Map service REST API:
 | POST           | /api/network-map/publish          | Publish new ``NodeInfo`` to the network map service, the legal identity in ``NodeInfo`` must match with the identity registered with the doorman.      |
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /api/network-map                  | Retrieve ``NetworkMap`` from the server, the ``NetworkMap`` object contains list of node info hashes and NetworkParameters hash.                       |
+|                |                                   | Due to possible decoupling of the network map signing process from the network map providing service, the 404 (Not Found) response can be returned.    |
+|                |                                   | This can happen in the initial phase of system deployment, when the network map providing service awaits the very first network map signature.         |
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /api/network-map/node-info/{hash} | Retrieve ``NodeInfo`` object with the same hash.                                                                                                       |
 +----------------+-----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
