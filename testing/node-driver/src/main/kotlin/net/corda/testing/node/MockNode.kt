@@ -27,7 +27,6 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.BFTSMaRtConfiguration
-import net.corda.node.services.config.DatabaseConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.keys.E2ETestKeyManagementService

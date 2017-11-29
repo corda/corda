@@ -109,8 +109,10 @@ open class MockServices(
          * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
          */
         @JvmStatic
-        fun makeTestDatabaseProperties(nodeName: String? = null): DatabaseConfig  =
-                DatabaseConfig(nodeOrganizationName = nodeName)
+        fun makeTestDatabaseProperties(nodeName: String? = null): DatabaseConfig {
+            val config = readDatabaseConfig(nodeName)
+            return DatabaseConfig(schema = if (config.hasPath("database.schema")) config.getString("database.schema") else "")
+        }
 
         /**
          * Creates an instance of [InMemoryIdentityService] with [MOCK_IDENTITIES].
@@ -145,7 +147,7 @@ open class MockServices(
                                             initialIdentityName: CordaX500Name): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
-            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, NodeSchemaService(cordappLoader))
+            val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), identityService, NodeSchemaService(cordappLoader))
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, initialIdentityName = initialIdentityName, keys = *(keys.toTypedArray())) {
                     override val identityService get() = identityService

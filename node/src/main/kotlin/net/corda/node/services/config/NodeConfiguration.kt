@@ -47,8 +47,7 @@ data class DatabaseConfig(
         val initDatabase: Boolean = true,
         val serverNameTablePrefix: String = "",
         val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
-        val schema: String? = null,
-        val nodeOrganizationName: String? = null
+        val schema: String? = null
 )
 
 enum class TransactionIsolationLevel {
