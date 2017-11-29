@@ -75,10 +75,15 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             caKeyStore.addOrReplaceKey(CORDA_CLIENT_CA, keyPair.private, privateKeyPassword.toCharArray(), certificates)
             caKeyStore.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
             caKeyStore.save(config.nodeKeystore, keystorePassword)
+
+            // Check the root certificate.
+            val returnedRootCa = certificates.last()
+            checkReturnedRootCaMatchesExpectedCa(returnedRootCa)
+
             // Save root certificates to trust store.
             val trustStore = loadOrCreateKeyStore(config.trustStoreFile, config.trustStorePassword)
             // Assumes certificate chain always starts with client certificate and end with root certificate.
-            trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, certificates.last())
+            trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, returnedRootCa)
             trustStore.save(config.trustStoreFile, config.trustStorePassword)
             println("Node private key and certificate stored in ${config.nodeKeystore}.")
 
@@ -95,6 +100,17 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             requestIdStore.deleteIfExists()
         } else {
             println("Certificate already exists, Corda node will now terminate...")
+        }
+    }
+
+    /**
+     * Checks that the passed Certificate is the expected root CA.
+     * @throws WrongRootCaCertificateException if the certificates don't match.
+     */
+    private fun checkReturnedRootCaMatchesExpectedCa(returnedRootCa: Certificate) {
+        val expected = X509Utilities.loadCertificateFromPEMFile(config.rootCaCertFile).cert
+        if (expected != returnedRootCa) {
+            throw WrongRootCaCertificateException()
         }
     }
 
@@ -151,3 +167,9 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
         }
     }
 }
+
+/**
+ * Exception thrown when the doorman root certificate doesn't match the expected (out-of-band) root certificate.
+ * This usually means the has been a Man-in-the-middle attack when contacting the doorman.
+ */
+class WrongRootCaCertificateException: Exception()

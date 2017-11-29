@@ -10,6 +10,7 @@ interface SSLConfiguration {
     val sslKeystore: Path get() = certificatesDirectory / "sslkeystore.jks"
     val nodeKeystore: Path get() = certificatesDirectory / "nodekeystore.jks"
     val trustStoreFile: Path get() = certificatesDirectory / "truststore.jks"
+    val rootCaCertFile: Path get() = certificatesDirectory / "rootCaCert.cer"
 }
 
 interface NodeSSLConfiguration : SSLConfiguration {
