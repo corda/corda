@@ -122,7 +122,8 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             identity.certPath.certificates.reversed().forEach {
                 log.error(it.toX509CertHolder().subject.toString())
             }
-            throw e
+            // Log the error and continue.
+            return null
         }
 
         // Ensure we record the first identity of the same name, first

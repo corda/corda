@@ -540,6 +540,17 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
                     "Read more at: https://docs.corda.net/permissioning.html"
         }
+
+        // Check all cert path chain to the trusted root
+        val sslKeystore = loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
+        val identitiesKeystore = loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
+        val trustStore = loadKeyStore(configuration.trustStoreFile, configuration.trustStorePassword)
+        val sslRoot = sslKeystore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).last()
+        val clientCARoot = identitiesKeystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA).last()
+        val trustRoot = trustStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
+
+        require(sslRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
+        require(clientCARoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
     }
 
     // Specific class so that MockNode can catch it.

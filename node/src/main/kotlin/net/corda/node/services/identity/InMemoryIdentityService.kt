@@ -67,7 +67,8 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
                 val space = (0 until index).joinToString("") { "   " }
                 log.error("$space${certificate.toX509CertHolder().subject}")
             }
-            throw e
+            // Log the error and continue.
+            return null
         }
 
         // Ensure we record the first identity of the same name, first

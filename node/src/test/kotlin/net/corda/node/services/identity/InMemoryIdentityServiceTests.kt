@@ -154,6 +154,23 @@ class InMemoryIdentityServiceTests {
         }
     }
 
+    @Test
+    fun `identity service should log and  ignore bad node identity`() {
+        withTestSerialization {
+            val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
+            val badCAKey = Crypto.generateKeyPair()
+            val badCA = X509Utilities.createSelfSignedCACertificate(CordaX500Name("Bad CA", "London", "GB"), badCAKey)
+            val (bob, anonymousBob) = createParty(BOB.name, CertificateAndKeyPair(badCA, badCAKey))
+
+            // Now we have identities, construct the service and let it know about both
+            val service = InMemoryIdentityService(setOf(alice, bob), emptySet(), DEV_TRUST_ROOT)
+
+            assertEquals(alice, service.verifyAndRegisterIdentity(anonymousAlice))
+            // this should return null instead of failing.
+            assertNull(service.verifyAndRegisterIdentity(anonymousBob))
+        }
+    }
+
     private fun createParty(x500Name: CordaX500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, PartyAndCertificate> {
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)

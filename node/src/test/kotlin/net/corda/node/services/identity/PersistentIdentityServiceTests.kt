@@ -218,6 +218,22 @@ class PersistentIdentityServiceTests {
     }
 
     @Test
+    fun `identity service should ignore bad node identity`() {
+        withTestSerialization {
+            val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
+            val badCAKey = Crypto.generateKeyPair()
+            val badCA = X509Utilities.createSelfSignedCACertificate(CordaX500Name("Bad CA", "London", "GB"), badCAKey)
+            val (_, anonymousBob) = createParty(BOB.name, CertificateAndKeyPair(badCA, badCAKey))
+
+            database.transaction {
+                assertEquals(alice, identityService.verifyAndRegisterIdentity(anonymousAlice))
+                // this should return null instead of failing.
+                assertNull(identityService.verifyAndRegisterIdentity(anonymousBob))
+            }
+        }
+    }
+
+    @Test
     fun `Test Persistence`() {
         val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
         val (bob, anonymousBob) = createParty(BOB.name, DEV_CA)
