@@ -140,7 +140,7 @@ class Node(private val project: Project) : CordformNode() {
      * Installs the corda fat JAR to the node directory.
      */
     private fun installCordaJar() {
-        val cordaJar = verifyAndGetJar("corda")
+        val cordaJar = verifyAndGetRuntimeJar("corda")
         project.copy {
             it.apply {
                 from(cordaJar)
@@ -155,7 +155,7 @@ class Node(private val project: Project) : CordformNode() {
      * Installs the corda webserver JAR to the node directory
      */
     private fun installWebserverJar() {
-        val webJar = verifyAndGetJar("corda-webserver")
+        val webJar = verifyAndGetRuntimeJar("corda-webserver")
         project.copy {
             it.apply {
                 from(webJar)
@@ -244,7 +244,7 @@ class Node(private val project: Project) : CordformNode() {
      *
      * @return A file representing found JAR
      */
-    private fun verifyAndGetJar(jarName: String): File {
+    private fun verifyAndGetRuntimeJar(jarName: String): File {
         val maybeJar = project.configuration("runtime").filter {
             "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-enterprise-$releaseVersion.jar" in it.toString()
         }
