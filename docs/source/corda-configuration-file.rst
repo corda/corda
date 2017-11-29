@@ -68,29 +68,21 @@ path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
-:database: Database configuration:
-
-        :initDatabase: Boolean on whether to initialise the database or just validate the schema. Defaults to true.
-        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
-        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
-            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
-
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
 :database:  This section is used to configure JDBC and Hibernate related properties:
 
-        :initDatabase: ``true`` - triggers creation of the database schema at a node startup, ``false`` - existing database schema is not altered,
-                    the value is mapped to Hibernate property 'hibernate.hbm2ddl.auto' (``true`` -> update, ``false`` -> validate)
+        :initDatabase: Boolean on whether to initialise the database or just validate the schema. Defaults to true.
 
         :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
              (the value is passed to Hibernate property 'hibernate.hbm2ddl.auto').
 
-        :transactionIsolationLevel: Database transaction isolation level ( allowed values ``none``, ``readUncommitted, ``readCommitted``,
-             ``repeatableRead``, ``serializable``), the default isolation level is ``repeatableRead``.
+        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
+            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
 
-        :serverNameTablePrefix: (optional) A prefix added to each database table.
+        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
