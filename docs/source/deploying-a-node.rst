@@ -9,8 +9,8 @@ Deploying a node
 
 Linux (systemd): Installing and running Corda as a systemd service
 ------------------------------------------------------------------
-We recommend creating systemd services to run a node and the optional webserver. This provides logging and service handling,
-ensures the Corda service is run at boot.
+We recommend creating systemd services to run a node and the optional webserver. This provides logging and service
+handling, and ensures the Corda service is run at boot.
 
 **Prerequisites**:
 
