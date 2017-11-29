@@ -3,15 +3,20 @@
 Creating a Corda network
 ========================
 
-A Corda network consists of a number of machines running nodes. These nodes communicate using persistent protocols in order to create and validate transactions.
+A Corda network consists of a number of machines running nodes. These nodes communicate using persistent protocols in
+order to create and validate transactions.
 
-There are four broader categories of functionality one such node may have. These pieces of functionality are provided as
-services, and one node may run several of them.
+There are four broader categories of functionality one such node may have. These pieces of functionality are provided
+as services, and one node may run several of them.
 
-* Network map: The node running the network map provides a way to resolve identities to physical node addresses and associated public keys.
-* Notary: Nodes running a notary service witness state spends and have the final say in whether a transaction is a double-spend or not.
-* Oracle: Network services that link the ledger to the outside world by providing facts that affect the validity of transactions.
-* Regular node: All nodes have a vault and may start protocols communicating with other nodes, notaries and oracles and evolve their private ledger.
+* Network map: The node running the network map provides a way to resolve identities to physical node addresses and
+  associated public keys
+* Notary: Nodes running a notary service witness state spends and have the final say in whether a transaction is a
+  double-spend or not
+* Oracle: Network services that link the ledger to the outside world by providing facts that affect the validity of
+  transactions
+* Regular node: All nodes have a vault and may start protocols communicating with other nodes, notaries and oracles and
+  evolve their private ledger
 
 Setting up your own network
 ---------------------------
@@ -19,15 +24,8 @@ Setting up your own network
 Certificates
 ~~~~~~~~~~~~
 
-All nodes belonging to the same Corda network must have the same root CA. For testing purposes you can
-use ``certSigningRequestUtility.jar`` to generate a node certificate with a fixed test root:
-
-.. sourcecode:: bash
-
-    # Build the jars
-    ./gradlew buildCordaJAR
-    # Generate certificate
-    java -jar build/libs/certSigningRequestUtility.jar --base-dir NODE_DIRECTORY/
+Every node in a given Corda network must have an identity certificate signed by the network's root CA. See
+:doc:`permissioning` for more information.
 
 Configuration
 ~~~~~~~~~~~~~

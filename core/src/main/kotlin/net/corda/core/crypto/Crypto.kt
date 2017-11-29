@@ -63,21 +63,21 @@ import javax.crypto.spec.SecretKeySpec
  */
 object Crypto {
     /**
-     * RSA_SHA256 signature scheme using SHA256 as hash algorithm and MGF1 (with SHA256) as mask generation function.
+     * RSA_SHA256 signature scheme using SHA256 as hash algorithm.
      * Note: Recommended key size >= 3072 bits.
      */
     @JvmField
     val RSA_SHA256 = SignatureScheme(
             1,
             "RSA_SHA256",
-            AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null),
-            emptyList(),
+            AlgorithmIdentifier(PKCSObjectIdentifiers.sha256WithRSAEncryption, null),
+            listOf(AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null)),
             BouncyCastleProvider.PROVIDER_NAME,
             "RSA",
-            "SHA256WITHRSAANDMGF1",
+            "SHA256WITHRSAEncryption",
             null,
             3072,
-            "RSA_SHA256 signature scheme using SHA256 as hash algorithm and MGF1 (with SHA256) as mask generation function."
+            "RSA_SHA256 signature scheme using SHA256 as hash algorithm."
     )
 
     /** ECDSA signature scheme using the secp256k1 Koblitz curve. */
@@ -117,7 +117,7 @@ object Crypto {
             "EDDSA_ED25519_SHA512",
             // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
             AlgorithmIdentifier(ASN1ObjectIdentifier("1.3.101.112"), null),
-            emptyList(),
+            emptyList(), // Both keys and the signature scheme use the same OID in i2p library.
             // We added EdDSA to bouncy castle for certificate signing.
             BouncyCastleProvider.PROVIDER_NAME,
             "1.3.101.112",
