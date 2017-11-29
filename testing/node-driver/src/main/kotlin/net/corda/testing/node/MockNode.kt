@@ -27,8 +27,8 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
@@ -37,14 +37,14 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
-import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.NotaryInfo
+import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.DUMMY_NOTARY_NAME
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -495,5 +495,6 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
+        doReturn(true).whenever(it).useAMQPBridges
     }
 }

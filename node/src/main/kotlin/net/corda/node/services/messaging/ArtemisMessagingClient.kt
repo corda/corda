@@ -3,12 +3,15 @@ package net.corda.node.services.messaging
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import org.apache.activemq.artemis.api.core.client.*
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
+import org.apache.activemq.artemis.api.core.client.ClientProducer
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
 
 class ArtemisMessagingClient(private val config: SSLConfiguration, private val serverAddress: NetworkHostAndPort, private val maxMessageSize: Int) {
     companion object {
@@ -46,7 +49,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration, private val s
     }
 
     fun stop() = synchronized(this) {
-        started!!.run {
+        started?.run {
             producer.close()
             // Ensure any trailing messages are committed to the journal
             session.commit()
