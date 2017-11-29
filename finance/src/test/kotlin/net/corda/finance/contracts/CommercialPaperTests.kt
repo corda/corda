@@ -240,7 +240,7 @@ class CommercialPaperTestsGeneric {
         aliceVaultService = aliceServices.vaultService
 
         databaseAlice.transaction {
-            alicesVault = VaultFiller(aliceServices).fillWithSomeTestCash(9000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
+            alicesVault = VaultFiller(aliceServices, DUMMY_NOTARY, DUMMY_NOTARY_KEY, rngFactory = ::Random).fillWithSomeTestCash(9000.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
             aliceVaultService = aliceServices.vaultService
         }
 
@@ -250,7 +250,7 @@ class CommercialPaperTestsGeneric {
         bigCorpVaultService = bigCorpServices.vaultService
 
         databaseBigCorp.transaction {
-            bigCorpVault = VaultFiller(bigCorpServices).fillWithSomeTestCash(13000.DOLLARS, issuerServices, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
+            bigCorpVault = VaultFiller(bigCorpServices, DUMMY_NOTARY, DUMMY_NOTARY_KEY, rngFactory = ::Random).fillWithSomeTestCash(13000.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
             bigCorpVaultService = bigCorpServices.vaultService
         }
 

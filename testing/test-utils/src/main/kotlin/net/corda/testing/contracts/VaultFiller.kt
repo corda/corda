@@ -8,28 +8,39 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.CommodityContract
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.finance.contracts.asset.DUMMY_OBLIGATION_ISSUER
-import net.corda.testing.*
+import net.corda.testing.chooseIdentity
+import net.corda.testing.chooseIdentityAndCert
+import net.corda.testing.dummyCommand
+import net.corda.testing.singleIdentity
+import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.time.Instant.now
 import java.util.*
 
-class VaultFiller(private val services: ServiceHub) {
+/**
+ * The service hub should provide at least a key management service and a storage service.
+ * @param defaultNotary used in [fillWithSomeTestDeals] and [fillWithSomeTestLinearStates].
+ * @param altNotary used in [fillWithSomeTestCash], [fillWithSomeTestCommodity] and consume/evolve methods. If not specified, same as [defaultNotary].
+ * @param rngFactory used by [fillWithSomeTestCash] if no custom [Random] provided.
+ */
+class VaultFiller @JvmOverloads constructor(
+        private val services: ServiceHub,
+        private val defaultNotary: Party,
+        private val defaultNotaryKeyPair: KeyPair,
+        private val altNotary: Party = defaultNotary,
+        private val rngFactory: () -> Random = { Random(0L) }) {
     companion object {
         fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
             val numSlots = min + Math.floor(rng.nextDouble() * (max - min)).toInt()
@@ -60,22 +71,25 @@ class VaultFiller(private val services: ServiceHub) {
         }
     }
 
+    init {
+        require(defaultNotary.owningKey == defaultNotaryKeyPair.public) { "Default notary public keys must match." }
+    }
+
     @JvmOverloads
     fun fillWithSomeTestDeals(dealIds: List<String>,
                               issuerServices: ServiceHub = services,
-                              participants: List<AbstractParty> = emptyList(),
-                              notary: Party = DUMMY_NOTARY): Vault<DealState> {
+                              participants: List<AbstractParty> = emptyList()): Vault<DealState> {
         val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
 
         val transactions: List<SignedTransaction> = dealIds.map {
             // Issue a deal state
-            val dummyIssue = TransactionBuilder(notary = notary).apply {
+            val dummyIssue = TransactionBuilder(notary = defaultNotary).apply {
                 addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(me)), DUMMY_DEAL_PROGRAM_ID)
                 addCommand(dummyCommand())
             }
             val stx = issuerServices.signInitialTransaction(dummyIssue)
-            return@map services.addSignature(stx, notary.owningKey)
+            return@map services.addSignature(stx, defaultNotaryKeyPair.public)
         }
         services.recordTransactions(transactions)
         // Get all the StateAndRefs of all the generated transactions.
@@ -96,11 +110,11 @@ class VaultFiller(private val services: ServiceHub) {
                                      linearTimestamp: Instant = now()): Vault<LinearState> {
         val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
-        val issuerKey = DUMMY_NOTARY_KEY
+        val issuerKey = defaultNotaryKeyPair
         val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
         val transactions: List<SignedTransaction> = (1..numberToCreate).map {
             // Issue a Linear state
-            val dummyIssue = TransactionBuilder(notary = DUMMY_NOTARY).apply {
+            val dummyIssue = TransactionBuilder(notary = defaultNotary).apply {
                 addOutputState(DummyLinearContract.State(
                         linearId = UniqueIdentifier(externalId),
                         participants = participants.plus(me),
@@ -121,49 +135,35 @@ class VaultFiller(private val services: ServiceHub) {
         return Vault(states)
     }
 
+    @JvmOverloads
+    fun fillWithSomeTestCash(howMuch: Amount<Currency>,
+                             issuerServices: ServiceHub,
+                             thisManyStates: Int,
+                             issuedBy: PartyAndReference,
+                             owner: AbstractParty? = null,
+                             rng: Random? = null) = fillWithSomeTestCash(howMuch, issuerServices, thisManyStates, thisManyStates, issuedBy, owner, rng)
+
     /**
-     * Creates a random set of cash states that add up to the given amount and adds them to the vault. This is intended for
-     * unit tests. The cash is owned by the legal identity key from the storage service.
-     *
-     * The service hub needs to provide at least a key management service and a storage service.
+     * Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
+     * to the vault. This is intended for unit tests. By default the cash is owned by the legal
+     * identity key from the storage service.
      *
      * @param issuerServices service hub of the issuer node, which will be used to sign the transaction.
-     * @param outputNotary the notary to use for output states. The transaction is NOT signed by this notary.
      * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
      */
     fun fillWithSomeTestCash(howMuch: Amount<Currency>,
                              issuerServices: ServiceHub,
-                             outputNotary: Party,
-                             states: Int,
-                             issuedBy: PartyAndReference): Vault<Cash.State>
-            = fillWithSomeTestCash(howMuch, issuerServices, outputNotary, states, states, issuedBy = issuedBy)
-
-    /**
-     * Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
-     * to the vault. This is intended for unit tests. By default the cash is issued by [DUMMY_CASH_ISSUER] and owned by the legal
-     * identity key from the storage service.
-     *
-     * The service hub needs to provide at least a key management service and a storage service.
-     *
-     * @param issuerServices service hub of the issuer node, which will be used to sign the transaction.
-     * @param outputNotary the notary to use for output states. The transaction is NOT signed by this notary.
-     * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
-     */
-    fun fillWithSomeTestCash(howMuch: Amount<Currency>,
-                             issuerServices: ServiceHub = services,
-                             outputNotary: Party = DUMMY_NOTARY,
-                             atLeastThisManyStates: Int = 3,
-                             atMostThisManyStates: Int = 10,
-                             rng: Random = Random(),
+                             atLeastThisManyStates: Int,
+                             atMostThisManyStates: Int,
+                             issuedBy: PartyAndReference,
                              owner: AbstractParty? = null,
-                             issuedBy: PartyAndReference = DUMMY_CASH_ISSUER): Vault<Cash.State> {
-        val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
-
+                             rng: Random? = null): Vault<Cash.State> {
+        val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng ?: rngFactory())
         // We will allocate one state to one transaction, for simplicities sake.
         val cash = Cash()
         val transactions: List<SignedTransaction> = amounts.map { pennies ->
             val issuance = TransactionBuilder(null as Party?)
-            cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy, howMuch.token)), owner ?: services.myInfo.singleIdentity(), outputNotary)
+            cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy, howMuch.token)), owner ?: services.myInfo.singleIdentity(), altNotary)
             return@map issuerServices.signInitialTransaction(issuance, issuedBy.party.owningKey)
         }
         services.recordTransactions(transactions)
@@ -178,88 +178,74 @@ class VaultFiller(private val services: ServiceHub) {
     /**
      *
      * @param issuerServices service hub of the issuer node, which will be used to sign the transaction.
-     * @param outputNotary the notary to use for output states. The transaction is NOT signed by this notary.
      * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
      */
     // TODO: need to make all FungibleAsset commands (issue, move, exit) generic
-    fun fillWithSomeTestCommodity(amount: Amount<Commodity>,
-                                  issuerServices: ServiceHub = services,
-                                  outputNotary: Party = DUMMY_NOTARY,
-                                  ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
-                                  ownedBy: AbstractParty? = null,
-                                  issuedBy: PartyAndReference = DUMMY_OBLIGATION_ISSUER.ref(1)): Vault<CommodityContract.State> {
-        val myKey: PublicKey = ownedBy?.owningKey ?: services.myInfo.chooseIdentity().owningKey
+    fun fillWithSomeTestCommodity(amount: Amount<Commodity>, issuerServices: ServiceHub, issuedBy: PartyAndReference): Vault<CommodityContract.State> {
+        val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
 
         val commodity = CommodityContract()
         val issuance = TransactionBuilder(null as Party?)
-        commodity.generateIssue(issuance, Amount(amount.quantity, Issued(issuedBy.copy(reference = ref), amount.token)), me, outputNotary)
+        commodity.generateIssue(issuance, Amount(amount.quantity, Issued(issuedBy, amount.token)), me, altNotary)
         val transaction = issuerServices.signInitialTransaction(issuance, issuedBy.party.owningKey)
         services.recordTransactions(transaction)
         return Vault(setOf(transaction.tx.outRef(0)))
     }
 
-    fun <T : LinearState> consume(states: List<StateAndRef<T>>, notary: Party) {
+    private fun <T : LinearState> consume(states: List<StateAndRef<T>>) {
         // Create a txn consuming different contract types
         states.forEach {
-            val builder = TransactionBuilder(notary = notary).apply {
+            val builder = TransactionBuilder(notary = altNotary).apply {
                 addInputState(it)
-                addCommand(dummyCommand(notary.owningKey))
+                addCommand(dummyCommand(altNotary.owningKey))
             }
-            val consumedTx = services.signInitialTransaction(builder, notary.owningKey)
+            val consumedTx = services.signInitialTransaction(builder, altNotary.owningKey)
             services.recordTransactions(consumedTx)
         }
     }
 
-    private fun <T : LinearState> consumeAndProduce(stateAndRef: StateAndRef<T>, notary: Party): StateAndRef<T> {
+    private fun <T : LinearState> consumeAndProduce(stateAndRef: StateAndRef<T>): StateAndRef<T> {
         // Create a txn consuming different contract types
-        var builder = TransactionBuilder(notary = notary).apply {
+        var builder = TransactionBuilder(notary = altNotary).apply {
             addInputState(stateAndRef)
-            addCommand(dummyCommand(notary.owningKey))
+            addCommand(dummyCommand(altNotary.owningKey))
         }
-        val consumedTx = services.signInitialTransaction(builder, notary.owningKey)
+        val consumedTx = services.signInitialTransaction(builder, altNotary.owningKey)
         services.recordTransactions(consumedTx)
         // Create a txn consuming different contract types
-        builder = TransactionBuilder(notary = notary).apply {
+        builder = TransactionBuilder(notary = altNotary).apply {
             addOutputState(DummyLinearContract.State(linearId = stateAndRef.state.data.linearId,
                     participants = stateAndRef.state.data.participants), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
-            addCommand(dummyCommand(notary.owningKey))
+            addCommand(dummyCommand(altNotary.owningKey))
         }
-        val producedTx = services.signInitialTransaction(builder, notary.owningKey)
+        val producedTx = services.signInitialTransaction(builder, altNotary.owningKey)
         services.recordTransactions(producedTx)
         return producedTx.tx.outRef(0)
     }
 
-    private fun <T : LinearState> consumeAndProduce(states: List<StateAndRef<T>>, notary: Party) {
+    private fun <T : LinearState> consumeAndProduce(states: List<StateAndRef<T>>) {
         states.forEach {
-            consumeAndProduce(it, notary)
+            consumeAndProduce(it)
         }
     }
 
-    fun consumeDeals(dealStates: List<StateAndRef<DealState>>, notary: Party) = consume(dealStates, notary)
-    fun consumeLinearStates(linearStates: List<StateAndRef<LinearState>>, notary: Party) = consume(linearStates, notary)
-    fun evolveLinearStates(linearStates: List<StateAndRef<LinearState>>, notary: Party) = consumeAndProduce(linearStates, notary)
-    fun evolveLinearState(linearState: StateAndRef<LinearState>, notary: Party): StateAndRef<LinearState> = consumeAndProduce(linearState, notary)
-
+    fun consumeDeals(dealStates: List<StateAndRef<DealState>>) = consume(dealStates)
+    fun consumeLinearStates(linearStates: List<StateAndRef<LinearState>>) = consume(linearStates)
+    fun evolveLinearStates(linearStates: List<StateAndRef<LinearState>>) = consumeAndProduce(linearStates)
+    fun evolveLinearState(linearState: StateAndRef<LinearState>): StateAndRef<LinearState> = consumeAndProduce(linearState)
     /**
      * Consume cash, sending any change to the default identity for this node. Only suitable for use in test scenarios,
      * where nodes have a default identity.
      */
-    @JvmOverloads
-    fun consumeCash(amount: Amount<Currency>, to: Party = CHARLIE, notary: Party): Vault.Update<ContractState> {
-        return consumeCash(amount, services.myInfo.chooseIdentityAndCert(), to, notary)
-    }
-
-    /**
-     * Consume cash, sending any change to the specified identity.
-     */
-    private fun consumeCash(amount: Amount<Currency>, ourIdentity: PartyAndCertificate, to: Party = CHARLIE, notary: Party): Vault.Update<ContractState> {
+    fun consumeCash(amount: Amount<Currency>, to: AbstractParty): Vault.Update<ContractState> {
+        val ourIdentity = services.myInfo.chooseIdentityAndCert()
         val update = services.vaultService.rawUpdates.toFuture()
         // A tx that spends our money.
-        val builder = TransactionBuilder(notary).apply {
+        val builder = TransactionBuilder(altNotary).apply {
             Cash.generateSpend(services, this, amount, ourIdentity, to)
         }
-        val spendTx = services.signInitialTransaction(builder, notary.owningKey)
+        val spendTx = services.signInitialTransaction(builder, altNotary.owningKey)
         services.recordTransactions(spendTx)
         return update.getOrThrow(Duration.ofSeconds(3))
     }

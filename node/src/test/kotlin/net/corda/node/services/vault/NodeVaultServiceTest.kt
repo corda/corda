@@ -75,7 +75,7 @@ class NodeVaultServiceTest {
         val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(cordappPackages = cordappPackages)
         database = databaseAndServices.first
         services = databaseAndServices.second
-        vaultFiller = VaultFiller(services)
+        vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
         issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
@@ -113,7 +113,7 @@ class NodeVaultServiceTest {
     @Test
     fun `states not local to instance`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
         }
         database.transaction {
             val w1 = vaultService.queryBy<Cash.State>().states
@@ -138,7 +138,7 @@ class NodeVaultServiceTest {
     @Test
     fun `states for refs`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
         }
         database.transaction {
             val w1 = vaultService.queryBy<Cash.State>().states
@@ -152,7 +152,7 @@ class NodeVaultServiceTest {
     @Test
     fun `states soft locking reserve and release`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
         }
         database.transaction {
 
@@ -205,7 +205,7 @@ class NodeVaultServiceTest {
         val vaultStates =
                 database.transaction {
                     assertEquals(0.DOLLARS, services.getCashBalance(USD))
-                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
+                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
                 }
         val stateRefsToSoftLock = (vaultStates.states.map { it.ref }).toNonEmptySet()
         println("State Refs:: $stateRefsToSoftLock")
@@ -260,7 +260,7 @@ class NodeVaultServiceTest {
         val vaultStates =
                 database.transaction {
                     assertEquals(0.DOLLARS, services.getCashBalance(USD))
-                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
+                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
                 }
         val stateRefsToSoftLock = vaultStates.states.map { it.ref }
         println("State Refs:: $stateRefsToSoftLock")
@@ -288,7 +288,7 @@ class NodeVaultServiceTest {
         val vaultStates =
                 database.transaction {
                     assertEquals(0.DOLLARS, services.getCashBalance(USD))
-                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
+                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
                 }
         val stateRefsToSoftLock = (vaultStates.states.map { it.ref }).toNonEmptySet()
         println("State Refs:: $stateRefsToSoftLock")
@@ -315,7 +315,7 @@ class NodeVaultServiceTest {
         val vaultStates =
                 database.transaction {
                     assertEquals(0.DOLLARS, services.getCashBalance(USD))
-                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L))
+                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
                 }
         val stateRefsToSoftLock = vaultStates.states.map { it.ref }
         println("State Refs:: $stateRefsToSoftLock")
@@ -336,7 +336,7 @@ class NodeVaultServiceTest {
     @Test
     fun `unconsumedStatesForSpending exact amount`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
         }
         database.transaction {
 
@@ -355,8 +355,8 @@ class NodeVaultServiceTest {
     @Test
     fun `unconsumedStatesForSpending from two issuer parties`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = BOC.ref(1))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, 1, BOC.ref(1))
         }
         database.transaction {
             val spendableStatesUSD = vaultService.unconsumedCashStatesForSpending(200.DOLLARS,
@@ -372,10 +372,10 @@ class NodeVaultServiceTest {
     @Test
     fun `unconsumedStatesForSpending from specific issuer party and refs`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = BOC.ref(1))
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = BOC.ref(2))
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = BOC.ref(3))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, 1, BOC.ref(1))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, 1, BOC.ref(2))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, 1, BOC.ref(3))
         }
         database.transaction {
             val unconsumedStates = vaultService.queryBy<Cash.State>().states
@@ -394,7 +394,7 @@ class NodeVaultServiceTest {
     @Test
     fun `unconsumedStatesForSpending insufficient amount`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
         }
         database.transaction {
             val unconsumedStates = vaultService.queryBy<Cash.State>().states
@@ -411,7 +411,7 @@ class NodeVaultServiceTest {
     @Test
     fun `unconsumedStatesForSpending small amount`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 2, DUMMY_CASH_ISSUER)
         }
         database.transaction {
             val unconsumedStates = vaultService.queryBy<Cash.State>().states
@@ -429,9 +429,9 @@ class NodeVaultServiceTest {
     @Test
     fun `states soft locking query granularity`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L))
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L))
-            vaultFiller.fillWithSomeTestCash(100.SWISS_FRANCS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L))
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), issuerServices, 10, DUMMY_CASH_ISSUER)
+            }
         }
         database.transaction {
             var unlockedStates = 30

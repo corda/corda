@@ -35,7 +35,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.util.*
 import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -64,7 +63,7 @@ class VaultWithCashTest {
         val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = cordappPackages, keys = listOf(generateKeyPair(), DUMMY_NOTARY_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second
-        vaultFiller = VaultFiller(services)
+        vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)
         issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
@@ -80,7 +79,7 @@ class VaultWithCashTest {
     fun splits() {
         database.transaction {
             // Fix the PRNG so that we get the same splits every time.
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
         }
         database.transaction {
             val w = vaultService.queryBy<Cash.State>().states
@@ -150,8 +149,7 @@ class VaultWithCashTest {
 
         database.transaction {
             // A tx that sends us money.
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L), owner = AnonymousParty(freshKey),
-                    issuedBy = MEGA_CORP.ref(1))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 10, MEGA_CORP.ref(1), AnonymousParty(freshKey))
             println("Cash balance: ${services.getCashBalance(USD)}")
         }
         database.transaction {
@@ -300,9 +298,9 @@ class VaultWithCashTest {
 
         val freshKey = services.keyManagementService.freshKey()
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L), owner = AnonymousParty(freshKey))
-            vaultFiller.fillWithSomeTestCash(100.SWISS_FRANCS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L))
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER, AnonymousParty(freshKey))
+            vaultFiller.fillWithSomeTestCash(100.SWISS_FRANCS, issuerServices, 2, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(100.POUNDS, issuerServices, 1, DUMMY_CASH_ISSUER)
         }
         database.transaction {
             val cash = vaultService.queryBy<Cash.State>().states

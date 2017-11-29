@@ -82,15 +82,11 @@ class CashTests {
 
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
         database.transaction {
-            val vaultFiller = VaultFiller(ourServices)
-            vaultFiller.fillWithSomeTestCash(howMuch = 100.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    owner = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
-            vaultFiller.fillWithSomeTestCash(howMuch = 400.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    owner = ourIdentity, issuedBy = MEGA_CORP.ref(1), issuerServices = megaCorpServices)
-            vaultFiller.fillWithSomeTestCash(howMuch = 80.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    owner = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
-            vaultFiller.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
-                    owner = ourIdentity, issuedBy = MINI_CORP.ref(1), issuerServices = miniCorpServices)
+            val vaultFiller = VaultFiller(ourServices, DUMMY_NOTARY, DUMMY_NOTARY_KEY, rngFactory = ::Random)
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(400.DOLLARS, megaCorpServices, 1, MEGA_CORP.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(80.DOLLARS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(80.SWISS_FRANCS, miniCorpServices, 1, MINI_CORP.ref(1), ourIdentity)
         }
         database.transaction {
             vaultStatesUnconsumed = ourServices.vaultService.queryBy<Cash.State>().states

@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
@@ -82,6 +83,7 @@ class HibernateConfigurationTest {
         bankServices = MockServices(cordappPackages, BOC.name, BOC_KEY)
         issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
             doReturn(null).whenever(mock).wellKnownPartyFromAnonymous(any<AbstractParty>())
@@ -106,18 +108,15 @@ class HibernateConfigurationTest {
 
                 override fun jdbcSession() = database.createSession()
             }
-            vaultFiller = VaultFiller(services)
+            vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random)
             hibernatePersister = services.hibernatePersister
         }
 
         identity = services.myInfo.singleIdentity()
         issuer = issuerServices.myInfo.singleIdentity()
-        notary = notaryServices.myInfo.singleIdentity()
-
         database.transaction {
             val numStates = 10
-            cashStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, notary, numStates, numStates, Random(0L), issuedBy = issuer.ref(1))
-                    .states.toList()
+            cashStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, numStates, issuer.ref(1), rng = Random(0L)).states.toList()
         }
 
         sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
@@ -126,7 +125,7 @@ class HibernateConfigurationTest {
     }
 
     private fun sessionFactoryForSchemas(vararg schemas: MappedSchema) = hibernateConfig.sessionFactoryForSchemas(schemas.toSet())
-
+    private fun consumeCash(amount: Amount<Currency>) = vaultFiller.consumeCash(amount, CHARLIE)
     @After
     fun cleanUp() {
         database.close()
@@ -147,7 +146,7 @@ class HibernateConfigurationTest {
     @Test
     fun `consumed states`() {
         database.transaction {
-            vaultFiller.consumeCash(50.DOLLARS, notary = notary)
+            consumeCash(50.DOLLARS)
         }
 
         // structure query
@@ -228,11 +227,7 @@ class HibernateConfigurationTest {
     fun `with sorting by state ref desc and asc`() {
         // generate additional state ref indexes
         database.transaction {
-            vaultFiller.consumeCash(1.DOLLARS, notary = notary)
-            vaultFiller.consumeCash(2.DOLLARS, notary = notary)
-            vaultFiller.consumeCash(3.DOLLARS, notary = notary)
-            vaultFiller.consumeCash(4.DOLLARS, notary = notary)
-            vaultFiller.consumeCash(5.DOLLARS, notary = notary)
+            (1..5).forEach { consumeCash(it.DOLLARS) }
         }
 
         // structure query
@@ -258,11 +253,7 @@ class HibernateConfigurationTest {
     fun `with sorting by state ref index and txId desc and asc`() {
         // generate additional state ref indexes
         database.transaction {
-            vaultFiller.consumeCash(1.DOLLARS, notary = notary)
-            vaultFiller.consumeCash(2.DOLLARS, notary = notary)
-            vaultFiller.consumeCash(3.DOLLARS, notary = notary)
-            vaultFiller.consumeCash(4.DOLLARS, notary = notary)
-            vaultFiller.consumeCash(5.DOLLARS, notary = notary)
+            (1..5).forEach { consumeCash(it.DOLLARS) }
         }
 
         // structure query
@@ -289,7 +280,7 @@ class HibernateConfigurationTest {
     fun `with pagination`() {
         // add 100 additional cash entries
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(1000.POUNDS, issuerServices, notary, 100, 100, Random(0L), issuedBy = issuer.ref(1))
+            vaultFiller.fillWithSomeTestCash(1000.POUNDS, issuerServices, 100, issuer.ref(1), rng = Random(0L))
         }
 
         // structure query
@@ -389,11 +380,11 @@ class HibernateConfigurationTest {
     @Test
     fun `calculate cash balances`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, notary, 10, issuer.ref(1))        // +$100 = $200
-            vaultFiller.fillWithSomeTestCash(50.POUNDS, issuerServices, notary, 5, issuer.ref(1))            // £50 = £50
-            vaultFiller.fillWithSomeTestCash(25.POUNDS, issuerServices, notary, 5, issuer.ref(1))            // +£25 = £175
-            vaultFiller.fillWithSomeTestCash(500.SWISS_FRANCS, issuerServices, notary, 10, issuer.ref(1))   // CHF500 = CHF500
-            vaultFiller.fillWithSomeTestCash(250.SWISS_FRANCS, issuerServices, notary, 5, issuer.ref(1))     // +CHF250 = CHF750
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 10, issuer.ref(1))        // +$100 = $200
+            vaultFiller.fillWithSomeTestCash(50.POUNDS, issuerServices, 5, issuer.ref(1))            // £50 = £50
+            vaultFiller.fillWithSomeTestCash(25.POUNDS, issuerServices, 5, issuer.ref(1))            // +£25 = £175
+            vaultFiller.fillWithSomeTestCash(500.SWISS_FRANCS, issuerServices, 10, issuer.ref(1))   // CHF500 = CHF500
+            vaultFiller.fillWithSomeTestCash(250.SWISS_FRANCS, issuerServices, 5, issuer.ref(1))     // +CHF250 = CHF750
         }
 
         // structure query
@@ -422,8 +413,8 @@ class HibernateConfigurationTest {
     @Test
     fun `calculate cash balance for single currency`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(50.POUNDS, issuerServices, notary, 5, issuer.ref(1))            // £50 = £50
-            vaultFiller.fillWithSomeTestCash(25.POUNDS, issuerServices, notary, 5, issuer.ref(1))            // +£25 = £175
+            vaultFiller.fillWithSomeTestCash(50.POUNDS, issuerServices, 5, issuer.ref(1))            // £50 = £50
+            vaultFiller.fillWithSomeTestCash(25.POUNDS, issuerServices, 5, issuer.ref(1))            // +£25 = £175
         }
 
         // structure query
@@ -453,9 +444,9 @@ class HibernateConfigurationTest {
     fun `calculate and order by cash balance for owner and currency`() {
         database.transaction {
             val bank = bankServices.myInfo.legalIdentities.single()
-            vaultFiller.fillWithSomeTestCash(200.DOLLARS, bankServices, notary, 2, bank.ref(1))
-            vaultFiller.fillWithSomeTestCash(300.POUNDS, issuerServices, notary, 3, issuer.ref(1))
-            vaultFiller.fillWithSomeTestCash(400.POUNDS, bankServices, notary, 4, bank.ref(2))
+            vaultFiller.fillWithSomeTestCash(200.DOLLARS, bankServices, 2, bank.ref(1))
+            vaultFiller.fillWithSomeTestCash(300.POUNDS, issuerServices, 3, issuer.ref(1))
+            vaultFiller.fillWithSomeTestCash(400.POUNDS, bankServices, 4, bank.ref(2))
         }
 
         // structure query
@@ -640,9 +631,8 @@ class HibernateConfigurationTest {
                 val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
                 hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
             }
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, notary, 2, 2, Random(0L),
-                    issuedBy = issuer.ref(1), owner = ALICE)
-            val cashStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, services, notary, 2,  identity.ref(0)).states
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 2, issuer.ref(1), ALICE, Random(0L))
+            val cashStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, services, 2, identity.ref(0)).states
             // persist additional cash states explicitly with V3 schema
             cashStates.forEach {
                 val cashState = it.state.data
@@ -718,15 +708,14 @@ class HibernateConfigurationTest {
                         val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
                         hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
                     }
-                    val moreCash = vaultFiller.fillWithSomeTestCash(100.DOLLARS, services, notary, 2, 2, Random(0L),
-                            issuedBy = identity.ref(0), owner = identity).states
+                    val moreCash = vaultFiller.fillWithSomeTestCash(100.DOLLARS, services, 2, identity.ref(0), identity, Random(0L)).states
                     // persist additional cash states explicitly with V3 schema
                     moreCash.forEach {
                         val cashState = it.state.data
                         val dummyFungibleState = DummyFungibleContract.State(cashState.amount, cashState.owner)
                         hibernatePersister.persistStateWithSchema(dummyFungibleState, it.ref, SampleCashSchemaV3)
                     }
-                    val cashStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, notary, 2, 2, Random(0L), owner = ALICE, issuedBy = issuer.ref(1)).states
+                    val cashStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 2, issuer.ref(1), ALICE, Random(0L)).states
                     // persist additional cash states explicitly with V3 schema
                     cashStates.forEach {
                         val cashState = it.state.data
