@@ -51,6 +51,7 @@ class VaultWithCashTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
     lateinit var services: MockServices
+    private lateinit var vaultFiller: VaultFiller
     lateinit var issuerServices: MockServices
     val vaultService: VaultService get() = services.vaultService
     lateinit var database: CordaPersistence
@@ -63,6 +64,7 @@ class VaultWithCashTest {
         val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = cordappPackages, keys = listOf(generateKeyPair(), DUMMY_NOTARY_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second
+        vaultFiller = VaultFiller(services)
         issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
         notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
@@ -78,7 +80,7 @@ class VaultWithCashTest {
     fun splits() {
         database.transaction {
             // Fix the PRNG so that we get the same splits every time.
-            services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
         }
         database.transaction {
             val w = vaultService.queryBy<Cash.State>().states
@@ -148,7 +150,7 @@ class VaultWithCashTest {
 
         database.transaction {
             // A tx that sends us money.
-            services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L), owner = AnonymousParty(freshKey),
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L), owner = AnonymousParty(freshKey),
                     issuedBy = MEGA_CORP.ref(1))
             println("Cash balance: ${services.getCashBalance(USD)}")
         }
@@ -298,16 +300,16 @@ class VaultWithCashTest {
 
         val freshKey = services.keyManagementService.freshKey()
         database.transaction {
-            services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L), owner = AnonymousParty(freshKey))
-            services.fillWithSomeTestCash(100.SWISS_FRANCS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L))
-            services.fillWithSomeTestCash(100.POUNDS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 3, 3, Random(0L), owner = AnonymousParty(freshKey))
+            vaultFiller.fillWithSomeTestCash(100.SWISS_FRANCS, issuerServices, DUMMY_NOTARY, 2, 2, Random(0L))
+            vaultFiller.fillWithSomeTestCash(100.POUNDS, issuerServices, DUMMY_NOTARY, 1, 1, Random(0L))
         }
         database.transaction {
             val cash = vaultService.queryBy<Cash.State>().states
             cash.forEach { println(it.state.data.amount) }
         }
         database.transaction {
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
+            vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
         }
         database.transaction {
             val deals = vaultService.queryBy<DummyDealContract.State>().states
@@ -337,14 +339,14 @@ class VaultWithCashTest {
         val freshKey = services.keyManagementService.freshKey()
         val freshIdentity = AnonymousParty(freshKey)
         database.transaction {
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
+            vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"), issuerServices)
         }
         val deals =
                 database.transaction {
                     vaultService.queryBy<DummyDealContract.State>().states
                 }
         database.transaction {
-            services.fillWithSomeTestLinearStates(3)
+            vaultFiller.fillWithSomeTestLinearStates(3)
         }
         database.transaction {
             val linearStates = vaultService.queryBy<DummyLinearContract.State>().states
