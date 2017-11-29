@@ -45,7 +45,7 @@ Existing Doorman code provides for optional integration with a JIRA project, in 
 
 Whilst expedient as a near-term solution, the long-term practicality of JIRA (specifically, the JIRA instance provided by R3's corporate Atlassian account) for managing workflow has been questioned on grounds of: 
 
-- **Scalability**: Unproven where a system in which every request raises a JIRA issue would prove resistant to  volume-based attacks
+- **Scalability**: Unproven that a system in which every request raises a JIRA issue would prove resistant to volume-based attacks
 - **Extensibility**: Current work to develop an ID verification process is surfacing various requirements to track meta-data around a CSR - specifically, evidence captured on the requester's identity, checks performed etc. with reference to a policy, and evidence of controls (e.g. 4-eyes checks and approvals) applied. Whilst it is potentially feasible to implement these features through JIRA customisation, the required flexibility has not been demonstrated.
 - **Security**: Threat model around JIRA as a third-party, cloud-hosted application cannot be easily qualified. At a minimum, it may be assumed that Atlassian administrators would have both visibility and permissions to change statuses of JIRA stories, thus compromising the integrity of the certificate issuance process.
 
