@@ -1,26 +1,50 @@
 package net.corda.testing
 
-import com.nhaarman.mockito_kotlin.doNothing
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.core.internal.staticField
 import net.corda.core.serialization.internal.*
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.testing.common.internal.asContextEnv
+import net.corda.testing.internal.testThreadFactory
+import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
+private val inVMExecutors = ConcurrentHashMap<SerializationEnvironment, ExecutorService>()
 
 /** @param inheritable whether new threads inherit the environment, use sparingly. */
 class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
+    companion object {
+        init {
+            // Can't turn it off, and it creates threads that do serialization, so hack it:
+            InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>().also {
+                doAnswer {
+                    inVMExecutors.computeIfAbsent(effectiveSerializationEnv) {
+                        Executors.newCachedThreadPool(testThreadFactory(true)) // Close enough to what InVMConnector makes normally.
+                    }.execute(it.arguments[0] as Runnable)
+                }.whenever(it).execute(any())
+            }
+        }
+    }
+
     lateinit var env: SerializationEnvironment
     override fun apply(base: Statement, description: Description): Statement {
         env = createTestSerializationEnv(description.toString())
         return object : Statement() {
-            override fun evaluate() = env.asContextEnv(inheritable) {
-                base.evaluate()
+            override fun evaluate() {
+                try {
+                    env.asContextEnv(inheritable) { base.evaluate() }
+                } finally {
+                    inVMExecutors.remove(env)
+                }
             }
         }
     }
@@ -59,6 +83,7 @@ fun setGlobalSerialization(armed: Boolean): GlobalSerializationEnvironment {
         object : GlobalSerializationEnvironment, SerializationEnvironment by createTestSerializationEnv("<global>") {
             override fun unset() {
                 _globalSerializationEnv.set(null)
+                inVMExecutors.remove(this)
             }
         }.also {
             _globalSerializationEnv.set(it)
