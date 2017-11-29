@@ -1,68 +1,14 @@
-package net.corda.node.utilities
+package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
 import org.hibernate.Session
-import org.hibernate.Transaction
 import rx.subjects.PublishSubject
 import rx.subjects.Subject
-import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class DatabaseTransaction(isolation: Int, val threadLocal: ThreadLocal<DatabaseTransaction>,
-                          val transactionBoundaries: Subject<DatabaseTransactionManager.Boundary, DatabaseTransactionManager.Boundary>,
-                          val cordaPersistence: CordaPersistence) {
+fun currentDBSession(): Session = DatabaseTransactionManager.current().session
 
-    val id: UUID = UUID.randomUUID()
-
-    val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
-        cordaPersistence.dataSource.connection
-                .apply {
-                    autoCommit = false
-                    transactionIsolation = isolation
-                }
-    }
-
-    private val sessionDelegate = lazy {
-        val session = cordaPersistence.entityManagerFactory.withOptions().connection(connection).openSession()
-        hibernateTransaction = session.beginTransaction()
-        session
-    }
-
-    val session: Session by sessionDelegate
-    private lateinit var hibernateTransaction: Transaction
-
-    private val outerTransaction: DatabaseTransaction? = threadLocal.get()
-
-    fun commit() {
-        if (sessionDelegate.isInitialized()) {
-            hibernateTransaction.commit()
-        }
-        connection.commit()
-    }
-
-    fun rollback() {
-        if (sessionDelegate.isInitialized() && session.isOpen) {
-            session.clear()
-        }
-        if (!connection.isClosed) {
-            connection.rollback()
-        }
-    }
-
-    fun close() {
-        if (sessionDelegate.isInitialized() && session.isOpen) {
-            session.close()
-        }
-        connection.close()
-        threadLocal.set(outerTransaction)
-        if (outerTransaction == null) {
-            transactionBoundaries.onNext(DatabaseTransactionManager.Boundary(id))
-        }
-    }
-}
-
-fun currentDBSession() = DatabaseTransactionManager.current().session
 class DatabaseTransactionManager(initDataSource: CordaPersistence) {
     companion object {
         private val threadLocalDb = ThreadLocal<CordaPersistence>()
@@ -95,11 +41,15 @@ class DatabaseTransactionManager(initDataSource: CordaPersistence) {
 
         fun currentOrNull(): DatabaseTransaction? = manager.currentOrNull()
 
-        fun currentOrNew(isolation: Int = dataSource.transactionIsolationLevel) = currentOrNull() ?: manager.newTransaction(isolation)
+        fun currentOrNew(isolation: TransactionIsolationLevel = dataSource.defaultIsolationLevel): DatabaseTransaction {
+            return currentOrNull() ?: manager.newTransaction(isolation.jdbcValue)
+        }
 
         fun current(): DatabaseTransaction = currentOrNull() ?: error("No transaction in context.")
 
-        fun newTransaction(isolation: Int = dataSource.transactionIsolationLevel) = manager.newTransaction(isolation)
+        fun newTransaction(isolation: TransactionIsolationLevel = dataSource.defaultIsolationLevel): DatabaseTransaction {
+            return manager.newTransaction(isolation.jdbcValue)
+        }
     }
 
     data class Boundary(val txId: UUID)

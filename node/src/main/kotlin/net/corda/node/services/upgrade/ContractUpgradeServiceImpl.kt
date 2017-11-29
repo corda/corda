@@ -4,7 +4,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.node.utilities.PersistentMap
 import javax.persistence.Column
 import javax.persistence.Entity
