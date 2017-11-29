@@ -1,4 +1,4 @@
-package net.corda.core.node
+package net.corda.nodeapi.internal
 
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
@@ -13,6 +13,7 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 
+// TODO: Need more discussion on rather we should move this class out of internal.
 /**
  * Data class containing hash of [NetworkParameters] and network participant's [NodeInfo] hashes.
  */
@@ -47,12 +48,8 @@ data class NetworkParameters(
     }
 }
 
-/**
- *
- */
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)
-
 
 /**
  * A serialized [NetworkMap] and its signature and certificate. Enforces signature validity in order to deserialize the data

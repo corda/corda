@@ -4,10 +4,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.openHttpConnection
-import net.corda.core.node.NetworkMap
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.SignedNetworkMap
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -15,6 +12,9 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
+import net.corda.nodeapi.internal.NetworkMap
+import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import okhttp3.CacheControl
 import okhttp3.Headers

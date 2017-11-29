@@ -17,7 +17,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
@@ -39,12 +38,13 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.common.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.setGlobalSerialization
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.setGlobalSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
@@ -159,29 +159,32 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
      * Returns the single notary node on the network. Throws if there are none or more than one.
      * @see notaryNodes
      */
-    val defaultNotaryNode: StartedNode<MockNode> get() {
-        return when (notaryNodes.size) {
-            0 -> throw IllegalStateException("There are no notaries defined on the network")
-            1 -> notaryNodes[0]
-            else -> throw IllegalStateException("There is more than one notary defined on the network")
+    val defaultNotaryNode: StartedNode<MockNode>
+        get() {
+            return when (notaryNodes.size) {
+                0 -> throw IllegalStateException("There are no notaries defined on the network")
+                1 -> notaryNodes[0]
+                else -> throw IllegalStateException("There is more than one notary defined on the network")
+            }
         }
-    }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentity: Party get() {
-        return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-    }
+    val defaultNotaryIdentity: Party
+        get() {
+            return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
-        return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-    }
+    val defaultNotaryIdentityAndCert: PartyAndCertificate
+        get() {
+            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+        }
 
     /**
      * Because this executor is shared, we need to be careful about nodes shutting it down.

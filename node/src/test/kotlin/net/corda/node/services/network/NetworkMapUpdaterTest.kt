@@ -13,7 +13,7 @@ import net.corda.core.crypto.SignedData
 import net.corda.core.identity.Party
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.node.NetworkMap
+import net.corda.nodeapi.internal.NetworkMap
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort

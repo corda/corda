@@ -11,10 +11,10 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.hours
-import net.corda.core.node.DigitalSignatureWithCert
-import net.corda.core.node.NetworkMap
-import net.corda.core.node.NetworkParameters
-import net.corda.core.node.SignedNetworkMap
+import net.corda.nodeapi.internal.DigitalSignatureWithCert
+import net.corda.nodeapi.internal.NetworkMap
+import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
