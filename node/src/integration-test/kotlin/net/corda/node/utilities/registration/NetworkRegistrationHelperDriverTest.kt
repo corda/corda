@@ -71,7 +71,7 @@ class NetworkRegistrationHelperDriverTest {
         driver(portAllocation = portAllocation,
                 compatibilityZoneURL = compatibilityZoneUrl,
                 startNodesInProcess = true) {
-            
+
             writeRootCaCertificateForNode(baseDirectory(ALICE_NAME.toString()), rootCert)
 
             // Wait for the node to have started.
