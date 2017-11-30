@@ -315,7 +315,7 @@ class X509CertificateFactory {
     }
 
     // TODO migrate calls to [CertificateFactory#generateCertPath] to call this instead.
-    fun buildCertPath(vararg certificates: Certificate): CertPath {
+    fun generateCertPath(vararg certificates: Certificate): CertPath {
         return delegate.generateCertPath(certificates.asList())
     }
 }

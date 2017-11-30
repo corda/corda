@@ -68,8 +68,8 @@ class NetworkRegistrationHelperDriverTest {
         driver(portAllocation = portAllocation,
                 compatibilityZoneURL = compatibilityZoneUrl,
                 startNodesInProcess = true,
-                rootCertificate = rootCert) {
-
+                rootCertificate = rootCert
+        ) {
             // Wait for the node to have started.
             startNode(providedName = ALICE_NAME, initialRegistration = true).get()
         }
@@ -85,8 +85,8 @@ class NetworkRegistrationHelperDriverTest {
     fun `node registration without root cert`() {
         driver(portAllocation = portAllocation,
                 compatibilityZoneURL = compatibilityZoneUrl,
-                startNodesInProcess = true) {
-
+                startNodesInProcess = true
+        ) {
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME, initialRegistration = true).get()
             }.isInstanceOf(java.nio.file.NoSuchFileException::class.java)
@@ -98,8 +98,8 @@ class NetworkRegistrationHelperDriverTest {
         driver(portAllocation = portAllocation,
                 compatibilityZoneURL = compatibilityZoneUrl,
                 startNodesInProcess = true,
-                rootCertificate = createSelfKeyAndSelfSignedCertificate().certificate) {
-
+                rootCertificate = createSelfKeyAndSelfSignedCertificate().certificate
+        ) {
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME, initialRegistration = true).get()
             }.isInstanceOf(WrongRootCaCertificateException::class.java)
@@ -147,7 +147,7 @@ private fun createSignedClientCertificate(certificationRequest: PKCS10Certificat
             CordaX500Name.parse(request.subject.toString()).copy(commonName = X509Utilities.CORDA_CLIENT_CA_CN),
             request.publicKey,
             nameConstraints = null)
-    return x509CertificateFactory.buildCertPath(x509CertificateHolder.cert, *caCertPath)
+    return x509CertificateFactory.generateCertPath(x509CertificateHolder.cert, *caCertPath)
 }
 
 // TODO this logic is shared with doorman itself, refactor this to be somewhere where both doorman and these tests

@@ -345,9 +345,11 @@ data class NodeParameters(
  * available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
  * @param compatibilityZoneURL if not null each node is started once in registration mode (which makes the node register and quit),
  *     and then re-starts the node with the given parameters.
+ * @param rootCertificate if not null every time a node is started for registration that certificate is written on disk   
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
+// TODO: make the registration testing parameters internal.
 fun <A> driver(
         defaultParameters: DriverParameters = DriverParameters(),
         isDebug: Boolean = defaultParameters.isDebug,
