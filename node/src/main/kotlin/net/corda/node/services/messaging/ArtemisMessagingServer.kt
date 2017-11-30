@@ -263,7 +263,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     }
 
     @Throws(IOException::class, KeyStoreException::class)
-    private fun createArtemisSecurityManager(loginListener : LoginListener): ActiveMQJAASSecurityManager {
+    private fun createArtemisSecurityManager(loginListener: LoginListener): ActiveMQJAASSecurityManager {
         val keyStore = loadKeyStore(config.sslKeystore, config.keyStorePassword)
         val trustStore = loadKeyStore(config.trustStoreFile, config.trustStorePassword)
 
