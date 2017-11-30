@@ -42,7 +42,7 @@ import net.corda.nodeapi.config.toConfig
 import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
-import net.corda.testing.common.internal.NetworkParametersCopier
+import net.corda.nodeapi.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.DriverDSL.ClusterType.*
 import net.corda.testing.internal.ProcessUtilities

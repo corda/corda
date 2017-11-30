@@ -16,9 +16,6 @@ dependencies {
 
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
-
-    // Bouncy Castle: for X.500 distinguished name manipulation
-    compile "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
 }
 
 publish {
