@@ -110,7 +110,7 @@ class IRSDemoTest {
 
     private fun runDateChange(nodeApi: HttpApi) {
         log.info("Running date change against ${nodeApi.root}")
-        assertThat(nodeApi.putJson("demodate", "\"$futureDate\"")).isTrue()
+        nodeApi.putJson("demodate", "\"$futureDate\"")
     }
 
     private fun runTrade(nodeApi: HttpApi, oracle: Party) {
@@ -123,7 +123,7 @@ class IRSDemoTest {
     private fun runUploadRates(nodeApi: HttpApi) {
         log.info("Running upload rates against ${nodeApi.root}")
         val fileContents = loadResourceFile("net/corda/irs/simulation/example.rates.txt")
-        assertThat(nodeApi.postPlain("fixes", fileContents)).isTrue()
+        nodeApi.postPlain("fixes", fileContents)
     }
 
     private fun loadResourceFile(filename: String): String {
