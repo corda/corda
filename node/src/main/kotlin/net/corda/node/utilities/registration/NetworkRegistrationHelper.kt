@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.cert.Certificate
@@ -110,7 +111,7 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
     private fun checkReturnedRootCaMatchesExpectedCa(returnedRootCa: Certificate) {
         val expected = X509Utilities.loadCertificateFromPEMFile(config.rootCaCertFile).cert
         if (expected != returnedRootCa) {
-            throw WrongRootCaCertificateException()
+            throw WrongRootCaCertificateException(expected, returnedRootCa, config.rootCaCertFile)
         }
     }
 
@@ -172,4 +173,12 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
  * Exception thrown when the doorman root certificate doesn't match the expected (out-of-band) root certificate.
  * This usually means the has been a Man-in-the-middle attack when contacting the doorman.
  */
-class WrongRootCaCertificateException: Exception()
+class WrongRootCaCertificateException(expected: Certificate,
+                                      actual: Certificate,
+                                      expectedFilePath: Path):
+        Exception("""
+            The Root CA returned back from the registration process does not match the expected Root CA
+            expected: $expected
+            actual: $actual
+            expected is stored in: $expectedFilePath
+            """.trimMargin())

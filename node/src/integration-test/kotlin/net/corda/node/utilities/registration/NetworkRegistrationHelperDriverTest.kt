@@ -3,6 +3,8 @@ package net.corda.node.utilities.registration
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -16,6 +18,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
@@ -42,9 +45,9 @@ private val portAllocation = PortAllocation.Incremental(10000)
  * Driver based tests for [NetworkRegistrationHelper]
  */
 class NetworkRegistrationHelperDriverTest {
-    val certificateAndKeyPair = createSelfKeyAndSelfSignedCertificate()
-    val caRootCertificate = certificateAndKeyPair.certificate
-    val handler = RegistrationHandler(certificateAndKeyPair)
+    val rootCertAndKeyPair = createSelfKeyAndSelfSignedCertificate()
+    val rootCert = rootCertAndKeyPair.certificate
+    val handler = RegistrationHandler(rootCertAndKeyPair)
     lateinit var server: NetworkMapServer
     lateinit var host: String
     var port: Int = 0
@@ -68,8 +71,8 @@ class NetworkRegistrationHelperDriverTest {
         driver(portAllocation = portAllocation,
                 compatibilityZoneURL = compatibilityZoneUrl,
                 startNodesInProcess = true) {
-
-            writeRootCaCertificateForNode(ALICE_NAME, caRootCertificate)
+            
+            writeRootCaCertificateForNode(baseDirectory(ALICE_NAME.toString()), rootCert)
 
             // Wait for the node to have started.
             startNode(providedName = ALICE_NAME, initialRegistration = true).get()
@@ -90,7 +93,7 @@ class NetworkRegistrationHelperDriverTest {
 
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME, initialRegistration = true).get()
-            }.isInstanceOf(NoSuchFileException::class.java)
+            }.isInstanceOf(java.nio.file.NoSuchFileException::class.java)
         }
     }
 
@@ -100,7 +103,8 @@ class NetworkRegistrationHelperDriverTest {
                 compatibilityZoneURL = compatibilityZoneUrl,
                 startNodesInProcess = true) {
 
-            writeRootCaCertificateForNode(ALICE_NAME, createSelfKeyAndSelfSignedCertificate().certificate)
+            writeRootCaCertificateForNode(baseDirectory(ALICE_NAME.toString()),
+                    createSelfKeyAndSelfSignedCertificate().certificate)
 
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME, initialRegistration = true).get()
@@ -114,8 +118,7 @@ class NetworkRegistrationHelperDriverTest {
  * Simple registration handler which can handle a single request, which will be given request id [REQUEST_ID].
  */
 @Path("certificate")
-class RegistrationHandler(
-        private val certificateAndKeyPair: CertificateAndKeyPair) {
+class RegistrationHandler(private val certificateAndKeyPair: CertificateAndKeyPair) {
     val requests = mutableListOf<String>()
     lateinit var certificationRequest: JcaPKCS10CertificationRequest
 
@@ -178,4 +181,10 @@ private fun createSelfKeyAndSelfSignedCertificate(): CertificateAndKeyPair {
                     organisation = "R3 Ltd", locality = "London",
                     country = "GB"), rootCAKey)
     return CertificateAndKeyPair(rootCACert, rootCAKey)
+}
+
+fun writeRootCaCertificateForNode(path: java.nio.file.Path, caRootCertificate: X509CertificateHolder) {
+    val fullPath = path / "certificates" / "rootcacert.cer"
+    fullPath.parent.createDirectories()
+    X509Utilities.saveCertificateAsPEMFile(caRootCertificate, fullPath)
 }

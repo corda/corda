@@ -46,6 +46,9 @@ class NetworkRegistrationHelperTest {
                 baseDirectory = tempFolder.root.toPath(),
                 myLegalName = ALICE.name)
 
+        config.rootCaCertFile.parent.createDirectories()
+        X509Utilities.saveCertificateAsPEMFile(certs.last().toX509CertHolder(), config.rootCaCertFile)
+
         assertFalse(config.nodeKeystore.exists())
         assertFalse(config.sslKeystore.exists())
         assertFalse(config.trustStoreFile.exists())

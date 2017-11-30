@@ -211,8 +211,6 @@ interface DriverDSLExposedInterface : CordformContext {
     }
 
     val shutdownManager: ShutdownManager
-
-    fun writeRootCaCertificateForNode(nodeName: CordaX500Name, caRootCertificate: X509CertificateHolder)
 }
 
 interface DriverDSLInternalInterface : DriverDSLExposedInterface {
@@ -1202,13 +1200,6 @@ class DriverDSL(
         private fun Map<String, Any>.removeResolvedClasspath(): Map<String, Any> {
             return filterNot { it.key == "java.class.path" }
         }
-    }
-
-    override fun writeRootCaCertificateForNode(nodeName: CordaX500Name, caRootCertificate: X509CertificateHolder) {
-        val path = baseDirectory(nodeName.toString())
-        (path / "certificates").createDirectories()
-        val fullPath = path / "certificates" / "rootCaCert.cer"
-        X509Utilities.saveCertificateAsPEMFile(caRootCertificate, fullPath)
     }
 }
 
