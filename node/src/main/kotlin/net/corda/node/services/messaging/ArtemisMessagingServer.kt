@@ -240,8 +240,10 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         val rolesAdderOnLogin = RolesAdderOnLogin { username ->
             Pair(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#",
-                    setOf(nodeInternalRole,
-                            restrictedRole("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username",
+                    setOf(
+                            nodeInternalRole,
+                            restrictedRole(
+                                    "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username",
                                     consume = true,
                                     createNonDurableQueue = true,
                                     deleteNonDurableQueue = true)))
