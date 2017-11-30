@@ -7,7 +7,12 @@ import java.lang.reflect.Type
 import java.util.*
 
 /**
- * @property transforms
+ * @property clazz The enum as it exists now, not as it did when it was seialised (either in the past
+ * or future).
+ * @property factory the [SerializerFactory] that is building this serialization object.
+ * @property conversions A mapping between all potential enum constants that could've been assigned as
+ * existed at serialisation and those that exist now
+ * @property ordinals Convenience mapping of constant to ordinality
  *
  */
 class EnumEvolutionSerializer(
@@ -19,7 +24,7 @@ class EnumEvolutionSerializer(
     override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")!!
 
     companion object {
-        fun MutableMap<String, String>.mapInPlace(f : (String)->String) {
+        private fun MutableMap<String, String>.mapInPlace(f : (String)->String) {
             val i = this.iterator()
             while(i.hasNext()) {
                 val curr = (i.next())
@@ -28,8 +33,14 @@ class EnumEvolutionSerializer(
         }
 
         /**
-         * @param old
-         * @param new
+         * Builds an Enum Evolver serializer.
+         *
+         * @param old The description of the enum as it existed at the time of serialisation take from the
+         * received AMQP header
+         * @param new The Serializer object we built based on the current state of the enum class on our classpath
+         * @param factory the [SerializerFactory] that is building this serialization object.
+         * @param transformsFromBlob the transforms attached to the class in the AMQP header, i.e. the transforms
+         * known at serialization time
          */
         fun make(old: RestrictedType,
                  new: AMQPSerializer<Any>,
@@ -48,9 +59,9 @@ class EnumEvolutionSerializer(
             val renameRules = transforms[TransformTypes.Rename] as? List<RenameSchemaTransform>
 
             // What values exist on the enum as it exists on the class path
-            val localVals = new.type.asClass()!!.enumConstants.map { it.toString() }
+            val localValues = new.type.asClass()!!.enumConstants.map { it.toString() }
 
-            var conversions : MutableMap<String, String> = new.type.asClass()!!.enumConstants.map { it.toString() }
+            val conversions : MutableMap<String, String> = new.type.asClass()!!.enumConstants.map { it.toString() }
                     .union(defaultRules?.map { it.new }?.toSet() ?: emptySet())
                     .union(renameRules?.map { it.to } ?: emptySet())
                     .associateBy({ it }, { it })
@@ -60,17 +71,20 @@ class EnumEvolutionSerializer(
             rules.putAll(defaultRules?.associateBy({ it.new }, { it.old }) ?: emptyMap())
             rules.putAll(renameRules?.associateBy({ it.to }, { it.from }) ?: emptyMap())
 
-            while (conversions.filter { it.value !in localVals }.isNotEmpty()) {
+            while (conversions.filter { it.value !in localValues }.isNotEmpty()) {
                 conversions.mapInPlace { rules[it] ?: it }
             }
 
+            // you'd think this was overkill to get access to the ordinal values for each constant but it's actually
+            // rather tricky when you don't have access to the actual type, so this is a nice way to be able
+            // to precompute and pass to the actual object
             var idx = 0
-            return EnumEvolutionSerializer(new.type, factory, conversions, localVals.associateBy( {it}, { idx++ }))
+            return EnumEvolutionSerializer(new.type, factory, conversions, localValues.associateBy( {it}, { idx++ }))
         }
     }
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
-        var enumName = (obj as List<*>)[0] as String
+        val enumName = (obj as List<*>)[0] as String
 
         if (enumName !in conversions) {
             throw NotSerializableException ("No rule to evolve enum constant $type::$enumName")

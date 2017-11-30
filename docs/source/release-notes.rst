@@ -6,6 +6,11 @@ Here are release notes for each snapshot release from M9 onwards.
 Unreleased
 ----------
 
+** Enum Class Evolution
+   With the addition of AMQP serialization Corda now supports enum constant evolution, that is the abilit to alter
+   an enum constant and, as long as certain rules ar followed and the correct annotations applied, have older and
+   newer instances of that enumeration be understood.
+
 Release 2.0
 ----------
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
