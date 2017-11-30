@@ -9,6 +9,8 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.driver.PortAllocation
@@ -157,7 +159,7 @@ private fun buildDoormanReply(certificates: Array<Certificate>): Response {
     val baos = ByteArrayOutputStream()
     ZipOutputStream(baos).use { zip ->
         // Client certificate must come first and root certificate should come last.
-        listOf(X509Utilities.CORDA_CLIENT_CA, CORDA_ROOT_CA).zip(certificates).forEach {
+        listOf(CORDA_CLIENT_CA, CORDA_INTERMEDIATE_CA, CORDA_ROOT_CA).zip(certificates).forEach {
             zip.putNextEntry(ZipEntry("${it.first}.cer"))
             zip.write(it.second.encoded)
             zip.closeEntry()
