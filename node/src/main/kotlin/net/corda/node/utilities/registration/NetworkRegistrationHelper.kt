@@ -103,10 +103,9 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
             println("Generating SSL certificate for node messaging service.")
             val sslKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val caCert = caKeyStore.getX509Certificate(CORDA_CLIENT_CA).toX509CertHolder()
-            val sslCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, keyPair, CordaX500Name.build(caCert.cert.subjectX500Principal).copy(commonName = null), sslKey.public)
+            val sslCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, keyPair, CordaX500Name.build(caCert.cert.subjectX500Principal), sslKey.public)
             val sslKeyStore = loadOrCreateKeyStore(config.sslKeystore, keystorePassword)
-            sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKey.private, privateKeyPassword.toCharArray(),
-                    arrayOf(sslCert.cert, *certificates))
+            sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKey.private, privateKeyPassword.toCharArray(), arrayOf(sslCert.cert, *certificates))
             sslKeyStore.save(config.sslKeystore, config.keyStorePassword)
             println("SSL private key and certificate stored in ${config.sslKeystore}.")
             // All done, clean up temp files.

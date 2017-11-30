@@ -9,8 +9,8 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.internal.kryoSpecific
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -24,6 +24,7 @@ class CompositeKeyTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()
@@ -40,9 +41,9 @@ class CompositeKeyTests {
     private val secureHash = message.sha256()
 
     // By lazy is required so that the serialisers are configured before vals initialisation takes place (they internally invoke serialise).
-    val aliceSignature by lazy { aliceKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID))) }
-    val bobSignature by lazy { bobKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(bobPublicKey).schemeNumberID))) }
-    val charlieSignature by lazy { charlieKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(charliePublicKey).schemeNumberID))) }
+    private val aliceSignature by lazy { aliceKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID))) }
+    private val bobSignature by lazy { bobKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(bobPublicKey).schemeNumberID))) }
+    private val charlieSignature by lazy { charlieKey.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(charliePublicKey).schemeNumberID))) }
 
     @Test
     fun `(Alice) fulfilled by Alice signature`() {
@@ -337,7 +338,7 @@ class CompositeKeyTests {
         val ca = X509Utilities.createSelfSignedCACertificate(caName, caKeyPair)
 
         // Sign the composite key with the self sign CA.
-        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, ca, caKeyPair, caName.copy(commonName = "CompositeKey"), compositeKey)
+        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, ca, caKeyPair, caName, compositeKey)
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"

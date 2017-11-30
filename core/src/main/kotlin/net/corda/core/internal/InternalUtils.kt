@@ -118,6 +118,8 @@ fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(th
 inline val Path.size: Long get() = Files.size(this)
 inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
 fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
+fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
+fun Path.writer(charset: Charset = UTF_8, vararg options: OpenOption): BufferedWriter = Files.newBufferedWriter(this, charset, *options)
 fun Path.readAll(): ByteArray = Files.readAllBytes(this)
 inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = Files.newInputStream(this, *options).use(block)
 inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {

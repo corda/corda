@@ -38,7 +38,7 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.nodeapi.internal.ServiceIdentityGenerator
+import net.corda.nodeapi.internal.IdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NotaryInfo
@@ -159,6 +159,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
         throw IllegalStateException("Using more than one MockNetwork simultaneously is not supported.", e)
     }
     private val sharedUserCount = AtomicInteger(0)
+
     /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
 
@@ -172,32 +173,29 @@ open class MockNetwork(private val cordappPackages: List<String>,
      * Returns the single notary node on the network. Throws if there are none or more than one.
      * @see notaryNodes
      */
-    val defaultNotaryNode: StartedNode<MockNode>
-        get() {
-            return when (notaryNodes.size) {
-                0 -> throw IllegalStateException("There are no notaries defined on the network")
-                1 -> notaryNodes[0]
-                else -> throw IllegalStateException("There is more than one notary defined on the network")
-            }
+    val defaultNotaryNode: StartedNode<MockNode> get() {
+        return when (notaryNodes.size) {
+            0 -> throw IllegalStateException("There are no notaries defined on the network")
+            1 -> notaryNodes[0]
+            else -> throw IllegalStateException("There is more than one notary defined on the network")
         }
+    }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentity: Party
-        get() {
-            return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-        }
+    val defaultNotaryIdentity: Party get() {
+        return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+    }
 
     /**
      * Return the identity of the default notary node.
      * @see defaultNotaryNode
      */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate
-        get() {
-            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-        }
+    val defaultNotaryIdentityAndCert: PartyAndCertificate get() {
+        return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+    }
 
     /**
      * Because this executor is shared, we need to be careful about nodes shutting it down.
@@ -237,19 +235,16 @@ open class MockNetwork(private val cordappPackages: List<String>,
 
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.mapIndexed { index, (name, validating) ->
-            val identity = ServiceIdentityGenerator.generateToDisk(
-                    dirs = listOf(baseDirectory(nextNodeId + index)),
-                    serviceName = name,
-                    serviceId = "identity")
+            val identity = IdentityGenerator.generateNodeIdentity(baseDirectory(nextNodeId + index), name)
             NotaryInfo(identity, validating)
         }
     }
 
     @VisibleForTesting
     internal open fun createNotaries(): List<StartedNode<MockNode>> {
-        return notarySpecs.map { spec ->
-            createNode(MockNodeParameters(legalName = spec.name, configOverrides = {
-                doReturn(NotaryConfig(spec.validating)).whenever(it).notary
+        return notarySpecs.map { (name, validating) ->
+            createNode(MockNodeParameters(legalName = name, configOverrides = {
+                doReturn(NotaryConfig(validating)).whenever(it).notary
             }))
         }
     }
@@ -306,7 +301,7 @@ open class MockNetwork(private val cordappPackages: List<String>,
                     id,
                     serverThread,
                     myNotaryIdentity,
-                    myLegalName,
+                    configuration.myLegalName,
                     database).also { runOnStop += it::stop }
         }
 
