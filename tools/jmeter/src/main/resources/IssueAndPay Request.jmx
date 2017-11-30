@@ -46,7 +46,7 @@
               </elementProp>
               <elementProp name="password" elementType="Argument">
                 <stringProp name="Argument.name">password</stringProp>
-                <stringProp name="Argument.value">Password Here</stringProp>
+                <stringProp name="Argument.value">corda_is_awesome</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="notaryName" elementType="Argument">
@@ -54,9 +54,14 @@
                 <stringProp name="Argument.value">O=Perf-10.155.0.8,OU=Corda,L=London,C=GB,CN=corda.node.simple</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
+              <elementProp name="otherPartyName" elementType="Argument">
+                <stringProp name="Argument.name">otherPartyName</stringProp>
+                <stringProp name="Argument.value">O=Perf-10.155.0.7, OU=Corda, L=London, C=GB</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.r3.corda.jmeter.CashIssueSampler</stringProp>
+          <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
