@@ -159,6 +159,9 @@ dependencies {
     // FastClasspathScanner: classpath scanning
     compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
 
+    // Apache Shiro: authentication, authorization, and session management framework
+    compile "org.apache.shiro:shiro-core:${shiro_version}"
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
@@ -177,8 +180,7 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
-    // Core of Apache Shiro framework
-    compile "org.apache.shiro:shiro-core:${shiro_version}"
+    testCompile "com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8"
 }
 
 task integrationTest(type: Test) {

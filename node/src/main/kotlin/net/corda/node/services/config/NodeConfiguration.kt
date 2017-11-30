@@ -23,7 +23,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val dataSourceProperties: Properties
     val database: Properties?
     val rpcUsers: List<User>
-    val securityDataSources: List<SecurityDataSourceConfig>
+    val securityDataSource: SecurityDataSourceConfig?
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
     val compatibilityZoneURL: URL?
@@ -113,7 +113,7 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
-        override val securityDataSources : List<SecurityDataSourceConfig> = emptyList()
+        override val securityDataSource : SecurityDataSourceConfig? = null
 
 ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
@@ -176,7 +176,6 @@ enum class PasswordEncryption {
 
 /**
  * Configure a generic security data source.
- *
  */
 data class SecurityDataSourceConfig(
         val type : SecurityDataSourceType,

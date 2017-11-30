@@ -134,7 +134,7 @@ open class Node(configuration: NodeConfiguration,
     override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
         securityManager = RPCSecurityManagerImpl(
                 id = AuthServiceId("NODE_RPC"),
-                sourceConfigs = configuration.securityDataSources,
+                sourceConfigs = listOf(configuration.securityDataSource).filterNotNull(),
                 addedUsers = configuration.rpcUsers)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()

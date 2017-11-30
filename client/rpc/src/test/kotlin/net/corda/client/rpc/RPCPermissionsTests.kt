@@ -40,7 +40,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
 
     class TestOpsImpl : TestOps {
         override val protocolVersion = 1
-        override fun validatePermission(method : String, target : String?) {
+        override fun validatePermission(method: String, target: String?) {
             val authorized = if (target == null) {
                 rpcContext().authorizer.isPermitted(method)
             } else {
@@ -99,6 +99,11 @@ class RPCPermissionsTests : AbstractRPCTest() {
                     "User ${joeUser.username} should not be allowed to use $OTHER_FLOW",
                     {
                         proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
+                    })
+            assertFailsWith(PermissionException::class,
+                    "User ${joeUser.username} should not be allowed to use $OTHER_FLOW",
+                    {
+
                         proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
                     })
         }
@@ -106,14 +111,18 @@ class RPCPermissionsTests : AbstractRPCTest() {
 
     @Test
     fun `joe user is not allowed to call other RPC methods`() {
-          rpcDriver {
+        rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
             assertFailsWith(PermissionException::class,
                     "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
                     {
-                      proxy.validatePermission("nodeInfo")
-                      proxy.validatePermission("networkMapFeed")
+                        proxy.validatePermission("nodeInfo")
+                    })
+            assertFailsWith(PermissionException::class,
+                    "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
+                    {
+                        proxy.validatePermission("networkMapFeed")
                     })
         }
     }
@@ -127,6 +136,10 @@ class RPCPermissionsTests : AbstractRPCTest() {
                     "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
                     {
                         proxy.validatePermission("nodeInfo")
+                    })
+            assertFailsWith(PermissionException::class,
+                    "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
+                    {
                         proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
                     })
             proxy.validatePermission("networkMapFeed")

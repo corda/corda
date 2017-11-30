@@ -259,7 +259,6 @@ internal class InMemoryRealm : AuthorizingRealm {
                 principals = SimplePrincipalCollection(it.username, realmId)
             }
         }
-        // Plain credential matcher
         credentialsMatcher = buildCredentialMatcher(passwordEncryption)
     }
 
@@ -268,10 +267,10 @@ internal class InMemoryRealm : AuthorizingRealm {
      * for authentication/authorization data for a given user
      */
     override fun doGetAuthenticationInfo(token: AuthenticationToken) =
-            authenticationInfoByUser.getValue(token.principal as String)
+            authenticationInfoByUser[token.principal as String]
 
     override fun doGetAuthorizationInfo(principals: PrincipalCollection) =
-            authorizationInfoByUser.getValue(principals.primaryPrincipal as String)
+            authorizationInfoByUser[principals.primaryPrincipal as String]
 
     private val authorizationInfoByUser: Map<String, AuthorizationInfo>
     private val authenticationInfoByUser: Map<String, AuthenticationInfo>
