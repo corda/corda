@@ -1,12 +1,11 @@
 package net.corda.node.services.config
 
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.ALICE
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
-import java.net.URL
 import java.nio.file.Paths
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -40,7 +39,6 @@ class NodeConfigurationImplTest {
             keyStorePassword = "cordacadevpass",
             trustStorePassword = "trustpass",
             dataSourceProperties = makeTestDataSourceProperties(ALICE.name.organisation),
-            database = makeTestDatabaseProperties(),
             rpcUsers = emptyList(),
             verifierType = VerifierType.InMemory,
             useHTTPS = false,

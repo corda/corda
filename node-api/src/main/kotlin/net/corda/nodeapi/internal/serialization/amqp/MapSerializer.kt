@@ -88,15 +88,15 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
         // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
-        val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schema, input, it) }
+        val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schemas, input, it) }
         concreteBuilder(entries.toMap())
     }
 
-    private fun readEntry(schema: Schema, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) =
-            input.readObjectOrNull(entry.key, schema, declaredType.actualTypeArguments[0]) to
-                    input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
+    private fun readEntry(schemas: SerializationSchemas, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) =
+            input.readObjectOrNull(entry.key, schemas, declaredType.actualTypeArguments[0]) to
+                    input.readObjectOrNull(entry.value, schemas, declaredType.actualTypeArguments[1])
 
     // Cannot use * as a bound for EnumMap and EnumSet since * is not an enum.  So, we use a sample enum instead.
     // We don't actually care about the type, we just need to make the compiler happier.

@@ -1,11 +1,11 @@
 package net.corda.node.services.api
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.context.InvocationContext
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -23,7 +23,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
 interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {

@@ -23,7 +23,7 @@ class CordaAuthenticationPlugin(val rpcOps:CordaRPCOps, val securityManager: RPC
         val authorizinguSubject = securityManager.tryAuthenticate(username, credential.toCharArray())
         if (authorizinguSubject != null) {
         val actor = Actor(Actor.Id(username), securityManager.id, nodeLegalName)
-            return CordaSSHAuthInfo(true, RPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), authorizinguSubject))
+            return CordaSSHAuthInfo(true, makeRPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), authorizinguSubject))
         }
 
         return AuthInfo.UNSUCCESSFUL;

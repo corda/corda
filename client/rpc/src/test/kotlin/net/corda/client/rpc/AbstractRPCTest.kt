@@ -6,14 +6,20 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.User
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.internal.RPCDriverExposedDSLInterface
 import net.corda.testing.internal.rpcTestUser
 import net.corda.testing.internal.startInVmRpcClient
 import net.corda.testing.internal.startRpcClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.junit.Rule
 import org.junit.runners.Parameterized
 
 open class AbstractRPCTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
+
     enum class RPCTestMode {
         InVm,
         Netty

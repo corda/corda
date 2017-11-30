@@ -9,7 +9,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
-import java.util.Locale
+import java.util.*
 import javax.security.auth.x500.X500Principal
 
 /**
@@ -45,7 +45,7 @@ data class CordaX500Name(val commonName: String?,
 
     init {
         // Legal name checks.
-        LegalNameValidator.validateLegalName(organisation)
+        LegalNameValidator.validateOrganization(organisation)
 
         // Attribute data width checks.
         require(country.length == LENGTH_COUNTRY) { "Invalid country '$country' Country code must be $LENGTH_COUNTRY letters ISO code " }

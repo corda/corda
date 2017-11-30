@@ -23,7 +23,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.PublicKey
 import javax.persistence.Entity
 import javax.persistence.Table

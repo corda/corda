@@ -9,13 +9,13 @@ import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.debug
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.node.utilities.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import org.bouncycastle.cert.X509CertificateHolder
-import java.io.ByteArrayInputStream
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -26,26 +26,21 @@ import javax.persistence.Id
 import javax.persistence.Lob
 
 @ThreadSafe
-class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = emptySet(),
-                                confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                                override val trustRoot: X509Certificate,
+class PersistentIdentityService(override val trustRoot: X509Certificate,
                                 vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
-    constructor(wellKnownIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
+    constructor(trustRoot: X509CertificateHolder) : this(trustRoot.cert)
 
     companion object {
         private val log = contextLogger()
-        private val certFactory: CertificateFactory = CertificateFactory.getInstance("X.509")
 
         fun createPKMap(): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
-                        Pair(SecureHash.parse(it.publicKeyHash),
-                                PartyAndCertificate(ByteArrayInputStream(it.identity).use {
-                                    certFactory.generateCertPath(it)
-                                }))
+                        Pair(
+                                SecureHash.parse(it.publicKeyHash),
+                                PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(it.identity.inputStream()))
+                        )
                     },
                     toPersistentEntity = { key: SecureHash, value: PartyAndCertificate ->
                         PersistentIdentity(key.toString(), value.certPath.encoded)
@@ -101,6 +96,10 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
         caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
+    }
+
+    /** Requires a database transaction. */
+    fun loadIdentities(identities: Iterable<PartyAndCertificate> = emptySet(), confidentialIdentities: Iterable<PartyAndCertificate> = emptySet()) {
         identities.forEach {
             val key = mapToKey(it)
             keyToParties.addWithDuplicatesAllowed(key, it, false)
@@ -135,8 +134,7 @@ class PersistentIdentityService(identities: Iterable<PartyAndCertificate> = empt
         if (firstCertWithThisName != identity.certificate) {
             val certificates = identity.certPath.certificates
             val idx = certificates.lastIndexOf(firstCertWithThisName)
-            val certFactory = CertificateFactory.getInstance("X509")
-            val firstPath = certFactory.generateCertPath(certificates.slice(idx..certificates.size - 1))
+            val firstPath = X509CertificateFactory().delegate.generateCertPath(certificates.slice(idx until certificates.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 

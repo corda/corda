@@ -38,7 +38,7 @@ public class FlowsInJavaTest {
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
-        bobNode.getInternals().registerInitiatedFlow(SendHelloAndThenReceive.class);
+        bobNode.registerInitiatedFlow(SendHelloAndThenReceive.class);
         Future<String> result = startFlow(aliceNode.getServices(), new SendInUnwrapFlow(bob)).getResultFuture();
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");

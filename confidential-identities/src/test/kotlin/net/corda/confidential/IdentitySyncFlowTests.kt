@@ -49,8 +49,7 @@ class IdentitySyncFlowTests {
         val alice: Party = aliceNode.info.singleIdentity()
         val bob: Party = bobNode.info.singleIdentity()
         val notary = mockNet.defaultNotaryIdentity
-        bobNode.internals.registerInitiatedFlow(Receive::class.java)
-
+        bobNode.registerInitiatedFlow(Receive::class.java)
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
@@ -80,8 +79,7 @@ class IdentitySyncFlowTests {
         val bob: Party = bobNode.info.singleIdentity()
         val charlie: Party = charlieNode.info.singleIdentity()
         val notary = mockNet.defaultNotaryIdentity
-        bobNode.internals.registerInitiatedFlow(Receive::class.java)
-
+        bobNode.registerInitiatedFlow(Receive::class.java)
         // Charlie issues then pays some cash to a new confidential identity
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)

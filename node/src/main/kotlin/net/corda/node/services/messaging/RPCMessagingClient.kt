@@ -8,6 +8,9 @@ import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.getX509Certificate
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 
 class RPCMessagingClient(private val config: SSLConfiguration, serverAddress: NetworkHostAndPort) : SingletonSerializeAsToken() {

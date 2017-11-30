@@ -20,10 +20,10 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
-import net.corda.node.utilities.X509Utilities
-import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
-import net.corda.node.utilities.loadKeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
@@ -240,8 +240,10 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         val rolesAdderOnLogin = RolesAdderOnLogin { username ->
             Pair(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#",
-                    setOf(nodeInternalRole,
-                            restrictedRole("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username",
+                    setOf(
+                            nodeInternalRole,
+                            restrictedRole(
+                                    "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username",
                                     consume = true,
                                     createNonDurableQueue = true,
                                     deleteNonDurableQueue = true)))
@@ -565,7 +567,7 @@ class NodeLoginModule : LoginModule {
         this.subject = subject
         this.callbackHandler = callbackHandler
         securityManager = options[RPCSecurityManager::class.java.name] as RPCSecurityManager
-	    loginListener = options[LoginListener::javaClass.name] as LoginListener
+	loginListener = options[LoginListener::javaClass.name] as LoginListener
         val certChainChecks: Map<String, CertificateChainCheckPolicy.Check> = uncheckedCast(options[CERT_CHAIN_CHECKS_OPTION_NAME])
         peerCertCheck = certChainChecks[PEER_ROLE]!!
         nodeCertCheck = certChainChecks[NODE_ROLE]!!
@@ -627,8 +629,8 @@ class NodeLoginModule : LoginModule {
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
-	    securityManager.authenticate(username, password.toCharArray())
-	    loginListener(username)
+	securityManager.authenticate(username, password.toCharArray())
+	loginListener(username)
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses
         return username

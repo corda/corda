@@ -9,10 +9,11 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
@@ -25,10 +26,10 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import org.slf4j.Logger
@@ -213,10 +214,13 @@ open class Node(configuration: NodeConfiguration,
             runOnStop += this::stop
         }
         verifierMessagingClient?.run {
-            start()
             runOnStop += this::stop
+            start()
         }
-        (network as P2PMessagingClient).start()
+        (network as P2PMessagingClient).apply {
+            runOnStop += this::stop
+            start()
+        }
     }
 
     /**
@@ -229,7 +233,7 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: (CordaPersistence) -> T): T {
+    override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -246,7 +250,7 @@ open class Node(configuration: NodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
-        return super.initialiseDatabasePersistence(schemaService, insideTransaction)
+        return super.initialiseDatabasePersistence(schemaService, identityService, insideTransaction)
     }
 
     private val _startupComplete = openFuture<Unit>()

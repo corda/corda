@@ -26,7 +26,7 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -115,10 +115,6 @@ internal class CordaRPCOpsImpl(
 
     override fun nodeInfo(): NodeInfo {
         return services.myInfo
-    }
-
-    override fun nodeStateObservable(): Observable<NodeState> {
-        return services.myNodeStateObservable
     }
 
     override fun notaryIdentities(): List<Party> {

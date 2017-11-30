@@ -3,6 +3,8 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
@@ -57,17 +59,20 @@ import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
 import rx.Observable
-import rx.subjects.PublishSubject
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.PublicKey
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
@@ -121,10 +126,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
-    protected val nodeStateObservable: PublishSubject<NodeState> = PublishSubject.create<NodeState>()
     protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
-    protected lateinit var smm: StateMachineManager
     private lateinit var tokenizableServices: List<Any>
     protected lateinit var attachments: NodeAttachmentService
     protected lateinit var network: MessagingService
@@ -153,7 +156,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     @Volatile private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence): CordaRPCOps {
+    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
         return SecureCordaRPCOps(services, smm, database, flowStarter)
     }
 
@@ -182,14 +185,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         log.info("Node starting up ...")
         initCertificate()
         val (keyPairs, info) = initNodeInfo()
-        val schemaService = NodeSchemaService(cordappLoader)
+        val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
+        val identityService = makeIdentityService(info)
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService) { database ->
+        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
+            identityService.loadIdentities(info.legalIdentitiesAndCerts)
             val transactionStorage = makeTransactionStorage(database)
             val stateLoader = StateLoaderImpl(transactionStorage)
-            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader, database, info)
+            val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader, database, info, identityService)
             val notaryService = makeNotaryService(nodeServices, database)
-            smm = makeStateMachineManager(database)
+            val smm = makeStateMachineManager(database)
             val flowStarter = FlowStarterImpl(serverThread, smm)
             val schedulerService = NodeSchedulerService(
                     platformClock,
@@ -206,20 +211,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, SECONDS)
                 }
             }
-            makeVaultObservers(schedulerService, database.hibernateConfig)
-            val rpcOps = makeRPCOps(flowStarter, database)
+            makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService)
+            val rpcOps = makeRPCOps(flowStarter, database, smm)
             startMessagingService(rpcOps)
             installCoreFlows()
             val cordaServices = installCordaServices(flowStarter)
             tokenizableServices = nodeServices + cordaServices + schedulerService
-            registerCordappFlows()
+            registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             FlowLogicRefFactoryImpl.classloader = cordappLoader.appClassLoader
-
-            runOnStop += network::stop
-
             startShell(rpcOps)
-
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
 
@@ -399,11 +400,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         installCoreFlow(NotaryFlow.Client::class, service::createServiceFlow)
     }
 
-    private fun registerCordappFlows() {
+    private fun registerCordappFlows(smm: StateMachineManager) {
         cordappLoader.cordapps.flatMap { it.initiatedFlows }
                 .forEach {
                     try {
-                        registerInitiatedFlowInternal(it, track = false)
+                        registerInitiatedFlowInternal(smm, it, track = false)
                     } catch (e: NoSuchMethodException) {
                         log.error("${it.name}, as an initiated flow, must have a constructor with a single parameter " +
                                 "of type ${Party::class.java.name}")
@@ -413,13 +414,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 }
     }
 
-    /**
-     * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
-     * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
-     * @return An [Observable] of the initiated flows started by counter-parties.
-     */
-    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> {
-        return registerInitiatedFlowInternal(initiatedFlowClass, track = true)
+    internal fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>): Observable<T> {
+        return registerInitiatedFlowInternal(smm, initiatedFlowClass, track = true)
     }
 
     // TODO remove once not needed
@@ -428,7 +424,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 "It should accept a ${FlowSession::class.java.simpleName} instead"
     }
 
-    private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(initiatedFlow: Class<F>, track: Boolean): Observable<F> {
+    private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(smm: StateMachineManager, initiatedFlow: Class<F>, track: Boolean): Observable<F> {
         val constructors = initiatedFlow.declaredConstructors.associateBy { it.parameterTypes.toList() }
         val flowSessionCtor = constructors[listOf(FlowSession::class.java)]?.apply { isAccessible = true }
         val ctor: (FlowSession) -> F = if (flowSessionCtor == null) {
@@ -449,16 +445,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
         }
         val flowFactory = InitiatedFlowFactory.CorDapp(version, initiatedFlow.appName, ctor)
-        val observable = internalRegisterFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
+        val observable = internalRegisterFlowFactory(smm, initiatingFlow, flowFactory, initiatedFlow, track)
         log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
         return observable
     }
 
-    @VisibleForTesting
-    fun <F : FlowLogic<*>> internalRegisterFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
-                                                       flowFactory: InitiatedFlowFactory<F>,
-                                                       initiatedFlowClass: Class<F>,
-                                                       track: Boolean): Observable<F> {
+    internal fun <F : FlowLogic<*>> internalRegisterFlowFactory(smm: StateMachineManager,
+                                                                initiatingFlowClass: Class<out FlowLogic<*>>,
+                                                                flowFactory: InitiatedFlowFactory<F>,
+                                                                initiatedFlowClass: Class<F>,
+                                                                track: Boolean): Observable<F> {
         val observable = if (track) {
             smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
         } else {
@@ -495,12 +491,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, stateLoader: StateLoader, database: CordaPersistence, info: NodeInfo): MutableList<Any> {
+    private fun makeServices(keyPairs: Set<KeyPair>, schemaService: SchemaService, transactionStorage: WritableTransactionStorage, stateLoader: StateLoader, database: CordaPersistence, info: NodeInfo, identityService: IdentityService): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
         val metrics = MetricRegistry()
         attachments = NodeAttachmentService(metrics)
         val cordappProvider = CordappProviderImpl(cordappLoader, attachments)
-        val identityService = makeIdentityService(info)
         val keyManagementService = makeKeyManagementService(identityService, keyPairs)
         _services = ServiceHubInternalImpl(
                 identityService,
@@ -522,10 +517,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(database: CordaPersistence): WritableTransactionStorage = DBTransactionStorage()
-    private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration) {
+
+    private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService) {
         VaultSoftLockManager.install(services.vaultService, smm)
         ScheduledActivityObserver.install(services.vaultService, schedulerService)
-        HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig)
+        HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
     }
 
     @VisibleForTesting
@@ -554,10 +550,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
-    protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: (CordaPersistence) -> T): T {
+    protected open fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            val database = configureDatabase(props, configuration.database, { _services.identityService }, schemaService)
+            val database = configureDatabase(props, configuration.database, identityService, schemaService)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             database.transaction {
                 log.info("Connected to ${database.dataSource.connection.metaData.databaseProductName} database.")
@@ -617,13 +613,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeIdentityService(info: NodeInfo): IdentityService {
+    private fun makeIdentityService(info: NodeInfo): PersistentIdentityService {
         val trustStore = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
         val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val trustRoot = trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
         val clientCa = caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
         val caCertificates = arrayOf(info.legalIdentitiesAndCerts[0].certificate, clientCa.certificate.cert)
-        return PersistentIdentityService(info.legalIdentitiesAndCerts, trustRoot = trustRoot, caCertificates = *caCertificates)
+        return PersistentIdentityService(trustRoot, *caCertificates)
     }
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
@@ -634,9 +630,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // to indicate "Please shut down gracefully" vs "Shut down now".
         // Meanwhile, we let the remote service send us updates until the acknowledgment buffer overflows and it
         // unsubscribes us forcibly, rather than blocking the shutdown process.
-
-        // Notify observers that the node is shutting down
-        nodeStateObservable.onNext(NodeState.SHUTTING_DOWN)
 
         // Run shutdown hooks in opposite order to starting
         for (toRun in runOnStop.reversed()) {
@@ -705,7 +698,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
         }
 
-        val certPath = CertificateFactory.getInstance("X509").generateCertPath(certificates)
+        val certPath = X509CertificateFactory().delegate.generateCertPath(certificates)
         return Pair(PartyAndCertificate(certPath), keyPair)
     }
 
@@ -738,7 +731,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
         override val networkService: MessagingService get() = network
         override val clock: Clock get() = platformClock
-        override val myNodeStateObservable: Observable<NodeState> get() = nodeStateObservable
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
@@ -766,7 +758,23 @@ internal class FlowStarterImpl(private val serverThread: AffinityExecutor, priva
 }
 
 class ConfigurationException(message: String) : CordaException(message)
+
 /**
  * Thrown when a node is about to start and its network map cache doesn't contain any node.
  */
 internal class NetworkMapCacheEmptyException : Exception()
+
+fun configureDatabase(dataSourceProperties: Properties,
+                      databaseConfig: DatabaseConfig,
+                      identityService: IdentityService,
+                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
+    // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
+    // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
+    // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
+    // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
+    JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
+    val config = HikariConfig(dataSourceProperties)
+    val dataSource = HikariDataSource(config)
+    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
+    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
+}

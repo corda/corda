@@ -37,7 +37,7 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             @Column(name = "legal_identities_certs")
             @ManyToMany(cascade = arrayOf(CascadeType.ALL))
-            @JoinTable(name = "link_nodeinfo_party",
+            @JoinTable(name = "node_link_nodeinfo_party",
                     joinColumns = arrayOf(JoinColumn(name = "node_info_id")),
                     inverseJoinColumns = arrayOf(JoinColumn(name = "party_name")))
             val legalIdentitiesAndCerts: List<DBPartyAndCertificate>,

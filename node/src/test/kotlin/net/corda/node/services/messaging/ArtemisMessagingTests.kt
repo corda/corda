@@ -3,8 +3,6 @@ package net.corda.node.services.messaging
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.AuthServiceId
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
@@ -14,13 +12,12 @@ import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -29,13 +26,13 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.net.ServerSocket
+import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-//TODO This needs to be merged into P2PMessagingTest as that creates a more realistic environment
 class ArtemisMessagingTests {
     companion object {
         const val TOPIC = "platform.self"
@@ -61,6 +58,7 @@ class ArtemisMessagingTests {
     private var messagingServer: ArtemisMessagingServer? = null
 
     private lateinit var networkMapCache: NetworkMapCacheImpl
+
     @Before
     fun setUp() {
         val baseDirectory = temporaryFolder.root.toPath()
@@ -68,11 +66,10 @@ class ArtemisMessagingTests {
                 users = emptyList(),
                 id = AuthServiceId("TEST"))
         config = testNodeConfiguration(
-                baseDirectory = baseDirectory,
+                baseDirectory = temporaryFolder.root.toPath(),
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), ::makeTestIdentityService)
-        networkMapRegistrationFuture = doneFuture(Unit)
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
         networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database), rigorousMock())
     }
 
@@ -80,8 +77,6 @@ class ArtemisMessagingTests {
     fun cleanUp() {
         messagingClient?.stop()
         messagingServer?.stop()
-        messagingClient = null
-        messagingServer = null
         database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
@@ -124,9 +119,7 @@ class ArtemisMessagingTests {
 
     @Test
     fun `client should be able to send message to itself`() {
-        val receivedMessages = LinkedBlockingQueue<Message>()
-
-        val messagingClient = createAndStartClientAndServer(receivedMessages)
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer()
         val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
@@ -136,76 +129,45 @@ class ArtemisMessagingTests {
     }
 
     @Test
-    fun `client should be able to send message to itself before network map is available, and receive after`() {
-        val settableFuture = openFuture<Unit>()
-        networkMapRegistrationFuture = settableFuture
-
-        val receivedMessages = LinkedBlockingQueue<Message>()
-
-        val messagingClient = createAndStartClientAndServer(receivedMessages)
+    fun `platform version is included in the message`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer(platformVersion = 3)
         val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
-        settableFuture.set(Unit)
-        val firstActual: Message = receivedMessages.take()
-        assertEquals("first msg", String(firstActual.data))
-        assertNull(receivedMessages.poll(200, MILLISECONDS))
-    }
-
-    @Test
-    fun `client should be able to send large numbers of messages to itself before network map is available and survive restart, then receive messages`() {
-        // Crank the iteration up as high as you want... just takes longer to run.
-        val iterations = 100
-        networkMapRegistrationFuture = openFuture()
-
-        val receivedMessages = LinkedBlockingQueue<Message>()
-
-        val messagingClient = createAndStartClientAndServer(receivedMessages)
-        for (iter in 1..iterations) {
-            val message = messagingClient.createMessage(TOPIC, data = "first msg $iter".toByteArray())
-            messagingClient.send(message, messagingClient.myAddress)
-        }
-
-        // Stop client and server and create afresh.
-        messagingClient.stop()
-        messagingServer?.stop()
-
-        networkMapRegistrationFuture = doneFuture(Unit)
-
-        createAndStartClientAndServer(receivedMessages)
-        for (iter in 1..iterations) {
-            val firstActual: Message = receivedMessages.take()
-            assertThat(String(firstActual.data)).isEqualTo("first msg $iter")
-        }
-        assertNull(receivedMessages.poll(200, MILLISECONDS))
+        val received = receivedMessages.take()
+        assertThat(received.platformVersion).isEqualTo(3)
     }
 
     private fun startNodeMessagingClient() {
         messagingClient!!.start()
     }
 
-    private fun createAndStartClientAndServer(receivedMessages: LinkedBlockingQueue<Message>): P2PMessagingClient {
+    private fun createAndStartClientAndServer(platformVersion: Int = 1): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
+        val receivedMessages = LinkedBlockingQueue<ReceivedMessage>()
+
         createMessagingServer().start()
 
-        val messagingClient = createMessagingClient()
+        val messagingClient = createMessagingClient(platformVersion = platformVersion)
         startNodeMessagingClient()
         messagingClient.addMessageHandler(TOPIC) { message, _ ->
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
-        thread { messagingClient.run() }
-        return messagingClient
+        thread(isDaemon = true) { messagingClient.run() }
+
+        return Pair(messagingClient, receivedMessages)
     }
 
-    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort)): P2PMessagingClient {
+    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort), platformVersion: Int = 1): P2PMessagingClient {
         return database.transaction {
             P2PMessagingClient(
                     config,
-                    MOCK_VERSION_INFO,
+                    MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
                     server,
                     identity.public,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
-                    database).apply {
+                    database
+            ).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }

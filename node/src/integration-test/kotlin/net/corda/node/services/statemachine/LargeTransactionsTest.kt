@@ -4,15 +4,15 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.internal.InputStreamAndHash
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.aliceAndBob
+import net.corda.core.utilities.getOrThrow
+import net.corda.nodeapi.User
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.driver.driver
-import net.corda.testing.dummyCommand
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -65,15 +65,16 @@ class LargeTransactionsTest {
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 2)
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024 * 3, 3)
         driver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.testing.contracts")) {
-            val (alice, _) = aliceAndBob()
-            alice.useRPC {
-                val hash1 = it.uploadAttachment(bigFile1.inputStream)
-                val hash2 = it.uploadAttachment(bigFile2.inputStream)
-                val hash3 = it.uploadAttachment(bigFile3.inputStream)
-                val hash4 = it.uploadAttachment(bigFile4.inputStream)
+            val rpcUser = User("admin", "admin", setOf("ALL"))
+            val (alice, _) = listOf(ALICE_NAME, BOB_NAME).map { startNode(providedName = it, rpcUsers = listOf(rpcUser)) }.transpose().getOrThrow()
+            alice.rpcClientToNode().use(rpcUser.username, rpcUser.password) {
+                val hash1 = it.proxy.uploadAttachment(bigFile1.inputStream)
+                val hash2 = it.proxy.uploadAttachment(bigFile2.inputStream)
+                val hash3 = it.proxy.uploadAttachment(bigFile3.inputStream)
+                val hash4 = it.proxy.uploadAttachment(bigFile4.inputStream)
                 assertEquals(hash1, bigFile1.sha256)
                 // Should not throw any exceptions.
-                it.startFlow(::SendLargeTransactionFlow, hash1, hash2, hash3, hash4).returnValue.get()
+                it.proxy.startFlow(::SendLargeTransactionFlow, hash1, hash2, hash3, hash4).returnValue.getOrThrow()
             }
         }
     }

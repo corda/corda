@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Removed confusing property database.initDatabase, enabling its guarded behaviour with the dev-mode.
+  In devMode Hibernate will try to create or update database schemas, otherwise it will expect relevant schemas to be present
+  in the database (pre configured via DDL scripts or equivalent), and validate these are correct.
 
 * ``AttachmentStorage`` now allows providing metadata on attachments upload - username and filename, currently as plain
   strings. Those can be then used for querying, utilizing ``queryAttachments`` method of the same interface.
@@ -90,6 +93,9 @@ UNRELEASED
   compatibility zone network management service's address.
 
 * ``waitForAllNodesToFinish()`` method in ``DriverDSLExposedInterface`` has instead become a parameter on driver creation.
+
+* ``database.transactionIsolationLevel`` values now follow the ``java.sql.Connection`` int constants but without the
+  "TRANSACTION_" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
 
 .. _changelog_v1:
 

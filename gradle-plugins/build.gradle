@@ -10,6 +10,7 @@ buildscript {
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
+    ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.kotlin_version = constants.getProperty("kotlinVersion")
 
     repositories {
