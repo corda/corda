@@ -75,7 +75,9 @@ class TestNetworkParametersGenerator : NetworkParametersGenerator {
      * @return list of latest [NodeInfo]s
      */
     private fun getAllNodeInfos(nodesDirs: List<Path>): List<NodeInfo> {
-        val nodeInfoFiles = nodesDirs.map { dir -> dir.list { it.filter { "nodeInfo-" in it.toString() }.toList()[0] } } // We take the first one only
+        val nodeInfoFiles = nodesDirs.map { dir ->
+            dir.list { it.filter { "nodeInfo-" in it.toString() }.findFirst().get() }
+        }
         return nodeInfoFiles.mapNotNull { processFile(it) }
     }
 

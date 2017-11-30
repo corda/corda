@@ -10,7 +10,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.nodeapi.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.NodeInfoFilesCopier
 import net.corda.testing.*
 import net.corda.testing.node.MockKeyManagementService
 import org.assertj.core.api.Assertions.assertThat

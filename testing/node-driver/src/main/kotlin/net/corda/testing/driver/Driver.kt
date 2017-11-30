@@ -35,7 +35,7 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
-import net.corda.nodeapi.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.NodeInfoFilesCopier
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.config.toConfig

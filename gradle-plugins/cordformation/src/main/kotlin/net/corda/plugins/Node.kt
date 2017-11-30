@@ -1,9 +1,9 @@
 package net.corda.plugins
 
-import com.typesafe.config.*
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValueFactory
 import net.corda.cordform.CordformNode
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
 import java.io.File
 import java.nio.charset.StandardCharsets

@@ -10,6 +10,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.TaskAction
+import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
