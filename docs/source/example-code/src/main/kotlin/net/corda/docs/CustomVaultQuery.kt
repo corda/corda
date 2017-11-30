@@ -45,7 +45,7 @@ object CustomVaultQuery {
             """
             log.info("SQL to execute: $nativeQuery")
             val session = services.jdbcSession()
-            session.prepareStatement(nativeQuery).use { prepStatement ->
+            return session.prepareStatement(nativeQuery).use { prepStatement ->
                 prepStatement.executeQuery().use { rs ->
                     val topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
                     while (rs.next()) {
@@ -54,9 +54,9 @@ object CustomVaultQuery {
                         log.info("$currencyStr : $amount")
                         topUpLimits.add(Amount(amount, Currency.getInstance(currencyStr)))
                     }
+                    topUpLimits
                 }
             }
-            return topUpLimits
         }
     }
 }
