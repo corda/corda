@@ -90,9 +90,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 issuableCurrencies = nodeData.extraServices.filterIsInstance<CurrencyIssuer>().map { it.currency.toString() }
         )
 
-        if (notary != null && notaryIdentity != null && notaryIdentity?.name != nodeConfig.myLegalName)
-            throw IllegalArgumentException("Only single notary allowed")
-
         val wrapper = NodeConfigWrapper(baseDir, nodeConfig)
 
         if (nodes.putIfAbsent(wrapper.key, wrapper) != null) {
@@ -123,7 +120,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     fun runCorda(pty: R3Pty, config: NodeConfigWrapper): Boolean {
         try {
-            check(notaryIdentity != null || config.nodeConfig.notary != null) { "Can't start node without notary in the network" }
+            require((config.nodeConfig.notary != null).xor(notaryIdentity != null)) { "There must be exactly one notary in the network" }
             config.nodeDir.createDirectories()
 
             // Install any built-in plugins into the working directory.
@@ -137,11 +134,11 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             val cordaEnv = System.getenv().toMutableMap().apply {
                 jvm.setCapsuleCacheDir(this)
             }
-            if (config.nodeConfig.notary != null)
+            if (networkParametersCopier == null)
                 makeNetworkParametersCopier(config)
+            networkParametersCopier!!.install(config.nodeDir)
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
-            networkParametersCopier?.install(config.nodeDir) ?: throw IllegalArgumentException("No network parameters specified")
             return true
         } catch (e: Exception) {
             log.log(Level.SEVERE, "Failed to launch Corda: ${e.message}", e)
@@ -150,22 +147,20 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     }
 
     private fun makeNetworkParametersCopier(config: NodeConfigWrapper) {
-        if (notaryIdentity == null) {
-            try {
-                if (nodeSerializationEnv == null) initialiseSerialization()
-                notaryIdentity = getNotaryIdentity(config)
-                networkParametersCopier = NetworkParametersCopier(NetworkParameters(
-                        minimumPlatformVersion = 1,
-                        notaries = listOf(NotaryInfo(notaryIdentity!!, config.nodeConfig.notary!!.validating)),
-                        modifiedTime = Instant.now(),
-                        eventHorizon = 10000.days,
-                        maxMessageSize = 40000,
-                        maxTransactionSize = 40000,
-                        epoch = 1
-                ))
-            } finally {
-                if (_contextSerializationEnv.get() != null) _contextSerializationEnv.set(null)
-            }
+        try {
+            if (nodeSerializationEnv == null) initialiseSerialization()
+            notaryIdentity = getNotaryIdentity(config)
+            networkParametersCopier = NetworkParametersCopier(NetworkParameters(
+                    minimumPlatformVersion = 1,
+                    notaries = listOf(NotaryInfo(notaryIdentity!!, config.nodeConfig.notary!!.validating)),
+                    modifiedTime = Instant.now(),
+                    eventHorizon = 10000.days,
+                    maxMessageSize = 40000,
+                    maxTransactionSize = 40000,
+                    epoch = 1
+            ))
+        } finally {
+            if (_contextSerializationEnv.get() != null) _contextSerializationEnv.set(null)
         }
     }
 
