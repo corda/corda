@@ -3,8 +3,6 @@ package net.corda.node.utilities.registration
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -18,7 +16,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
@@ -70,9 +67,8 @@ class NetworkRegistrationHelperDriverTest {
     fun `node registration correct root cert`() {
         driver(portAllocation = portAllocation,
                 compatibilityZoneURL = compatibilityZoneUrl,
-                startNodesInProcess = true) {
-
-            writeRootCaCertificateForNode(baseDirectory(ALICE_NAME.toString()), rootCert)
+                startNodesInProcess = true,
+                rootCertificate = rootCert) {
 
             // Wait for the node to have started.
             startNode(providedName = ALICE_NAME, initialRegistration = true).get()
@@ -101,10 +97,8 @@ class NetworkRegistrationHelperDriverTest {
     fun `node registration wrong root cert`() {
         driver(portAllocation = portAllocation,
                 compatibilityZoneURL = compatibilityZoneUrl,
-                startNodesInProcess = true) {
-
-            writeRootCaCertificateForNode(baseDirectory(ALICE_NAME.toString()),
-                    createSelfKeyAndSelfSignedCertificate().certificate)
+                startNodesInProcess = true,
+                rootCertificate = createSelfKeyAndSelfSignedCertificate().certificate) {
 
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME, initialRegistration = true).get()
@@ -181,10 +175,4 @@ private fun createSelfKeyAndSelfSignedCertificate(): CertificateAndKeyPair {
                     organisation = "R3 Ltd", locality = "London",
                     country = "GB"), rootCAKey)
     return CertificateAndKeyPair(rootCACert, rootCAKey)
-}
-
-fun writeRootCaCertificateForNode(path: java.nio.file.Path, caRootCertificate: X509CertificateHolder) {
-    val fullPath = path / "certificates" / "rootcacert.cer"
-    fullPath.parent.createDirectories()
-    X509Utilities.saveCertificateAsPEMFile(caRootCertificate, fullPath)
 }

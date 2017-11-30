@@ -180,5 +180,5 @@ class WrongRootCaCertificateException(expected: Certificate,
             The Root CA returned back from the registration process does not match the expected Root CA
             expected: $expected
             actual: $actual
-            expected is stored in: $expectedFilePath
+            the expected certificate is stored in: $expectedFilePath
             """.trimMargin())
