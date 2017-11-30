@@ -8,13 +8,13 @@ import java.lang.reflect.Type
 
 @CordaCustomSerializer
 @Suppress("UNUSED")
-class DoubleArraySerializer : SerializationCustomSerializer {
+class DoubleArraySerializer : SerializationCustomSerializer<DoubleArray, DoubleArraySerializer.Proxy> {
     @CordaCustomSerializerProxy
     data class Proxy(val amount: kotlin.DoubleArray)
 
     override val type: Type get() = DoubleArray::class.java
     override val ptype: Type get() = Proxy::class.java
 
-    override fun fromProxy(proxy: Any): Any = DoubleArray.copyOf((proxy as Proxy).amount)
-    override fun toProxy(obj: Any): Any = Proxy((obj as DoubleArray).toArray())
+    override fun fromProxy(proxy: Proxy) = DoubleArray.copyOf(proxy.amount)
+    override fun toProxy(obj: DoubleArray) = Proxy(obj.toArray())
 }

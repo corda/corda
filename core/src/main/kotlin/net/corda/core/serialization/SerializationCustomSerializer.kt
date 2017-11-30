@@ -21,18 +21,18 @@ import java.lang.reflect.Type
  * @property type the type of the object that this class is proxying
  * @property ptype the type of the proxy object used as an intermediate representation of [type]
  */
-interface SerializationCustomSerializer {
+interface SerializationCustomSerializer<OBJ, PROXY> {
     /**
      * Should facilitate the conversion of the third party object into the serializable
      * local class specified by [ptype]
      */
-    fun toProxy(obj: Any) : Any
+    fun toProxy(obj: OBJ) : PROXY
 
     /**
      * Should facilitate the conversion of the proxy object into a new instance of the
      * unserializable type
      */
-    fun fromProxy(proxy: Any) : Any
+    fun fromProxy(proxy: PROXY) : OBJ
 
     /**
      * Should be set to the type of the object being proxied

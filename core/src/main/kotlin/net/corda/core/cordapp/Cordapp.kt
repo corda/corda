@@ -39,7 +39,7 @@ interface Cordapp {
     val services: List<Class<out SerializeAsToken>>
     val serializationWhitelists: List<SerializationWhitelist>
     val serializationCustomSerializerProxies: List<Class<*>>
-    val serializationCustomSerializers: List<Class<out SerializationCustomSerializer>>
+    val serializationCustomSerializers: List<Class<out SerializationCustomSerializer<*, *>>>
     val customSchemas: Set<MappedSchema>
     val jarPath: URL
     val cordappClasses: List<String>

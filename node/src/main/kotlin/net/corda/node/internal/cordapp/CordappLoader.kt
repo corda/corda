@@ -254,7 +254,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         return scanResult.getClassesWithAnnotation(Class::class, CordaCustomSerializerProxy::class)
     }
 
-    private fun findSerialzers(scanResult: RestrictedScanResult) : List<Class<out SerializationCustomSerializer>> {
+    private fun findSerialzers(scanResult: RestrictedScanResult) : List<Class<out SerializationCustomSerializer<*, *>>> {
         return scanResult.getClassesWithAnnotation(SerializationCustomSerializer::class, CordaCustomSerializer::class)
     }
 

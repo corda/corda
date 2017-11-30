@@ -7,12 +7,13 @@ import java.lang.reflect.Type
 
 @CordaCustomSerializer
 @Suppress("UNUSED")
-class MultiCurrencyAmountSerializer : SerializationCustomSerializer {
+class MultiCurrencyAmountSerializer :
+        SerializationCustomSerializer<MultiCurrencyAmount, MultiCurrencyAmountSerializer.Proxy> {
     @CordaCustomSerializerProxy
     data class Proxy(val curencies : Map<Currency, Double>)
 
-    override fun toProxy(obj: Any): Any = Proxy((obj as MultiCurrencyAmount).toMap())
-    override fun fromProxy(proxy: Any): Any = MultiCurrencyAmount.of((proxy as Proxy).curencies)
+    override fun toProxy(obj: MultiCurrencyAmount) = Proxy(obj.toMap())
+    override fun fromProxy(proxy: Proxy) = MultiCurrencyAmount.of(proxy.curencies)
 
     override val type: Type get() = MultiCurrencyAmount::class.java
     override val ptype: Type get() = Proxy::class.java

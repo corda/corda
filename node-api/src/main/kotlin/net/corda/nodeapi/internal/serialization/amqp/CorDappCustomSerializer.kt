@@ -8,7 +8,7 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
 class CorDappCustomSerializer(
-        private val serialiser: SerializationCustomSerializer,
+        private val serialiser: SerializationCustomSerializer<*, *>,
         factory: SerializerFactory)
     : AMQPSerializer<Any>, SerializerFor {
     override val revealSubclassesInSchema: Boolean get() = false
@@ -21,7 +21,8 @@ class CorDappCustomSerializer(
     override fun writeClassInfo(output: SerializationOutput) {}
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        val proxy = serialiser.toProxy(obj)
+        @Suppress("UNCHECKED_CAST")
+        val proxy = (serialiser as SerializationCustomSerializer<Any?,Any?>).toProxy(obj)
 
         data.withDescribed(descriptor) {
             data.withList {
@@ -32,9 +33,10 @@ class CorDappCustomSerializer(
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
-        return serialiser.fromProxy(uncheckedCast(proxySerializer.readObject(obj, schema, input)))
-    }
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput) =
+            @Suppress("UNCHECKED_CAST")
+            (serialiser as SerializationCustomSerializer<Any?,Any?>).fromProxy(
+                    uncheckedCast(proxySerializer.readObject(obj, schema, input)))!!
 
     override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == type
 }

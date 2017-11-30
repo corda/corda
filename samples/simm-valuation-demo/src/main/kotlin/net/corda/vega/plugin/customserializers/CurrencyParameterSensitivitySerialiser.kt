@@ -12,7 +12,8 @@ import java.lang.reflect.Type
 
 @CordaCustomSerializer
 @Suppress("UNUSED")
-class CurrencyParameterSensitivitySerializer : SerializationCustomSerializer {
+class CurrencyParameterSensitivitySerializer :
+        SerializationCustomSerializer<CurrencyParameterSensitivity, CurrencyParameterSensitivitySerializer.Proxy> {
     @CordaCustomSerializerProxy
     data class Proxy(val currency: Currency, val marketDataName: MarketDataName<*>,
                      val parameterMetadata: List<ParameterMetadata>,
@@ -21,13 +22,13 @@ class CurrencyParameterSensitivitySerializer : SerializationCustomSerializer {
     override val type: Type get() = CurrencyParameterSensitivity::class.java
     override val ptype: Type get() = Proxy::class.java
 
-    override fun fromProxy(proxy: Any): Any =
+    override fun fromProxy(proxy: CurrencyParameterSensitivitySerializer.Proxy) =
             CurrencyParameterSensitivity.of(
-                    (proxy as Proxy).marketDataName,
+                    proxy.marketDataName,
                     proxy.parameterMetadata,
                     proxy.currency,
                     proxy.sensitivity)
 
-    override fun toProxy(obj: Any): Any = Proxy ((obj as CurrencyParameterSensitivity).currency,
+    override fun toProxy(obj: CurrencyParameterSensitivity) = Proxy((obj as CurrencyParameterSensitivity).currency,
             obj.marketDataName, obj.parameterMetadata, obj.sensitivity)
 }
