@@ -1,4 +1,4 @@
-package net.corda.testing.common.internal
+package net.corda.nodeapi.internal
 
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.entropyToKeyPair

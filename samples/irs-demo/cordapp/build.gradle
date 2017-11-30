@@ -38,7 +38,7 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
     compile group: 'commons-io', name: 'commons-io', version: '2.5'
 
-    testCompile project(':node-driver')
+    cordaCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }

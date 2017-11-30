@@ -2,9 +2,6 @@ package net.corda.plugins
 
 import com.typesafe.config.*
 import net.corda.cordform.CordformNode
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.RDN
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
 import java.io.File
 import java.nio.charset.StandardCharsets
@@ -122,18 +119,10 @@ class Node(private val project: Project) : CordformNode() {
             project.logger.error("Node has a null name - cannot create node")
             throw IllegalStateException("Node has a null name - cannot create node")
         }
-
-        val dirName = try {
-            val o = X500Name(name).getRDNs(BCStyle.O)
-            if (o.size > 0) {
-                o.first().first.value.toString()
-            } else {
-                name
-            }
-        } catch(_ : IllegalArgumentException) {
-            // Can't parse as an X500 name, use the full string
-            name
-        }
+        // Parsing O= part directly because importing BouncyCastle provider in Cordformation causes problems
+        // with loading our custom X509EdDSAEngine.
+        val organizationName = name.trim().split(",").firstOrNull { it.startsWith("O=") }?.substringAfter("=")
+        val dirName = organizationName ?: name
         nodeDir = File(rootDir.toFile(), dirName)
     }
 
@@ -151,7 +140,7 @@ class Node(private val project: Project) : CordformNode() {
      * Installs the corda fat JAR to the node directory.
      */
     private fun installCordaJar() {
-        val cordaJar = verifyAndGetCordaJar()
+        val cordaJar = verifyAndGetRuntimeJar("corda")
         project.copy {
             it.apply {
                 from(cordaJar)
@@ -166,7 +155,7 @@ class Node(private val project: Project) : CordformNode() {
      * Installs the corda webserver JAR to the node directory
      */
     private fun installWebserverJar() {
-        val webJar = verifyAndGetWebserverJar()
+        val webJar = verifyAndGetRuntimeJar("corda-webserver")
         project.copy {
             it.apply {
                 from(webJar)
@@ -250,34 +239,17 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     /**
-     * Find the corda JAR amongst the dependencies.
+     * Find the given JAR amongst the dependencies
+     * @param jarName JAR name without the version part, for example for corda-2.0-SNAPSHOT.jar provide only "corda" as jarName
      *
-     * @return A file representing the Corda JAR.
+     * @return A file representing found JAR
      */
-    private fun verifyAndGetCordaJar(): File {
-        val maybeCordaJAR = project.configuration("runtime").filter {
-            it.toString().contains("corda-$releaseVersion.jar") || it.toString().contains("corda-enterprise-$releaseVersion.jar")
-        }
-        if (maybeCordaJAR.isEmpty) {
-            throw RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-$releaseVersion.jar\"")
-        } else {
-            val cordaJar = maybeCordaJAR.singleFile
-            assert(cordaJar.isFile)
-            return cordaJar
-        }
-    }
-
-    /**
-     * Find the corda JAR amongst the dependencies
-     *
-     * @return A file representing the Corda webserver JAR
-     */
-    private fun verifyAndGetWebserverJar(): File {
+    private fun verifyAndGetRuntimeJar(jarName: String): File {
         val maybeJar = project.configuration("runtime").filter {
-            it.toString().contains("corda-webserver-$releaseVersion.jar")
+            "$jarName-$releaseVersion.jar" in it.toString() || "$jarName-enterprise-$releaseVersion.jar" in it.toString()
         }
         if (maybeJar.isEmpty) {
-            throw RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-$releaseVersion.jar\"")
+            throw IllegalStateException("No $jarName JAR found. Have you deployed the Corda project to Maven? Looked for \"$jarName-$releaseVersion.jar\"")
         } else {
             val jar = maybeJar.singleFile
             assert(jar.isFile)

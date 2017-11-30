@@ -40,7 +40,7 @@ fun <A> springDriver(
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
-        notarySpecs: List<NotarySpec>,
+        notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
         dsl: SpringDriverExposedDSLInterface.() -> A
 ) = genericDriver(

@@ -3,15 +3,14 @@ package net.corda.plugins
 import groovy.lang.Closure
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.cordform.NetworkParametersGenerator
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.TaskAction
-import java.io.File
 import java.net.URLClassLoader
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -28,6 +27,7 @@ open class Cordform : DefaultTask() {
      */
     @Suppress("MemberVisibilityCanPrivate")
     var definitionClass: String? = null
+    private val networkParametersGenClass: String = "net.corda.nodeapi.internal.TestNetworkParametersGenerator"
     private var directory = Paths.get("build", "nodes")
     private val nodes = mutableListOf<Node>()
 
@@ -114,6 +114,19 @@ open class Cordform : DefaultTask() {
     }
 
     /**
+     * The parametersGenerator needn't be compiled until just before our build method, so we load it manually via sourceSets.main.runtimeClasspath.
+     */
+    private fun loadParametersGenerator(): NetworkParametersGenerator {
+        val plugin = project.convention.getPlugin(JavaPluginConvention::class.java)
+        val classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
+        val urls = classpath.files.map { it.toURI().toURL() }.toTypedArray()
+        return URLClassLoader(urls, NetworkParametersGenerator::class.java.classLoader)
+                .loadClass(networkParametersGenClass)
+                .asSubclass(NetworkParametersGenerator::class.java)
+                .newInstance()
+    }
+
+    /**
      * This task action will create and install the nodes based on the node configurations added.
      */
     @Suppress("unused")
@@ -124,6 +137,7 @@ open class Cordform : DefaultTask() {
         installRunScript()
         nodes.forEach(Node::build)
         generateAndInstallNodeInfos()
+        generateAndInstallNetworkParameters()
     }
 
     private fun initializeConfiguration() {
@@ -142,6 +156,12 @@ open class Cordform : DefaultTask() {
         }
     }
 
+    private fun generateAndInstallNetworkParameters() {
+        project.logger.info("Generating and installing network parameters")
+        val networkParamsGenerator = loadParametersGenerator()
+        networkParamsGenerator.run(nodes.map { it.fullPath() })
+    }
+
     private fun generateAndInstallNodeInfos() {
         generateNodeInfos()
         installNodeInfos()
@@ -149,7 +169,7 @@ open class Cordform : DefaultTask() {
 
     private fun generateNodeInfos() {
         project.logger.info("Generating node infos")
-        var nodeProcesses = buildNodeProcesses()
+        val nodeProcesses = buildNodeProcesses()
         try {
             validateNodeProcessess(nodeProcesses)
         } finally {
@@ -158,9 +178,10 @@ open class Cordform : DefaultTask() {
     }
 
     private fun buildNodeProcesses(): Map<Node, Process> {
-        return nodes
-                .map { buildNodeProcess(it) }
-                .toMap()
+        val command = generateNodeInfoCommand()
+        return nodes.map {
+                    it.makeLogDirectory()
+                    buildProcess(it, command, "generate-info.log") }.toMap()
     }
 
     private fun validateNodeProcessess(nodeProcesses: Map<Node, Process>) {
@@ -175,14 +196,13 @@ open class Cordform : DefaultTask() {
         }
     }
 
-    private fun buildNodeProcess(node: Node): Pair<Node, Process> {
-        node.makeLogDirectory()
-        var process = ProcessBuilder(generateNodeInfoCommand())
+    private fun buildProcess(node: Node, command: List<String>, logFile: String): Pair<Node, Process> {
+        val process = ProcessBuilder(command)
                 .directory(node.fullPath().toFile())
                 .redirectErrorStream(true)
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
                 // Must redirect to output or logger (node log is still written, this is just startup banner)
-                .redirectOutput(node.logFile().toFile())
+                .redirectOutput(node.logFile(logFile).toFile())
                 .addEnvironment("CAPSULE_CACHE_DIR", Node.capsuleCacheDir)
                 .start()
         return Pair(node, process)
@@ -224,6 +244,6 @@ open class Cordform : DefaultTask() {
             }
         }
     }
-    private fun Node.logFile(): Path = this.logDirectory().resolve("generate-info.log")
+    private fun Node.logFile(name: String): Path = this.logDirectory().resolve(name)
     private fun ProcessBuilder.addEnvironment(key: String, value: String) = this.apply { environment().put(key, value) }
 }
