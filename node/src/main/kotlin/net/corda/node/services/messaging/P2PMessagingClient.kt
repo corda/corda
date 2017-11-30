@@ -68,7 +68,8 @@ class P2PMessagingClient(config: NodeConfiguration,
                          private val myIdentity: PublicKey,
                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                          private val database: CordaPersistence,
-                         advertisedAddress: NetworkHostAndPort = serverAddress
+                         advertisedAddress: NetworkHostAndPort = serverAddress,
+                         private val maxMessageSize: Int
 ) : SingletonSerializeAsToken(), MessagingService {
     companion object {
         private val log = contextLogger()
@@ -146,7 +147,7 @@ class P2PMessagingClient(config: NodeConfiguration,
 
     override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
     private val messageRedeliveryDelaySeconds = config.messageRedeliveryDelaySeconds.toLong()
-    private val artemis = ArtemisMessagingClient(config, serverAddress)
+    private val artemis = ArtemisMessagingClient(config, serverAddress, maxMessageSize)
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
 

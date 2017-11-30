@@ -10,7 +10,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 
-class ArtemisMessagingClient(private val config: SSLConfiguration, private val serverAddress: NetworkHostAndPort) {
+class ArtemisMessagingClient(private val config: SSLConfiguration, private val serverAddress: NetworkHostAndPort, private val maxMessageSize: Int) {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
     }
@@ -30,7 +30,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration, private val s
             // would be the default and the two lines below can be deleted.
             connectionTTL = -1
             clientFailureCheckPeriod = -1
-            minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            minLargeMessageSize = maxMessageSize // TODO check that option!
             isUseGlobalPools = nodeSerializationEnv != null
         }
         val sessionFactory = locator.createSessionFactory()

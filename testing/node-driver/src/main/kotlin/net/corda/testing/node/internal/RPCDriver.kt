@@ -25,6 +25,7 @@ import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.testing.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.NotarySpec
@@ -430,7 +431,7 @@ data class RPCDriverDSL(
             brokerHandle: RpcBrokerHandle
     ): RpcServerHandle {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
-            minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
+            minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false
         }
         val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))
