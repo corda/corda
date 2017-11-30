@@ -2,7 +2,6 @@
 
 package net.corda.testing
 
-import com.nhaarman.mockito_kotlin.doCallRealMethod
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.Actor
@@ -74,10 +73,6 @@ fun testNodeConfiguration(
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
-        doCallRealMethod().whenever(it).certificatesDirectory
-        doCallRealMethod().whenever(it).trustStoreFile
-        doCallRealMethod().whenever(it).sslKeystore
-        doCallRealMethod().whenever(it).nodeKeystore
     }
 }
 
