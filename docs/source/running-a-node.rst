@@ -45,7 +45,7 @@ example, the following would run the node with a heap size of 2048MB:
 
 .. code-block:: shell
 
-   java -jar corda.jar -Xmx2048m
+   java -Xmx2048m -jar corda.jar
 
 You should do this if you receive an ``OutOfMemoryError`` exception when interacting with the node.
 
