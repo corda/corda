@@ -63,8 +63,8 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
                 pollServerForCertificates(requestId)
             } catch (certificateRequestException: CertificateRequestException) {
                 System.err.println(certificateRequestException.message)
-                println("Please make sure the details in configuration file are correct and try again.")
-                println("Corda node will now terminate.")
+                System.err.println("Please make sure the details in configuration file are correct and try again.")
+                System.err.println("Corda node will now terminate.")
                 requestIdStore.deleteIfExists()
                 throw certificateRequestException
             }
