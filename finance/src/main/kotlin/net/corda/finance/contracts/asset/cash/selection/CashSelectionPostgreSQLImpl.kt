@@ -27,8 +27,7 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
     //       2) The window function accumulated column (`total`) does not include the current row (starts from 0) and cannot
     //          appear in the WHERE clause, hence restricting row selection and adjusting the returned total in the outer query.
     //       3) Currently (version 9.6), FOR UPDATE cannot be specified with window functions
-    override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
-                              onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>) : ResultSet {
+    override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
         val selectJoin = """SELECT nested.transaction_id, nested.output_index, nested.pennies,
                         nested.total+nested.pennies as total_pennies, nested.lock_id
                        FROM
@@ -51,29 +50,32 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
                         nested WHERE nested.total < ?
                      """
 
-        val statement = connection.prepareStatement(selectJoin)
-        statement.setString(1, amount.token.toString())
-        statement.setString(2, lockId.toString())
-        var paramOffset = 0
-        if (notary != null) {
-            statement.setString(3, notary.name.toString())
-            paramOffset += 1
-        }
-        if (onlyFromIssuerParties.isNotEmpty()) {
-            val issuerKeys = connection.createArrayOf("VARCHAR", onlyFromIssuerParties.map
-            { it.owningKey.toBase58String() }.toTypedArray())
-            statement.setArray(3 + paramOffset, issuerKeys)
-            paramOffset += 1
-        }
-        if (withIssuerRefs.isNotEmpty()) {
-            val issuerRefs = connection.createArrayOf("BYTEA", withIssuerRefs.map
-            { it.bytes }.toTypedArray())
-            statement.setArray(3 + paramOffset, issuerRefs)
-            paramOffset += 1
-        }
-        statement.setLong(3 + paramOffset, amount.quantity)
-        log.debug { statement.toString() }
+        connection.prepareStatement(selectJoin).use { statement ->
+            statement.setString(1, amount.token.toString())
+            statement.setString(2, lockId.toString())
+            var paramOffset = 0
+            if (notary != null) {
+                statement.setString(3, notary.name.toString())
+                paramOffset += 1
+            }
+            if (onlyFromIssuerParties.isNotEmpty()) {
+                val issuerKeys = connection.createArrayOf("VARCHAR", onlyFromIssuerParties.map
+                { it.owningKey.toBase58String() }.toTypedArray())
+                statement.setArray(3 + paramOffset, issuerKeys)
+                paramOffset += 1
+            }
+            if (withIssuerRefs.isNotEmpty()) {
+                val issuerRefs = connection.createArrayOf("BYTEA", withIssuerRefs.map
+                { it.bytes }.toTypedArray())
+                statement.setArray(3 + paramOffset, issuerRefs)
+                paramOffset += 1
+            }
+            statement.setLong(3 + paramOffset, amount.quantity)
+            log.debug { statement.toString() }
 
-        return statement.executeQuery()
+            statement.executeQuery().use { rs ->
+                return withResultSet(rs)
+            }
+        }
     }
 }

@@ -33,7 +33,7 @@ class CommercialPaperTest {
         ledger {
             transaction {
                 attachments(CP_PROGRAM_ID)
-                input(CP_PROGRAM_ID) { inState }
+                input(CP_PROGRAM_ID, inState)
                 verifies()
             }
         }
@@ -46,8 +46,8 @@ class CommercialPaperTest {
         val inState = getPaper()
         ledger {
             transaction {
-                input(CP_PROGRAM_ID) { inState }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                input(CP_PROGRAM_ID, inState)
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
                 attachments(CP_PROGRAM_ID)
                 verifies()
             }
@@ -61,8 +61,8 @@ class CommercialPaperTest {
         val inState = getPaper()
         ledger {
             transaction {
-                input(CP_PROGRAM_ID) { inState }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                input(CP_PROGRAM_ID, inState)
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
                 attachments(CP_PROGRAM_ID)
                 `fails with`("the state is propagated")
             }
@@ -76,11 +76,11 @@ class CommercialPaperTest {
         val inState = getPaper()
         ledger {
             transaction {
-                input(CP_PROGRAM_ID) { inState }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                input(CP_PROGRAM_ID, inState)
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
                 attachments(CP_PROGRAM_ID)
                 `fails with`("the state is propagated")
-                output(CP_PROGRAM_ID, "alice's paper") { inState.withOwner(ALICE) }
+                output(CP_PROGRAM_ID, "alice's paper", inState.withOwner(ALICE))
                 verifies()
             }
         }
@@ -92,15 +92,15 @@ class CommercialPaperTest {
     fun `simple issuance with tweak`() {
         ledger {
             transaction {
-                output(CP_PROGRAM_ID, "paper") { getPaper() } // Some CP is issued onto the ledger by MegaCorp.
+                output(CP_PROGRAM_ID, "paper", getPaper()) // Some CP is issued onto the ledger by MegaCorp.
                 attachments(CP_PROGRAM_ID)
                 tweak {
                     // The wrong pubkey.
-                    command(BIG_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                    command(BIG_CORP_PUBKEY, CommercialPaper.Commands.Issue())
                     timeWindow(TEST_TX_TIME)
                     `fails with`("output states are issued by a command signer")
                 }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Issue())
                 timeWindow(TEST_TX_TIME)
                 verifies()
             }
@@ -112,15 +112,15 @@ class CommercialPaperTest {
     @Test
     fun `simple issuance with tweak and top level transaction`() {
         transaction {
-            output(CP_PROGRAM_ID, "paper") { getPaper() } // Some CP is issued onto the ledger by MegaCorp.
+            output(CP_PROGRAM_ID, "paper", getPaper()) // Some CP is issued onto the ledger by MegaCorp.
             attachments(CP_PROGRAM_ID)
             tweak {
                 // The wrong pubkey.
-                command(BIG_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                command(BIG_CORP_PUBKEY, CommercialPaper.Commands.Issue())
                 timeWindow(TEST_TX_TIME)
                 `fails with`("output states are issued by a command signer")
             }
-            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+            command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Issue())
             timeWindow(TEST_TX_TIME)
             verifies()
         }
@@ -140,8 +140,8 @@ class CommercialPaperTest {
 
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
-                output(CP_PROGRAM_ID, "paper") { getPaper() }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                output(CP_PROGRAM_ID, "paper", getPaper())
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Issue())
                 attachments(CP_PROGRAM_ID)
                 timeWindow(TEST_TX_TIME)
                 verifies()
@@ -151,10 +151,10 @@ class CommercialPaperTest {
             transaction("Trade") {
                 input("paper")
                 input("alice's $900")
-                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP }
-                output(CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move() }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                output(Cash.PROGRAM_ID, "borrowed $900", 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP)
+                output(CP_PROGRAM_ID, "alice's paper", "paper".output<ICommercialPaperState>().withOwner(ALICE))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
                 verifies()
             }
         }
@@ -173,8 +173,8 @@ class CommercialPaperTest {
 
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
-                output(CP_PROGRAM_ID, "paper") { getPaper() }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                output(CP_PROGRAM_ID, "paper", getPaper())
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Issue())
                 attachments(CP_PROGRAM_ID)
                 timeWindow(TEST_TX_TIME)
                 verifies()
@@ -183,18 +183,18 @@ class CommercialPaperTest {
             transaction("Trade") {
                 input("paper")
                 input("alice's $900")
-                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP }
-                output(CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move() }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                output(Cash.PROGRAM_ID, "borrowed $900", 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP)
+                output(CP_PROGRAM_ID, "alice's paper", "paper".output<ICommercialPaperState>().withOwner(ALICE))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
                 verifies()
             }
 
             transaction {
                 input("paper")
                 // We moved a paper to another pubkey.
-                output(CP_PROGRAM_ID, "bob's paper") { "paper".output<ICommercialPaperState>().withOwner(BOB) }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                output(CP_PROGRAM_ID, "bob's paper", "paper".output<ICommercialPaperState>().withOwner(BOB))
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
                 verifies()
             }
 
@@ -215,8 +215,8 @@ class CommercialPaperTest {
 
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
-                output(CP_PROGRAM_ID, "paper") { getPaper() }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                output(CP_PROGRAM_ID, "paper", getPaper())
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Issue())
                 attachments(CP_PROGRAM_ID)
                 timeWindow(TEST_TX_TIME)
                 verifies()
@@ -225,10 +225,10 @@ class CommercialPaperTest {
             transaction("Trade") {
                 input("paper")
                 input("alice's $900")
-                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP }
-                output(CP_PROGRAM_ID, "alice's paper") { "paper".output<ICommercialPaperState>().withOwner(ALICE) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move() }
-                command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                output(Cash.PROGRAM_ID, "borrowed $900", 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP)
+                output(CP_PROGRAM_ID, "alice's paper", "paper".output<ICommercialPaperState>().withOwner(ALICE))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
                 verifies()
             }
 
@@ -236,8 +236,8 @@ class CommercialPaperTest {
                 transaction {
                     input("paper")
                     // We moved a paper to another pubkey.
-                    output(CP_PROGRAM_ID, "bob's paper") { "paper".output<ICommercialPaperState>().withOwner(BOB) }
-                    command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                    output(CP_PROGRAM_ID, "bob's paper", "paper".output<ICommercialPaperState>().withOwner(BOB))
+                    command(MEGA_CORP_PUBKEY, CommercialPaper.Commands.Move())
                     verifies()
                 }
                 fails()

@@ -71,34 +71,33 @@ class ObligationTests {
     fun trivial() {
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-
+            input(Obligation.PROGRAM_ID, inState)
             tweak {
-                output(Obligation.PROGRAM_ID) { outState.copy(quantity = 2000.DOLLARS.quantity) }
-                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+                output(Obligation.PROGRAM_ID, outState.copy(quantity = 2000.DOLLARS.quantity))
+                command(CHARLIE.owningKey, Obligation.Commands.Move())
                 this `fails with` "the amounts balance"
             }
             tweak {
-                output(Obligation.PROGRAM_ID) { outState }
-                command(CHARLIE.owningKey) { DummyCommandData }
+                output(Obligation.PROGRAM_ID, outState)
+                command(CHARLIE.owningKey, DummyCommandData)
                 // Invalid command
                 this `fails with` "required net.corda.finance.contracts.asset.Obligation.Commands.Move command"
             }
             tweak {
-                output(Obligation.PROGRAM_ID) { outState }
-                command(BOB_PUBKEY) { Obligation.Commands.Move() }
+                output(Obligation.PROGRAM_ID, outState)
+                command(BOB_PUBKEY, Obligation.Commands.Move())
                 this `fails with` "the owning keys are a subset of the signing keys"
             }
             tweak {
-                output(Obligation.PROGRAM_ID) { outState }
-                output(Obligation.PROGRAM_ID) { outState `issued by` MINI_CORP }
-                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+                output(Obligation.PROGRAM_ID, outState)
+                output(Obligation.PROGRAM_ID, outState `issued by` MINI_CORP)
+                command(CHARLIE.owningKey, Obligation.Commands.Move())
                 this `fails with` "at least one obligation input"
             }
             // Simple reallocation works.
             tweak {
-                output(Obligation.PROGRAM_ID) { outState }
-                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+                output(Obligation.PROGRAM_ID, outState)
+                command(CHARLIE.owningKey, Obligation.Commands.Move())
                 this.verifies()
             }
         }
@@ -109,10 +108,9 @@ class ObligationTests {
         // Check we can't "move" debt into existence.
         transaction {
             attachments(DummyContract.PROGRAM_ID, Obligation.PROGRAM_ID)
-            input(DummyContract.PROGRAM_ID) { DummyState() }
-            output(Obligation.PROGRAM_ID) { outState }
-            command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
-
+            input(DummyContract.PROGRAM_ID, DummyState())
+            output(Obligation.PROGRAM_ID, outState)
+            command(MINI_CORP_PUBKEY, Obligation.Commands.Move())
             this `fails with` "at least one obligation input"
         }
 
@@ -120,21 +118,19 @@ class ObligationTests {
         // institution is allowed to issue as much cash as they want.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            output(Obligation.PROGRAM_ID) { outState }
-            command(CHARLIE.owningKey) { Obligation.Commands.Issue() }
+            output(Obligation.PROGRAM_ID, outState)
+            command(CHARLIE.owningKey, Obligation.Commands.Issue())
             this `fails with` "output states are issued by a command signer"
         }
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            output(Obligation.PROGRAM_ID) {
+            output(Obligation.PROGRAM_ID,
                 Obligation.State(
                         obligor = MINI_CORP,
                         quantity = 1000.DOLLARS.quantity,
                         beneficiary = CHARLIE,
-                        template = megaCorpDollarSettlement
-                )
-            }
-            command(MINI_CORP_PUBKEY) { Obligation.Commands.Issue() }
+                        template = megaCorpDollarSettlement))
+            command(MINI_CORP_PUBKEY, Obligation.Commands.Issue())
             this.verifies()
         }
         run {
@@ -157,18 +153,17 @@ class ObligationTests {
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            output(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.amount.quantity * 2) }
-
+            input(Obligation.PROGRAM_ID, inState)
+            output(Obligation.PROGRAM_ID, inState.copy(quantity = inState.amount.quantity * 2))
             // Move fails: not allowed to summon money.
             tweak {
-                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+                command(CHARLIE.owningKey, Obligation.Commands.Move())
                 this `fails with` "the amounts balance"
             }
 
             // Issue works.
             tweak {
-                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
+                command(MEGA_CORP_PUBKEY, Obligation.Commands.Issue())
                 this.verifies()
             }
         }
@@ -176,29 +171,29 @@ class ObligationTests {
         // Can't use an issue command to lower the amount.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            output(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.amount.quantity / 2) }
-            command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
+            input(Obligation.PROGRAM_ID, inState)
+            output(Obligation.PROGRAM_ID, inState.copy(quantity = inState.amount.quantity / 2))
+            command(MEGA_CORP_PUBKEY, Obligation.Commands.Issue())
             this `fails with` "output values sum to more than the inputs"
         }
 
         // Can't have an issue command that doesn't actually issue money.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            output(Obligation.PROGRAM_ID) { inState }
-            command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
+            input(Obligation.PROGRAM_ID, inState)
+            output(Obligation.PROGRAM_ID, inState)
+            command(MEGA_CORP_PUBKEY, Obligation.Commands.Issue())
             this `fails with` ""
         }
 
         // Can't have any other commands if we have an issue command (because the issue command overrules them).
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            output(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.amount.quantity * 2) }
-            command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
+            input(Obligation.PROGRAM_ID, inState)
+            output(Obligation.PROGRAM_ID, inState.copy(quantity = inState.amount.quantity * 2))
+            command(MEGA_CORP_PUBKEY, Obligation.Commands.Issue())
             tweak {
-                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Issue() }
+                command(MEGA_CORP_PUBKEY, Obligation.Commands.Issue())
                 this `fails with` "there is only a single issue command"
             }
             this.verifies()
@@ -352,7 +347,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
                 // Note we can sign with either key here
-                command(ALICE_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
+                command(ALICE_PUBKEY, Obligation.Commands.Net(NetType.CLOSE_OUT))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
@@ -368,8 +363,8 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
                 input("MegaCorp's $1,000,000 obligation to Bob")
-                output(Obligation.PROGRAM_ID, "change") { oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, BOB) }
-                command(BOB_PUBKEY, MEGA_CORP_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
+                output(Obligation.PROGRAM_ID, "change", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, BOB))
+                command(listOf(BOB_PUBKEY, MEGA_CORP_PUBKEY), Obligation.Commands.Net(NetType.CLOSE_OUT))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
@@ -383,8 +378,8 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
-                output(Obligation.PROGRAM_ID, "change") { (oneMillionDollars.splitEvenly(2).first()).OBLIGATION between Pair(ALICE, BOB) }
-                command(BOB_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
+                output(Obligation.PROGRAM_ID, "change", oneMillionDollars.splitEvenly(2).first().OBLIGATION between Pair(ALICE, BOB))
+                command(BOB_PUBKEY, Obligation.Commands.Net(NetType.CLOSE_OUT))
                 timeWindow(TEST_TX_TIME)
                 this `fails with` "amounts owed on input and output must match"
             }
@@ -397,7 +392,7 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
-                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
+                command(MEGA_CORP_PUBKEY, Obligation.Commands.Net(NetType.CLOSE_OUT))
                 timeWindow(TEST_TX_TIME)
                 this `fails with` "any involved party has signed"
             }
@@ -413,7 +408,7 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
-                command(ALICE_PUBKEY, BOB_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
+                command(listOf(ALICE_PUBKEY, BOB_PUBKEY), Obligation.Commands.Net(NetType.PAYMENT))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
@@ -428,7 +423,7 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
-                command(BOB_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
+                command(BOB_PUBKEY, Obligation.Commands.Net(NetType.PAYMENT))
                 timeWindow(TEST_TX_TIME)
                 this `fails with` "all involved parties have signed"
             }
@@ -441,8 +436,8 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Bob's $1,000,000 obligation to Alice")
                 input("MegaCorp's $1,000,000 obligation to Bob")
-                output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Alice") { oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, ALICE) }
-                command(ALICE_PUBKEY, BOB_PUBKEY, MEGA_CORP_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
+                output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Alice", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, ALICE))
+                command(listOf(ALICE_PUBKEY, BOB_PUBKEY, MEGA_CORP_PUBKEY), Obligation.Commands.Net(NetType.PAYMENT))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
@@ -456,8 +451,8 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Bob's $1,000,000 obligation to Alice")
                 input("MegaCorp's $1,000,000 obligation to Bob")
-                output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Alice") { oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, ALICE) }
-                command(ALICE_PUBKEY, BOB_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
+                output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Alice", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, ALICE))
+                command(listOf(ALICE_PUBKEY, BOB_PUBKEY), Obligation.Commands.Net(NetType.PAYMENT))
                 timeWindow(TEST_TX_TIME)
                 this `fails with` "all involved parties have signed"
             }
@@ -473,9 +468,9 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
-                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
+                output(Obligation.PROGRAM_ID, "Bob's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB)
+                command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)))
+                command(ALICE_PUBKEY, Cash.Commands.Move(Obligation::class.java))
                 attachment(attachment(cashContractBytes.inputStream()))
                 this.verifies()
             }
@@ -488,10 +483,10 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID, Cash.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB))
                 input(Cash.PROGRAM_ID, 500000.DOLLARS.CASH issuedBy defaultIssuer ownedBy ALICE)
-                output(Obligation.PROGRAM_ID, "Alice's $500,000 obligation to Bob") { halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB) }
-                output(Obligation.PROGRAM_ID, "Bob's $500,000") { 500000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
+                output(Obligation.PROGRAM_ID, "Alice's $500,000 obligation to Bob", halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB))
+                output(Obligation.PROGRAM_ID, "Bob's $500,000", 500000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB)
+                command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)))
+                command(ALICE_PUBKEY, Cash.Commands.Move(Obligation::class.java))
                 attachment(attachment(cashContractBytes.inputStream()))
                 this.verifies()
             }
@@ -504,9 +499,9 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID, Cash.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, defaultedObligation) // Alice's defaulted $1,000,000 obligation to Bob
                 input(Cash.PROGRAM_ID, 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy ALICE)
-                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
+                output(Obligation.PROGRAM_ID, "Bob's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB)
+                command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)))
+                command(ALICE_PUBKEY, Cash.Commands.Move(Obligation::class.java))
                 this `fails with` "all inputs are in the normal state"
             }
         }
@@ -518,9 +513,9 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
-                output(Obligation.PROGRAM_ID, "Bob's $1,000,000") { 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation::class.java) }
+                output(Obligation.PROGRAM_ID, "Bob's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB)
+                command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)))
+                command(ALICE_PUBKEY, Cash.Commands.Move(Obligation::class.java))
                 attachment(attachment(cashContractBytes.inputStream()))
                 this `fails with` "amount in settle command"
             }
@@ -546,9 +541,9 @@ class ObligationTests {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's 1 FCOJ obligation to Bob")
                 input("Alice's 1 FCOJ")
-                output(Obligation.PROGRAM_ID, "Bob's 1 FCOJ") { CommodityContract.State(oneUnitFcoj, BOB) }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.amount.token)) }
-                command(ALICE_PUBKEY) { CommodityContract.Commands.Move(Obligation::class.java) }
+                output(Obligation.PROGRAM_ID, "Bob's 1 FCOJ", CommodityContract.State(oneUnitFcoj, BOB))
+                command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.amount.token)))
+                command(ALICE_PUBKEY, CommodityContract.Commands.Move(Obligation::class.java))
                 attachment(attachment(commodityContractBytes.inputStream()))
                 verifies()
             }
@@ -563,8 +558,8 @@ class ObligationTests {
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's $1,000,000 obligation to Bob")
-                output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)).copy(lifecycle = Lifecycle.DEFAULTED) }
-                command(BOB_PUBKEY) { Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED) }
+                output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)).copy(lifecycle = Lifecycle.DEFAULTED))
+                command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
                 this `fails with` "there is a time-window from the authority"
             }
         }
@@ -575,8 +570,8 @@ class ObligationTests {
         transaction {
             attachments(Obligation.PROGRAM_ID)
             input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime)
-            output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
-            command(BOB_PUBKEY) { Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED) }
+            output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
+            command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
             timeWindow(TEST_TX_TIME)
             this `fails with` "the due date has passed"
         }
@@ -586,8 +581,8 @@ class ObligationTests {
             transaction {
                 attachments(Obligation.PROGRAM_ID)
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime)
-                output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
-                command(BOB_PUBKEY) { Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED) }
+                output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
+                command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
@@ -600,24 +595,24 @@ class ObligationTests {
         // Splitting value works.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+            command(CHARLIE.owningKey, Obligation.Commands.Move())
             tweak {
-                input(Obligation.PROGRAM_ID) { inState }
-                repeat(4) { output(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.quantity / 4) } }
+                input(Obligation.PROGRAM_ID, inState)
+                repeat(4) { output(Obligation.PROGRAM_ID, inState.copy(quantity = inState.quantity / 4)) }
                 this.verifies()
             }
             // Merging 4 inputs into 2 outputs works.
             tweak {
-                repeat(4) { input(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.quantity / 4) } }
-                output(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.quantity / 2) }
-                output(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.quantity / 2) }
+                repeat(4) { input(Obligation.PROGRAM_ID, inState.copy(quantity = inState.quantity / 4)) }
+                output(Obligation.PROGRAM_ID, inState.copy(quantity = inState.quantity / 2))
+                output(Obligation.PROGRAM_ID, inState.copy(quantity = inState.quantity / 2))
                 this.verifies()
             }
             // Merging 2 inputs into 1 works.
             tweak {
-                input(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.quantity / 2) }
-                input(Obligation.PROGRAM_ID) { inState.copy(quantity = inState.quantity / 2) }
-                output(Obligation.PROGRAM_ID) { inState }
+                input(Obligation.PROGRAM_ID, inState.copy(quantity = inState.quantity / 2))
+                input(Obligation.PROGRAM_ID, inState.copy(quantity = inState.quantity / 2))
+                output(Obligation.PROGRAM_ID, inState)
                 this.verifies()
             }
         }
@@ -627,18 +622,16 @@ class ObligationTests {
     fun zeroSizedValues() {
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+            command(CHARLIE.owningKey, Obligation.Commands.Move())
             tweak {
-                input(Obligation.PROGRAM_ID) { inState }
-                input(Obligation.PROGRAM_ID) { inState.copy(quantity = 0L) }
-
+                input(Obligation.PROGRAM_ID, inState)
+                input(Obligation.PROGRAM_ID, inState.copy(quantity = 0L))
                 this `fails with` "zero sized inputs"
             }
             tweak {
-                input(Obligation.PROGRAM_ID) { inState }
-                output(Obligation.PROGRAM_ID) { inState }
-                output(Obligation.PROGRAM_ID) { inState.copy(quantity = 0L) }
-
+                input(Obligation.PROGRAM_ID, inState)
+                output(Obligation.PROGRAM_ID, inState)
+                output(Obligation.PROGRAM_ID, inState.copy(quantity = 0L))
                 this `fails with` "zero sized outputs"
             }
         }
@@ -649,41 +642,39 @@ class ObligationTests {
         // Can't change issuer.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            output(Obligation.PROGRAM_ID) { outState `issued by` MINI_CORP }
-            command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
+            input(Obligation.PROGRAM_ID, inState)
+            output(Obligation.PROGRAM_ID, outState `issued by` MINI_CORP)
+            command(MINI_CORP_PUBKEY, Obligation.Commands.Move())
             this `fails with` "the amounts balance"
         }
         // Can't mix currencies.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            output(Obligation.PROGRAM_ID) { outState.copy(quantity = 80000, template = megaCorpDollarSettlement) }
-            output(Obligation.PROGRAM_ID) { outState.copy(quantity = 20000, template = megaCorpPoundSettlement) }
-            command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
+            input(Obligation.PROGRAM_ID, inState)
+            output(Obligation.PROGRAM_ID, outState.copy(quantity = 80000, template = megaCorpDollarSettlement))
+            output(Obligation.PROGRAM_ID, outState.copy(quantity = 20000, template = megaCorpPoundSettlement))
+            command(MINI_CORP_PUBKEY, Obligation.Commands.Move())
             this `fails with` "the amounts balance"
         }
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            input(Obligation.PROGRAM_ID) {
+            input(Obligation.PROGRAM_ID, inState)
+            input(Obligation.PROGRAM_ID,
                 inState.copy(
                         quantity = 15000,
                         template = megaCorpPoundSettlement,
-                        beneficiary = AnonymousParty(BOB_PUBKEY)
-                )
-            }
-            output(Obligation.PROGRAM_ID) { outState.copy(quantity = 115000) }
-            command(MINI_CORP_PUBKEY) { Obligation.Commands.Move() }
+                        beneficiary = AnonymousParty(BOB_PUBKEY)))
+            output(Obligation.PROGRAM_ID, outState.copy(quantity = 115000))
+            command(MINI_CORP_PUBKEY, Obligation.Commands.Move())
             this `fails with` "the amounts balance"
         }
         // Can't have superfluous input states from different issuers.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            input(Obligation.PROGRAM_ID) { inState `issued by` MINI_CORP }
-            output(Obligation.PROGRAM_ID) { outState }
-            command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+            input(Obligation.PROGRAM_ID, inState)
+            input(Obligation.PROGRAM_ID, inState `issued by` MINI_CORP)
+            output(Obligation.PROGRAM_ID, outState)
+            command(CHARLIE.owningKey, Obligation.Commands.Move())
             this `fails with` "the amounts balance"
         }
     }
@@ -693,21 +684,20 @@ class ObligationTests {
         // Single input/output straightforward case.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID) { inState }
-            output(Obligation.PROGRAM_ID) { outState.copy(quantity = inState.quantity - 200.DOLLARS.quantity) }
-
+            input(Obligation.PROGRAM_ID, inState)
+            output(Obligation.PROGRAM_ID, outState.copy(quantity = inState.quantity - 200.DOLLARS.quantity))
             tweak {
-                command(CHARLIE.owningKey) { Obligation.Commands.Exit(Amount(100.DOLLARS.quantity, inState.amount.token)) }
-                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+                command(CHARLIE.owningKey, Obligation.Commands.Exit(Amount(100.DOLLARS.quantity, inState.amount.token)))
+                command(CHARLIE.owningKey, Obligation.Commands.Move())
                 this `fails with` "the amounts balance"
             }
 
             tweak {
-                command(CHARLIE.owningKey) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token)) }
+                command(CHARLIE.owningKey, Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token)))
                 this `fails with` "required net.corda.finance.contracts.asset.Obligation.Commands.Move command"
 
                 tweak {
-                    command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+                    command(CHARLIE.owningKey, Obligation.Commands.Move())
                     this.verifies()
                 }
             }
@@ -720,21 +710,15 @@ class ObligationTests {
         // Multi-product case.
         transaction {
             attachments(Obligation.PROGRAM_ID)
-
-            input(Obligation.PROGRAM_ID) { inState.copy(template = inState.template.copy(acceptableIssuedProducts = megaIssuedPounds)) }
-            input(Obligation.PROGRAM_ID) { inState.copy(template = inState.template.copy(acceptableIssuedProducts = megaIssuedDollars)) }
-
-            output(Obligation.PROGRAM_ID) { inState.copy(template = inState.template.copy(acceptableIssuedProducts = megaIssuedPounds), quantity = inState.quantity - 200.POUNDS.quantity) }
-            output(Obligation.PROGRAM_ID) { inState.copy(template = inState.template.copy(acceptableIssuedProducts = megaIssuedDollars), quantity = inState.quantity - 200.DOLLARS.quantity) }
-
-            command(CHARLIE.owningKey) { Obligation.Commands.Move() }
-
+            input(Obligation.PROGRAM_ID, inState.copy(template = inState.template.copy(acceptableIssuedProducts = megaIssuedPounds)))
+            input(Obligation.PROGRAM_ID, inState.copy(template = inState.template.copy(acceptableIssuedProducts = megaIssuedDollars)))
+            output(Obligation.PROGRAM_ID, inState.copy(template = inState.template.copy(acceptableIssuedProducts = megaIssuedPounds), quantity = inState.quantity - 200.POUNDS.quantity))
+            output(Obligation.PROGRAM_ID, inState.copy(template = inState.template.copy(acceptableIssuedProducts = megaIssuedDollars), quantity = inState.quantity - 200.DOLLARS.quantity))
+            command(CHARLIE.owningKey, Obligation.Commands.Move())
             this `fails with` "the amounts balance"
-
-            command(CHARLIE.owningKey) { Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token.copy(product = megaCorpDollarSettlement))) }
+            command(CHARLIE.owningKey, Obligation.Commands.Exit(Amount(200.DOLLARS.quantity, inState.amount.token.copy(product = megaCorpDollarSettlement))))
             this `fails with` "the amounts balance"
-
-            command(CHARLIE.owningKey) { Obligation.Commands.Exit(Amount(200.POUNDS.quantity, inState.amount.token.copy(product = megaCorpPoundSettlement))) }
+            command(CHARLIE.owningKey, Obligation.Commands.Exit(Amount(200.POUNDS.quantity, inState.amount.token.copy(product = megaCorpPoundSettlement))))
             this.verifies()
         }
     }
@@ -745,27 +729,26 @@ class ObligationTests {
             attachments(Obligation.PROGRAM_ID)
 
             // Gather 2000 dollars from two different issuers.
-            input(Obligation.PROGRAM_ID) { inState }
-            input(Obligation.PROGRAM_ID) { inState `issued by` MINI_CORP }
-
+            input(Obligation.PROGRAM_ID, inState)
+            input(Obligation.PROGRAM_ID, inState `issued by` MINI_CORP)
             // Can't merge them together.
             tweak {
-                output(Obligation.PROGRAM_ID) { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY), quantity = 200000L) }
-                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+                output(Obligation.PROGRAM_ID, inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY), quantity = 200000L))
+                command(CHARLIE.owningKey, Obligation.Commands.Move())
                 this `fails with` "the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
-                output(Obligation.PROGRAM_ID) { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
-                output(Obligation.PROGRAM_ID) { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
-                command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+                output(Obligation.PROGRAM_ID, inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)))
+                output(Obligation.PROGRAM_ID, inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)))
+                command(CHARLIE.owningKey, Obligation.Commands.Move())
                 this `fails with` "the amounts balance"
             }
 
             // This works.
-            output(Obligation.PROGRAM_ID) { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) }
-            output(Obligation.PROGRAM_ID) { inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP }
-            command(CHARLIE.owningKey) { Obligation.Commands.Move() }
+            output(Obligation.PROGRAM_ID, inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)))
+            output(Obligation.PROGRAM_ID, inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY)) `issued by` MINI_CORP)
+            command(CHARLIE.owningKey, Obligation.Commands.Move())
             this.verifies()
         }
     }
@@ -776,12 +759,11 @@ class ObligationTests {
         transaction {
             attachments(Obligation.PROGRAM_ID)
             val pounds = Obligation.State(Lifecycle.NORMAL, MINI_CORP, megaCorpPoundSettlement, 658.POUNDS.quantity, AnonymousParty(BOB_PUBKEY))
-            input(Obligation.PROGRAM_ID) { inState `owned by` CHARLIE }
-            input(Obligation.PROGRAM_ID) { pounds }
-            output(Obligation.PROGRAM_ID) { inState `owned by` AnonymousParty(BOB_PUBKEY) }
-            output(Obligation.PROGRAM_ID) { pounds `owned by` CHARLIE }
-            command(CHARLIE.owningKey, BOB_PUBKEY) { Obligation.Commands.Move() }
-
+            input(Obligation.PROGRAM_ID, inState `owned by` CHARLIE)
+            input(Obligation.PROGRAM_ID, pounds)
+            output(Obligation.PROGRAM_ID, inState `owned by` AnonymousParty(BOB_PUBKEY))
+            output(Obligation.PROGRAM_ID, pounds `owned by` CHARLIE)
+            command(listOf(CHARLIE.owningKey, BOB_PUBKEY), Obligation.Commands.Move())
             this.verifies()
         }
     }

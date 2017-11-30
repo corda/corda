@@ -97,21 +97,21 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>): T = des {
         val envelope = getEnvelope(bytes)
-        clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz))
+        clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz))
     }
 
     @Throws(NotSerializableException::class)
     fun <T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>, clazz: Class<T>): ObjectAndEnvelope<T> = des {
         val envelope = getEnvelope(bytes)
         // Now pick out the obj and schema from the envelope.
-        ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz)), envelope)
+        ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz)), envelope)
     }
 
-    internal fun readObjectOrNull(obj: Any?, schema: Schema, type: Type): Any? {
+    internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type): Any? {
         return if (obj == null) null else readObject(obj, schema, type)
     }
 
-    internal fun readObject(obj: Any, schema: Schema, type: Type): Any =
+    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type): Any =
             if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
                 // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
                 val objectIndex = (obj.described as UnsignedInteger).toInt()
@@ -127,11 +127,11 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
                 val objectRead = when (obj) {
                     is DescribedType -> {
                         // Look up serializer in factory by descriptor
-                        val serializer = serializerFactory.get(obj.descriptor, schema)
+                        val serializer = serializerFactory.get(obj.descriptor, schemas)
                         if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) })
                             throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                                     "expected to be of type $type but was ${serializer.type}")
-                        serializer.readObject(obj.described, schema, this)
+                        serializer.readObject(obj.described, schemas, this)
                     }
                     is Binary -> obj.array
                     else -> obj // this will be the case for primitive types like [boolean] et al.

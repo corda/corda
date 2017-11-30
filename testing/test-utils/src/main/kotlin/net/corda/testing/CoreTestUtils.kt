@@ -3,7 +3,6 @@
 
 package net.corda.testing
 
-import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -12,24 +11,23 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.utilities.CertificateAndKeyPair
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
+import org.mockito.Mockito.mock
 import org.mockito.internal.stubbing.answers.ThrowsException
-import org.mockito.stubbing.Answer
 import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.cert.CertificateFactory
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -131,9 +129,8 @@ fun configureTestSSL(legalName: CordaX500Name = MEGA_CORP.name): SSLConfiguratio
 }
 
 fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DEV_CA): PartyAndCertificate {
-    val certFactory = CertificateFactory.getInstance("X509")
     val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
-    val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
+    val certPath = X509CertificateFactory().delegate.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
     return PartyAndCertificate(certPath)
 }
 
@@ -181,12 +178,13 @@ fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
  */
 class UndefinedMockBehaviorException(message: String) : RuntimeException(message)
 
+inline fun <reified T : Any> rigorousMock() = rigorousMock(T::class.java)
 /**
  * Create a Mockito mock that has [UndefinedMockBehaviorException] as the default behaviour of all methods.
  * @param T the type to mock. Note if you want to use [com.nhaarman.mockito_kotlin.doCallRealMethod] on a Kotlin interface,
  * it won't work unless you mock a (trivial) abstract implementation of that interface instead.
  */
-inline fun <reified T : Any> rigorousMock() = mock<T>(Answer {
+fun <T> rigorousMock(clazz: Class<T>): T = mock(clazz) {
     // Use ThrowsException to hack the stack trace, and lazily so we can customise the message:
-    ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it.")).answer(it)
-})
+    ThrowsException(UndefinedMockBehaviorException("Please specify what should happen when '${it.method}' is called, or don't call it. Args: ${Arrays.toString(it.arguments)}")).answer(it)
+}

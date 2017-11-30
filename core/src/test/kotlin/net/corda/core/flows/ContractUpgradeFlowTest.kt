@@ -133,7 +133,7 @@ class ContractUpgradeFlowTest {
 
     @Test
     fun `2 parties contract upgrade using RPC`() {
-        rpcDriver(initialiseSerialization = false) {
+        rpcDriver {
             // Create dummy contract.
             val twoPartyDummyContract = DummyContract.generateInitial(0, notary, alice.ref(1), bob.ref(1))
             val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)

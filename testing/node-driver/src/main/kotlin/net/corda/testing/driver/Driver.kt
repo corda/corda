@@ -162,12 +162,6 @@ interface DriverDSLExposedInterface : CordformContext {
      */
     fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> = startNode(defaultParameters = parameters)
 
-    fun startNodes(
-            nodes: List<CordformNode>,
-            startInSameProcess: Boolean? = null,
-            maximumHeapSize: String = "200m"
-    ): List<CordaFuture<NodeHandle>>
-
     /** Call [startWebserver] with a default maximumHeapSize. */
     fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, "200m")
 
@@ -587,7 +581,6 @@ class DriverDSL(
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    private val databaseNamesByNode = mutableMapOf<CordaX500Name, String>()
     val systemProperties by lazy { System.getProperties().toList().map { it.first.toString() to it.second.toString() }.toMap() + extraSystemProperties }
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
     // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
@@ -678,22 +671,21 @@ class DriverDSL(
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
     }
 
-    override fun startNodes(nodes: List<CordformNode>, startInSameProcess: Boolean?, maximumHeapSize: String): List<CordaFuture<NodeHandle>> {
-        return nodes.map { node ->
-            portAllocation.nextHostAndPort() // rpcAddress
-            val webAddress = portAllocation.nextHostAndPort()
-            val name = CordaX500Name.parse(node.name)
-            val rpcUsers = node.rpcUsers
-            val notary = if (node.notary != null) mapOf("notary" to node.notary) else emptyMap()
-            val config = ConfigHelper.loadConfig(
-                    baseDirectory = baseDirectory(name),
-                    allowMissingConfig = true,
-                    configOverrides = node.config + notary + mapOf(
-                            "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
-                    )
-            )
-            startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize)
-        }
+    internal fun startCordformNode(cordform: CordformNode): CordaFuture<NodeHandle> {
+        val name = CordaX500Name.parse(cordform.name)
+        // TODO We shouldn't have to allocate an RPC or web address if they're not specified. We're having to do this because of startNodeInternal
+        val rpcAddress = if (cordform.rpcAddress == null) mapOf("rpcAddress" to portAllocation.nextHostAndPort().toString()) else emptyMap()
+        val webAddress = cordform.webAddress?.let { NetworkHostAndPort.parse(it) } ?: portAllocation.nextHostAndPort()
+        val notary = if (cordform.notary != null) mapOf("notary" to cordform.notary) else emptyMap()
+        val rpcUsers = cordform.rpcUsers
+        val config = ConfigHelper.loadConfig(
+                baseDirectory = baseDirectory(name),
+                allowMissingConfig = true,
+                configOverrides = cordform.config + rpcAddress + notary + mapOf(
+                        "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
+                )
+        )
+        return startNodeInternal(config, webAddress, null, "200m")
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
@@ -978,23 +970,25 @@ class DriverDSL(
             // Write node.conf
             writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
-                val systemProperties = overriddenSystemProperties + mapOf(
-                        "name" to nodeConf.myLegalName,
-                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
-                        Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator),
-                        "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
-                "user.dir" to nodeConf.baseDirectory)
-                // See experimental/quasar-hook/README.md for how to generate.
-                val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
-                        "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
-                        "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
-                        "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
-                        "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
-                        "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
-                        "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
-                val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
-                        "-javaagent:$quasarJarPath=$excludePattern"
-                val loggingLevel = logLevel ?:if (debugPort == null) "INFO" else "DEBUG"
+            val systemProperties = overriddenSystemProperties + mapOf(
+                    "name" to nodeConf.myLegalName,
+                    "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
+                    Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator),
+                    "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
+                    "user.dir" to nodeConf.baseDirectory, //Enterprise only
+                    "log4j2.debug" to if(debugPort != null) "true" else "false"
+            )
+            // See experimental/quasar-hook/README.md for how to generate.
+            val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
+                    "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
+                    "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
+                    "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
+                    "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
+                    "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
+                    "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
+            val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
+                    "-javaagent:$quasarJarPath=$excludePattern"
+            val loggingLevel = logLevel ?:if (debugPort == null) "INFO" else "DEBUG"
 
             return ProcessUtilities.startCordaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string

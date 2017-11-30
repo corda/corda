@@ -26,5 +26,8 @@ class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer<Any> {
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = (obj as? Binary)?.array ?: obj
+    override fun readObject(
+            obj: Any,
+            schemas: SerializationSchemas,
+            input: DeserializationInput): Any = (obj as? Binary)?.array ?: obj
 }

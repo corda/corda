@@ -1,9 +1,11 @@
-package net.corda.node.utilities
+package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.read
+import net.corda.core.internal.write
 import net.corda.core.internal.x500Name
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -25,10 +27,10 @@ import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.util.io.pem.PemReader
-import java.io.FileReader
 import java.io.FileWriter
 import java.io.InputStream
 import java.math.BigInteger
+import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
@@ -52,6 +54,7 @@ object X509Utilities {
     const val CORDA_CLIENT_CA_CN = "Corda Client CA Certificate"
 
     private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
+
     /**
      * Helper function to return the latest out of an instant and an optional date.
      */
@@ -89,7 +92,9 @@ object X509Utilities {
      * Create a de novo root self-signed X509 v3 CA cert.
      */
     @JvmStatic
-    fun createSelfSignedCACertificate(subject: CordaX500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509CertificateHolder {
+    fun createSelfSignedCACertificate(subject: CordaX500Name,
+                                      keyPair: KeyPair,
+                                      validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
         return createCertificate(CertificateType.ROOT_CA, subject.x500Name, keyPair, subject.x500Name, keyPair.public, window)
     }
@@ -114,8 +119,9 @@ object X509Utilities {
                           subject: CordaX500Name,
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
-                          nameConstraints: NameConstraints? = null): X509CertificateHolder
-            = createCertificate(certificateType, issuerCertificate, issuerKeyPair, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+        return createCertificate(certificateType, issuerCertificate, issuerKeyPair, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
+    }
 
     /**
      * Create a X509 v3 certificate for use as a CA or for TLS. This does not require a [CordaX500Name] because the
@@ -145,10 +151,9 @@ object X509Utilities {
     @Throws(CertPathValidatorException::class)
     fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: Certificate) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
-        val certFactory = CertificateFactory.getInstance("X509")
         val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
         params.isRevocationEnabled = false
-        val certPath = certFactory.generateCertPath(certificates.toList())
+        val certPath = X509CertificateFactory().delegate.generateCertPath(certificates.toList())
         val pathValidator = CertPathValidator.getInstance("PKIX")
         pathValidator.validate(certPath, params)
     }
@@ -156,30 +161,29 @@ object X509Utilities {
     /**
      * Helper method to store a .pem/.cer format file copy of a certificate if required for import into a PC/Mac, or for inspection.
      * @param x509Certificate certificate to save.
-     * @param filename Target filename.
+     * @param file Target file.
      */
     @JvmStatic
-    fun saveCertificateAsPEMFile(x509Certificate: X509CertificateHolder, filename: Path) {
-        FileWriter(filename.toFile()).use {
-            JcaPEMWriter(it).use {
-                it.writeObject(x509Certificate)
-            }
+    fun saveCertificateAsPEMFile(x509Certificate: X509CertificateHolder, file: Path) {
+        JcaPEMWriter(file.toFile().writer()).use {
+            it.writeObject(x509Certificate)
         }
     }
 
     /**
      * Helper method to load back a .pem/.cer format file copy of a certificate.
-     * @param filename Source filename.
+     * @param file Source file.
      * @return The X509Certificate that was encoded in the file.
      */
     @JvmStatic
-    fun loadCertificateFromPEMFile(filename: Path): X509CertificateHolder {
-        val reader = PemReader(FileReader(filename.toFile()))
-        val pemObject = reader.readPemObject()
-        val cert = X509CertificateHolder(pemObject.content)
-        return cert.apply {
-            isValidOn(Date())
+    fun loadCertificateFromPEMFile(file: Path): X509CertificateHolder {
+        val cert = file.read {
+            val reader = PemReader(it.reader())
+            val pemObject = reader.readPemObject()
+            X509CertificateHolder(pemObject.content)
         }
+        cert.isValidOn(Date())
+        return cert
     }
 
     /**
@@ -243,13 +247,13 @@ object X509Utilities {
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
-    internal fun createCertificate(certificateType: CertificateType,
-                                   issuer: X500Name,
-                                   issuerSigner: ContentSigner,
-                                   subject: CordaX500Name,
-                                   subjectPublicKey: PublicKey,
-                                   validityWindow: Pair<Date, Date>,
-                                   nameConstraints: NameConstraints? = null): X509CertificateHolder {
+    fun createCertificate(certificateType: CertificateType,
+                          issuer: X500Name,
+                          issuerSigner: ContentSigner,
+                          subject: CordaX500Name,
+                          subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val builder = createCertificate(certificateType, issuer, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
         return builder.build(issuerSigner).apply {
             require(isValidOn(Date()))
@@ -266,11 +270,13 @@ object X509Utilities {
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
-    internal fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
-                                   subject: X500Name, subjectPublicKey: PublicKey,
-                                   validityWindow: Pair<Date, Date>,
-                                   nameConstraints: NameConstraints? = null): X509CertificateHolder {
-
+    fun createCertificate(certificateType: CertificateType,
+                          issuer: X500Name,
+                          issuerKeyPair: KeyPair,
+                          subject: X500Name,
+                          subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
         val provider = Crypto.findProvider(signatureScheme.providerName)
         val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
@@ -285,28 +291,71 @@ object X509Utilities {
     /**
      * Create certificate signing request using provided information.
      */
-    internal fun createCertificateSigningRequest(subject: CordaX500Name, email: String, keyPair: KeyPair, signatureScheme: SignatureScheme): PKCS10CertificationRequest {
+    private fun createCertificateSigningRequest(subject: CordaX500Name,
+                                                email: String,
+                                                keyPair: KeyPair,
+                                                signatureScheme: SignatureScheme): PKCS10CertificationRequest {
         val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.findProvider(signatureScheme.providerName))
         return JcaPKCS10CertificationRequestBuilder(subject.x500Name, keyPair.public).addAttribute(BCStyle.E, DERUTF8String(email)).build(signer)
     }
 
-    fun createCertificateSigningRequest(subject: CordaX500Name, email: String, keyPair: KeyPair) = createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
+    fun createCertificateSigningRequest(subject: CordaX500Name, email: String, keyPair: KeyPair): PKCS10CertificationRequest {
+        return createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME)
+    }
 }
 
-
-class CertificateStream(val input: InputStream) {
-    private val certificateFactory = CertificateFactory.getInstance("X.509")
-
-    fun nextCertificate(): X509Certificate = certificateFactory.generateCertificate(input) as X509Certificate
+/**
+ * Wraps a [CertificateFactory] to remove boilerplate. It's unclear whether [CertificateFactory] is threadsafe so best
+ * so assume this class is not.
+ */
+class X509CertificateFactory {
+    val delegate: CertificateFactory = CertificateFactory.getInstance("X.509")
+    fun generateCertificate(input: InputStream): X509Certificate {
+        return delegate.generateCertificate(input) as X509Certificate
+    }
 }
 
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean) {
-    ROOT_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),
-    INTERMEDIATE_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),
-    CLIENT_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),
-    TLS(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = false),
+    ROOT_CA(
+            KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = true
+    ),
+
+    INTERMEDIATE_CA(
+            KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = true
+    ),
+
+    CLIENT_CA(
+            KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = true
+    ),
+
+    TLS(
+            KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = false
+    ),
+
     // TODO: Identity certs should have only limited depth (i.e. 1) CA signing capability, with tight name constraints
-    IDENTITY(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true)
+    IDENTITY(
+            KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = true
+    )
 }
 
 data class CertificateAndKeyPair(val certificate: X509CertificateHolder, val keyPair: KeyPair)

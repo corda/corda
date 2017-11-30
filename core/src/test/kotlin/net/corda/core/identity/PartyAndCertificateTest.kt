@@ -4,8 +4,8 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.internal.read
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.utilities.KEYSTORE_TYPE
-import net.corda.node.utilities.save
+import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
+import net.corda.nodeapi.internal.crypto.save
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.getTestPartyAndCertificate
 import org.assertj.core.api.Assertions.assertThat

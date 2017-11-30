@@ -13,8 +13,9 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.internal.demorun.*
+import java.nio.file.Paths
 
-fun main(args: Array<String>) = RaftNotaryCordform().runNodes()
+fun main(args: Array<String>) = RaftNotaryCordform().deployNodes()
 
 internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { CordaX500Name("Notary Service $it", "Zurich", "CH") }
 
@@ -22,10 +23,11 @@ private val notaryNames = createNotaryNames(3)
 
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
 // NOT use this as a design to copy.
-class RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes") {
+class RaftNotaryCordform : CordformDefinition() {
     private val clusterName = CordaX500Name(RaftValidatingNotaryService.id, "Raft", "Zurich", "CH")
 
     init {
+        nodesDirectory = Paths.get("build", "nodes", "nodesRaft")
         node {
             name(ALICE.name)
             p2pPort(10002)

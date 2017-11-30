@@ -5,6 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.parseAs
@@ -19,7 +20,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val emailAddress: String
     val exportJMXto: String
     val dataSourceProperties: Properties
-    val database: DatabaseConfig
     val rpcUsers: List<User>
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
@@ -30,6 +30,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
+    // TODO Remove as this is only used by the driver
     val useHTTPS: Boolean
     val p2pAddress: NetworkHostAndPort
     val rpcAddress: NetworkHostAndPort?
@@ -38,30 +39,11 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
+    val database: DatabaseConfig
     val relay: RelayConfiguration?
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
-
-data class DatabaseConfig(
-        val initDatabase: Boolean = true,
-        val serverNameTablePrefix: String = "",
-        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
-        val schema: String? = null
-)
-
-enum class TransactionIsolationLevel {
-    NONE,
-    READ_UNCOMMITTED,
-    READ_COMMITTED,
-    REPEATABLE_READ,
-    SERIALIZABLE;
-
-    /**
-     * The JDBC constant value of the same name but with prefixed with TRANSACTION_ defined in [java.sql.Connection].
-     */
-    val jdbcValue: Int = java.sql.Connection::class.java.getField("TRANSACTION_$name").get(null) as Int
-}
 
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
@@ -110,7 +92,6 @@ data class NodeConfigurationImpl(
         override val keyStorePassword: String,
         override val trustStorePassword: String,
         override val dataSourceProperties: Properties,
-        override val database: DatabaseConfig = DatabaseConfig(),
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,
@@ -133,9 +114,9 @@ data class NodeConfigurationImpl(
         override val activeMQServer: ActiveMqServerConfiguration,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
-        override val sshd: SSHDConfiguration? = null
-
-) : NodeConfiguration {
+        override val sshd: SSHDConfiguration? = null,
+        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode)
+        ) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
     init {

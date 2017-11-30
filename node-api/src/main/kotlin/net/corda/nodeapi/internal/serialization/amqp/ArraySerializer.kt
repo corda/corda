@@ -56,9 +56,9 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
         if (obj is List<*>) {
-            return obj.map { input.readObjectOrNull(it, schema, elementType) }.toArrayOfType(elementType)
+            return obj.map { input.readObjectOrNull(it, schemas, elementType) }.toArrayOfType(elementType)
         } else throw NotSerializableException("Expected a List but found $obj")
     }
 

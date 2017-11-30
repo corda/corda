@@ -1,9 +1,9 @@
 package net.corda.nodeapi.internal.serialization.amqp.custom
 
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.serialization.amqp.*
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
 object X509CertificateSerializer : CustomSerializer.Implements<X509Certificate>(X509Certificate::class.java) {
@@ -20,8 +20,8 @@ object X509CertificateSerializer : CustomSerializer.Implements<X509Certificate>(
         output.writeObject(obj.encoded, data, clazz)
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): X509Certificate {
-        val bits = input.readObject(obj, schema, ByteArray::class.java) as ByteArray
-        return CertificateFactory.getInstance("X.509").generateCertificate(bits.inputStream()) as X509Certificate
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): X509Certificate {
+        val bits = input.readObject(obj, schemas, ByteArray::class.java) as ByteArray
+        return X509CertificateFactory().generateCertificate(bits.inputStream())
     }
 }

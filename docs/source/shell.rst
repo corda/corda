@@ -137,7 +137,7 @@ which could be represented as ``{ first: foo, second: 123 }``.
 
 .. note:: If your CorDapp is written in Java,
    named arguments won't work unless you compiled using the ``-parameters`` argument to javac.
-   See :doc:`deploying-a-node` for how to specify it via Gradle.
+   See :doc:`generating-a-node` for how to specify it via Gradle.
 
 The same syntax is also used to specify the parameters for RPCs, accessed via the ``run`` command, like this:
 

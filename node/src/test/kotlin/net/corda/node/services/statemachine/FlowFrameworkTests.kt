@@ -672,7 +672,7 @@ class FlowFrameworkTests {
             initiatingFlowClass: KClass<out FlowLogic<*>>,
             initiatedFlowVersion: Int = 1,
             noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {
-        val observable = internals.internalRegisterFlowFactory(
+        val observable = internalRegisterFlowFactory(
                 initiatingFlowClass.java,
                 InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
                 P::class.java,

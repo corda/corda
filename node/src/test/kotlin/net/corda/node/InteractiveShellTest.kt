@@ -10,10 +10,10 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
-import net.corda.node.services.config.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.shell.InteractiveShell
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
 import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_IDENTITY
