@@ -212,7 +212,7 @@ at boot, and means the Corda service stays running with no users connected to th
 
       nssm install cordanode1 C:\ProgramData\Oracle\Java\javapath\java.exe
       nssm set cordanode1 AppDirectory C:\Corda
-      nssm set cordanode1 AppParameters "-jar corda.jar -Xmx2048m --config-file=C:\corda\node.conf"
+      nssm set cordanode1 AppParameters "-Xmx2048m -jar corda.jar --config-file=C:\corda\node.conf"
       nssm set cordanode1 AppStdout C:\Corda\service.log
       nssm set cordanode1 AppStderr C:\Corda\service.log
       nssm set cordanode1 Description Corda Node - Bank of Breakfast Tea
