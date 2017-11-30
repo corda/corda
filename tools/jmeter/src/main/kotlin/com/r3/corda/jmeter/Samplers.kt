@@ -60,7 +60,7 @@ class CashIssueSampler : AbstractSampler() {
  * via P2P
  */
 class CashIssueAndPaySampler : AbstractSampler() {
-    companion object JMeterProperties{
+    companion object JMeterProperties {
         val otherParty = Argument("otherPartyName", "", "<meta>", "The X500 name of the payee.")
     }
 
