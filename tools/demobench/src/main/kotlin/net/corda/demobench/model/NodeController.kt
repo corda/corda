@@ -3,12 +3,10 @@ package net.corda.demobench.model
 import javafx.beans.binding.IntegerExpression
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal._contextSerializationEnv
-import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.core.utilities.ByteSequence
+import net.corda.core.internal.copyToDirectory
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.demobench.plugin.CordappController
@@ -17,12 +15,6 @@ import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.nodeapi.internal.NetworkParametersCopier
 import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.ServiceIdentityGenerator
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory
@@ -120,6 +112,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     fun runCorda(pty: R3Pty, config: NodeConfigWrapper): Boolean {
         try {
+            // Notary can be removed and then added again, that's why we need to perform this check.
             require((config.nodeConfig.notary != null).xor(notaryIdentity != null)) { "There must be exactly one notary in the network" }
             config.nodeDir.createDirectories()
 
@@ -136,7 +129,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             }
             if (networkParametersCopier == null)
                 makeNetworkParametersCopier(config)
-            networkParametersCopier!!.install(config.nodeDir)
+            (networkParametersCopier ?: makeNetworkParametersCopier(config)).install(config.nodeDir)
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
             return true
@@ -146,41 +139,20 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         }
     }
 
-    private fun makeNetworkParametersCopier(config: NodeConfigWrapper) {
-        try {
-            if (nodeSerializationEnv == null) initialiseSerialization()
-            notaryIdentity = getNotaryIdentity(config)
-            networkParametersCopier = NetworkParametersCopier(NetworkParameters(
-                    minimumPlatformVersion = 1,
-                    notaries = listOf(NotaryInfo(notaryIdentity!!, config.nodeConfig.notary!!.validating)),
-                    modifiedTime = Instant.now(),
-                    eventHorizon = 10000.days,
-                    maxMessageSize = 40000,
-                    maxTransactionSize = 40000,
-                    epoch = 1
-            ))
-        } finally {
-            if (_contextSerializationEnv.get() != null) _contextSerializationEnv.set(null)
-        }
-    }
-
-    private fun initialiseSerialization() {
-        val context = if (java.lang.Boolean.getBoolean("net.corda.testing.amqp.enable")) AMQP_P2P_CONTEXT else KRYO_P2P_CONTEXT
-        _contextSerializationEnv.set(SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
-                    registerScheme(KryoDemoSerializationScheme)
-                    registerScheme(AMQPServerSerializationScheme())
-                },
-                context))
-    }
-
-    private object KryoDemoSerializationScheme : AbstractKryoSerializationScheme() {
-        override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
-            return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
-        }
-
-        override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
-        override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
+    private fun makeNetworkParametersCopier(config: NodeConfigWrapper): NetworkParametersCopier {
+        val identity = getNotaryIdentity(config)
+        val parametersCopier = NetworkParametersCopier(NetworkParameters(
+                minimumPlatformVersion = 1,
+                notaries = listOf(NotaryInfo(identity, config.nodeConfig.notary!!.validating)),
+                modifiedTime = Instant.now(),
+                eventHorizon = 10000.days,
+                maxMessageSize = 40000,
+                maxTransactionSize = 40000,
+                epoch = 1
+        ))
+        notaryIdentity = identity
+        networkParametersCopier = parametersCopier
+        return parametersCopier
     }
 
     // Generate notary identity and save it into node's directory. This identity will be used in network parameters.
