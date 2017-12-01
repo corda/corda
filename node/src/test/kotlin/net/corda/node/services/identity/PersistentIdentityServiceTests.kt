@@ -10,13 +10,15 @@ import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
+import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
-import net.corda.testing.node.MockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -29,15 +31,12 @@ import kotlin.test.assertNull
  */
 class PersistentIdentityServiceTests {
     private lateinit var database: CordaPersistence
-    private lateinit var services: MockServices
     private lateinit var identityService: IdentityService
 
     @Before
     fun setup() {
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), identityService = PersistentIdentityService(DEV_TRUST_ROOT))
-        database = databaseAndServices.first
-        services = databaseAndServices.second
-        identityService = services.identityService
+        identityService = PersistentIdentityService(DEV_TRUST_ROOT)
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), identityService)
     }
 
     @After
