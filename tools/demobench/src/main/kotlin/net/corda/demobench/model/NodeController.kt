@@ -127,8 +127,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             val cordaEnv = System.getenv().toMutableMap().apply {
                 jvm.setCapsuleCacheDir(this)
             }
-            if (networkParametersCopier == null)
-                makeNetworkParametersCopier(config)
             (networkParametersCopier ?: makeNetworkParametersCopier(config)).install(config.nodeDir)
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
