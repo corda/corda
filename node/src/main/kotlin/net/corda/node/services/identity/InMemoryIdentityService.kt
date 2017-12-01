@@ -36,17 +36,12 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         private val log = contextLogger()
     }
 
-    /**
-     * Certificate store for certificate authority and intermediary certificates.
-     */
-    override val caCertStore: CertStore
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
 
     init {
         val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
-        caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
         keyToParties.putAll(identities.associateBy { it.owningKey })
         principalToParties.putAll(identities.associateBy { it.name })
         confidentialIdentities.forEach { identity ->

@@ -21,7 +21,6 @@ import java.security.cert.*
 interface IdentityService {
     val trustRoot: X509Certificate
     val trustAnchor: TrustAnchor
-    val caCertStore: CertStore
 
     /**
      * Verify and then store an identity.
