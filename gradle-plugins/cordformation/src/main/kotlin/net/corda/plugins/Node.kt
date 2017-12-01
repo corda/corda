@@ -61,21 +61,6 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     /**
-     * Set the network map address for this node.
-     *
-     * @warning This should not be directly set unless you know what you are doing. Use the networkMapName in the
-     *          Cordform task instead.
-     * @param networkMapAddress Network map node address.
-     * @param networkMapLegalName Network map node legal name.
-     */
-    fun networkMapAddress(networkMapAddress: String, networkMapLegalName: String) {
-        val networkMapService = mutableMapOf<String, String>()
-        networkMapService.put("address", networkMapAddress)
-        networkMapService.put("legalName", networkMapLegalName)
-        config = config.withValue("networkMapService", ConfigValueFactory.fromMap(networkMapService))
-    }
-
-    /**
      * Enables SSH access on given port
      *
      * @param sshdPort The port for SSH server to listen on

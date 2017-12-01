@@ -45,8 +45,6 @@ The most important fields regarding network configuration are:
   resolvable name of a machine in a VPN.
 * ``rpcAddress``: The address to which Artemis will bind for RPC calls.
 * ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``p2pAddress`` and ``rpcAddress`` if they are on the same machine.
-* ``networkMapService``: Details of the node running the network map service. If it's this node that's running the service
-  then this field must not be specified.
 
 Starting the nodes
 ~~~~~~~~~~~~~~~~~~

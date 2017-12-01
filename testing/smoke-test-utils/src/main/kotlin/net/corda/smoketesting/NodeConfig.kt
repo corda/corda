@@ -14,8 +14,7 @@ class NodeConfig(
         val rpcPort: Int,
         val webPort: Int,
         val isNotary: Boolean,
-        val users: List<User>,
-        var networkMap: NodeConfig? = null
+        val users: List<User>
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
@@ -32,10 +31,6 @@ class NodeConfig(
         val config = empty()
                 .withValue("myLegalName", valueFor(legalName.toString()))
                 .withValue("p2pAddress", addressValueFor(p2pPort))
-                .withFallback(optional("networkMapService", networkMap, { c, n ->
-                    c.withValue("address", addressValueFor(n.p2pPort))
-                            .withValue("legalName", valueFor(n.legalName.toString()))
-                }))
                 .withValue("webAddress", addressValueFor(webPort))
                 .withValue("rpcAddress", addressValueFor(rpcPort))
                 .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
@@ -50,8 +45,6 @@ class NodeConfig(
     fun toText(): String = toFileConfig().root().render(renderOptions)
 
     private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)
+
     private fun addressValueFor(port: Int) = valueFor("localhost:$port")
-    private inline fun <T> optional(path: String, obj: T?, body: (Config, T) -> Config): Config {
-        return if (obj == null) empty() else body(empty(), obj).atPath(path)
-    }
 }
