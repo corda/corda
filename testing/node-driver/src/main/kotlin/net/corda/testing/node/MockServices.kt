@@ -4,7 +4,6 @@ import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
@@ -19,13 +18,11 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshCertificate
 import net.corda.node.services.keys.getSigner
-import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -116,9 +113,7 @@ open class MockServices(
                     override val vaultService: VaultServiceInternal = makeVaultService(database.hibernateConfig, schemaService)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-                        for (stx in txs) {
-                            validatedTransactions.addTransaction(stx)
-                        }
+                        super.recordTransactions(statesToRecord, txs)
                         // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                         vaultService.notifyAll(statesToRecord, txs.map { it.tx })
                     }
@@ -139,15 +134,11 @@ open class MockServices(
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
-            stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
-        }
-        for (stx in txs) {
-            validatedTransactions.addTransaction(stx)
+            validatedTransactions.addTransaction(it)
         }
     }
 
     final override val attachments = MockAttachmentStorage()
-    val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
     override val identityService: IdentityService = makeTestIdentityService()
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
@@ -217,10 +208,6 @@ class MockKeyManagementService(val identityService: IdentityService,
         return keyPair.sign(signableData)
     }
 }
-
-class MockStateMachineRecordedTransactionMappingStorage(
-        val storage: StateMachineRecordedTransactionMappingStorage = InMemoryStateMachineRecordedTransactionMappingStorage()
-) : StateMachineRecordedTransactionMappingStorage by storage
 
 open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
