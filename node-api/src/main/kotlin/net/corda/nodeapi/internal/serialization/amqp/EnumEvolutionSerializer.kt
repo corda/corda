@@ -8,11 +8,29 @@ import java.lang.UnsupportedOperationException
 import java.lang.reflect.Type
 
 /**
+ * Used whenever a deserialized enums fingerprint doesn't match the fingerprint of the generated
+ * serializer object. I.e. the deserializing code has a different version of the code either newer or
+ * older). The changes will have been documented using the transformation annotations, a copy of which
+ * are encoded as part of the AMQP envelope.
+ *
+ * This function ascertains which version of the enumeration is newer by comparing the length of the
+ * transformations list. Since transformation annotations should only ever be added, never removed even
+ * when seemingly unneeded (such as repeated renaming of a single constant), the longer list will dictate
+ * which is more up to date.
+ *
+ * The list of transforms come from two places, the class as it exists on the current class path and the
+ * class as it exists as it was serialized. In the case of the former we can build the list by using
+ * reflection on the class. In the case of the latter the transforms are retrieved from the AMQP envelope.
+ *
+ * With a set of transforms chosen we calculate the set of all possible constants, then using the
+ * transformation rules we create a mapping between those values and the values that exist on the
+ * current class
+ *
  * @property clazz The enum as it exists now, not as it did when it was serialized (either in the past
  * or future).
  * @property factory the [SerializerFactory] that is building this serialization object.
  * @property conversions A mapping between all potential enum constants that could've been assigned to
- * an instance of the enum as it existed at serialisation and those that exist now
+ * an instance of the enum as it existed at time of serialisation and those that exist now
  * @property ordinals Convenience mapping of constant to ordinality
  */
 class EnumEvolutionSerializer(
@@ -76,8 +94,8 @@ class EnumEvolutionSerializer(
             // you'd think this was overkill to get access to the ordinal values for each constant but it's actually
             // rather tricky when you don't have access to the actual type, so this is a nice way to be able
             // to precompute and pass to the actual object
-            var idx = 0
-            return EnumEvolutionSerializer(new.type, factory, conversions, localValues.associateBy({ it }, { idx++ }))
+            return EnumEvolutionSerializer(new.type, factory, conversions,
+                    localValues.mapIndexed { i, s -> Pair (s, i)}.toMap())
         }
     }
 
