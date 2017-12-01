@@ -20,7 +20,6 @@ import org.apache.shiro.authz.SimpleAuthorizationInfo
 import org.apache.shiro.authz.permission.DomainPermission
 import org.apache.shiro.authz.permission.PermissionResolver
 import org.apache.shiro.mgt.DefaultSecurityManager
-import org.apache.shiro.mgt.SecurityManager
 import org.apache.shiro.realm.AuthorizingRealm
 import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
@@ -210,13 +209,7 @@ internal class ShiroAuthorizingSubject(private val impl: Subject) : AuthorizingS
     override val principal: String
         get() = impl.principals.primaryPrincipal as String
 
-    override fun isPermitted(action: String, vararg arguments: String): Boolean {
-        return when {
-        // TODO sollecitom try firstOrNull()
-            arguments.isEmpty() -> impl.isPermitted(RPCPermission(setOf(action)))
-            else -> impl.isPermitted(RPCPermission(setOf(action), arguments.first()))
-        }
-    }
+    override fun isPermitted(action: String, vararg arguments: String) = impl.isPermitted(RPCPermission(setOf(action), arguments.firstOrNull()))
 }
 
 /**
