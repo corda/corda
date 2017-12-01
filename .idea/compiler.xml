@@ -57,10 +57,10 @@
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
-      <module name="gradle-plugins-cordform-common_main" target="1.8" />
-      <module name="gradle-plugins-cordform-common_test" target="1.8" />
       <module name="gradle-plugins-cordapp_main" target="1.8" />
       <module name="gradle-plugins-cordapp_test" target="1.8" />
+      <module name="gradle-plugins-cordform-common_main" target="1.8" />
+      <module name="gradle-plugins-cordform-common_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
       <module name="intellij-plugin_main" target="1.8" />
@@ -90,6 +90,8 @@
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
+      <module name="network-management-capsule_main" target="1.8" />
+      <module name="network-management-capsule_test" target="1.8" />
       <module name="network-management_integrationTest" target="1.8" />
       <module name="network-management_main" target="1.8" />
       <module name="network-management_test" target="1.8" />

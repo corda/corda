@@ -11,7 +11,6 @@ description 'Network management module encapsulating components such as Doorman,
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-jpa'
-apply plugin: 'maven-publish'
 
 repositories {
     mavenLocal()
@@ -45,30 +44,6 @@ sourceSets {
         resources {
             srcDir file('src/integration-test/resources')
         }
-    }
-}
-
-task buildDoormanJAR(type: FatCapsule, dependsOn: 'jar') {
-    group = 'build'
-    applicationClass 'com.r3.corda.networkmanage.doorman.MainKt'
-    archiveName "doorman-${version}-capsule.jar"
-    capsuleManifest {
-        applicationVersion = corda_dependency_version
-        systemProperties['visualvm.display.name'] = 'Doorman'
-        minJavaVersion = '1.8.0'
-        jvmArgs = ['-XX:+UseG1GC']
-    }
-}
-
-task buildHsmJAR(type: FatCapsule, dependsOn: 'jar') {
-    group = 'build'
-    applicationClass 'com.r3.corda.networkmanage.hsm.MainKt'
-    archiveName "hsm-${version}-capsule.jar"
-    capsuleManifest {
-        applicationVersion = corda_dependency_version
-        systemProperties['visualvm.display.name'] = 'HSM Signing Service'
-        minJavaVersion = '1.8.0'
-        jvmArgs = ['-XX:+UseG1GC']
     }
 }
 
@@ -128,14 +103,4 @@ dependencies {
 
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.5.1"
-}
-
-publishing {
-    publications {
-        doorman(MavenPublication) {
-            artifact buildDoormanJAR {
-                classifier ""
-            }
-        }
-    }
 }

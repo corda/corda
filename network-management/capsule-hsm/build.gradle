@@ -1,0 +1,36 @@
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Doorman default'
+
+version project(':network-management').version
+
+configurations {
+    runtimeArtifacts.extendsFrom runtime
+}
+
+task buildHsmJAR(type: FatCapsule, dependsOn: 'jar') {
+    applicationClass 'com.r3.corda.networkmanage.hsm.MainKt'
+    archiveName "hsm-${version}-capsule.jar"
+    capsuleManifest {
+        applicationVersion = corda_dependency_version
+        systemProperties['visualvm.display.name'] = 'HSM Signing Service'
+        minJavaVersion = '1.8.0'
+        jvmArgs = ['-XX:+UseG1GC']
+    }
+    applicationSource = files(
+        project(':network-management').configurations.runtime,
+        project(':network-management').jar
+    )
+}
+
+artifacts {
+    runtimeArtifacts buildHsmJAR
+    publish buildHsmJAR
+}
+
+publish {
+    name 'doorman-hsm'
+    disableDefaultJar = true
+}

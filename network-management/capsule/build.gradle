@@ -1,0 +1,36 @@
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Doorman default'
+
+version project(':network-management').version
+
+configurations {
+    runtimeArtifacts.extendsFrom runtime
+}
+
+task buildDoormanJAR(type: FatCapsule, dependsOn: ':network-management:jar') {
+    applicationClass 'com.r3.corda.networkmanage.doorman.MainKt'
+    archiveName "doorman-${version}-capsule.jar"
+    capsuleManifest {
+        applicationVersion = corda_dependency_version
+        systemProperties['visualvm.display.name'] = 'Doorman'
+        minJavaVersion = '1.8.0'
+        jvmArgs = ['-XX:+UseG1GC']
+    }
+    applicationSource = files(
+        project(':network-management').configurations.runtime,
+        project(':network-management').jar
+    )
+}
+
+artifacts {
+    runtimeArtifacts buildDoormanJAR
+    publish buildDoormanJAR
+}
+
+publish {
+    name 'doorman'
+    disableDefaultJar = true
+}
