@@ -126,11 +126,11 @@ handling, and ensures the Corda service is run at boot.
 9. Provision the required certificates to your node. Contact the network permissioning service or see
    :doc:`permissioning`
 
-10. You can now start a node and its webserver by running the following ``systemctl`` commands:
+10. You can now start a node and its webserver and set the services to start on boot by running the following ``systemctl`` commands:
 
    * ``sudo systemctl daemon-reload``
-   * ``sudo systemctl corda start``
-   * ``sudo systemctl corda-webserver start``
+   * ``sudo systemctl enable --now corda``
+   * ``sudo systemctl enable --now corda-webserver``
 
 You can run multiple nodes by creating multiple directories and Corda services, modifying the ``node.conf`` and
 ``service`` files so they are unique.
@@ -212,10 +212,11 @@ at boot, and means the Corda service stays running with no users connected to th
 
       nssm install cordanode1 C:\ProgramData\Oracle\Java\javapath\java.exe
       nssm set cordanode1 AppDirectory C:\Corda
-      nssm set cordanode1 AppParameters "-jar corda.jar -Xmx2048m --config-file=C:\corda\node.conf"
+      nssm set cordanode1 AppParameters "-Xmx2048m -jar corda.jar --config-file=C:\corda\node.conf"
       nssm set cordanode1 AppStdout C:\Corda\service.log
       nssm set cordanode1 AppStderr C:\Corda\service.log
       nssm set cordanode1 Description Corda Node - Bank of Breakfast Tea
+      nssm set cordanode1 Start SERVICE_AUTO_START
       sc start cordanode1
 
 9. Modify the batch file:
