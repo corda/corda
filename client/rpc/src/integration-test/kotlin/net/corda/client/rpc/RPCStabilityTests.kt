@@ -63,8 +63,8 @@ class RPCStabilityTests {
         val executor = Executors.newScheduledThreadPool(1)
         fun startAndStop() {
             rpcDriver {
-                val server = startRpcServer<RPCOps>(ops = DummyOps)
-                startRpcClient<RPCOps>(server.get().broker.hostAndPort!!).get()
+                val server = startRpcServer<RPCOps>(ops = DummyOps).get()
+                startRpcClient<RPCOps>(server.broker.hostAndPort!!).get()
             }
         }
         repeat(5) {

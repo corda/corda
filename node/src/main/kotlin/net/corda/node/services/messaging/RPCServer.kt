@@ -212,6 +212,7 @@ class RPCServer(
         reaperScheduledFuture?.cancel(false)
         rpcExecutor?.shutdownNow()
         reaperExecutor?.shutdownNow()
+        securityManager.close()
         sessionAndConsumers.forEach {
             it.sessionFactory.close()
         }
