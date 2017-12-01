@@ -47,9 +47,7 @@ It's reproduced here as an example of both ways you can do this for a couple of 
 AMQP
 ====
 
-.. note:: AMQP serialization is not currently live and will be turned on in a future release.
-
-The long term goal is to migrate the current serialization format for everything except checkpoints away from the current
+As The long term goal is to migrate the current serialization format for everything except checkpoints away from the current
 ``Kryo``-based format to a more sustainable, self-describing and controllable format based on AMQP 1.0.  The primary drivers for that move are:
 
     #.  A desire to have a schema describing what has been serialized along-side the actual data:
@@ -235,14 +233,6 @@ Enums
 
     #.  All enums are supported, provided they are annotated with ``@CordaSerializable``.
 
-..  warning::  Use of enums in CorDapps requires potentially deeper consideration than in other application environments
-    due to the challenges of simultaneously upgrading the code on all nodes.  It is therefore important to consider the code
-    evolution perspective, since an older version of the enum code cannot
-    accommodate a newly added element of the enum in a new version of the enum code.  See `Type Evolution`_.  Hence, enums are
-    a good fit for genuinely static data that will *never* change.  e.g. Days of the week is not going to be extended any time
-    soon and is indeed an enum in the Java library.  A Buy or Sell indicator is another.  However, something like
-    Trade Type or Currency Code is likely not, since who's to say a new trade type or currency will not come along soon.  For
-    those it is better to choose another representation: perhaps just a string.
 
 Exceptions
 ``````````
@@ -279,10 +269,6 @@ Future Enhancements
         static method responsible for returning the singleton instance.
     #.  Instance internalizing support.  We will add support for identifying classes that should be resolved against an instances map to avoid
         creating many duplicate instances that are equal.  Similar to ``String.intern()``.
-    #.  Enum evolution support.  We *may* introduce an annotation that can be applied to an enum element to indicate that
-        if an unrecognised enum entry is deserialized from a newer version of the code, it should be converted to that
-        element in the older version of the code.  This is dependent on identifying a suitable use case, since it does
-        mutate the data when transported to another node, which could be considered hazardous.
 
 .. Type Evolution:
 
@@ -291,4 +277,11 @@ Type Evolution
 
 When we move to AMQP as the serialization format, we will be adding explicit support for interoperability of different versions of the same code.
 We will describe here the rules and features for evolvability as part of a future update to the documentation.
+
+Enum Evolution
+``````````````
+Corda supports interoperability of enumerated type versions. This allows such type to be changed over time without breaking
+backward (or forward) compatibility. The rules and mechanisms for doing this are discussed in :doc:`serialization-enum-evolution``
+
+
 
