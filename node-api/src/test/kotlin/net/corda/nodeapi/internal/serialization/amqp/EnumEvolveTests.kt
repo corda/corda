@@ -27,7 +27,7 @@ class EnumEvolveTests {
 
     @Test
     fun deserialiseNewerSetToUnknown() {
-        val resource = "${this.javaClass.simpleName}.${testName()}"
+        val resource = "${javaClass.simpleName}.${testName()}"
         val sf = testDefaultFactory()
 
         data class C (val e : DeserializeNewerSetToUnknown)
@@ -55,7 +55,7 @@ class EnumEvolveTests {
 
     @Test
     fun deserialiseNewerSetToUnknown2() {
-        val resource = "${this.javaClass.simpleName}.${testName()}"
+        val resource = "${javaClass.simpleName}.${testName()}"
         val sf = testDefaultFactory()
 
         data class C(val e: DeserializeNewerSetToUnknown2)
@@ -95,7 +95,7 @@ class EnumEvolveTests {
     // Lets test to see if they forgot to provide an upgrade rule
     @Test
     fun deserialiseNewerWithNoRule() {
-        val resource = "${this.javaClass.simpleName}.${testName()}"
+        val resource = "${javaClass.simpleName}.${testName()}"
         val sf = testDefaultFactory()
 
         data class C(val e: DeserializeNewerWithNoRule)
@@ -143,7 +143,7 @@ class EnumEvolveTests {
 
     @Test
     fun deserializeWithRename() {
-        val resource = "${this.javaClass.simpleName}.${testName()}"
+        val resource = "${javaClass.simpleName}.${testName()}"
         val sf = testDefaultFactory()
 
         data class C(val e: DeserializeWithRename)
@@ -265,7 +265,7 @@ class EnumEvolveTests {
 
     @Test
     fun multiOperations() {
-        val resource = "${this.javaClass.simpleName}.${testName()}"
+        val resource = "${javaClass.simpleName}.${testName()}"
         val sf = testDefaultFactory()
 
         data class C(val e: MultiOperations)

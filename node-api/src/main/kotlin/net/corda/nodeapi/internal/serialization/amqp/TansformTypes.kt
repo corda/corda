@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
@@ -43,7 +44,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
         override fun validate(l : List<Transform>, constants: Set<String>) {
-            @Suppress("UNCHECKED_CAST") (l as List<EnumDefaultSchemaTransform>).forEach {
+            uncheckedCast<List<Transform>, List<EnumDefaultSchemaTransform>>(l).forEach {
                 if (!constants.contains(it.old)) {
                     throw NotSerializableException(
                             "Enum extension defaults must be to a valid constant: ${it.new} -> ${it.old}. ${it.old} " +

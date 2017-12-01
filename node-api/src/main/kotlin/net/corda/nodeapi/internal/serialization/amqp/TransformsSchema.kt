@@ -146,10 +146,8 @@ class EnumDefaultSchemaTransform(val old: String, val new: String) : Transform()
 /**
  * Transform applied to either a class or enum where a property is renamed
  *
- * @property from the name at time of change of the property
- * @property to the new name of the property
- *
- *
+ * @property from the name of the property or constant prior to being changed, i.e. what it was
+ * @property to the new name of the property or constant after the change has been made, i.e. what it is now
  */
 class RenameSchemaTransform(val from: String, val to: String) : Transform() {
     companion object : DescribedTypeConstructor<RenameSchemaTransform> {
