@@ -89,11 +89,11 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                 val legalName = MEGA_CORP.name
                 certificatesDirectory.createDirectories()
                 if (!trustStoreFile.exists()) {
-                    javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStoreFile)
+                    javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").copyTo(trustStoreFile)
                 }
 
                 val caKeyStore = loadKeyStore(
-                        javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"),
+                        javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"),
                         "cordacadevpass")
 
                 val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA).toX509CertHolder()

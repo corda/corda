@@ -1,4 +1,4 @@
-package net.corda.node.utilities
+package net.corda.nodeapi.internal
 
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.generateKeyPair
@@ -31,7 +31,7 @@ object ServiceIdentityGenerator {
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
 
-        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
         val issuer = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
         val rootCert = caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
 
