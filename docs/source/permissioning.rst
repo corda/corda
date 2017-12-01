@@ -37,7 +37,7 @@ A Corda network has three types of certificate authorities (CAs):
 We can visualise the permissioning structure as follows:
 
 .. image:: resources/certificate_structure.png
-   :scale: 25%
+   :scale: 55%
    :align: center
 
 Keypair and certificate formats
