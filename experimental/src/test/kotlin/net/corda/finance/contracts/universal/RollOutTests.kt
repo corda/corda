@@ -145,16 +145,14 @@ class RollOutTests {
     @Test
     fun issue() {
         transaction {
-            output(UNIVERSAL_PROGRAM_ID) { stateStart }
+            output(UNIVERSAL_PROGRAM_ID, stateStart)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Issue())
                 this `fails with` "the transaction is signed by all liable parties"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Issue())
             this.verifies()
         }
     }
@@ -162,18 +160,16 @@ class RollOutTests {
     @Test
     fun `execute`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { stateStart }
-            output(UNIVERSAL_PROGRAM_ID) { stateStep1a }
-            output(UNIVERSAL_PROGRAM_ID) { stateStep1b }
+            input(UNIVERSAL_PROGRAM_ID, stateStart)
+            output(UNIVERSAL_PROGRAM_ID, stateStep1a)
+            output(UNIVERSAL_PROGRAM_ID, stateStep1b)
             timeWindow(TEST_TX_TIME_1)
 
             /*   tweak {
                    command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                    this `fails with` "action must be defined"
                }*/
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("transfer") }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Action("transfer"))
             this.verifies()
         }
     }

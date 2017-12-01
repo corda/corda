@@ -5,10 +5,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.utilities.*
-import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_CA
-import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter

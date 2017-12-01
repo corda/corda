@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info">
+    <Properties>
+        <Property name="defaultLogLevel">info</Property>
+    </Properties>
+
+    <ThresholdFilter level="trace"/>
+
+    <Appenders>
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%-5level] %date{HH:mm:ss,SSS} [%t] (%F:%L) %c{2}.%method - %msg %X%n" />
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Root level="${sys:defaultLogLevel}">
+            <AppenderRef ref="Console-Appender" level="${sys:defaultLogLevel}"/>
+        </Root>
+    </Loggers>
+</Configuration>

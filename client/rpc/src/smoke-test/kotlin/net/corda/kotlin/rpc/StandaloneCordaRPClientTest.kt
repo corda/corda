@@ -86,7 +86,7 @@ class StandaloneCordaRPClientTest {
     }
 
     private fun copyFinanceCordapp() {
-        val cordappsDir = (factory.baseDirectory(notaryConfig) / "cordapps").createDirectories()
+        val cordappsDir = (factory.baseDirectory(notaryConfig) / NodeProcess.CORDAPPS_DIR_NAME).createDirectories()
         // Find the finance jar file for the smoke tests of this module
         val financeJar = Paths.get("build", "resources", "smokeTest").list {
             it.filter { "corda-finance" in it.toString() }.toList().single()

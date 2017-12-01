@@ -8,15 +8,14 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.X509Utilities
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
-import java.io.ByteArrayInputStream
 import java.security.KeyPair
 import java.security.cert.CertPath
 import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
 object TestNodeInfoFactory {
@@ -40,11 +39,11 @@ object TestNodeInfoFactory {
     }
 
     private fun buildCertPath(vararg certificates: Certificate): CertPath {
-        return CertificateFactory.getInstance("X509").generateCertPath(certificates.asList())
+        return X509CertificateFactory().delegate.generateCertPath(certificates.asList())
     }
 
     private fun X509CertificateHolder.toX509Certificate(): X509Certificate {
-        return CertificateFactory.getInstance("X509").generateCertificate(ByteArrayInputStream(encoded)) as X509Certificate
+        return X509CertificateFactory().generateCertificate(encoded.inputStream())
     }
 
 }

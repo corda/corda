@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.ALICE
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -38,7 +39,6 @@ class NodeConfigurationImplTest {
             keyStorePassword = "cordacadevpass",
             trustStorePassword = "trustpass",
             dataSourceProperties = makeTestDataSourceProperties(ALICE.name.organisation),
-            database = DatabaseConfig(),
             rpcUsers = emptyList(),
             verifierType = VerifierType.InMemory,
             useHTTPS = false,

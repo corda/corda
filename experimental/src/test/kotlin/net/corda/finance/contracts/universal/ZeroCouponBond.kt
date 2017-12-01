@@ -51,15 +51,12 @@ class ZeroCouponBond {
     @Test
     fun `issue - signature`() {
         transaction {
-            output(UNIVERSAL_PROGRAM_ID) { inState }
-
+            output(UNIVERSAL_PROGRAM_ID, inState)
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Issue())
                 this `fails with` "the transaction is signed by all liable parties"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Issue())
             this.verifies()
         }
     }
@@ -67,17 +64,15 @@ class ZeroCouponBond {
     @Test
     fun `execute`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("execute") }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Action("execute"))
             this.verifies()
         }
     }
@@ -85,11 +80,10 @@ class ZeroCouponBond {
     @Test
     fun `execute - not authorized`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState)
             timeWindow(TEST_TX_TIME_1)
-
-            command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(momAndPop.owningKey, UniversalContract.Commands.Action("execute"))
             this `fails with` "condition must be met"
         }
     }
@@ -97,11 +91,10 @@ class ZeroCouponBond {
     @Test
     fun `execute - outState mismatch`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outStateWrong }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outStateWrong)
             timeWindow(TEST_TX_TIME_1)
-
-            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey, UniversalContract.Commands.Action("execute"))
             this `fails with` "output state must match action result state"
         }
     }
@@ -109,29 +102,23 @@ class ZeroCouponBond {
     @Test
     fun move() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-
+            input(UNIVERSAL_PROGRAM_ID, inState)
             tweak {
-                output(UNIVERSAL_PROGRAM_ID) { outStateMove }
-                command(acmeCorp.owningKey) {
-                    UniversalContract.Commands.Move(acmeCorp, momAndPop)
-                }
+                output(UNIVERSAL_PROGRAM_ID, outStateMove)
+                command(acmeCorp.owningKey,
+                    UniversalContract.Commands.Move(acmeCorp, momAndPop))
                 this `fails with` "the transaction is signed by all liable parties"
             }
 
             tweak {
-                output(UNIVERSAL_PROGRAM_ID) { inState }
-                command(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey) {
-                    UniversalContract.Commands.Move(acmeCorp, momAndPop)
-                }
+                output(UNIVERSAL_PROGRAM_ID, inState)
+                command(listOf(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey),
+                    UniversalContract.Commands.Move(acmeCorp, momAndPop))
                 this `fails with` "output state does not reflect move command"
             }
-
-            output(UNIVERSAL_PROGRAM_ID) { outStateMove }
-
-            command(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey) {
-                UniversalContract.Commands.Move(acmeCorp, momAndPop)
-            }
+            output(UNIVERSAL_PROGRAM_ID, outStateMove)
+            command(listOf(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey),
+                UniversalContract.Commands.Move(acmeCorp, momAndPop))
             this.verifies()
         }
     }

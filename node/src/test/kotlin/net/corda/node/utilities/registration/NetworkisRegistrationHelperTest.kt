@@ -5,9 +5,9 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.node.utilities.X509Utilities
-import net.corda.node.utilities.getX509Certificate
-import net.corda.node.utilities.loadKeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.getX509Certificate
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.ALICE
 import net.corda.testing.rigorousMock
 import net.corda.testing.testNodeConfiguration

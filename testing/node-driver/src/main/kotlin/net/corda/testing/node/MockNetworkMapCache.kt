@@ -8,7 +8,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.getTestPartyAndCertificate
 import rx.Observable
 import rx.subjects.PublishSubject

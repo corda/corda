@@ -15,9 +15,9 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.irs.flows.RatesFixFlow
-import net.corda.node.services.config.DatabaseConfig
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
@@ -209,8 +209,8 @@ class NodeInterestRatesTest {
         val mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
-            internals.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
-            internals.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
+            registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+            registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             database.transaction {
                 services.cordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
             }

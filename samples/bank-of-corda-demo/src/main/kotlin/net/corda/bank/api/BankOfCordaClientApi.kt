@@ -10,20 +10,18 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.testing.http.HttpApi
-import java.util.*
 
 /**
  * Interface for communicating with Bank of Corda node
  */
-class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
-    private val apiRoot = "api/bank"
+object BankOfCordaClientApi {
     /**
      * HTTP API
      */
     // TODO: security controls required
-    fun requestWebIssue(params: IssueRequestParams): Boolean {
-        val api = HttpApi.fromHostAndPort(hostAndPort, apiRoot)
-        return api.postJson("issue-asset-request", params)
+    fun requestWebIssue(webAddress: NetworkHostAndPort, params: IssueRequestParams) {
+        val api = HttpApi.fromHostAndPort(webAddress, "api/bank")
+        api.postJson("issue-asset-request", params)
     }
 
     /**
@@ -31,8 +29,8 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
      *
      * @return a pair of the issuing and payment transactions.
      */
-    fun requestRPCIssue(params: IssueRequestParams): SignedTransaction {
-        val client = CordaRPCClient(hostAndPort)
+    fun requestRPCIssue(rpcAddress: NetworkHostAndPort, params: IssueRequestParams): SignedTransaction {
+        val client = CordaRPCClient(rpcAddress)
         // TODO: privileged security controls required
         client.start("bankUser", "test").use { connection ->
             val rpc = connection.proxy
@@ -44,11 +42,10 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
             val notaryLegalIdentity = rpc.notaryIdentities().firstOrNull { it.name == params.notaryName } ?:
                     throw IllegalStateException("Couldn't locate notary ${params.notaryName} in NetworkMapCache")
 
-            val amount = Amount(params.amount, Currency.getInstance(params.currency))
             val anonymous = true
             val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
 
-            return rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, anonymous, notaryLegalIdentity)
+            return rpc.startFlow(::CashIssueAndPaymentFlow, params.amount, issuerBankPartyRef, issueToParty, anonymous, notaryLegalIdentity)
                     .returnValue.getOrThrow().stx
         }
     }

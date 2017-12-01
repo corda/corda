@@ -17,12 +17,12 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
 import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.currentDBSession
-import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.DatabaseTransactionManager
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
