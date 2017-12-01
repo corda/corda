@@ -6,13 +6,13 @@ import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.x500Name
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.hibernate.Session
 import java.security.cert.CertPath
-import java.sql.Connection
 import java.time.Instant
 
 /**
@@ -20,7 +20,7 @@ import java.time.Instant
  */
 class PersistentCertificateRequestStorage(private val database: CordaPersistence) : CertificationRequestStorage {
     override fun putCertificatePath(requestId: String, certificates: CertPath, signedBy: List<String>) {
-        return database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
+        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val request = singleRequestWhere(CertificateSigningRequestEntity::class.java) { builder, path ->
                 val requestIdEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
                 val statusEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), RequestStatus.APPROVED)
@@ -44,7 +44,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
 
     override fun saveRequest(request: PKCS10CertificationRequest): String {
         val requestId = SecureHash.randomSHA256().toString()
-        database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
+        database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val (legalName, rejectReason) = parseAndValidateLegalName(request, session)
             session.save(CertificateSigningRequestEntity(
                     requestId = requestId,
@@ -72,7 +72,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
     }
 
     override fun markRequestTicketCreated(requestId: String) {
-        return database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
+        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val request = findRequest(requestId, RequestStatus.NEW)
             request ?: throw IllegalArgumentException("Error when creating request ticket with id: $requestId. Request does not exist or its status is not NEW.")
             val update = request.copy(
@@ -83,7 +83,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
     }
 
     override fun approveRequest(requestId: String, approvedBy: String) {
-        return database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
+        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val request = findRequest(requestId, RequestStatus.TICKET_CREATED)
             request ?: throw IllegalArgumentException("Error when approving request with id: $requestId. Request does not exist or its status is not TICKET_CREATED.")
             val update = request.copy(
@@ -95,7 +95,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
     }
 
     override fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String) {
-        database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
+        database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val request = findRequest(requestId)
             request ?: throw IllegalArgumentException("Error when rejecting request with id: $requestId. Request does not exist.")
             val update = request.copy(

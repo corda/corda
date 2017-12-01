@@ -3,7 +3,7 @@ package com.r3.corda.networkmanage.hsm.persistence
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.PersistentCertificateRequestStorage
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.CertPath
 

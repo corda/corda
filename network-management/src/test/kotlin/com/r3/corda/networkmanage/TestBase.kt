@@ -5,12 +5,10 @@ import com.r3.corda.networkmanage.common.persistence.CertificateData
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
-import com.r3.corda.networkmanage.common.persistence.entity.CertificateDataEntity
-import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
 import net.corda.core.crypto.SecureHash
-import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.testing.SerializationEnvironmentRule
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.junit.Rule

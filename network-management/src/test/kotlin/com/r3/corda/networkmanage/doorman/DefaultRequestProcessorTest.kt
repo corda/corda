@@ -15,7 +15,7 @@ import com.r3.corda.networkmanage.doorman.signer.DefaultCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.node.utilities.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.junit.Test
 import kotlin.test.assertEquals
 

@@ -9,15 +9,15 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializedBytes
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import java.security.cert.CertPath
-import java.sql.Connection
 
 /**
  * Database implementation of the [NetworkMapStorage] interface
  */
 class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeInfoStorage {
-    override fun putNodeInfo(signedNodeInfo: SignedData<NodeInfo>): SecureHash = database.transaction(Connection.TRANSACTION_SERIALIZABLE) {
+    override fun putNodeInfo(signedNodeInfo: SignedData<NodeInfo>): SecureHash = database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
         val nodeInfo = signedNodeInfo.verified()
         val publicKeyHash = nodeInfo.legalIdentities.first().owningKey.hashString()
         val request = singleRequestWhere(CertificateDataEntity::class.java) { builder, path ->

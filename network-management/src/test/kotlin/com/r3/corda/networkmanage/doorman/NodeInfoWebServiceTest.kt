@@ -18,8 +18,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.X509Utilities
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.SerializationEnvironmentRule
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Rule
@@ -33,7 +33,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class NodeInfoWebServiceTest {
-
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)

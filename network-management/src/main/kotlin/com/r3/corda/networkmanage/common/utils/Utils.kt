@@ -5,12 +5,11 @@ import com.typesafe.config.ConfigFactory
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import net.corda.core.crypto.sha256
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import org.bouncycastle.cert.X509CertificateHolder
-import java.io.ByteArrayInputStream
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
 // TODO: replace this with Crypto.hash when its available.
@@ -37,16 +36,8 @@ fun Array<out String>.toConfigWithOptions(registerOptions: OptionParser.() -> Un
 
 class ShowHelpException(val parser: OptionParser) : Exception()
 
-object CertificateUtilities {
-    fun toX509Certificate(byteArray: ByteArray): X509Certificate {
-        return CertificateFactory.getInstance("X509").generateCertificate(ByteArrayInputStream(byteArray)) as X509Certificate
-    }
-}
+fun X509CertificateHolder.toX509Certificate(): X509Certificate = X509CertificateFactory().generateCertificate(encoded.inputStream())
 
-fun X509CertificateHolder.toX509Certificate(): Certificate = CertificateUtilities.toX509Certificate(encoded)
+fun buildCertPath(vararg certificates: Certificate): CertPath = X509CertificateFactory().delegate.generateCertPath(certificates.asList())
 
-fun buildCertPath(vararg certificates: Certificate): CertPath {
-    return CertificateFactory.getInstance("X509").generateCertPath(certificates.asList())
-}
-
-fun buildCertPath(certPathBytes: ByteArray): CertPath = CertificateFactory.getInstance("X509").generateCertPath(certPathBytes.inputStream())
+fun buildCertPath(certPathBytes: ByteArray): CertPath = X509CertificateFactory().delegate.generateCertPath(certPathBytes.inputStream())

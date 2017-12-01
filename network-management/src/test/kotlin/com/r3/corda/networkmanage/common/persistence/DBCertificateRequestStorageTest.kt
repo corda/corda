@@ -8,10 +8,10 @@ import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.X509Utilities
-import net.corda.node.utilities.configureDatabase
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -30,7 +30,7 @@ class DBCertificateRequestStorageTest : TestBase() {
 
     @Before
     fun startDb() {
-        persistence = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { throw UnsupportedOperationException() }, SchemaService())
+        persistence = configureDatabase(makeTestDataSourceProperties())
         storage = PersistentCertificateRequestStorage(persistence)
     }
 
@@ -222,15 +222,6 @@ class DBCertificateRequestStorageTest : TestBase() {
         props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
         props.setProperty("dataSource.user", "sa")
         props.setProperty("dataSource.password", "")
-        return props
-    }
-
-    private fun makeTestDatabaseProperties(key: String? = null, value: String? = null): Properties {
-        val props = Properties()
-        props.setProperty("transactionIsolationLevel", "repeatableRead") //for other possible values see net.corda.node.utilities.CordaPeristence.parserTransactionIsolationLevel(String)
-        if (key != null) {
-            props.setProperty(key, value)
-        }
         return props
     }
 }

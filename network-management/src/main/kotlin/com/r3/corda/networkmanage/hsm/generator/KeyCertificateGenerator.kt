@@ -8,7 +8,7 @@ import com.r3.corda.networkmanage.hsm.utils.X509Utilities.createSelfSignedCACert
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.getAndInitializeKeyStore
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.getCleanEcdsaKeyPair
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.retrieveCertificateAndKeys
-import net.corda.node.utilities.addOrReplaceKey
+import net.corda.nodeapi.internal.crypto.addOrReplaceKey
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey

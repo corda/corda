@@ -1,6 +1,13 @@
 package com.r3.corda.networkmanage.common.persistence
 
-import net.corda.node.utilities.DatabaseTransaction
+import com.r3.corda.networkmanage.common.persistence.entity.*
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import net.corda.core.schemas.MappedSchema
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import java.util.*
 import javax.persistence.LockModeType
 import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.Path
@@ -24,3 +31,19 @@ fun <T> DatabaseTransaction.deleteRequest(clazz: Class<T>, predicate: (CriteriaB
     return session.createQuery(delete).executeUpdate()
 }
 
+fun configureDatabase(dataSourceProperties: Properties,
+                      databaseConfig: DatabaseConfig = DatabaseConfig()): CordaPersistence {
+    val config = HikariConfig(dataSourceProperties)
+    val dataSource = HikariDataSource(config)
+    return CordaPersistence(dataSource, databaseConfig, setOf(NetworkManagementSchemaServices.SchemaV1), emptyList())
+}
+
+sealed class NetworkManagementSchemaServices {
+    object SchemaV1 : MappedSchema(schemaFamily = NetworkManagementSchemaServices::class.java, version = 1,
+            mappedTypes = listOf(
+                    CertificateSigningRequestEntity::class.java,
+                    CertificateDataEntity::class.java,
+                    NodeInfoEntity::class.java,
+                    NetworkParametersEntity::class.java,
+                    NetworkMapEntity::class.java))
+}

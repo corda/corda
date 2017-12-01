@@ -13,10 +13,10 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.X509Utilities
-import net.corda.node.utilities.configureDatabase
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
@@ -36,7 +36,7 @@ class PersitenceNodeInfoStorageTest : TestBase() {
 
     @Before
     fun startDb() {
-        persistence = configureDatabase(MockServices.makeTestDataSourceProperties(), MockServices.makeTestDatabaseProperties(), { throw UnsupportedOperationException() }, SchemaService())
+        persistence = configureDatabase(MockServices.makeTestDataSourceProperties())
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
         requestStorage = PersistentCertificateRequestStorage(persistence)
     }

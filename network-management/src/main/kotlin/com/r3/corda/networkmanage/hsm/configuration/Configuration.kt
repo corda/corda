@@ -13,8 +13,9 @@ import com.r3.corda.networkmanage.hsm.configuration.Parameters.Companion.DEFAULT
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
-import net.corda.node.utilities.X509Utilities
 import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -22,11 +23,10 @@ import java.util.*
 /**
  * Configuration parameters.
  */
-data class Parameters(val basedir: Path = Paths.get("."),
-                      val dataSourceProperties: Properties,
-                      val databaseProperties: Properties? = null,
+data class Parameters(val dataSourceProperties: Properties,
+                      val databaseConfig: DatabaseConfig = DatabaseConfig(),
                       val device: String = DEFAULT_DEVICE,
-                      // TODO this needs cleaning up after the config-file-only support is implemented
+        // TODO this needs cleaning up after the config-file-only support is implemented
                       val keyGroup: String,
                       val keySpecifier: Int = DEFAULT_KEY_SPECIFIER,
                       val rootPrivateKeyPassword: String,
@@ -42,7 +42,7 @@ data class Parameters(val basedir: Path = Paths.get("."),
                       val authKeyFilePath: Path? = DEFAULT_KEY_FILE_PATH,
                       val authKeyFilePassword: String? = DEFAULT_KEY_FILE_PASSWORD,
                       val autoUsername: String? = DEFAULT_AUTO_USERNAME,
-                      // TODO Change this to Duration in the future.
+        // TODO Change this to Duration in the future.
                       val signInterval: Long = DEFAULT_SIGN_INTERVAL) {
     companion object {
         val DEFAULT_DEVICE = "3001@127.0.0.1"
@@ -93,5 +93,5 @@ fun parseParameters(vararg args: String): Parameters {
     }
 
     val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))).resolve()
-    return config.parseAs<Parameters>()
+    return config.parseAs()
 }

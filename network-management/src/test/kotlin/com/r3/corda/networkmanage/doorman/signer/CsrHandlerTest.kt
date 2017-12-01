@@ -8,7 +8,7 @@ import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.doorman.JiraClient
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.node.utilities.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -32,11 +32,11 @@ class JiraCsrHandlerTest {
     lateinit var defaultCsrHandler: DefaultCsrHandler
 
     @Mock
-    var certPath : CertPath = mock()
+    var certPath: CertPath = mock()
 
-    private lateinit var jiraCsrHandler : JiraCsrHandler
+    private lateinit var jiraCsrHandler: JiraCsrHandler
     private val requestId = "id"
-    private lateinit var certificateResponse : CertificateResponse.Ready
+    private lateinit var certificateResponse: CertificateResponse.Ready
 
     private val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     private val pkcS10CertificationRequest = X509Utilities.createCertificateSigningRequest(CordaX500Name(locality = "London", organisation = "LegalName", country = "GB"), "my@mail.com", keyPair)

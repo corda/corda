@@ -1,7 +1,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.nhaarman.mockito_kotlin.whenever
-import com.r3.corda.networkmanage.common.persistence.SchemaService
+import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
@@ -16,9 +16,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.network.NetworkMapClient
-import net.corda.node.utilities.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.testing.ALICE
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.common.internal.testNetworkParameters
@@ -112,7 +112,7 @@ class DoormanIntegrationTest {
         NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
 
         // Publish NodeInfo
-        val networkMapClient = NetworkMapClient(config.compatibilityZoneURL!!)
+        val networkMapClient = NetworkMapClient(config.compatibilityZoneURL!!, rootCertAndKey.certificate.cert)
         val certs = loadKeyStore(config.nodeKeystore, config.keyStorePassword).getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         val keyPair = loadKeyStore(config.nodeKeystore, config.keyStorePassword).getKeyPair(X509Utilities.CORDA_CLIENT_CA, config.keyStorePassword)
         val nodeInfo = NodeInfo(listOf(NetworkHostAndPort("my.company.com", 1234)), listOf(PartyAndCertificate(buildCertPath(*certs))), 1, serial = 1L)
@@ -166,10 +166,7 @@ fun startDoorman(intermediateCACertAndKey: CertificateAndKeyPair, rootCACert: X5
 }
 
 fun startDoorman(localSigner: LocalSigner? = null): DoormanServer {
-    val database = configureDatabase(makeTestDataSourceProperties(), null, {
-        // Identity service not needed doorman, corda persistence is not very generic.
-        throw UnsupportedOperationException()
-    }, SchemaService())
+    val database = configureDatabase(makeTestDataSourceProperties())
     //Start doorman server
-    return startDoorman(NetworkHostAndPort("localhost", 0), database, true, testNetworkParameters(emptyList()), localSigner, 2, 30,null)
+    return startDoorman(NetworkHostAndPort("localhost", 0), database, true, testNetworkParameters(emptyList()), localSigner, 2, 30, null)
 }

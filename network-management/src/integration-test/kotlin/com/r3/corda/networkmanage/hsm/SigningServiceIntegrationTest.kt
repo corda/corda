@@ -4,7 +4,7 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
-import com.r3.corda.networkmanage.common.persistence.SchemaService
+import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import com.r3.corda.networkmanage.doorman.startDoorman
@@ -17,11 +17,11 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.X509Utilities
-import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.common.internal.testNetworkParameters
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -35,7 +35,6 @@ import kotlin.concurrent.scheduleAtFixedRate
 import kotlin.concurrent.thread
 
 class SigningServiceIntegrationTest {
-
     companion object {
         val H2_TCP_PORT = "8092"
         val HOST = "localhost"
@@ -89,10 +88,7 @@ class SigningServiceIntegrationTest {
     @Test
     fun `Signing service signs approved CSRs`() {
         //Start doorman server
-        val database = configureDatabase(makeTestDataSourceProperties(), null, {
-            // Identity service not needed doorman, corda persistence is not very generic.
-            throw UnsupportedOperationException()
-        }, SchemaService())
+        val database = configureDatabase(makeTestDataSourceProperties())
         val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 30, networkMapParameters = testNetworkParameters(emptyList()))
 
         // Start Corda network registration.
@@ -103,10 +99,7 @@ class SigningServiceIntegrationTest {
             whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
         }
 
-        val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), makeNotInitialisingTestDatabaseProperties(), {
-            // Identity service not needed doorman, corda persistence is not very generic.
-            throw UnsupportedOperationException()
-        }, SchemaService()))
+        val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties()))
 
         val hsmSigner = givenSignerSigningAllRequests(signingServiceStorage)
         // Poll the database for approved requests
@@ -145,10 +138,7 @@ class SigningServiceIntegrationTest {
     @Ignore
     fun `DEMO - Create CSR and poll`() {
         //Start doorman server
-        val database = configureDatabase(makeTestDataSourceProperties(), null, {
-            // Identity service not needed doorman, corda persistence is not very generic.
-            throw UnsupportedOperationException()
-        }, SchemaService())
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig())
         val doorman = startDoorman(NetworkHostAndPort(HOST, 0), database, approveAll = true, approveInterval = 2, signInterval = 10, networkMapParameters = testNetworkParameters(emptyList()))
 
         thread(start = true, isDaemon = true) {
@@ -186,8 +176,4 @@ private fun makeTestDataSourceProperties(): Properties {
     return props
 }
 
-internal fun makeNotInitialisingTestDatabaseProperties(): Properties {
-    val props = Properties()
-    props.setProperty("initDatabase", "false")
-    return props
-}
+internal fun makeNotInitialisingTestDatabaseProperties() = DatabaseConfig(initialiseSchema = false)

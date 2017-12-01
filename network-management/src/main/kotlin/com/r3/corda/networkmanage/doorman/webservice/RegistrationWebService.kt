@@ -3,9 +3,9 @@ package com.r3.corda.networkmanage.doorman.webservice
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.doorman.DoormanServerStatus
 import com.r3.corda.networkmanage.doorman.signer.CsrHandler
-import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_CA
-import net.corda.node.utilities.X509Utilities.CORDA_INTERMEDIATE_CA
-import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.codehaus.jackson.map.ObjectMapper
 import java.io.ByteArrayOutputStream

@@ -7,9 +7,9 @@ import com.r3.corda.networkmanage.common.signer.NetworkMap
 import com.r3.corda.networkmanage.common.signer.SignedNetworkMap
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.hibernate.Session
 import org.hibernate.jpa.QueryHints
 

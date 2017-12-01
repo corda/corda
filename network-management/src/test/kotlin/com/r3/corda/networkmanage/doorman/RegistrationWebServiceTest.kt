@@ -11,10 +11,10 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.utilities.CertificateStream
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.X509Utilities
-import net.corda.node.utilities.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
@@ -184,10 +184,10 @@ class RegistrationWebServiceTest : TestBase() {
 
         return when (conn.responseCode) {
             HTTP_OK -> ZipInputStream(conn.inputStream).use {
-                val stream = CertificateStream(it)
                 val certificates = ArrayList<X509Certificate>()
+                val factory = X509CertificateFactory()
                 while (it.nextEntry != null) {
-                    certificates.add(stream.nextCertificate())
+                    certificates += factory.generateCertificate(it)
                 }
                 PollResponse.Ready(certificates)
             }

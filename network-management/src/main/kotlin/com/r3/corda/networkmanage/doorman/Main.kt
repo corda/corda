@@ -15,10 +15,11 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
-import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
@@ -277,7 +278,7 @@ fun main(args: Array<String>) {
                         keystorePassword,
                         caPrivateKeyPassword)
                 DoormanParameters.Mode.DOORMAN -> {
-                    val database = configureDatabase(dataSourceProperties, databaseProperties, { throw UnsupportedOperationException() }, SchemaService())
+                    val database = configureDatabase(dataSourceProperties)
                     val signer = buildLocalSigner(this)
                     val networkParameters = commandLineOptions.updateNetworkParametersFile?.let {
                         parseNetworkParametersFrom(it)

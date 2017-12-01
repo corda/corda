@@ -10,7 +10,7 @@ import net.corda.core.internal.country
 import net.corda.core.internal.locality
 import net.corda.core.internal.organisation
 import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.pkcs.PKCS10CertificationRequest

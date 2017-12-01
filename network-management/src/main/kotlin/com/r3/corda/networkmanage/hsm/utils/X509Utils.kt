@@ -5,10 +5,10 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.internal.x500Name
-import net.corda.node.utilities.CertificateAndKeyPair
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.X509Utilities
-import net.corda.node.utilities.getX509Certificate
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.getX509Certificate
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.DERSequence

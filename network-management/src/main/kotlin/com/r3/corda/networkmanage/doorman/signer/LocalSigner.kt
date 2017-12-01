@@ -7,9 +7,8 @@ import com.r3.corda.networkmanage.common.utils.toX509Certificate
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.toX509CertHolder
-import net.corda.core.internal.x500Name
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.X509Utilities
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints

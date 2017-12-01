@@ -1,7 +1,7 @@
 package com.r3.corda.networkmanage.hsm
 
 import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
-import com.r3.corda.networkmanage.common.persistence.SchemaService
+import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
@@ -15,7 +15,6 @@ import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStor
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import com.r3.corda.networkmanage.hsm.signer.HsmNetworkMapSigner
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
-import net.corda.node.utilities.configureDatabase
 
 fun main(args: Array<String>) {
     run(parseParameters(*args))
@@ -25,10 +24,7 @@ fun run(parameters: Parameters) {
     parameters.run {
         // Create DB connection.
         checkNotNull(dataSourceProperties)
-        val database = configureDatabase(dataSourceProperties, databaseProperties, {
-            // Identity service not needed
-            throw UnsupportedOperationException()
-        }, SchemaService())
+        val database = configureDatabase(dataSourceProperties, databaseConfig)
         val csrStorage = DBSignedCertificateRequestStorage(database)
         val networkMapStorage = PersistentNetworkMapStorage(database)
         val hsmNetworkMapSigningThread = HsmNetworkMapSigner(
