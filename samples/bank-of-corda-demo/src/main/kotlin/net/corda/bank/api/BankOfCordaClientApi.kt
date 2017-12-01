@@ -10,7 +10,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.testing.http.HttpApi
-import java.util.*
 
 /**
  * Interface for communicating with Bank of Corda node

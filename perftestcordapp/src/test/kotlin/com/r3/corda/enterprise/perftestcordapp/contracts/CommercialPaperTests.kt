@@ -89,8 +89,8 @@ class CommercialPaperTestsGeneric {
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
                 attachments(CP_PROGRAM_ID, CommercialPaper.CP_PROGRAM_ID)
-                output(thisTest.getContract(), "paper") { thisTest.getPaper() }
-                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+                output(thisTest.getContract(), "paper", thisTest.getPaper())
+                command(MEGA_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
@@ -101,10 +101,10 @@ class CommercialPaperTestsGeneric {
                 attachments(Cash.PROGRAM_ID, CommercialPaper.CP_PROGRAM_ID)
                 input("paper")
                 input("alice's $900")
-                output(Cash.PROGRAM_ID, "borrowed $900") { 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP }
-                output(thisTest.getContract(), "alice's paper") { "paper".output<CommercialPaper.State>().withOwner(ALICE) }
-                command(ALICE_PUBKEY) { Cash.Commands.Move() }
-                command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
+                output(Cash.PROGRAM_ID, "borrowed $900", 900.DOLLARS.CASH issuedBy issuer ownedBy MEGA_CORP)
+                output(thisTest.getContract(), "alice's paper", "paper".output<CommercialPaper.State>().withOwner(ALICE))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(MEGA_CORP_PUBKEY, thisTest.getMoveCommand())
                 this.verifies()
             }
 
@@ -116,12 +116,12 @@ class CommercialPaperTestsGeneric {
                 input("some profits")
 
                 fun TransactionDSL<TransactionDSLInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
-                    output(Cash.PROGRAM_ID, "Alice's profit") { aliceGetsBack.STATE ownedBy ALICE }
-                    output(Cash.PROGRAM_ID, "Change") { (someProfits - aliceGetsBack).STATE ownedBy MEGA_CORP }
+                    output(Cash.PROGRAM_ID, "Alice's profit", aliceGetsBack.STATE ownedBy ALICE)
+                    output(Cash.PROGRAM_ID, "Change", (someProfits - aliceGetsBack).STATE ownedBy MEGA_CORP)
                 }
 
-                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                command(ALICE_PUBKEY) { thisTest.getRedeemCommand(DUMMY_NOTARY) }
+                command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, thisTest.getRedeemCommand(DUMMY_NOTARY))
 
                 tweak {
                     outputs(700.DOLLARS `issued by` issuer)
@@ -138,7 +138,7 @@ class CommercialPaperTestsGeneric {
                 timeWindow(TEST_TX_TIME + 8.days)
 
                 tweak {
-                    output(thisTest.getContract()) { "paper".output<CommercialPaper.State>() }
+                    output(thisTest.getContract(), "paper".output<CommercialPaper.State>())
                     this `fails with` "must be destroyed"
                 }
 
@@ -152,8 +152,8 @@ class CommercialPaperTestsGeneric {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(CP_PROGRAM_ID)
-            output(thisTest.getContract()) { thisTest.getPaper() }
-            command(MINI_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            output(thisTest.getContract(), thisTest.getPaper())
+            command(MINI_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
             timeWindow(TEST_TX_TIME)
             this `fails with` "output states are issued by a command signer"
         }
@@ -164,8 +164,8 @@ class CommercialPaperTestsGeneric {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(CP_PROGRAM_ID)
-            output(thisTest.getContract()) { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            output(thisTest.getContract(), thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer))
+            command(MEGA_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
             timeWindow(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
@@ -176,8 +176,8 @@ class CommercialPaperTestsGeneric {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(CP_PROGRAM_ID)
-            output(thisTest.getContract()) { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            output(thisTest.getContract(), thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days))
+            command(MEGA_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
             timeWindow(TEST_TX_TIME)
             this `fails with` "maturity date is not in the past"
         }
@@ -189,8 +189,8 @@ class CommercialPaperTestsGeneric {
             attachment(CP_PROGRAM_ID)
             attachment(CP_PROGRAM_ID)
             input(thisTest.getContract(), thisTest.getPaper())
-            output(thisTest.getContract()) { thisTest.getPaper() }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
+            output(thisTest.getContract(), thisTest.getPaper())
+            command(MEGA_CORP_PUBKEY, thisTest.getIssueCommand(DUMMY_NOTARY))
             timeWindow(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }

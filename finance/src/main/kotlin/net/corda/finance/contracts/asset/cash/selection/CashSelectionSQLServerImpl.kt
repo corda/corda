@@ -28,7 +28,7 @@ class CashSelectionSQLServerImpl : AbstractCashSelection() {
     override fun toString() = "${this::class.java} for $JDBC_DRIVER_NAME"
 
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
-                              onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>) : ResultSet {
+                              onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
 
         val selectJoin = """
             WITH row(transaction_id, output_index, pennies, total, lock_id) AS
@@ -51,19 +51,22 @@ class CashSelectionSQLServerImpl : AbstractCashSelection() {
             FROM row where row.total <= ? + row.pennies"""
 
         // Use prepared statement for protection against SQL Injection
-        val psSelectJoin = connection.prepareStatement(selectJoin)
-        var pIndex = 0
-        psSelectJoin.setString(++pIndex, amount.token.currencyCode)
-        psSelectJoin.setString(++pIndex, lockId.toString())
-        if (notary != null)
-            psSelectJoin.setString(++pIndex, notary.name.toString())
-        if (onlyFromIssuerParties.isNotEmpty())
-            psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toBase58String() as Any}.toTypedArray() )
-        if (withIssuerRefs.isNotEmpty())
-            psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes as Any }.toTypedArray())
-        psSelectJoin.setLong(++pIndex, amount.quantity)
-        log.debug(selectJoin)
+        connection.prepareStatement(selectJoin).use { statement ->
+            var pIndex = 0
+            statement.setString(++pIndex, amount.token.currencyCode)
+            statement.setString(++pIndex, lockId.toString())
+            if (notary != null)
+                statement.setString(++pIndex, notary.name.toString())
+            if (onlyFromIssuerParties.isNotEmpty())
+                statement.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toBase58String() as Any }.toTypedArray())
+            if (withIssuerRefs.isNotEmpty())
+                statement.setObject(++pIndex, withIssuerRefs.map { it.bytes as Any }.toTypedArray())
+            statement.setLong(++pIndex, amount.quantity)
+            log.debug(selectJoin)
 
-        return psSelectJoin.executeQuery()
+            statement.executeQuery().use { rs ->
+                return withResultSet(rs)
+            }
+        }
     }
 }
