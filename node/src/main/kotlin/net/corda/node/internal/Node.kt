@@ -33,6 +33,7 @@ import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.schedulers.Schedulers
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
@@ -46,7 +47,7 @@ import kotlin.system.exitProcess
  */
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
-                val initialiseSerialization: Boolean = true,
+                private val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
 ) : AbstractNode(configuration, createClock(configuration), versionInfo, cordappLoader) {
     companion object {
@@ -293,6 +294,7 @@ open class Node(configuration: NodeConfiguration,
         return started
     }
 
+    override fun getRxIoScheduler() = Schedulers.io()!!
     private fun initialiseSerialization() {
         val classloader = cordappLoader.appClassLoader
         nodeSerializationEnv = SerializationEnvironmentImpl(
