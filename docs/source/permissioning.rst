@@ -34,6 +34,12 @@ A Corda network has three types of certificate authorities (CAs):
   * Each node serves as its own CA in issuing the child certificates that it uses to sign its identity
     keys and TLS certificates
 
+We can visualise the permissioning structure as follows:
+
+.. image:: resources/certificate_structure.png
+   :scale: 25%
+   :align: center
+
 Keypair and certificate formats
 -------------------------------
 You can use any standard key tools or Corda's ``X509Utilities`` (which uses Bouncy Castle) to create the required
@@ -45,7 +51,8 @@ public/private keypairs and certificates. The keypairs and certificates should o
 
 * The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`_
 
-* Supported TLS 1.2 compatible schemes for all CA and TLS keys:
+* The root network CA, intermediate network CA and node CA keys, as well as the node TLS
+  keys, must follow one of the following schemes:
 
     * ECDSA using the NIST P-256 curve (secp256r1)
 
