@@ -45,7 +45,7 @@ public/private keypairs and certificates. The keypairs and certificates should o
 
 * The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`_
 
-* Supported TLS 1.2 compatible schemes:
+* Supported TLS 1.2 compatible schemes for all CA and TLS keys:
 
     * ECDSA using the NIST P-256 curve (secp256r1)
 
