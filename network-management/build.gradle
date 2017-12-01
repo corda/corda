@@ -58,10 +58,6 @@ task buildDoormanJAR(type: FatCapsule, dependsOn: 'jar') {
         minJavaVersion = '1.8.0'
         jvmArgs = ['-XX:+UseG1GC']
     }
-    // Make the resulting JAR file directly executable on UNIX by prepending a shell script to it.
-    // This lets you run the file like so: ./corda.jar
-    // Other than being slightly less typing, this has one big advantage: Ctrl-C works properly in the terminal.
-    reallyExecutable { trampolining() }
 }
 
 task buildHsmJAR(type: FatCapsule, dependsOn: 'jar') {
@@ -74,10 +70,6 @@ task buildHsmJAR(type: FatCapsule, dependsOn: 'jar') {
         minJavaVersion = '1.8.0'
         jvmArgs = ['-XX:+UseG1GC']
     }
-    // Make the resulting JAR file directly executable on UNIX by prepending a shell script to it.
-    // This lets you run the file like so: ./corda.jar
-    // Other than being slightly less typing, this has one big advantage: Ctrl-C works properly in the terminal.
-    reallyExecutable { trampolining() }
 }
 
 task integrationTest(type: Test) {
