@@ -5,14 +5,13 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
-
-data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 
 interface NodeConfiguration : NodeSSLConfiguration {
     // myLegalName should be only used in the initial network registration, we should use the name from the certificate instead of this.
@@ -21,7 +20,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val emailAddress: String
     val exportJMXto: String
     val dataSourceProperties: Properties
-    val database: Properties?
     val rpcUsers: List<User>
     val securityDataSources: List<SecurityDataSourceConfig>
     val devMode: Boolean
@@ -33,6 +31,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
+    // TODO Remove as this is only used by the driver
     val useHTTPS: Boolean
     val p2pAddress: NetworkHostAndPort
     val rpcAddress: NetworkHostAndPort?
@@ -41,7 +40,10 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
+    val database: DatabaseConfig
 }
+
+data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
@@ -90,7 +92,6 @@ data class NodeConfigurationImpl(
         override val keyStorePassword: String,
         override val trustStorePassword: String,
         override val dataSourceProperties: Properties,
-        override val database: Properties?,
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,
@@ -112,6 +113,7 @@ data class NodeConfigurationImpl(
         override val activeMQServer: ActiveMqServerConfiguration,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
+        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode),
         override val sshd: SSHDConfiguration? = null,
         override val securityDataSources : List<SecurityDataSourceConfig> = emptyList()
 

@@ -6,22 +6,20 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.core.internal.cert
-import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.utilities.CertificateAndKeyPair
-import net.corda.node.utilities.CertificateType
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.X509Utilities
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.cert.CertificateFactory
-import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -30,14 +28,13 @@ import kotlin.test.assertNull
  * Tests for the in memory identity service.
  */
 class PersistentIdentityServiceTests {
-
-    lateinit var database: CordaPersistence
-    lateinit var services: MockServices
-    lateinit var identityService: IdentityService
+    private lateinit var database: CordaPersistence
+    private lateinit var services: MockServices
+    private lateinit var identityService: IdentityService
 
     @Before
     fun setup() {
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), createIdentityService = { PersistentIdentityService(trustRoot = DEV_TRUST_ROOT) })
+        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), identityService = PersistentIdentityService(DEV_TRUST_ROOT))
         database = databaseAndServices.first
         services = databaseAndServices.second
         identityService = services.identityService
@@ -236,7 +233,7 @@ class PersistentIdentityServiceTests {
 
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = database.transaction {
-            PersistentIdentityService(trustRoot = DEV_TRUST_ROOT)
+            PersistentIdentityService(DEV_TRUST_ROOT)
         }
 
         database.transaction {
@@ -256,12 +253,11 @@ class PersistentIdentityServiceTests {
     }
 
     private fun createParty(x500Name: CordaX500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, PartyAndCertificate> {
-        val certFactory = CertificateFactory.getInstance("X509")
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate.toX509CertHolder(), issuerKeyPair, x500Name, txKey.public)
-        val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
+        val txCertPath = X509CertificateFactory().delegate.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }
 

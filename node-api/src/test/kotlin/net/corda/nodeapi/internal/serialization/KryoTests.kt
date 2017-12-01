@@ -21,13 +21,14 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExpectedException
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
-import java.util.Collections
-import kotlin.test.*
+import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class KryoTests {
     @Rule
@@ -35,9 +36,6 @@ class KryoTests {
     val testSerialization = SerializationEnvironmentRule()
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
-
-    @get:Rule
-    val expectedEx: ExpectedException = ExpectedException.none()
 
     @Before
     fun setup() {
@@ -51,7 +49,7 @@ class KryoTests {
     }
 
     @Test
-    fun ok() {
+    fun `simple data class`() {
         val birthday = Instant.parse("1984-04-17T00:30:00.00Z")
         val mike = Person("mike", birthday)
         val bits = mike.serialize(factory, context)
@@ -59,7 +57,7 @@ class KryoTests {
     }
 
     @Test
-    fun nullables() {
+    fun `null values`() {
         val bob = Person("bob", null)
         val bits = bob.serialize(factory, context)
         assertThat(bits.deserialize(factory, context)).isEqualTo(Person("bob", null))
@@ -200,13 +198,6 @@ class KryoTests {
         val serializedBytes = expected.serialize(factory, context)
         val actual = serializedBytes.deserialize(factory, context)
         assertEquals(expected, actual)
-    }
-
-    @Test
-    fun `all-zero PrivacySalt not allowed`() {
-        expectedEx.expect(IllegalArgumentException::class.java)
-        expectedEx.expectMessage("Privacy salt should not be all zeros.")
-        PrivacySalt(ByteArray(32))
     }
 
     @CordaSerializable

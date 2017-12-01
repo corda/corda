@@ -30,7 +30,10 @@ import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientRequestor
+import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.api.core.client.ServerLocator
+import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
@@ -191,7 +194,9 @@ class RPCClientProxyHandler(
                 TimeUnit.MILLISECONDS
         )
         sessionAndProducerPool.run {
+            // TODO sollecitom why do we use address == queue? Can't we have multiple queues per address like intended?
             it.session.createTemporaryQueue(clientAddress, ActiveMQDefaultConfiguration.getDefaultRoutingType(), clientAddress)
+            doStuffWithManagement(it.session, clientAddress.toString())
         }
         val sessionFactory = serverLocator.createSessionFactory()
         val session = sessionFactory.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
@@ -200,6 +205,18 @@ class RPCClientProxyHandler(
         sessionAndConsumer = ArtemisConsumer(sessionFactory, session, consumer)
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
         session.start()
+    }
+
+    private fun doStuffWithManagement(session: ClientSession, queueName: String) {
+
+        // TODO sollecitom
+        val requestor = ClientRequestor(session, "activemq.management")
+        val message = session.createMessage(false)
+        ManagementHelper.putAttribute(message, "queue.$queueName", "messageCount")
+
+        val reply = requestor.request(message)
+        val count = ManagementHelper.getResult(reply) as Int
+        println("There are $count messages in $queueName")
     }
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.

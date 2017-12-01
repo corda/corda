@@ -22,9 +22,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -172,13 +172,13 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
             if (previousNode == null) {
                 logger.info("No previous node found")
                 database.transaction {
-                    updateInfoDB(node)
+                    updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Added(node))
                 }
             } else if (previousNode != node) {
                 logger.info("Previous node was found as: $previousNode")
                 database.transaction {
-                    updateInfoDB(node)
+                    updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Modified(node, previousNode))
                 }
             } else {
@@ -233,25 +233,14 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
         }
     }
 
-    private fun updateInfoDB(nodeInfo: NodeInfo) {
-        // TODO Temporary workaround to force isolated transaction (otherwise it causes race conditions when processing
-        //  network map registration on network map node)
-        database.dataSource.connection.use {
-            val session = database.entityManagerFactory.withOptions().connection(it.apply {
-                transactionIsolation = 1
-            }).openSession()
-            session.use {
-                val tx = session.beginTransaction()
-                // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
-                val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey)
-                val nodeInfoEntry = generateMappedObject(nodeInfo)
-                if (info.isNotEmpty()) {
-                    nodeInfoEntry.id = info[0].id
-                }
-                session.merge(nodeInfoEntry)
-                tx.commit()
-            }
+    private fun updateInfoDB(nodeInfo: NodeInfo, session: Session) {
+        // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
+        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey)
+        val nodeInfoEntry = generateMappedObject(nodeInfo)
+        if (info.isNotEmpty()) {
+            nodeInfoEntry.id = info.first().id
         }
+        session.merge(nodeInfoEntry)
     }
 
     private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {

@@ -35,14 +35,17 @@ We start with the empty ledger:
 
     .. sourcecode:: java
 
-        import static net.corda.core.testing.JavaTestHelpers.*;
-        import static net.corda.core.contracts.JavaTestHelpers.*;
+        import org.junit.Test;
 
-        @Test
-        public void emptyLedger() {
-            ledger(l -> {
-                return Unit.INSTANCE; // We need to return this explicitly
-            });
+        import static net.corda.testing.NodeTestUtils.ledger;
+
+        public class CommercialPaperTest {
+            @Test
+            public void emptyLedger() {
+                ledger(l -> {
+                    return null;
+                });
+            }
         }
 
 The DSL keyword ``ledger`` takes a closure that can build up several transactions and may verify their overall

@@ -44,20 +44,18 @@ class FXSwap {
     fun `issue - signature`() {
 
         transaction {
-            output(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID, inState)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Issue())
                 this `fails with` "the transaction is signed by all liable parties"
             }
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Issue())
                 this `fails with` "the transaction is signed by all liable parties"
             }
-
-            command(highStreetBank.owningKey, acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
-
+            command(listOf(highStreetBank.owningKey, acmeCorp.owningKey), UniversalContract.Commands.Issue())
             this.verifies()
         }
     }
@@ -65,18 +63,16 @@ class FXSwap {
     @Test
     fun `execute`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
-            output(UNIVERSAL_PROGRAM_ID) { outState2 }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
+            output(UNIVERSAL_PROGRAM_ID, outState2)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("execute") }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Action("execute"))
             this.verifies()
         }
     }
@@ -84,18 +80,16 @@ class FXSwap {
     @Test
     fun `execute - reversed order`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState2 }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState2)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("execute") }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Action("execute"))
             this.verifies()
         }
     }
@@ -103,12 +97,11 @@ class FXSwap {
     @Test
     fun `execute - not authorized`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
-            output(UNIVERSAL_PROGRAM_ID) { outState2 }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
+            output(UNIVERSAL_PROGRAM_ID, outState2)
             timeWindow(TEST_TX_TIME_1)
-
-            command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(momAndPop.owningKey, UniversalContract.Commands.Action("execute"))
             this `fails with` "condition must be met"
         }
     }
@@ -116,12 +109,11 @@ class FXSwap {
     @Test
     fun `execute - before maturity`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
-            output(UNIVERSAL_PROGRAM_ID) { outState2 }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
+            output(UNIVERSAL_PROGRAM_ID, outState2)
             timeWindow(TEST_TX_TIME_TOO_EARLY)
-
-            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey, UniversalContract.Commands.Action("execute"))
             this `fails with` "condition must be met"
         }
     }
@@ -129,11 +121,10 @@ class FXSwap {
     @Test
     fun `execute - outState mismatch 1`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
             timeWindow(TEST_TX_TIME_1)
-
-            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey, UniversalContract.Commands.Action("execute"))
             this `fails with` "output state must match action result state"
         }
     }
@@ -141,12 +132,11 @@ class FXSwap {
     @Test
     fun `execute - outState mismatch 2`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
-            output(UNIVERSAL_PROGRAM_ID) { outStateBad2 }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
+            output(UNIVERSAL_PROGRAM_ID, outStateBad2)
             timeWindow(TEST_TX_TIME_1)
-
-            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey, UniversalContract.Commands.Action("execute"))
             this `fails with` "output states must match action result state"
         }
     }
@@ -154,12 +144,11 @@ class FXSwap {
     @Test
     fun `execute - outState mismatch 3`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outStateBad1 }
-            output(UNIVERSAL_PROGRAM_ID) { outState2 }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outStateBad1)
+            output(UNIVERSAL_PROGRAM_ID, outState2)
             timeWindow(TEST_TX_TIME_1)
-
-            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey, UniversalContract.Commands.Action("execute"))
             this `fails with` "output states must match action result state"
         }
     }
@@ -167,12 +156,11 @@ class FXSwap {
     @Test
     fun `execute - outState mismatch 4`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
-            output(UNIVERSAL_PROGRAM_ID) { outStateBad3 }
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
+            output(UNIVERSAL_PROGRAM_ID, outStateBad3)
             timeWindow(TEST_TX_TIME_1)
-
-            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey, UniversalContract.Commands.Action("execute"))
             this `fails with` "output states must match action result state"
         }
     }

@@ -22,7 +22,6 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
@@ -37,7 +36,7 @@ import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -45,8 +44,6 @@ import net.corda.testing.setGlobalSerialization
 import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
-import org.slf4j.Logger
-import java.io.Closeable
 import java.math.BigInteger
 import java.nio.file.Path
 import java.security.KeyPair
@@ -123,7 +120,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                   private val defaultFactory: (MockNodeArgs) -> MockNode = defaultParameters.defaultFactory,
                   initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
                   private val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) : Closeable {
+                  private val cordappPackages: List<String> = defaultParameters.cordappPackages) {
     /** Helper constructor for creating a [MockNetwork] with custom parameters from Java. */
     constructor(parameters: MockNetworkParameters) : this(defaultParameters = parameters)
 
@@ -267,8 +264,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
                     serverThread,
                     myNotaryIdentity,
                     myLegalName,
-                    database
-            ).start().getOrThrow()
+                    database).also { runOnStop += it::stop }
         }
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
@@ -309,9 +305,11 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = testSerializationWhitelists
         private var dbCloser: (() -> Any?)? = null
-        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, insideTransaction: (CordaPersistence) -> T) = super.initialiseDatabasePersistence(schemaService) { database ->
-            dbCloser = database::close
-            insideTransaction(database)
+        override fun <T> initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService, insideTransaction: (CordaPersistence) -> T): T {
+            return super.initialiseDatabasePersistence(schemaService, identityService) { database ->
+                dbCloser = database::close
+                insideTransaction(database)
+            }
         }
 
         fun disableDBCloseOnStop() {
@@ -424,6 +422,7 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
     fun stopNodes() {
         nodes.forEach { it.started?.dispose() }
         serializationEnv.unset()
+        messagingNetwork.stop()
     }
 
     // Test method to block until all scheduled activity, active flows
@@ -432,19 +431,8 @@ class MockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParamete
         busyLatch.await()
     }
 
-    override fun close() {
-        stopNodes()
-    }
-
     data class NotarySpec(val name: CordaX500Name, val validating: Boolean = true) {
         constructor(name: CordaX500Name) : this(name, validating = true)
-    }
-}
-
-fun network(nodesCount: Int, action: MockNetwork.(List<StartedNode<MockNetwork.MockNode>>) -> Unit) {
-    MockNetwork().use { mockNet ->
-        val nodes = (1..nodesCount).map { mockNet.createPartyNode() }
-        mockNet.action(nodes)
     }
 }
 

@@ -31,8 +31,8 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.node.utilities.ANSIProgressRenderer
-import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.StdoutANSIProgressRenderer
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
 import org.crsh.console.jline.TerminalFactory
@@ -92,17 +92,17 @@ object InteractiveShell {
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database:CordaPersistence) {
+    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
         this.rpcOps = cordaRPCOps
         this.securityManager = securityManager
         this.identityService = identityService
         this.nodeLegalName = configuration.myLegalName
         this.database = database
         val dir = configuration.baseDirectory
-        val runSshDeamon = configuration.sshd != null
+        val runSshDaemon = configuration.sshd != null
 
         val config = Properties()
-        if (runSshDeamon) {
+        if (runSshDaemon) {
             val sshKeysDir = dir / "sshkey"
             sshKeysDir.toFile().mkdirs()
 
@@ -118,7 +118,7 @@ object InteractiveShell {
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
         shell = ShellLifecycle(dir).start(config)
 
-        if (runSshDeamon) {
+        if (runSshDaemon) {
             Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
         }
     }
@@ -181,7 +181,7 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, RPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER")), StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, makeRPCOpsWithContext(rpcOps, net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER")), StdoutANSIProgressRenderer))
         }
     }
 
@@ -235,7 +235,7 @@ object InteractiveShell {
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz,args -> rpcOps.startTrackedFlowDynamic (clazz, *args) }, inputData, clazz)
+            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, clazz)
 
             val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, { latch.countDown() })
@@ -246,7 +246,6 @@ object InteractiveShell {
             } catch (e: InterruptedException) {
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
-
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
@@ -325,7 +324,9 @@ object InteractiveShell {
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = FlowWatchPrintingSubscriber(out)
-        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        database.transaction {
+            stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        }
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {
@@ -347,7 +348,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>): Any? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps): Any? {
         val parser = StringToMethodCallParser(CordaRPCOps::class.java, context.attributes["mapper"] as ObjectMapper)
 
         val cmd = input.joinToString(" ").trim { it <= ' ' }
@@ -362,7 +363,7 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val call = database.transaction { parser.parse(context.attributes["ops"] as CordaRPCOps, cmd) }
+            val call = database.transaction { parser.parse(cordaRPCOps, cmd) }
             result = call.call()
             if (result != null && result !is kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)

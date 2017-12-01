@@ -3,7 +3,6 @@ package net.corda.plugins
 import com.typesafe.config.*
 import net.corda.cordform.CordformNode
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.RDN
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
 import java.io.File
@@ -39,6 +38,7 @@ class Node(private val project: Project) : CordformNode() {
 
     private val releaseVersion = project.rootProject.ext<String>("corda_release_version")
     internal lateinit var nodeDir: File
+        private set
 
     /**
      * Sets whether this node will use HTTPS communication.
@@ -58,26 +58,6 @@ class Node(private val project: Project) : CordformNode() {
 
     fun useTestClock(useTestClock: Boolean) {
         config = config.withValue("useTestClock", ConfigValueFactory.fromAnyRef(useTestClock))
-    }
-
-    /**
-     * Set the HTTP web server port for this node. Will use localhost as the address.
-     *
-     * @param webPort The web port number for this node.
-     */
-    fun webPort(webPort: Int) {
-        config = config.withValue("webAddress",
-                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$webPort"))
-    }
-
-    /**
-     * Set the HTTP web server address and port for this node.
-     *
-     * @param webAddress The web address for this node.
-     */
-    fun webAddress(webAddress: String) {
-        config = config.withValue("webAddress",
-                ConfigValueFactory.fromAnyRef(webAddress))
     }
 
     /**
@@ -104,7 +84,6 @@ class Node(private val project: Project) : CordformNode() {
         config = config.withValue("sshd.port", ConfigValueFactory.fromAnyRef(sshdPort))
     }
 
-
     internal fun build() {
         configureProperties()
         installCordaJar()
@@ -118,19 +97,15 @@ class Node(private val project: Project) : CordformNode() {
     }
 
     internal fun rootDir(rootDir: Path) {
-        if(name == null) {
+        if (name == null) {
             project.logger.error("Node has a null name - cannot create node")
             throw IllegalStateException("Node has a null name - cannot create node")
         }
 
         val dirName = try {
             val o = X500Name(name).getRDNs(BCStyle.O)
-            if (o.size > 0) {
-                o.first().first.value.toString()
-            } else {
-                name
-            }
-        } catch(_ : IllegalArgumentException) {
+            if (o.isNotEmpty()) o.first().first.value.toString() else name
+        } catch (_ : IllegalArgumentException) {
             // Can't parse as an X500 name, use the full string
             name
         }
@@ -192,9 +167,8 @@ class Node(private val project: Project) : CordformNode() {
     /**
      * Installs other cordapps to this node's cordapps directory.
      */
-    private fun installCordapps() {
+    internal fun installCordapps(cordapps: Collection<File> = getCordappList()) {
         val cordappsDir = File(nodeDir, "cordapps")
-        val cordapps = getCordappList()
         project.copy {
             it.apply {
                 from(cordapps)
@@ -280,7 +254,7 @@ class Node(private val project: Project) : CordformNode() {
             throw RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-$releaseVersion.jar\"")
         } else {
             val jar = maybeJar.singleFile
-            assert(jar.isFile)
+            require(jar.isFile)
             return jar
         }
     }

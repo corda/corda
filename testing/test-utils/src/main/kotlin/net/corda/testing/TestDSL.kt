@@ -93,7 +93,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addInputState(StateAndRef(state, stateRef))
     }
 
-    override fun _output(contractClassName: ContractClassName,
+    override fun output(contractClassName: ContractClassName,
                          label: String?,
                          notary: Party,
                          encumbrance: Int?,
@@ -115,7 +115,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addAttachment(attachmentId)
     }
 
-    override fun _command(signers: List<PublicKey>, commandData: CommandData) {
+    override fun command(signers: List<PublicKey>, commandData: CommandData) {
         val command = Command(commandData, signers)
         transactionBuilder.addCommand(command)
     }

@@ -6,21 +6,20 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.VaultService
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.HibernateObserver
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.CordaPersistence
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.internal.configureDatabase
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
-import net.corda.testing.node.MockServices.Companion.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -33,22 +32,23 @@ class DBTransactionStorageTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    lateinit var database: CordaPersistence
-    lateinit var transactionStorage: DBTransactionStorage
-    lateinit var services: MockServices
-    val vault: VaultService get() = services.vaultService
+
+    private lateinit var database: CordaPersistence
+    private lateinit var transactionStorage: DBTransactionStorage
+    private lateinit var services: MockServices
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), ::makeTestIdentityService)
+        val schemaService = NodeSchemaService()
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock(), schemaService)
         database.transaction {
             services = object : MockServices(BOB_KEY) {
                 override val vaultService: VaultServiceInternal
                     get() {
                         val vaultService = NodeVaultService(clock, keyManagementService, stateLoader, database.hibernateConfig)
-                        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig)
+                        hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig, schemaService)
                         return vaultService
                     }
 

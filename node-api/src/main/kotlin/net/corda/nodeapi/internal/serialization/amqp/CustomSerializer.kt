@@ -67,8 +67,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
             superClassSerializer.writeDescribedObject(obj, data, type, output)
         }
 
-        override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T {
-            return superClassSerializer.readObject(obj, schema, input)
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): T {
+            return superClassSerializer.readObject(obj, schemas, input)
         }
     }
 
@@ -133,8 +133,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
             }
         }
 
-        override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T {
-            val proxy: P = uncheckedCast(proxySerializer.readObject(obj, schema, input))
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): T {
+            val proxy: P = uncheckedCast(proxySerializer.readObject(obj, schemas, input))
             return fromProxy(proxy)
         }
     }
@@ -166,7 +166,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T> {
             data.putString(unmaker(obj))
         }
 
-        override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T {
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): T {
             val proxy = obj as String
             return maker(proxy)
         }

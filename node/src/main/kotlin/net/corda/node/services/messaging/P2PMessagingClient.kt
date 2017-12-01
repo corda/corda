@@ -10,23 +10,26 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.*
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.sequence
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManagerImpl
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.PersistentMap
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.*
+import org.apache.activemq.artemis.api.core.client.ClientConsumer
+import org.apache.activemq.artemis.api.core.client.ClientMessage
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -323,7 +326,13 @@ class P2PMessagingClient(config: NodeConfiguration,
         }
     }
 
-    override fun stop() {
+    /**
+     * Initiates shutdown: if called from a thread that isn't controlled by the executor passed to the constructor
+     * then this will block until all in-flight messages have finished being handled and acknowledged. If called
+     * from a thread that's a part of the [net.corda.node.utilities.AffinityExecutor] given to the constructor,
+     * it returns immediately and shutdown is asynchronous.
+     */
+    fun stop() {
         val running = state.locked {
             // We allow stop() to be called without a run() in between, but it must have at least been started.
             check(artemis.started != null)

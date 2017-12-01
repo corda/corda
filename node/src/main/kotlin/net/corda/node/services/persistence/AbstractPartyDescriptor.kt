@@ -9,12 +9,10 @@ import org.hibernate.type.descriptor.java.AbstractTypeDescriptor
 import org.hibernate.type.descriptor.java.ImmutableMutabilityPlan
 import org.hibernate.type.descriptor.java.MutabilityPlan
 
-class AbstractPartyDescriptor(identitySvc: () -> IdentityService) : AbstractTypeDescriptor<AbstractParty>(AbstractParty::class.java) {
+class AbstractPartyDescriptor(private val identityService: IdentityService) : AbstractTypeDescriptor<AbstractParty>(AbstractParty::class.java) {
     companion object {
         private val log = contextLogger()
     }
-
-    private val identityService: IdentityService by lazy(identitySvc)
 
     override fun fromString(dbData: String?): AbstractParty? {
         return if (dbData != null) {

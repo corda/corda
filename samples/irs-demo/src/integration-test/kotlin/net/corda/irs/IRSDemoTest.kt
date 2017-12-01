@@ -117,7 +117,7 @@ class IRSDemoTest {
         log.info("Running trade against ${nodeApi.root}")
         val fileContents = loadResourceFile("net/corda/irs/web/simulation/example-irs-trade.json")
         val tradeFile = fileContents.replace("tradeXXX", "trade1").replace("oracleXXX", oracle.name.toString())
-        assertThat(nodeApi.postJson("deals", tradeFile)).isTrue()
+        nodeApi.postJson("deals", tradeFile)
     }
 
     private fun runUploadRates(nodeApi: HttpApi) {
