@@ -21,6 +21,42 @@ class ReceiveMultipleFlowTests {
     }
 
     @Test
+    fun showcase_flows_as_closures() {
+
+        val answer = 10.0
+        val message = "Hello Ivan"
+
+        val counterParty = nodes[1].info.singleIdentity()
+
+        val initiatingFlow = @InitiatingFlow object : FlowLogic<Any>() {
+
+            @Suspendable
+            override fun call(): Any {
+                val session = initiateFlow(counterParty)
+                return session.sendAndReceive<Any>(message).unwrap { it }
+            }
+        }
+
+        nodes[1].registerInitiatedFlow(initiatingFlow::class) { session ->
+            object : FlowLogic<Unit>() {
+                @Suspendable
+                override fun call() {
+                    // this is a closure, meaning you can access variables outside its scope e.g., `answer`.
+                    val receivedMessage = session.receive<String>().unwrap { it }
+                    logger.info("Got message from counterParty: $receivedMessage.")
+                    assertThat(receivedMessage).isEqualTo(message)
+                    session.send(answer)
+                }
+            } as FlowLogic<Unit>
+        }
+
+        val flow = nodes[0].services.startFlow(initiatingFlow)
+        mockNet.runNetwork()
+        val receivedAnswer = flow.resultFuture.getOrThrow()
+        assertThat(receivedAnswer).isEqualTo(answer)
+    }
+
+    @Test
     fun `receive all messages in parallel using map style`() {
         val doubleValue = 5.0
         nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
