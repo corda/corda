@@ -41,7 +41,7 @@ import javax.ws.rs.core.Response
 private const val REQUEST_ID = "requestId"
 
 private val x509CertificateFactory = X509CertificateFactory()
-private val portAllocation = PortAllocation.Incremental(10000)
+private val portAllocation = PortAllocation.Incremental(11000)
 
 /**
  * Driver based tests for [NetworkRegistrationHelper]
