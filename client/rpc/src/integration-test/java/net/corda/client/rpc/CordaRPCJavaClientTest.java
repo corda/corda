@@ -12,9 +12,12 @@ import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
 import net.corda.nodeapi.User;
 import net.corda.testing.CoreTestUtils;
+import net.corda.testing.IntegrationTestKt;
+import net.corda.testing.IntegrationTestSchemas;
 import net.corda.testing.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -29,11 +32,16 @@ import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
 import static net.corda.testing.TestConstants.getALICE;
+import static net.corda.testing.TestConstants.getDUMMY_NOTARY;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
         super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()));
     }
+
+    @ClassRule
+    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(getALICE()),
+            IntegrationTestKt.toDatabaseSchemaName(getDUMMY_NOTARY()));
 
     private List<String> perms = Arrays.asList(
             startFlow(CashPaymentFlow.class),

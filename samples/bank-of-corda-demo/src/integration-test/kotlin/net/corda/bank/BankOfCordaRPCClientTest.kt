@@ -13,9 +13,16 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
+import org.junit.ClassRule
 import org.junit.Test
 
 class BankOfCordaRPCClientTest : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(BOC.toDatabaseSchemaName(), DUMMY_NOTARY.toDatabaseSchemaName(),
+                BIGCORP_NAME.organisation)
+    }
+
     @Test
     fun `issuer flow via RPC`() {
         val commonPermissions = setOf(

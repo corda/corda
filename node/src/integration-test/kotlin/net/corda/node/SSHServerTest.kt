@@ -10,24 +10,29 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.nodeapi.User
-import net.corda.testing.ALICE
 import net.corda.testing.driver.driver
 import org.bouncycastle.util.io.Streams
 import org.junit.Test
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.testing.*
 import java.net.ConnectException
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import java.util.regex.Pattern
 
-class SSHServerTest {
+class SSHServerTest : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName())
+    }
 
     @Test()
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver() {
+        driver {
             val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user))
             node.getOrThrow()
 

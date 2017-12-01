@@ -12,14 +12,14 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.IntegrationTest
+import net.corda.testing.*
 import net.corda.testing.driver.poll
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import rx.Observable
@@ -37,6 +37,12 @@ class RPCStabilityTests : IntegrationTest() {
     @After
     fun shutdown() {
         pool.shutdown()
+    }
+
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_BANK_A)
+                .map { it.toDatabaseSchemaNames("","_10000","_10003","_10012") }.flatten().toTypedArray())
     }
 
     object DummyOps : RPCOps {

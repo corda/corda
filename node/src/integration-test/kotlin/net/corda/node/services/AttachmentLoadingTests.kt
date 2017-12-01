@@ -20,7 +20,6 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.*
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.IntegrationTest
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
@@ -28,12 +27,14 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.MockServices
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests : IntegrationTest() {
+
     private class Services : MockServices() {
         private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
         private val cordapp get() = provider.cordapps.first()
@@ -43,6 +44,10 @@ class AttachmentLoadingTests : IntegrationTest() {
     }
 
     private companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+
         private val logger = contextLogger()
         val isolatedJAR = AttachmentLoadingTests::class.java.getResource("isolated.jar")!!
         val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"

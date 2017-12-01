@@ -9,15 +9,18 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.IntegrationTest
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 
 class CordappScanningDriverTest : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), BOB.toDatabaseSchemaName())
+    }
+
     @Test
     fun `sub-classed initiated flow pointing to the same initiating flow as its super-class`() {
         val user = User("u", "p", setOf(startFlow<ReceiveFlow>()))

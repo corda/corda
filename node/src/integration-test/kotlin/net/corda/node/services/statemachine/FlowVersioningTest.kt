@@ -7,15 +7,18 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.internal.NodeBasedTest
-import net.corda.testing.startFlow
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 
 class FlowVersioningTest : NodeBasedTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), BOB.toDatabaseSchemaName())
+    }
+
     @Test
     fun `getFlowContext returns the platform version for core flows`() {
         val alice = startNode(ALICE.name, platformVersion = 2)

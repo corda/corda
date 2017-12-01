@@ -21,6 +21,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -31,7 +32,11 @@ class DistributedServiceTests : IntegrationTest() {
     private lateinit var aliceProxy: CordaRPCOps
     private lateinit var raftNotaryIdentity: Party
     private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
-
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
+                ALICE.toDatabaseSchemaName())
+    }
     private fun setup(testBlock: () -> Unit) {
         val testUser = User("test", "test", permissions = setOf(
                 startFlow<CashIssueFlow>(),

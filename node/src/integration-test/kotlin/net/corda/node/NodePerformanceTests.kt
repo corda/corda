@@ -14,8 +14,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.IntegrationTest
+import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
@@ -24,6 +23,7 @@ import net.corda.testing.internal.performance.startPublishingFixedRateInjector
 import net.corda.testing.internal.performance.startReporter
 import net.corda.testing.internal.performance.startTightLoopInjector
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Test
 import java.lang.management.ManagementFactory
@@ -40,6 +40,12 @@ private fun checkQuasarAgent() {
 
 @Ignore("Run these locally")
 class NodePerformanceTests : IntegrationTest() {
+     companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
+                DUMMY_BANK_A.toDatabaseSchemaName())
+    }
+
     @StartableByRPC
     class EmptyFlow : FlowLogic<Unit>() {
         @Suspendable

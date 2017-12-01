@@ -28,6 +28,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -48,6 +49,10 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
 
     private fun login(username: String, password: String, externalTrace: Trace? = null, impersonatedActor: Actor? = null) {
         connection = client.start(username, password, externalTrace, impersonatedActor)
+    }
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName())
     }
 
     @Before

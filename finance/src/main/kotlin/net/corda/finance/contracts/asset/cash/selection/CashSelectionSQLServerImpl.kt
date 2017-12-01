@@ -14,7 +14,7 @@ import java.util.*
 /**
  * SQL Server / SQL Azure
  */
-class CashSelectionSQLServerImpl : AbstractCashSelection() {
+class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retrySleep = 1000, retryCap = 5000) {
 
     companion object {
         val JDBC_DRIVER_NAME = "Microsoft JDBC Driver 6.2 for SQL Server"

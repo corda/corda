@@ -28,6 +28,7 @@ import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
 import java.time.Duration
@@ -36,12 +37,16 @@ import java.time.LocalDate
 class IRSDemoTest : IntegrationTest() {
     companion object {
         private val log = contextLogger()
+
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
     }
 
     private val rpcUsers = listOf(User("user", "password", setOf("ALL")))
     private val currentDate: LocalDate = LocalDate.now()
     private val futureDate: LocalDate = currentDate.plusMonths(6)
-    private val maxWaitTime: Duration = 60.seconds
+    private val maxWaitTime: Duration = 180.seconds
 
     @Test
     fun `runs IRS demo`() {

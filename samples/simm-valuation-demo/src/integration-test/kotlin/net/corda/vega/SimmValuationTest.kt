@@ -3,9 +3,7 @@ package net.corda.vega
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.IntegrationTest
+import net.corda.testing.*
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.vega.api.PortfolioApi
@@ -13,6 +11,7 @@ import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -24,6 +23,10 @@ class SimmValuationTest : IntegrationTest() {
         val nodeALegalName = DUMMY_BANK_A.name
         val nodeBLegalName = DUMMY_BANK_B.name
         val testTradeId = "trade1"
+
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
     }
 
     @Test

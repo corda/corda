@@ -9,18 +9,23 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
-import net.corda.testing.ALICE
-import net.corda.testing.IntegrationTest
+import net.corda.testing.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.ClassRule
 import org.junit.Test
 import java.io.*
 import java.nio.file.Files
 import kotlin.test.assertEquals
 
 class BootTests : IntegrationTest() {
+     companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_BANK_A)
+                .map { it.toDatabaseSchemaNames("", "_10000","_10003") }.flatten().toTypedArray())
+     }
 
     @Test
     fun `java deserialization is disabled`() {

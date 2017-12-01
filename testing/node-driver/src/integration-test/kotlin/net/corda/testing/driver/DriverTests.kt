@@ -6,13 +6,11 @@ import net.corda.core.internal.list
 import net.corda.core.internal.readLines
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_REGULATOR
+import net.corda.testing.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
-import net.corda.testing.IntegrationTest
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -32,6 +30,10 @@ class DriverTests : IntegrationTest() {
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }
+
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A, DUMMY_NOTARY, DUMMY_REGULATOR)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
     }
 
     @Test

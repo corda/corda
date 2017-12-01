@@ -13,8 +13,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.driver.driver
-import net.corda.testing.dummyCommand
-import net.corda.testing.IntegrationTest
+import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -23,6 +22,11 @@ import kotlin.test.assertEquals
  * transaction size limit (which should only consider the hashes).
  */
 class LargeTransactionsTest : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_NOTARY).map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class SendLargeTransactionFlow(private val hash1: SecureHash,

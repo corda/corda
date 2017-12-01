@@ -1,10 +1,12 @@
 package net.corda.testing
 
+import net.corda.core.identity.Party
 import net.corda.testing.database.DbScriptRunner.runDbScript
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
+import org.junit.rules.ExternalResource
 
 /**
  * Base class for all integration tests that require common setup and/or teardown.
@@ -12,6 +14,8 @@ import org.junit.BeforeClass
  */
 
 abstract class IntegrationTest {
+    open protected val databaseSchemas = Companion.databaseSchemas
+
     // System properties set in main 'corda-project' build.gradle
     // Note: the database provider configuration file for integration tests should specify:
     // dataSource.user = ${nodeOrganizationName}
@@ -22,19 +26,20 @@ abstract class IntegrationTest {
         private val dbProvider = System.getProperty(DATABASE_PROVIDER, "")
         private val TEST_DB_SCRIPT_DIR = "test.db.script.dir"
         private val testDbScriptDir = System.getProperty(TEST_DB_SCRIPT_DIR, "database-scripts")
+        var databaseSchemas = mutableListOf<String>()
 
         @BeforeClass
         @JvmStatic
         fun globalSetUp() {
             if (dbProvider.isNotEmpty()) {
-                runDbScript(dbProvider,"$testDbScriptDir/db-global-setup-${this::class.simpleName}.sql")
+                runDbScript(dbProvider,"$testDbScriptDir/db-global-setup.sql", databaseSchemas)
             }
         }
         @AfterClass
         @JvmStatic
         fun globalTearDown() {
             if (dbProvider.isNotEmpty()) {
-                runDbScript(dbProvider,"$testDbScriptDir/db-global-cleanup-${this::class.simpleName}.sql")
+                runDbScript(dbProvider,"$testDbScriptDir/db-global-cleanup.sql", databaseSchemas)
             }
         }
     }
@@ -43,15 +48,31 @@ abstract class IntegrationTest {
     @Throws(Exception::class)
     open fun setUp() {
         if (dbProvider.isNotEmpty()) {
-            runDbScript(dbProvider,"$testDbScriptDir/db-setup-${this::class.simpleName}.sql")
+            runDbScript(dbProvider,"$testDbScriptDir/db-setup.sql", databaseSchemas)
         }
     }
 
     @After
     open fun tearDown() {
         if (dbProvider.isNotEmpty()) {
-            runDbScript(dbProvider,"$testDbScriptDir/db-cleanup-${this::class.simpleName}.sql")
+           runDbScript(dbProvider,"$testDbScriptDir/db-cleanup.sql", databaseSchemas)
         }
     }
+}
 
+class IntegrationTestSchemas(vararg var list : String) : ExternalResource() {
+
+    override fun before() {
+        IntegrationTest.Companion.databaseSchemas.addAll(list)
+    }
+    override fun after() {
+        IntegrationTest.Companion.databaseSchemas.clear()
+    }
+}
+
+fun Party.toDatabaseSchemaName() = this.name.organisation.replace(" ", "").replace("-", "_")
+
+fun Party.toDatabaseSchemaNames(vararg postfixes: String): List<String> {
+    val nodeName = this.toDatabaseSchemaName()
+    return postfixes.map { "$nodeName$it" }
 }

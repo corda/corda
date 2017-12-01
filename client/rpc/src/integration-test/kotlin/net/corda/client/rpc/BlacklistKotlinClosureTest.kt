@@ -7,15 +7,18 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.ALICE
-import net.corda.testing.IntegrationTest
+import net.corda.testing.*
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.ClassRule
 import org.junit.Test
 
 class BlacklistKotlinClosureTest : IntegrationTest() {
     companion object {
         const val EVIL: Long = 666
+
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), DUMMY_NOTARY.toDatabaseSchemaName())
     }
 
     @StartableByRPC

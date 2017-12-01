@@ -5,15 +5,20 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
-import net.corda.testing.IntegrationTest
+import net.corda.testing.*
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
 
 class AttachmentDemoTest : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
+
     // run with a 10,000,000 bytes in-memory zip file. In practice, a slightly bigger file will be used (~10,002,000 bytes).
     // Force INFO logging to prevent printing 10MB arrays in logfiles
     @Test

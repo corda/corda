@@ -20,6 +20,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.VersionInfo
 import net.corda.node.internal.StateLoaderImpl
+import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
@@ -34,11 +35,17 @@ import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.testing.*
+import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_CLASSNAME
+import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_PASSWORD
+import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_URL
+import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_USER
+import net.corda.testing.database.DatabaseConstants.SCHEMA
+import net.corda.testing.database.DatabaseConstants.TRANSACTION_ISOLATION_LEVEL
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -66,22 +73,37 @@ open class MockServices(
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
-        private fun readDatabaseConfig(nodeName: String? = null, postifx: String? = null): Config {
-            val standarizedNodeName = if (nodeName!= null) nodeName.replace(" ", "").replace("-", "_") else null
-            //in case of H2, the same db instance runs for all integration tests, so adding additional variable postfix to use unique db user/schema each time
-            val h2InstanceName =  if (postifx != null) standarizedNodeName + "_" + postifx  else standarizedNodeName
+        private fun readDatabaseConfig(nodeName: String? = null, postfix: String? = null): Config {
+
             val parseOptions = ConfigParseOptions.defaults()
+
+            //read overrides from command line (passed by Gradle as system properties)
+            val dataSourceKeys = listOf(DATA_SOURCE_URL, DATA_SOURCE_CLASSNAME, DATA_SOURCE_USER, DATA_SOURCE_PASSWORD)
+            val dataSourceSystemProperties = Properties()
+            val allSystemProperties = System.getProperties().toList().map { it.first.toString() to it.second.toString() }.toMap()
+            dataSourceKeys.filter { allSystemProperties.containsKey(it) }.forEach { dataSourceSystemProperties.setProperty(it, allSystemProperties[it]) }
+            val systemConfigOverride = ConfigFactory.parseProperties(dataSourceSystemProperties, parseOptions)
+
+            //read from db vendor specific configuration file
             val databaseConfig = ConfigFactory.parseResources(System.getProperty("databaseProvider") + ".conf", parseOptions.setAllowMissing(true))
             val fixedOverride = ConfigFactory.parseString("baseDirectory = \"\"")
-            val nodeOrganizationNameConfig = if (standarizedNodeName != null) configOf("nodeOrganizationName" to standarizedNodeName) else ConfigFactory.empty()
+
+            //implied property nodeOrganizationName to fill the potential placeholders in db schema/ db user properties
+            val standardizedNodeName = if (nodeName!= null) nodeName.replace(" ", "").replace("-", "_") else null
+            val nodeOrganizationNameConfig = if (standardizedNodeName != null) configOf("nodeOrganizationName" to standardizedNodeName) else ConfigFactory.empty()
+
+            //defaults to H2
+            //for H2 the same db instance runs for all integration tests, so adding additional variable postfix to use unique db user/schema each time
+            val h2InstanceName = if (postfix != null) standardizedNodeName + "_" + postfix else standardizedNodeName
             val defaultProps = Properties()
-            defaultProps.setProperty("dataSourceProperties.dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            defaultProps.setProperty("dataSourceProperties.dataSource.url", "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-            defaultProps.setProperty("dataSourceProperties.dataSource.user", "sa")
-            defaultProps.setProperty("dataSourceProperties.dataSource.password", "")
+            defaultProps.setProperty(DATA_SOURCE_CLASSNAME, "org.h2.jdbcx.JdbcDataSource")
+            defaultProps.setProperty(DATA_SOURCE_URL, "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+            defaultProps.setProperty(DATA_SOURCE_USER, "sa")
+            defaultProps.setProperty(DATA_SOURCE_PASSWORD, "")
             val defaultConfig = ConfigFactory.parseProperties(defaultProps, parseOptions)
 
-            return databaseConfig.withFallback(fixedOverride)
+            return systemConfigOverride.withFallback(databaseConfig)
+                    .withFallback(fixedOverride)
                     .withFallback(nodeOrganizationNameConfig)
                     .withFallback(defaultConfig)
                     .resolve()
@@ -112,7 +134,10 @@ open class MockServices(
         @JvmStatic
         fun makeTestDatabaseProperties(nodeName: String? = null): DatabaseConfig {
             val config = readDatabaseConfig(nodeName)
-            return DatabaseConfig(schema = if (config.hasPath("database.schema")) config.getString("database.schema") else "")
+            val transactionIsolationLevel = if (config.hasPath(TRANSACTION_ISOLATION_LEVEL)) TransactionIsolationLevel.valueOf(config.getString(TRANSACTION_ISOLATION_LEVEL))
+                                                else TransactionIsolationLevel.READ_COMMITTED
+            val schema = if (config.hasPath(SCHEMA)) config.getString(SCHEMA) else ""
+            return DatabaseConfig(transactionIsolationLevel = transactionIsolationLevel, schema = schema)
         }
 
         private fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
@@ -144,9 +169,9 @@ open class MockServices(
                                             cordappPackages: List<String> = emptyList(),
                                             initialIdentityName: CordaX500Name): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
-            val dataSourceProps = makeTestDataSourceProperties()
+            val dataSourceProps = makeTestDataSourceProperties(initialIdentityName.organisation)
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(), identityService, schemaService)
+            val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentityName.organisation), identityService, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, initialIdentityName = initialIdentityName, keys = *(keys.toTypedArray())) {
                     override val identityService get() = identityService

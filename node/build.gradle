@@ -35,6 +35,7 @@ sourceSets {
         }
         resources {
             srcDir file('src/integration-test/resources')
+            srcDir file('../../testing/test-utils/src/main/resources')
         }
     }
 }

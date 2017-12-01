@@ -16,15 +16,14 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.testing.ALICE
-import net.corda.testing.IntegrationTest
-import net.corda.testing.chooseIdentity
+import net.corda.testing.*
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -32,7 +31,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : IntegrationTest() {
-    private companion object {
+     private companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
+
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name(RaftValidatingNotaryService.id, "DistributedService", "London", "GB")
     }
 

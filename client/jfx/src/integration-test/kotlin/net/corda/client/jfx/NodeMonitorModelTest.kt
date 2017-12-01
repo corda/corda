@@ -31,6 +31,7 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
+import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
 
@@ -49,6 +50,12 @@ class NodeMonitorModelTest : IntegrationTest() {
     private lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
     private lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
+
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, CHARLIE, DUMMY_NOTARY)
+                .map { it.toDatabaseSchemaNames("","_10000","_10003") }.flatten().toTypedArray())
+    }
 
     private fun setup(runTest: () -> Unit) {
         driver(extraCordappPackagesToScan = listOf("net.corda.finance")) {

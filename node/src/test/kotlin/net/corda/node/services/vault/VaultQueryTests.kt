@@ -49,7 +49,7 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-class VaultQueryTests {
+open class VaultQueryTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -77,7 +77,7 @@ class VaultQueryTests {
     private val CASH_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(CASH_NOTARY.nameOrNull(), CASH_NOTARY_KEY.public)
 
     @Before
-    fun setUp() {
+    open fun setUp() {
         // register additional identities
         val databaseAndServices = makeTestDatabaseAndMockServices(keys = listOf(MEGA_CORP_KEY, DUMMY_NOTARY_KEY),
                 cordappPackages = cordappPackages)
@@ -94,7 +94,7 @@ class VaultQueryTests {
     }
 
     @After
-    fun tearDown() {
+    open fun tearDown() {
         database.close()
     }
 
@@ -1651,7 +1651,7 @@ class VaultQueryTests {
     @Test
     fun `unconsumed linear heads for linearId between two timestamps for a given external id`() {
         val start = Instant.now()
-        val end = start.plus(1, ChronoUnit.SECONDS)
+        val end = start.plus(3, ChronoUnit.SECONDS)
 
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")

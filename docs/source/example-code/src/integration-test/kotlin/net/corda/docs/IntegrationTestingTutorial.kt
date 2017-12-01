@@ -20,6 +20,9 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class IntegrationTestingTutorial : IntegrationTest() {
+    override val databaseSchemas: MutableList<String>
+        get() = listOf(ALICE, BOB, DUMMY_NOTARY).map { it.toDatabaseSchemaName() }.toMutableList()
+
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
