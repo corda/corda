@@ -84,6 +84,10 @@ A private installation of JIRA will be deployed to R3's Azure cloud. This will b
 
 Access to the JIRA instance will be over a VPN to the R3 (Ldn/NY) office network. Outside an R3 office, doorman operators will require their own VPN connection in order to access the doorman JIRA. (Note that under the proposed scheme where smart card-authentication is used to control the final signing stage, the user needs to be physically present in either the London or New York office anyway, so remote working is not assumed as a key requirement for this process.)
 
+Note that a private installation of JIRA for 10 users (perpetual license) costs USD 10;  25 users costs USD 2,500.
+
+
+
 ## Final recommendation
 
 - Proceed to Technical Design stage
