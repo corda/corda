@@ -11,6 +11,7 @@ import com.r3.corda.networkmanage.doorman.signer.JiraCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
+import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
@@ -119,7 +120,7 @@ fun generateRootKeyPair(rootStorePath: Path, rootKeystorePass: String?, rootPriv
     rootStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, selfSignKey.private, rootPrivateKeyPassword.toCharArray(), arrayOf(selfSignCert))
     rootStore.save(rootStorePath, rootKeystorePassword)
 
-    println("Root CA keypair and certificate stored in $rootStorePath.")
+    println("Root CA keypair and certificate stored in ${rootStorePath.toAbsolutePath()}.")
     println(loadKeyStore(rootStorePath, rootKeystorePassword).getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey)
 }
 
@@ -260,7 +261,9 @@ private class ApproveAllCertificateRequestStorage(private val delegate: Certific
 fun main(args: Array<String>) {
     try {
         val commandLineOptions = parseCommandLine(*args)
+        val mode = commandLineOptions.mode
         parseParameters(commandLineOptions.configFile).run {
+            println("Starting in $mode mode")
             when (mode) {
                 DoormanParameters.Mode.ROOT_KEYGEN -> generateRootKeyPair(
                         rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),

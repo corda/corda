@@ -1,9 +1,11 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import joptsimple.OptionParser
+import joptsimple.util.EnumConverter
 import net.corda.core.internal.isRegularFile
 import net.corda.nodeapi.config.parseAs
 import java.nio.file.Path
@@ -21,7 +23,6 @@ data class DoormanParameters(// TODO Create a localSigning sub-config and put th
                              val host: String,
                              val port: Int,
                              val dataSourceProperties: Properties,
-                             val mode: Mode = Mode.DOORMAN,
                              val approveAll: Boolean = false,
                              val databaseProperties: Properties? = null,
                              val jiraConfig: JiraConfig? = null,
@@ -31,7 +32,6 @@ data class DoormanParameters(// TODO Create a localSigning sub-config and put th
                              val rootStorePath: Path? = null,
                              // TODO Change these to Duration in the future
                              val approveInterval: Long = DEFAULT_APPROVE_INTERVAL,
-                             // TODO Should be part of a localSigning sub-config
                              val signInterval: Long = DEFAULT_SIGN_INTERVAL
 ) {
     enum class Mode {
@@ -53,7 +53,8 @@ data class DoormanParameters(// TODO Create a localSigning sub-config and put th
 }
 
 data class CommandLineOptions(val configFile: Path,
-                              val updateNetworkParametersFile: Path?) {
+                              val updateNetworkParametersFile: Path?,
+                              val mode: DoormanParameters.Mode) {
     init {
         check(configFile.isRegularFile()) { "Config file $configFile does not exist" }
         if (updateNetworkParametersFile != null) {
@@ -76,7 +77,12 @@ fun parseCommandLine(vararg args: String): CommandLineOptions {
             .withRequiredArg()
             .describedAs("The new network map")
             .describedAs("filepath")
-    val helpOption = optionParser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp();
+    val modeArg = optionParser
+            .accepts("mode", "Set the mode of this application")
+            .withRequiredArg()
+            .withValuesConvertedBy(object : EnumConverter<DoormanParameters.Mode>(DoormanParameters.Mode::class.java) {})
+            .defaultsTo(DoormanParameters.Mode.DOORMAN)
+    val helpOption = optionParser.acceptsAll(listOf("h", "?", "help"), "show help").forHelp()
 
     val optionSet = optionParser.parse(*args)
     // Print help and exit on help option or if there are missing options.
@@ -90,16 +96,18 @@ fun parseCommandLine(vararg args: String): CommandLineOptions {
         Paths.get(it).toAbsolutePath()
     }
 
-    return CommandLineOptions(configFile, updateNetworkParameters)
+    return CommandLineOptions(configFile, updateNetworkParameters, optionSet.valueOf(modeArg))
 }
 
 /**
  * Parses a configuration file, which contains all the configuration except the initial values for the network
  * parameters.
  */
-fun parseParameters(configFile: Path): DoormanParameters {
-    return ConfigFactory
+fun parseParameters(configFile: Path, overrides: Config = ConfigFactory.empty()): DoormanParameters {
+    val config = ConfigFactory
             .parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))
             .resolve()
+    return overrides
+            .withFallback(config)
             .parseAs()
 }
