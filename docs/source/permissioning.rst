@@ -32,7 +32,7 @@ A Corda network has three types of certificate authorities (CAs):
 * The **node CAs**
 
   * Each node serves as its own CA in issuing the child certificates that it uses to sign its identity
-    keys, anonymous keys and TLS certificates
+    keys and TLS certificates
 
 Keypair and certificate formats
 -------------------------------
@@ -44,6 +44,12 @@ public/private keypairs and certificates. The keypairs and certificates should o
    * We recommend X.509 v3 for forward compatibility
 
 * The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`_
+
+* Supported TLS 1.2 compatible schemes:
+
+    * ECDSA using the NIST P-256 curve (secp256r1)
+
+    * RSA with 3072-bit key size
 
 Creating the root and intermediate network CAs
 ----------------------------------------------
