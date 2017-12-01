@@ -4,6 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -29,6 +30,8 @@ import java.net.URL
 import java.security.KeyPair
 import java.security.cert.CertPath
 import java.security.cert.Certificate
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.ws.rs.*
@@ -72,7 +75,6 @@ class NetworkRegistrationHelperDriverTest {
                 startNodesInProcess = true,
                 rootCertificate = rootCert
         ) {
-            // Wait for the node to have started.
             startNode(providedName = ALICE_NAME, initialRegistration = true).get()
         }
 

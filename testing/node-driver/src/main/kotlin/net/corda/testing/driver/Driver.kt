@@ -876,12 +876,14 @@ class DriverDSL(
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = listOf(baseDirectory(spec.name)),
                         serviceName = spec.name,
+                        rootCertertificate = rootCertificate,
                         serviceId = "identity"
                 )
             } else {
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
                         serviceName = spec.name,
+                        rootCertertificate = rootCertificate,
                         serviceId = NotaryService.constructId(
                                 validating = spec.validating,
                                 raft = spec.cluster is ClusterSpec.Raft
