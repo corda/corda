@@ -15,7 +15,7 @@ import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.chooseIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.poll
+import net.corda.testing.internal.poll
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow

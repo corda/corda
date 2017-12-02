@@ -8,7 +8,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.driver.DriverDSL
+import net.corda.testing.internal.DriverDSLImpl
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 
@@ -49,8 +49,8 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             portAllocation = PortAllocation.Incremental(maxPort + 1),
             waitForAllNodesToFinish = waitForAllNodesToFinish
     ) {
+        this as DriverDSLImpl  // access internal API
         setup(this)
-        this as DriverDSL  // startCordformNode is an internal API
         nodes.map {
             val startedNode = startCordformNode(it)
             if (it.webAddress != null) {

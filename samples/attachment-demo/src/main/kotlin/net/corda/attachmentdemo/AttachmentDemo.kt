@@ -25,7 +25,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.driver.poll
+import net.corda.testing.internal.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL

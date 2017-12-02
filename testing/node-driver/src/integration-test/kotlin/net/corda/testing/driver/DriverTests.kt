@@ -10,6 +10,8 @@ import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.internal.addressMustBeBound
+import net.corda.testing.internal.addressMustNotBeBound
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -74,7 +76,7 @@ class DriverTests {
         }
 
         val baseDirectory = driver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
-            (this as DriverDSL).baseDirectory(DUMMY_NOTARY.name)
+            baseDirectory(DUMMY_NOTARY.name)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
     }
