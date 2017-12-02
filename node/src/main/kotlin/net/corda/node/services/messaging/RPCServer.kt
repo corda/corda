@@ -30,6 +30,7 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.config.User
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE

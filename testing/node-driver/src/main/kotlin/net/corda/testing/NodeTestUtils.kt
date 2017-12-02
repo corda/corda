@@ -20,7 +20,7 @@ import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import java.nio.file.Path

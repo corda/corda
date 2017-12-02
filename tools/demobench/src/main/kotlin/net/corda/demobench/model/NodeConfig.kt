@@ -6,8 +6,8 @@ import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 

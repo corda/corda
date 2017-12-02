@@ -9,7 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE
 import net.corda.testing.driver.driver
 import org.bouncycastle.util.io.Streams

@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigParseOptions
 import net.corda.loadtest.tests.StabilityTest
 import net.corda.loadtest.tests.crossCashTest
 import net.corda.loadtest.tests.selfIssueTest
-import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.config.parseAs
 import java.io.File
 
 /**
