@@ -1,8 +1,9 @@
 package net.corda.node.services
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
@@ -11,6 +12,8 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
@@ -23,22 +26,19 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.DriverDSLExposedInterface
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.node.MockServices
+import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Assert.assertEquals
-import org.junit.Before
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
-    private class Services : MockServices() {
-        private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
-        private val cordapp get() = provider.cordapps.first()
-        val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
-        val appContext get() = provider.getAppContext(cordapp)
-        override val cordappProvider: CordappProvider = provider
-    }
+    private val attachments = MockAttachmentStorage()
+    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), attachments)
+    private val cordapp get() = provider.cordapps.first()
+    private val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
+    private val appContext get() = provider.getAppContext(cordapp)
 
     private companion object {
         private val logger = contextLogger()
@@ -70,16 +70,17 @@ class AttachmentLoadingTests {
         }
     }
 
-    private lateinit var services: Services
-
-    @Before
-    fun setup() {
-        services = Services()
+    private val services = rigorousMock<ServiceHub>().also {
+        doReturn(attachments).whenever(it).attachments
+        doReturn(provider).whenever(it).cordappProvider
+        doReturn(rigorousMock<IdentityService>().also {
+            doReturn(null).whenever(it).partyFromKey(DUMMY_BANK_A.owningKey)
+        }).whenever(it).identityService
     }
 
     @Test
     fun `test a wire transaction has loaded the correct attachment`() = withTestSerialization {
-        val appClassLoader = services.appContext.classLoader
+        val appClassLoader = appContext.classLoader
         val contractClass = appClassLoader.loadClass(ISOLATED_CONTRACT_ID).asSubclass(Contract::class.java)
         val generateInitialMethod = contractClass.getDeclaredMethod("generateInitial", PartyAndReference::class.java, Integer.TYPE, Party::class.java)
         val contract = contractClass.newInstance()
@@ -89,8 +90,7 @@ class AttachmentLoadingTests {
         contract.verify(ledgerTx)
 
         val actual = ledgerTx.attachments.first()
-        val expected = services.attachments.openAttachment(services.attachmentId)!!
-
+        val expected = attachments.openAttachment(attachmentId)!!
         assertEquals(expected, actual)
     }
 
