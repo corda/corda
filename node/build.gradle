@@ -101,6 +101,14 @@ dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 
+    compile "javax.inject:javax.inject:$javax_inject_version"
+    compile "javax.annotation:jsr250-api:$jsr_250_version"
+
+    compile "org.springframework.boot:spring-boot:$spring_boot_version"
+    compile "org.springframework.boot:spring-boot-autoconfigure:$spring_boot_version"
+    runtime "org.springframework.boot:spring-boot-starter-log4j2:$spring_boot_version"
+    testCompile "org.hibernate:hibernate-validator:5.2.4.Final"
+
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
