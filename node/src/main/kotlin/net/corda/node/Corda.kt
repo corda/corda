@@ -3,11 +3,25 @@
 
 package net.corda.node
 
+import com.google.inject.Guice
 import net.corda.node.internal.NodeStartup
+import net.corda.node.internal.NodeStartupArgumentsModule
+import net.corda.node.internal.VersionInfoModule
 
 fun main(args: Array<String>) {
     // Pass the arguments to the Node factory. In the Enterprise edition, this line is modified to point to a subclass.
     // It will exit the process in case of startup failure and is not intended to be used by embedders. If you want
     // to embed Node in your own container, instantiate it directly and set up the configuration objects yourself.
-    NodeStartup(args).run()
+
+    /**
+     * List of installed modules.
+     */
+    val modules = listOf(NodeStartupArgumentsModule(args),
+            VersionInfoModule())
+
+    val nodeStartup = Guice.createInjector(modules).getInstance(NodeStartup::class.java)
+
+    nodeStartup.run()
 }
+
+

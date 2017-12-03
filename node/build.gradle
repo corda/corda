@@ -53,6 +53,7 @@ dependencies {
     compile project(":confidential-identities")
     compile project(':client:rpc')
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
+    compile group: 'com.google.inject', name: 'guice', version: '4.0'
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
