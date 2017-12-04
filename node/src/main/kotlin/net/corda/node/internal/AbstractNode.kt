@@ -66,6 +66,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
 import rx.Observable
+import rx.Scheduler
 import java.io.IOException
 import java.io.NotSerializableException
 import java.lang.reflect.InvocationTargetException
@@ -232,7 +233,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
 
         val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
-                NodeInfoWatcher(configuration.baseDirectory, Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
+                NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient)
         runOnStop += networkMapUpdater::close
 
@@ -257,6 +258,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             _started = this
         }
     }
+
+    /**
+     * Should be [rx.schedulers.Schedulers.io] for production,
+     * or [rx.internal.schedulers.CachedThreadScheduler] (with shutdown registered with [runOnStop]) for shared-JVM testing.
+     */
+    protected abstract fun getRxIoScheduler(): Scheduler
 
     open fun startShell(rpcOps: CordaRPCOps) {
         InteractiveShell.startShell(configuration, rpcOps, userService, _services.identityService, _services.database)

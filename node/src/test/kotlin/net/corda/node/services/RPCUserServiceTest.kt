@@ -1,7 +1,7 @@
 package net.corda.node.services
 
 
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 

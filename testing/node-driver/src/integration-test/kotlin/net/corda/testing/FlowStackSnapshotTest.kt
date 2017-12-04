@@ -9,7 +9,7 @@ import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.driver.driver
 import net.corda.testing.node.MockNetwork
 import org.junit.Ignore

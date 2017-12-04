@@ -26,7 +26,6 @@ import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.config.*
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -36,9 +35,9 @@ import net.corda.nodeapi.internal.ServiceIdentityGenerator
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.NodeInfoFilesCopier
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.config.parseAs
-import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.NotaryInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -46,6 +45,7 @@ import net.corda.testing.*
 import net.corda.nodeapi.internal.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.DriverDSL.ClusterType.*
+import net.corda.testing.internal.InProcessNode
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -345,7 +345,7 @@ data class NodeParameters(
  * available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
  * @param compatibilityZoneURL if not null each node is started once in registration mode (which makes the node register and quit),
  *     and then re-starts the node with the given parameters.
- * @param rootCertificate if not null every time a node is started for registration that certificate is written on disk   
+ * @param rootCertificate if not null every time a node is started for registration that certificate is written on disk
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
@@ -1120,12 +1120,7 @@ class DriverDSL(
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 // TODO pass the version in?
-                val node = Node(
-                        nodeConf,
-                        MOCK_VERSION_INFO,
-                        initialiseSerialization = false,
-                        cordappLoader = CordappLoader.createDefaultWithTestPackages(nodeConf, cordappPackages))
-                        .start()
+                val node = InProcessNode(nodeConf, MOCK_VERSION_INFO, cordappPackages).start()
                 val nodeThread = thread(name = nodeConf.myLegalName.organisation) {
                     node.internals.run()
                 }

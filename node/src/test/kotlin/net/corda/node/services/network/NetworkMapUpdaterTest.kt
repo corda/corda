@@ -52,7 +52,7 @@ class NetworkMapUpdaterTest {
         val networkMapClient = mock<NetworkMapClient>()
 
         val scheduler = TestScheduler()
-        val fileWatcher = NodeInfoWatcher(baseDir, scheduler = scheduler)
+        val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
         val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient)
 
         // Publish node info for the first time.
@@ -101,7 +101,7 @@ class NetworkMapUpdaterTest {
         }
 
         val scheduler = TestScheduler()
-        val fileWatcher = NodeInfoWatcher(baseDir,  scheduler = scheduler)
+        val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
         val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient)
 
         // Test adding new node.
@@ -155,7 +155,7 @@ class NetworkMapUpdaterTest {
         }
 
         val scheduler = TestScheduler()
-        val fileWatcher = NodeInfoWatcher(baseDir,  scheduler = scheduler)
+        val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
         val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient)
 
         // Add all nodes.
@@ -199,7 +199,7 @@ class NetworkMapUpdaterTest {
         val networkMapCache = getMockNetworkMapCache()
 
         val scheduler = TestScheduler()
-        val fileWatcher = NodeInfoWatcher(baseDir,  scheduler = scheduler)
+        val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
         val updater = NetworkMapUpdater(networkMapCache, fileWatcher, null)
 
         // Not subscribed yet.

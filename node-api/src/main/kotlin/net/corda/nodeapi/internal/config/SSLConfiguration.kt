@@ -1,4 +1,4 @@
-package net.corda.nodeapi.config
+package net.corda.nodeapi.internal.config
 
 import net.corda.core.internal.div
 import java.nio.file.Path
