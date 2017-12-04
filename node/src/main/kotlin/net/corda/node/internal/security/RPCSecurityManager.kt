@@ -16,8 +16,7 @@ interface RPCSecurityManager : AutoCloseable {
      * of the authenticated user. If the authentication fails an exception
      * is thrown.
      */
-    fun authenticate(principal : String, password : CharArray) =
-        tryAuthenticate(principal, password) ?: throw FailedLoginException("Authentication fail for ${principal}")
+    fun authenticate(principal : String, password : CharArray) = tryAuthenticate(principal, password) ?: throw FailedLoginException("Authentication failed for principal $principal.")
 
     /**
      * Non-throwing version of authenticate, returning null instead of throwing
