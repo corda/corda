@@ -94,6 +94,7 @@ data class NodeConfigurationImpl(
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
+        override val securityDataSource : SecurityDataSourceConfig? = null,
         override val verifierType: VerifierType,
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
         // Then rename this to messageRedeliveryDelay and make it of type Duration
@@ -114,9 +115,11 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
-        override val securityDataSource : SecurityDataSourceConfig? = null,
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode)
         ) : NodeConfiguration {
+        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode),
+        override val sshd: SSHDConfiguration? = null,
+        override val securityDataSources: List<SecurityDataSourceConfig> = emptyList()) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
     init {
@@ -179,13 +182,13 @@ enum class PasswordEncryption {
  * Configure a generic security data source.
  */
 data class SecurityDataSourceConfig(
-        val type : SecurityDataSourceType,
-        val passwordEncryption : PasswordEncryption = PasswordEncryption.SHA256,
+        val type: SecurityDataSourceType,
+        val passwordEncryption: PasswordEncryption = PasswordEncryption.SHA256,
         val dataSourceProperties: Properties? = null,
-        val users : List<User>? = null) {
+        val users: List<User>? = null) {
 
     init {
-        when(type) {
+        when (type) {
             SecurityDataSourceType.EMBEDDED -> require(users != null && dataSourceProperties == null)
             SecurityDataSourceType.JDBC -> require(users == null && dataSourceProperties != null)
         }

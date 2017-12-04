@@ -483,9 +483,7 @@ data class RPCDriverDSL(
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
             isUseGlobalPools = false
         }
-        val rpcSecurityManager = RPCSecurityManagerImpl.buildInMemory(
-                users = listOf(rpcUser),
-                id = AuthServiceId("TEST_SECURITY_MANAGER"))
+        val rpcSecurityManager = RPCSecurityManagerImpl.buildInMemory(users = listOf(rpcUser), id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
                 ops,
                 rpcUser.username,

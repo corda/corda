@@ -53,21 +53,15 @@ import kotlin.test.assertTrue
 /*
  * Mock an AuthorizingSubject instance sticking to a fixed set of permissions
  */
-private class UserWithPermissions(
-        override val principal : String,
-        private val permissionStrings : Set<String>) : AuthorizingSubject
-{
+private class UserWithPermissions(override val principal: String, private val permissionStrings: Set<String>) : AuthorizingSubject {
+
     override fun isPermitted(action: String, vararg arguments: String): Boolean {
-        val requestedAction = if (arguments.isEmpty())
-        {
+        val requestedAction = if (arguments.isEmpty()) {
             RPCPermission(setOf(action))
-        }
-        else
-        {
+        } else {
             require(arguments.size == 1)
             RPCPermission(setOf(action), arguments[0])
         }
-
         return permissionStrings.any {
             RPCPermissionResolver.resolvePermission(it).implies(requestedAction)
         }
@@ -328,8 +322,7 @@ class CordaRPCOpsImplTest {
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
             CURRENT_RPC_CONTEXT.set(previous.copy(authorizer =
-                UserWithPermissions(previous.authorizer.principal,
-                                    permissions.toSet())))
+            UserWithPermissions(previous.authorizer.principal, permissions.toSet())))
             action.invoke()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)

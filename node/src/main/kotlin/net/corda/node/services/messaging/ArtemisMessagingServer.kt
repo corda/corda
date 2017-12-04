@@ -12,7 +12,10 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.node.internal.Node
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.NodeConfiguration
@@ -20,19 +23,19 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.*
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisPeerAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisPeerAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
@@ -228,7 +231,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * 3. RPC users. These are only given sufficient access to perform RPC with us.
      * 4. Verifiers. These are given read access to the verification request queue and write access to the response queue.
      */
-    private fun ConfigurationImpl.configureAddressSecurity() : Pair<Configuration, LoginListener> {
+    private fun ConfigurationImpl.configureAddressSecurity(): Pair<Configuration, LoginListener> {
         val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles[P2P_QUEUE] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
@@ -567,7 +570,7 @@ class NodeLoginModule : LoginModule {
         this.subject = subject
         this.callbackHandler = callbackHandler
         securityManager = options[RPCSecurityManager::class.java.name] as RPCSecurityManager
-	loginListener = options[LoginListener::javaClass.name] as LoginListener
+        loginListener = options[LoginListener::javaClass.name] as LoginListener
         val certChainChecks: Map<String, CertificateChainCheckPolicy.Check> = uncheckedCast(options[CERT_CHAIN_CHECKS_OPTION_NAME])
         peerCertCheck = certChainChecks[PEER_ROLE]!!
         nodeCertCheck = certChainChecks[NODE_ROLE]!!
@@ -629,8 +632,8 @@ class NodeLoginModule : LoginModule {
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
-	securityManager.authenticate(username, password.toCharArray())
-	loginListener(username)
+        securityManager.authenticate(username, password.toCharArray())
+        loginListener(username)
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses
         return username

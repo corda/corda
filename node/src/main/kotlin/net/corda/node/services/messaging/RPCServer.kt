@@ -212,6 +212,7 @@ class RPCServer(
         reaperScheduledFuture?.cancel(false)
         rpcExecutor?.shutdownNow()
         reaperExecutor?.shutdownNow()
+        securityManager.close()
         sessionAndConsumers.forEach {
             it.sessionFactory.close()
         }
@@ -367,9 +368,7 @@ class RPCServer(
     private fun actorFrom(message: ClientMessage): Pair<Actor, AuthorizingSubject> {
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
         val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
-        return Pair(
-            Actor(Id(validatedUser), securityManager.id, targetLegalIdentity),
-            securityManager.resolveSubject(validatedUser))
+        return Pair(Actor(Id(validatedUser), securityManager.id, targetLegalIdentity), securityManager.subjectInSession(validatedUser))
     }
 }
 

@@ -53,7 +53,6 @@ class ArtemisMessagingTests {
     private lateinit var config: NodeConfiguration
     private lateinit var database: CordaPersistence
     private lateinit var securityManager: RPCSecurityManager
-    private lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
     private var messagingClient: P2PMessagingClient? = null
     private var messagingServer: ArtemisMessagingServer? = null
 
@@ -61,10 +60,7 @@ class ArtemisMessagingTests {
 
     @Before
     fun setUp() {
-        val baseDirectory = temporaryFolder.root.toPath()
-        securityManager = RPCSecurityManagerImpl.buildInMemory(
-                users = emptyList(),
-                id = AuthServiceId("TEST"))
+        securityManager = RPCSecurityManagerImpl.buildInMemory(users = emptyList(), id = AuthServiceId("TEST"))
         config = testNodeConfiguration(
                 baseDirectory = temporaryFolder.root.toPath(),
                 myLegalName = ALICE.name)

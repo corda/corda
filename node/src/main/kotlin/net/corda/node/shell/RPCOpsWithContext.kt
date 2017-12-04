@@ -1,41 +1,39 @@
 package net.corda.node.shell
 
-import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
-import rx.Observable
-import java.io.InputStream
-import java.security.PublicKey
-import java.time.Instant
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
-fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, authorizer: AuthorizingSubject) : CordaRPCOps {
-    return Proxy.newProxyInstance(CordaRPCOps::class.java.classLoader, arrayOf(CordaRPCOps::class.java), { proxy, method, args ->
-            RPCContextRunner(invocationContext, authorizer) {
-                try {
-                    method.invoke(cordaRPCOps, *(args ?: arrayOf()))
-                } catch (e: InvocationTargetException) {
-                    // Unpack exception.
-                    throw e.targetException
-                }
-            }.get().getOrThrow()
-        }) as CordaRPCOps
+fun makeRPCOpsWithContext(cordaRPCOps: CordaRPCOps, invocationContext:InvocationContext, authorizingSubject: AuthorizingSubject) : CordaRPCOps {
+
+    return Proxy.newProxyInstance(CordaRPCOps::class.java.classLoader, arrayOf(CordaRPCOps::class.java), { _, method, args ->
+        RPCContextRunner(invocationContext, authorizingSubject) {
+            try {
+                method.invoke(cordaRPCOps, *(args ?: arrayOf()))
+            } catch (e: InvocationTargetException) {
+                // Unpack exception.
+                throw e.targetException
+            }
+        }.get().getOrThrow()
+    }) as CordaRPCOps
 }
 
-private class RPCContextRunner<T>(val invocationContext:InvocationContext, val authorizer: AuthorizingSubject, val block:() -> T) : Thread() {
+private class RPCContextRunner<T>(val invocationContext: InvocationContext, val authorizingSubject: AuthorizingSubject, val block:() -> T): Thread() {
+
     private var result: CompletableFuture<T> = CompletableFuture()
+
     override fun run() {
-        CURRENT_RPC_CONTEXT.set(RpcAuthContext(invocationContext, authorizer))
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(invocationContext, authorizingSubject))
         try {
             result.complete(block())
-        } catch (e:Throwable) {
+        } catch (e: Throwable) {
             result.completeExceptionally(e)
         } finally {
             CURRENT_RPC_CONTEXT.remove()

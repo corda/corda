@@ -9,24 +9,23 @@ import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
 
-class CordaAuthenticationPlugin(val rpcOps:CordaRPCOps, val securityManager: RPCSecurityManager, val nodeLegalName:CordaX500Name) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
+class CordaAuthenticationPlugin(private val rpcOps: CordaRPCOps, private val securityManager: RPCSecurityManager, private val nodeLegalName: CordaX500Name) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
 
     override fun getImplementation(): AuthenticationPlugin<String> = this
 
     override fun getName(): String = "corda"
 
     override fun authenticate(username: String?, credential: String?): AuthInfo {
+
         if (username == null || credential == null) {
             return AuthInfo.UNSUCCESSFUL
         }
-
-        val authorizinguSubject = securityManager.tryAuthenticate(username, credential.toCharArray())
-        if (authorizinguSubject != null) {
-        val actor = Actor(Actor.Id(username), securityManager.id, nodeLegalName)
-            return CordaSSHAuthInfo(true, makeRPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), authorizinguSubject))
+        val authorizingSubject = securityManager.tryAuthenticate(username, credential.toCharArray())
+        if (authorizingSubject != null) {
+            val actor = Actor(Actor.Id(username), securityManager.id, nodeLegalName)
+            return CordaSSHAuthInfo(true, makeRPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), authorizingSubject))
         }
-
-        return AuthInfo.UNSUCCESSFUL;
+        return AuthInfo.UNSUCCESSFUL
     }
 
     override fun getCredentialType(): Class<String> = String::class.java

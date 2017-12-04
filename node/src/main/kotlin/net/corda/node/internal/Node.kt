@@ -135,7 +135,7 @@ open class Node(configuration: NodeConfiguration,
     override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
         securityManager = RPCSecurityManagerImpl(
                 id = AuthServiceId("NODE_RPC"),
-                sourceConfigs = listOf(configuration.securityDataSource).filterNotNull(),
+                sourceConfigs = configuration.securityDataSource?.let { listOf(it) },
                 addedUsers = configuration.rpcUsers)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
@@ -210,8 +210,8 @@ open class Node(configuration: NodeConfiguration,
         }
         // Start up the MQ clients.
         rpcMessagingClient.run {
-            start(rpcOps, securityManager)
             runOnStop += this::stop
+            start(rpcOps, securityManager)
         }
         verifierMessagingClient?.run {
             runOnStop += this::stop

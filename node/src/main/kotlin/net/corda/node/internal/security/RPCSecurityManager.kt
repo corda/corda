@@ -8,7 +8,7 @@ import javax.security.auth.login.FailedLoginException
  * Manage security of RPC users, providing logic for user
  * authentication and authorization.
  */
-interface RPCSecurityManager {
+interface RPCSecurityManager : AutoCloseable {
 
     /**
      * Perform user authentication. If the authentication is successful
@@ -29,7 +29,7 @@ interface RPCSecurityManager {
      * Construct an AuthorizingSubject instance allowing to perform permission checks
      * on the given principal.
      */
-    fun resolveSubject(principal : String) : AuthorizingSubject
+    fun subjectInSession(principal : String) : AuthorizingSubject
 
     /**
      *  An identifier associated to this security service
