@@ -4,6 +4,7 @@ import net.corda.core.context.Actor
 import net.corda.core.context.InvocationContext
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManager
 import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
@@ -20,7 +21,7 @@ class CordaAuthenticationPlugin(private val rpcOps: CordaRPCOps, private val sec
         if (username == null || credential == null) {
             return AuthInfo.UNSUCCESSFUL
         }
-        val authorizingSubject = securityManager.tryAuthenticate(username, credential.toCharArray())
+        val authorizingSubject = securityManager.tryAuthenticate(username, Password(credential))
         if (authorizingSubject != null) {
             val actor = Actor(Actor.Id(username), securityManager.id, nodeLegalName)
             return CordaSSHAuthInfo(true, makeRPCOpsWithContext(rpcOps, InvocationContext.rpc(actor), authorizingSubject))

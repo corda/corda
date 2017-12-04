@@ -17,6 +17,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.node.internal.Node
+import net.corda.node.internal.security.Password
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
@@ -632,7 +633,7 @@ class NodeLoginModule : LoginModule {
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
-        securityManager.authenticate(username, password.toCharArray())
+        securityManager.authenticate(username, Password(password))
         loginListener(username)
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses
