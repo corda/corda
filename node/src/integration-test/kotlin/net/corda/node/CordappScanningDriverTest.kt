@@ -8,7 +8,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.chooseIdentity

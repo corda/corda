@@ -3,7 +3,7 @@ package net.corda.demobench.model
 import com.typesafe.config.Config
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.config.parseAs
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files

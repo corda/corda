@@ -1,7 +1,4 @@
-package net.corda.nodeapi
-
-import net.corda.nodeapi.config.OldConfig
-import net.corda.nodeapi.config.toConfig
+package net.corda.nodeapi.internal.config
 
 data class User(
         @OldConfig("user")

@@ -1,4 +1,4 @@
-package net.corda.nodeapi.config
+package net.corda.nodeapi.internal.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory.empty
