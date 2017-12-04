@@ -117,9 +117,7 @@ data class NodeConfigurationImpl(
         override val sshd: SSHDConfiguration? = null,
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode)
         ) : NodeConfiguration {
-        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode),
-        override val sshd: SSHDConfiguration? = null,
-        override val securityDataSources: List<SecurityDataSourceConfig> = emptyList()) : NodeConfiguration {
+
     override val exportJMXto: String get() = "http"
 
     init {

@@ -81,17 +81,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
-            assertFailsWith(PermissionException::class,
-                    "User ${joeUser.username} should not be allowed to use $OTHER_FLOW",
-                    {
-                        proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
-                    })
-            assertFailsWith(PermissionException::class,
-                    "User ${joeUser.username} should not be allowed to use $OTHER_FLOW",
-                    {
-
-                        proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
-                    })
             assertNotAllowed {
                 proxy.validatePermission("startFlowDynamic", "net.corda.flows.OtherFlow")
             }
@@ -106,16 +95,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
-            assertFailsWith(PermissionException::class,
-                    "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
-                    {
-                        proxy.validatePermission("nodeInfo")
-                    })
-            assertFailsWith(PermissionException::class,
-                    "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
-                    {
-                        proxy.validatePermission("networkMapFeed")
-                    })
             assertNotAllowed {
                 proxy.validatePermission("nodeInfo")
             }
@@ -130,16 +109,6 @@ class RPCPermissionsTests : AbstractRPCTest() {
         rpcDriver {
             val joeUser = userOf("joe", setOf("InvokeRpc.networkMapFeed"))
             val proxy = testProxyFor(joeUser)
-            assertFailsWith(PermissionException::class,
-                    "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
-                    {
-                        proxy.validatePermission("nodeInfo")
-                    })
-            assertFailsWith(PermissionException::class,
-                    "User ${joeUser.username} should not be allowed to invoke RPC other than for starting flows",
-                    {
-                        proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
-                    })
             assertNotAllowed {
                 proxy.validatePermission("nodeInfo")
             }
