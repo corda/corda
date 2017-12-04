@@ -34,11 +34,10 @@ import java.lang.reflect.Type
  * @property ordinals Convenience mapping of constant to ordinality
  */
 class EnumEvolutionSerializer(
-        clazz: Type,
+        override val type: Type,
         factory: SerializerFactory,
         private val conversions: Map<String, String>,
         private val ordinals: Map<String, Int>) : AMQPSerializer<Any> {
-    override val type: Type = clazz
     override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}")!!
 
     companion object {
@@ -87,7 +86,7 @@ class EnumEvolutionSerializer(
             rules.putAll(defaultRules?.associateBy({ it.new }, { it.old }) ?: emptyMap())
             rules.putAll(renameRules?.associateBy({ it.to }, { it.from }) ?: emptyMap())
 
-            while (conversions.filter { it.value !in localValues }.isNotEmpty()) {
+            while (conversions.filterNot { it.value in localValues }.isNotEmpty()) {
                 conversions.mapInPlace { rules[it] ?: it }
             }
 
