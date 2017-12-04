@@ -124,12 +124,12 @@ path to the node's base directory.
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:
 
-        :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
-        :password: The password
-        :permissions: A list of permission strings which RPC methods can use to control access
-
-    If this field is absent or an empty list then RPC is effectively locked down. Alternatively, if it contains the string
-    ``ALL`` then the user is permitted to use *any* RPC method. This value is intended for administrator users and for developers.
+    :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
+    :password: The password
+    :permissions: A list of permissions for starting flows via RPC. To give the user the permission to start the flow
+        ``foo.bar.FlowClass``, add the string ``StartFlow.foo.bar.FlowClass`` to the list. If the list
+        contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
+        users and for development.
 
 :devMode: This flag sets the node to run in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
     does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
@@ -141,4 +141,4 @@ path to the node's base directory.
     interfaces, and then by sending an IP discovery request to the network map service. Set to ``false`` to disable.
 
 :certificateSigningService: Certificate Signing Server address. It is used by the certificate signing request utility to
-    obtain SSL certificate. (See :doc:`permissioning` for more information.)
+    obtain SSL certificate (see :doc:`permissioning` for more information)

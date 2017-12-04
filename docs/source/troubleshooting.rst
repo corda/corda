@@ -26,7 +26,8 @@ for gradle and IntelliJ, but it's possible this option is not present in your en
 "No matching constructor found: - [arg0: int, arg1: Party]: missing parameter arg0"
 ***********************************************************************************
 
-Your CorDapp is written in Java and you haven't specified the ``-parameters`` compiler argument. See :doc:`deploying-a-node` for how it can be done using Gradle.
+Your CorDapp is written in Java and you haven't specified the ``-parameters`` compiler argument. See
+:doc:`generating-a-node` for how it can be done using Gradle.
 
 IDEA issues
 -----------

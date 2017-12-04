@@ -176,7 +176,7 @@ There are two ways to run the example CorDapp:
 * Via IntelliJ
 
 In both cases, we will deploy a set of test nodes with our CorDapp installed, then run the nodes. You can read more
-about how we define the nodes to be deployed :doc:`here <deploying-a-node>`.
+about how we define the nodes to be deployed :doc:`here <generating-a-node>`.
 
 Terminal
 ~~~~~~~~
