@@ -1,10 +1,8 @@
 package net.corda.nodeapi.internal
 
 import com.typesafe.config.ConfigFactory
-import net.corda.cordform.CordformNode
-import net.corda.cordform.NetworkParametersGenerator
 import net.corda.core.crypto.SignedData
-import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readAll
@@ -16,26 +14,30 @@ import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.days
-import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
 import java.nio.file.Path
 import java.time.Instant
-import kotlin.streams.toList
 
-// This class is used by deployNodes task to generate NetworkParameters in [Cordformation].
+/**
+ * This class is loaded by Cordform using reflection to generate the network parameters. It is assumed that Cordform has
+ * already asked each node to generate its node info file.
+ */
 @Suppress("UNUSED")
-class TestNetworkParametersGenerator : NetworkParametersGenerator {
+class NetworkParametersGenerator {
     companion object {
         private val logger = contextLogger()
     }
 
-    override fun run(nodesDirs: List<Path>) {
+    fun run(nodesDirs: List<Path>) {
         logger.info("NetworkParameters generation using node directories: $nodesDirs")
         try {
             initialiseSerialization()
-            val notaryInfos = loadAndGatherNotaryIdentities(nodesDirs)
+            val notaryInfos = gatherNotaryIdentities(nodesDirs)
             val copier = NetworkParametersCopier(NetworkParameters(
                     minimumPlatformVersion = 1,
                     notaries = notaryInfos,
@@ -45,40 +47,34 @@ class TestNetworkParametersGenerator : NetworkParametersGenerator {
                     maxTransactionSize = 40000,
                     epoch = 1
             ))
-            nodesDirs.forEach { copier.install(it) }
+            nodesDirs.forEach(copier::install)
         } finally {
             _contextSerializationEnv.set(null)
         }
     }
     
-    private fun loadAndGatherNotaryIdentities(nodesDirs: List<Path>): List<NotaryInfo> {
-        val infos = getAllNodeInfos(nodesDirs)
-        val configs = nodesDirs.map { ConfigFactory.parseFile((it / "node.conf").toFile()) }
-        val notaryConfigs = configs.filter { it.hasPath("notary") }
-        val notaries = notaryConfigs.associateBy(
-                { CordaX500Name.parse(it.getString("myLegalName")) },
-                { it.getConfig("notary").getBoolean("validating") }
-        )
-        // Now get the notary identities based on names passed from configs. There is one problem, for distributed notaries
-        // in config we specify only node's main name, the notary identity isn't passed there. It's read from keystore on
-        // node startup, so we have to look it up from node info as a second identity, which is ugly.
-        return infos.mapNotNull {
-            info -> notaries[info.legalIdentities[0].name]?.let { NotaryInfo(info.notaryIdentity(), it) }
-        }.distinct()
+    private fun gatherNotaryIdentities(nodesDirs: List<Path>): List<NotaryInfo> {
+        return nodesDirs.mapNotNull { nodeDir ->
+            val nodeConfig = ConfigFactory.parseFile((nodeDir / "node.conf").toFile())
+            if (nodeConfig.hasPath("notary")) {
+                val validating = nodeConfig.getConfig("notary").getBoolean("validating")
+                val nodeInfoFile = nodeDir.list { paths -> paths.filter { it.fileName.toString().startsWith("nodeInfo-") }.findFirst().get() }
+                processFile(nodeInfoFile)?.let { NotaryInfo(it.notaryIdentity(), validating) }
+            } else {
+                null
+            }
+        }.distinct() // We need distinct as nodes part of a distributed notary share the same notary identity
     }
 
-    /**
-     * Loads latest NodeInfo files stored in node's base directory.
-     * Scans main directory and [CordformNode.NODE_INFO_DIRECTORY].
-     * Signatures are checked before returning a value. The latest value stored for a given name is returned.
-     *
-     * @return list of latest [NodeInfo]s
-     */
-    private fun getAllNodeInfos(nodesDirs: List<Path>): List<NodeInfo> {
-        val nodeInfoFiles = nodesDirs.map { dir ->
-            dir.list { it.filter { "nodeInfo-" in it.toString() }.findFirst().get() }
+    private fun NodeInfo.notaryIdentity(): Party {
+        return when (legalIdentities.size) {
+            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+            1 -> legalIdentities[0]
+            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+            // cluster and is shared by all the other members. This is the notary identity.
+            2 -> legalIdentities[1]
+            else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }
-        return nodeInfoFiles.mapNotNull { processFile(it) }
     }
 
     private fun processFile(file: Path): NodeInfo? {
@@ -92,8 +88,6 @@ class TestNetworkParametersGenerator : NetworkParametersGenerator {
         }
     }
 
-    private fun NodeInfo.notaryIdentity() = if (legalIdentities.size == 2) legalIdentities[1] else legalIdentities[0]
-
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     // KryoServerSerializationScheme is not accessible from nodeapi.
     private fun initialiseSerialization() {
@@ -103,14 +97,14 @@ class TestNetworkParametersGenerator : NetworkParametersGenerator {
                     registerScheme(KryoParametersSerializationScheme)
                     registerScheme(AMQPServerSerializationScheme())
                 },
-                context))
+                context)
+        )
     }
 
     private object KryoParametersSerializationScheme : AbstractKryoSerializationScheme() {
         override fun canDeserializeVersion(byteSequence: ByteSequence, target: SerializationContext.UseCase): Boolean {
             return byteSequence == KryoHeaderV0_1 && target == SerializationContext.UseCase.P2P
         }
-
         override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
     }

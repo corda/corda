@@ -3,7 +3,6 @@ package net.corda.plugins
 import groovy.lang.Closure
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
-import net.corda.cordform.NetworkParametersGenerator
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -33,7 +32,6 @@ open class Cordform : DefaultTask() {
      */
     @Suppress("MemberVisibilityCanPrivate")
     var definitionClass: String? = null
-    private val networkParametersGenClass: String = "net.corda.nodeapi.internal.TestNetworkParametersGenerator"
     private var directory = defaultDirectory
     private val nodes = mutableListOf<Node>()
 
@@ -122,14 +120,11 @@ open class Cordform : DefaultTask() {
     /**
      * The parametersGenerator needn't be compiled until just before our build method, so we load it manually via sourceSets.main.runtimeClasspath.
      */
-    private fun loadParametersGenerator(): NetworkParametersGenerator {
+    private fun loadNetworkParamsGenClass(): Class<*> {
         val plugin = project.convention.getPlugin(JavaPluginConvention::class.java)
         val classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
         val urls = classpath.files.map { it.toURI().toURL() }.toTypedArray()
-        return URLClassLoader(urls, NetworkParametersGenerator::class.java.classLoader)
-                .loadClass(networkParametersGenClass)
-                .asSubclass(NetworkParametersGenerator::class.java)
-                .newInstance()
+        return URLClassLoader(urls, javaClass.classLoader).loadClass("net.corda.nodeapi.internal.NetworkParametersGenerator")
     }
 
     /**
@@ -171,8 +166,12 @@ open class Cordform : DefaultTask() {
 
     private fun generateAndInstallNetworkParameters() {
         project.logger.info("Generating and installing network parameters")
-        val networkParamsGenerator = loadParametersGenerator()
-        networkParamsGenerator.run(nodes.map { it.fullPath() })
+        val networkParamsGenClass = loadNetworkParamsGenClass()
+        val nodeDirs = nodes.map(Node::fullPath)
+        val networkParamsGenObject = networkParamsGenClass.newInstance()
+        val runMethod = networkParamsGenClass.getMethod("run", List::class.java).apply { isAccessible = true }
+        // Call NetworkParametersGenerator.run
+        runMethod.invoke(networkParamsGenObject, nodeDirs)
     }
 
     private fun CordformDefinition.getMatchingCordapps(): List<File> {
