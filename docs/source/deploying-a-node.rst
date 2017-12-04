@@ -8,7 +8,7 @@ Deploying a node
    or are deploying a third-party CorDapp.
 
 Linux: Installing and running Corda as a system service
-------------------------------------------------------------------
+-------------------------------------------------------
 We recommend creating system services to run a node and the optional webserver. This provides logging and service
 handling, and ensures the Corda service is run at boot.
 
@@ -80,7 +80,8 @@ handling, and ensures the Corda service is run at boot.
 .. note:: Ubuntu 16.04 and other modern Linux distributions use **SystemD**. 
           If you are running Ubuntu 14.04, follow the instructions for **Upstart**.
 
-8. **SystemD**: Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/`` directory
+8. **SystemD**: Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/``
+   directory
 
     .. code-block:: shell
 
@@ -115,12 +116,16 @@ handling, and ensures the Corda service is run at boot.
 9. Make the following changes to ``corda.service`` or ``corda.conf``:
 
     * Make sure the service description is informative - particularly if you plan to run multiple nodes.
-    * Change the username to the user account you want to use to run Corda. **We recommend that this is not root**
+    * Change the username to the user account you want to use to run Corda. **We recommend that this user account is
+      not root**
     * Set the maximum amount of memory available to the Corda process by changing the ``-Xmx2048m`` parameter
     * **SystemD**: Make sure the ``corda.service`` file is owned by root with the correct permissions:
+
         * ``sudo chown root:root /etc/systemd/system/corda.service``
         * ``sudo chmod 644 /etc/systemd/system/corda.service``
+
     * **Upstart**: Make sure the ``corda.conf`` file is owned by root with the correct permissions:
+
         * ``sudo chown root:root /etc/init/corda.conf``
         * ``sudo chmod 644 /etc/init/corda.conf``
 
@@ -128,7 +133,7 @@ handling, and ensures the Corda service is run at boot.
    Running the webserver is optional.
 
 10. **SystemD**: Create a ``corda-webserver.service`` file based on the example below and save it in the ``/etc/systemd/system/``
-   directory.
+    directory
 
     .. code-block:: shell
 
@@ -147,7 +152,7 @@ handling, and ensures the Corda service is run at boot.
        WantedBy=multi-user.target
 
 10. **Upstart**: Create a ``corda-webserver.conf`` file based on the example below and save it in the ``/etc/init/``
-   directory.
+    directory
 
     .. code-block:: shell
 
@@ -162,9 +167,10 @@ handling, and ensures the Corda service is run at boot.
         exec java -jar /opt/corda/corda-webserver.jar
 
 11. Provision the required certificates to your node. Contact the network permissioning service or see
-   :doc:`permissioning`
+    :doc:`permissioning`
 
-12. **SystemD**: You can now start a node and its webserver and set the services to start on boot by running the following ``systemctl`` commands:
+12. **SystemD**: You can now start a node and its webserver and set the services to start on boot by running the
+    following ``systemctl`` commands:
 
    * ``sudo systemctl daemon-reload``
    * ``sudo systemctl enable --now corda``
