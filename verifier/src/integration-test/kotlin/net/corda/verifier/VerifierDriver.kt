@@ -37,6 +37,7 @@ import org.apache.activemq.artemis.core.security.CheckType
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager
+import org.bouncycastle.cert.X509CertificateHolder
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -87,6 +88,7 @@ fun <A> verifierDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         compatibilityZoneURL: URL? = null,
+        rootCertificate: X509CertificateHolder? = null,
         dsl: VerifierExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -101,7 +103,8 @@ fun <A> verifierDriver(
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
                         notarySpecs = notarySpecs,
-                        compatibilityZoneURL = compatibilityZoneURL
+                        compatibilityZoneURL = compatibilityZoneURL,
+                        rootCertificate = rootCertificate
                 )
         ),
         coerce = { it },

@@ -5,25 +5,17 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.net.URL
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import javax.ws.rs.GET
-import javax.ws.rs.POST
-import javax.ws.rs.Path
-import javax.ws.rs.core.Response
-import javax.ws.rs.core.Response.ok
+
 
 class DriverTests {
     companion object {
@@ -61,22 +53,6 @@ class DriverTests {
         nodeMustBeDown(nodeHandle)
     }
 
-    @Test
-    fun `node registration`() {
-        val handler = RegistrationHandler()
-        NetworkMapServer(1.seconds, portAllocation.nextHostAndPort(), handler).use {
-            val (host, port) = it.start()
-            driver(portAllocation = portAllocation, compatibilityZoneURL = URL("http://$host:$port")) {
-                // Wait for the node to have started.
-                startNode(initialRegistration = true).get()
-            }
-        }
-        // We're getting:
-        //   a request to sign the certificate then
-        //   at least one poll request to see if the request has been approved.
-        //   all the network map registration and download.
-        assertThat(handler.requests).startsWith("/certificate", "/certificate/reply")
-    }
 
     @Test
     fun `debug mode enables debug logging level`() {
@@ -104,22 +80,5 @@ class DriverTests {
             (this as DriverDSL).baseDirectory(DUMMY_NOTARY.name)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
-    }
-}
-
-@Path("certificate")
-class RegistrationHandler {
-    val requests = mutableListOf<String>()
-    @POST
-    fun registration(): Response {
-        requests += "/certificate"
-        return ok("reply").build()
-    }
-
-    @GET
-    @Path("reply")
-    fun reply(): Response {
-        requests += "/certificate/reply"
-        return ok().build()
     }
 }

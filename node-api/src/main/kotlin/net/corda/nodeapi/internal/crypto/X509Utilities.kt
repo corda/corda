@@ -313,6 +313,11 @@ class X509CertificateFactory {
     fun generateCertificate(input: InputStream): X509Certificate {
         return delegate.generateCertificate(input) as X509Certificate
     }
+
+    // TODO migrate calls to [CertificateFactory#generateCertPath] to call this instead.
+    fun generateCertPath(vararg certificates: Certificate): CertPath {
+        return delegate.generateCertPath(certificates.asList())
+    }
 }
 
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean) {

@@ -78,6 +78,7 @@ fun testNodeConfiguration(
         doCallRealMethod().whenever(it).trustStoreFile
         doCallRealMethod().whenever(it).sslKeystore
         doCallRealMethod().whenever(it).nodeKeystore
+        doCallRealMethod().whenever(it).rootCaCertFile
     }
 }
 
