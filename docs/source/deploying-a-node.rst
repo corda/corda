@@ -77,7 +77,8 @@ handling, and ensures the Corda service is run at boot.
       * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
    *  Change the RPC username and password
 
-.. note:: Ubuntu 16.04 and other modern Linux distributions use **SystemD**. 
+.. note:: Ubuntu 16.04 and most current Linux distributions use SystemD, so if you are running one of these
+          distributions follow the steps marked **SystemD**. 
           If you are running Ubuntu 14.04, follow the instructions for **Upstart**.
 
 8. **SystemD**: Create a ``corda.service`` file based on the example below and save it in the ``/etc/systemd/system/``
