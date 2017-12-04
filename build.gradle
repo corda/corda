@@ -47,7 +47,7 @@ buildscript {
     ext.dependency_checker_version = '3.0.1'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = 'faba68332800f21278c5b600bf14ad55cef5989e'
+    ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
     ext.jsr305_version = constants.getProperty("jsr305Version")
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
