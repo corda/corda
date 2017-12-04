@@ -44,22 +44,26 @@ class RPCSecurityManagerImpl(override val id: AuthServiceId,
         manager.destroy()
     }
 
-    override fun authenticate(principal: String, password: CharArray): AuthorizingSubject {
-        val authToken = UsernamePasswordToken(principal, password)
-        val authSubject = Subject.Builder(manager).buildSubject()
-        authSubject.login(authToken)
-        return ShiroAuthorizingSubject(authSubject)
+    override fun authenticate(principal: String, password: Password): AuthorizingSubject {
+        password.use {
+            val authToken = UsernamePasswordToken(principal, it.value)
+            val authSubject = Subject.Builder(manager).buildSubject()
+            authSubject.login(authToken)
+            return ShiroAuthorizingSubject(authSubject)
+        }
     }
 
-    override fun tryAuthenticate(principal: String, password: CharArray): AuthorizingSubject? {
-        val authToken = UsernamePasswordToken(principal, password)
-        var authSubject = Subject.Builder(manager).buildSubject()
-        try {
-            authSubject.login(authToken)
-        } catch (e: Exception) {
-            authSubject = null
+    override fun tryAuthenticate(principal: String, password: Password): AuthorizingSubject? {
+        password.use {
+            val authToken = UsernamePasswordToken(principal, it.value)
+            var authSubject = Subject.Builder(manager).buildSubject()
+            try {
+                authSubject.login(authToken)
+            } catch (e: Exception) {
+                authSubject = null
+            }
+            return ShiroAuthorizingSubject(authSubject)
         }
-        return ShiroAuthorizingSubject(authSubject)
     }
 
     override fun subjectInSession(principal: String): AuthorizingSubject {
