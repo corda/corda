@@ -23,9 +23,9 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.services.IdentityService
-import net.corda.node.internal.security.AdminSubject
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.node.internal.security.AdminSubject
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
@@ -82,17 +82,17 @@ object InteractiveShell {
     private lateinit var node: StartedNode<Node>
     @VisibleForTesting
     internal lateinit var database: CordaPersistence
-    private lateinit var rpcOps:CordaRPCOps
+    private lateinit var rpcOps: CordaRPCOps
     private lateinit var securityManager: RPCSecurityManager
-    private lateinit var identityService:IdentityService
-    private var shell:Shell? = null
+    private lateinit var identityService: IdentityService
+    private var shell: Shell? = null
     private lateinit var nodeLegalName: CordaX500Name
 
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
-    fun startShell(configuration:NodeConfiguration, cordaRPCOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
+    fun startShell(configuration: NodeConfiguration, cordaRPCOps: CordaRPCOps, securityManager: RPCSecurityManager, identityService: IdentityService, database: CordaPersistence) {
         this.rpcOps = cordaRPCOps
         this.securityManager = securityManager
         this.identityService = identityService
@@ -123,15 +123,14 @@ object InteractiveShell {
         }
     }
 
-    fun runLocalShell(node:StartedNode<Node>) {
+    fun runLocalShell(node: StartedNode<Node>) {
         val terminal = TerminalFactory.create()
         val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
         val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
             // Give whoever has local shell access administrator access to the node.
-            val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(),
-                                         AdminSubject("SHELL_USER"))
+            val context = RpcAuthContext(net.corda.core.context.InvocationContext.shell(), AdminSubject("SHELL_USER"))
             CURRENT_RPC_CONTEXT.set(context)
             Emoji.renderIfSupported {
                 jlineProcessor.run()
@@ -249,7 +248,7 @@ object InteractiveShell {
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
-        } catch (e:PermissionException) {
+        } catch (e: PermissionException) {
             output.println(e.message ?: "Access denied", Color.red)
         } finally {
             InputStreamDeserializer.closeAll()
@@ -272,9 +271,9 @@ object InteractiveShell {
      */
     @Throws(NoApplicableConstructor::class)
     fun <T> runFlowFromString(invoke: (Class<out FlowLogic<T>>, Array<out Any?>) -> FlowProgressHandle<T>,
-                          inputData: String,
-                          clazz: Class<out FlowLogic<T>>,
-                          om: ObjectMapper = yamlInputMapper): FlowProgressHandle<T> {
+                              inputData: String,
+                              clazz: Class<out FlowLogic<T>>,
+                              om: ObjectMapper = yamlInputMapper): FlowProgressHandle<T> {
         // For each constructor, attempt to parse the input data as a method call. Use the first that succeeds,
         // and keep track of the reasons we failed so we can print them out if no constructors are usable.
         val parser = StringToMethodCallParser(clazz, om)

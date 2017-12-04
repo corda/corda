@@ -62,7 +62,7 @@ class RPCSecurityManagerImpl(override val id: AuthServiceId,
         return ShiroAuthorizingSubject(authSubject)
     }
 
-    override fun resolveSubject(principal: String): AuthorizingSubject {
+    override fun subjectInSession(principal: String): AuthorizingSubject {
         val subject = Subject.Builder(manager)
                 .authenticated(true)
                 .principals(SimplePrincipalCollection(principal, id.value))
@@ -130,7 +130,7 @@ internal class RPCPermission : DomainPermission {
 
 /**
  * A [org.apache.shiro.authz.permission.PermissionResolver] implementation for RPC permissions.
- * Provides a method to construct an [RPCPermission] instance from its string represenatation
+ * Provides a method to construct an [RPCPermission] instance from its string representation
  * in the form used by a Node admin.
  *
  * Currently valid permission strings have the forms:
@@ -145,21 +145,18 @@ internal class RPCPermission : DomainPermission {
  */
 internal object RPCPermissionResolver : PermissionResolver {
 
-    /**
-     * Construct [RPCPermission] from string representation
-     *
-     * @param representation
-     */
+    private val SEPARATOR = '.'
+    private val ACTION_START_FLOW = "startflow"
+    private val ACTION_INVOKE_RPC = "invokerpc"
+    private val ACTION_ALL = "all"
+
+    private val FLOW_RPC_CALLS = setOf("startFlowDynamic", "startTrackedFlowDynamic")
+
     override fun resolvePermission(representation: String): Permission {
-        /*
-         * Parse action and targets from string representation
-         */
+
         val action = representation.substringBefore(SEPARATOR).toLowerCase()
         when (action) {
             ACTION_INVOKE_RPC -> {
-                /*
-                 * Permission to call a given RPC on any input
-                 */
                 val rpcCall = representation.substringAfter(SEPARATOR)
                 require(representation.count { it == SEPARATOR } == 1) {
                     "Malformed permission string"
@@ -167,9 +164,6 @@ internal object RPCPermissionResolver : PermissionResolver {
                 return RPCPermission(setOf(rpcCall))
             }
             ACTION_START_FLOW -> {
-                /*
-                 * Permission to start a given Flow via RPC
-                 */
                 val targetFlow = representation.substringAfter(SEPARATOR)
                 require(targetFlow.isNotEmpty()) {
                     "Missing target flow after StartFlow"
@@ -183,27 +177,8 @@ internal object RPCPermissionResolver : PermissionResolver {
             else -> throw IllegalArgumentException("Unkwnow permission action specifier: $action")
         }
     }
-
-    /*
-     * Collection of static factory functions and private string constants
-     */
-    private val SEPARATOR = '.'
-    private val ACTION_START_FLOW = "startflow"
-    private val ACTION_INVOKE_RPC = "invokerpc"
-    private val ACTION_ALL = "all"
-
-    /*
-     * List of RPC calls granted by a StartFlow permission
-     */
-    private val FLOW_RPC_CALLS = setOf(
-            "startFlowDynamic",
-            "startTrackedFlowDynamic")
 }
 
-/**
- * An implementation of [net.corda.node.AuthorizingSubject] adapting
- * [org.apache.shiro.subject.Subject]
- */
 internal class ShiroAuthorizingSubject(private val impl: Subject) : AuthorizingSubject {
 
     override val principal: String
@@ -212,31 +187,17 @@ internal class ShiroAuthorizingSubject(private val impl: Subject) : AuthorizingS
     override fun isPermitted(action: String, vararg arguments: String) = impl.isPermitted(RPCPermission(setOf(action), arguments.firstOrNull()))
 }
 
-/**
- * Helper function to create the corresponding CredentialMatcher from configuration
- */
 private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {
+
     PasswordEncryption.NONE -> SimpleCredentialsMatcher()
     PasswordEncryption.SHA256 -> PasswordMatcher()
 }
 
-/**
- * An AuthorizingRealm implementation taking data from an input list of User
- */
-internal class InMemoryRealm(
-        users: List<User>,
-        realmId: String,
-        passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
+internal class InMemoryRealm(users: List<User>, realmId: String, passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
 
-    /*
-     * Methods from AuthorizingRealm interface used by Shiro to query
-     * for authentication/authorization data for a given user
-     */
-    override fun doGetAuthenticationInfo(token: AuthenticationToken) =
-            authenticationInfoByUser.getValue(token.principal as String)
+    override fun doGetAuthenticationInfo(token: AuthenticationToken) = authenticationInfoByUser.getValue(token.principal as String)
 
-    override fun doGetAuthorizationInfo(principals: PrincipalCollection) =
-            authorizationInfoByUser.getValue(principals.primaryPrincipal as String)
+    override fun doGetAuthorizationInfo(principals: PrincipalCollection) = authorizationInfoByUser.getValue(principals.primaryPrincipal as String)
 
     private val authorizationInfoByUser: Map<String, AuthorizationInfo>
     private val authenticationInfoByUser: Map<String, AuthenticationInfo>
@@ -266,9 +227,6 @@ internal class InMemoryRealm(
     }
 }
 
-/**
- * Wrapper adding convenient constructor on JdbcRealm
- */
 internal class NodeJdbcRealm(val config: SecurityDataSourceConfig) : JdbcRealm() {
 
     init {

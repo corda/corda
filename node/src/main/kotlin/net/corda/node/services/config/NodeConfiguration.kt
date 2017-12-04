@@ -115,9 +115,7 @@ data class NodeConfigurationImpl(
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode),
         override val sshd: SSHDConfiguration? = null,
-        override val securityDataSources : List<SecurityDataSourceConfig> = emptyList()
-
-) : NodeConfiguration {
+        override val securityDataSources: List<SecurityDataSourceConfig> = emptyList()) : NodeConfiguration {
     override val exportJMXto: String get() = "http"
 
     init {
@@ -181,13 +179,13 @@ enum class PasswordEncryption {
  *
  */
 data class SecurityDataSourceConfig(
-        val type : SecurityDataSourceType,
-        val passwordEncryption : PasswordEncryption = PasswordEncryption.SHA256,
+        val type: SecurityDataSourceType,
+        val passwordEncryption: PasswordEncryption = PasswordEncryption.SHA256,
         val dataSourceProperties: Properties? = null,
-        val users : List<User>? = null) {
+        val users: List<User>? = null) {
 
     init {
-        when(type) {
+        when (type) {
             SecurityDataSourceType.EMBEDDED -> require(users != null && dataSourceProperties == null)
             SecurityDataSourceType.JDBC -> require(users == null && dataSourceProperties != null)
         }

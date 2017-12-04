@@ -29,7 +29,7 @@ interface RPCSecurityManager : AutoCloseable {
      * Construct an AuthorizingSubject instance allowing to perform permission checks
      * on the given principal.
      */
-    fun resolveSubject(principal : String) : AuthorizingSubject
+    fun subjectInSession(principal : String) : AuthorizingSubject
 
     /**
      *  An identifier associated to this security service

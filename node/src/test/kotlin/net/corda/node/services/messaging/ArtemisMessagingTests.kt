@@ -60,9 +60,7 @@ class ArtemisMessagingTests {
 
     @Before
     fun setUp() {
-        securityManager = RPCSecurityManagerImpl.buildInMemory(
-                users = emptyList(),
-                id = AuthServiceId("TEST"))
+        securityManager = RPCSecurityManagerImpl.buildInMemory(users = emptyList(), id = AuthServiceId("TEST"))
         config = testNodeConfiguration(
                 baseDirectory = temporaryFolder.root.toPath(),
                 myLegalName = ALICE.name)

@@ -19,8 +19,6 @@ class RPCSecurityManagerTest {
     }
 
     private fun configWithRPCUsername(username: String) {
-        RPCSecurityManagerImpl.buildInMemory(
-                users = listOf(User(username, "password", setOf())),
-                id = AuthServiceId("TEST"))
+        RPCSecurityManagerImpl.buildInMemory(users = listOf(User(username, "password", setOf())), id = AuthServiceId("TEST"))
     }
 }
