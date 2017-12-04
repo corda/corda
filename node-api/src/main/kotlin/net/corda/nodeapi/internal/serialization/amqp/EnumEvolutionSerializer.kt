@@ -6,6 +6,7 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.UnsupportedOperationException
 import java.lang.reflect.Type
+import java.util.*
 
 /**
  * Used whenever a deserialized enums fingerprint doesn't match the fingerprint of the generated
@@ -62,11 +63,13 @@ class EnumEvolutionSerializer(
         fun make(old: RestrictedType,
                  new: AMQPSerializer<Any>,
                  factory: SerializerFactory,
-                 transformsFromBlob: TransformsSchema): AMQPSerializer<Any> {
-
-            val wireTransforms = transformsFromBlob.types[old.name]
+                 schemas: SerializationSchemas): AMQPSerializer<Any> {
+            val wireTransforms = schemas.transforms.types[old.name] ?: EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
             val localTransforms = TransformsSchema.get(old.name, factory)
-            val transforms = if (wireTransforms?.size ?: -1 > localTransforms.size) wireTransforms!! else localTransforms
+
+            // remember, the longer the list the newer we're assuming the transform set it as we assume
+            // evolution annotations are never removed, only added to
+            val transforms = if (wireTransforms.size > localTransforms.size) wireTransforms else localTransforms
 
             // if either of these isn't of the cast type then something has gone terribly wrong
             // elsewhere in the code
@@ -84,8 +87,12 @@ class EnumEvolutionSerializer(
 
             val rules: MutableMap<String, String> = mutableMapOf()
             rules.putAll(defaultRules?.associateBy({ it.new }, { it.old }) ?: emptyMap())
-            rules.putAll(renameRules?.associateBy({ it.to }, { it.from }) ?: emptyMap())
+            val renameRulesMap = renameRules?.associateBy({ it.to }, { it.from }) ?: emptyMap()
+            rules.putAll(renameRulesMap)
 
+            // take out set of all possible constants and build a map from those to the
+            // existing constants applying the rename and defaulting rules as defined
+            // in the schema
             while (conversions.filterNot { it.value in localValues }.isNotEmpty()) {
                 conversions.mapInPlace { rules[it] ?: it }
             }
@@ -93,8 +100,19 @@ class EnumEvolutionSerializer(
             // you'd think this was overkill to get access to the ordinal values for each constant but it's actually
             // rather tricky when you don't have access to the actual type, so this is a nice way to be able
             // to precompute and pass to the actual object
-            return EnumEvolutionSerializer(new.type, factory, conversions,
-                    localValues.mapIndexed { i, s -> Pair (s, i)}.toMap())
+            val ordinals = localValues.mapIndexed { i, s -> Pair(s, i) }.toMap()
+
+            // create a mapping between the ordinal value and the name as it was serialised converted
+            // to the name as it exists. We want to test any new constants have been added to the end
+            // of the enum class
+            val serialisedOrds = ((schemas.schema.types.find { it.name == old.name } as RestrictedType).choices
+                    .associateBy ({ it.value.toInt() }, { conversions[it.name] }))
+
+            if (ordinals.filterNot { serialisedOrds[it.value] == it.key }.isNotEmpty()) {
+                throw NotSerializableException("Constants have been reordered, additions must be appended to the end")
+            }
+
+            return EnumEvolutionSerializer(new.type, factory, conversions, ordinals)
         }
     }
 

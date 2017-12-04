@@ -355,4 +355,60 @@ class EnumEvolveTests {
         load (stage4Resources).forEach { assertEquals(it.second, it.first.e) }
         load (stage5Resources).forEach { assertEquals(it.second, it.first.e) }
     }
+
+    @CordaSerializationTransformEnumDefault(old = "A", new = "F")
+    enum class BadNewValue { A, B, C, D }
+
+    @Test
+    fun badNewValue() {
+        val sf = testDefaultFactory()
+
+        data class C (val e : BadNewValue)
+
+        Assertions.assertThatThrownBy {
+            SerializationOutput(sf).serialize(C(BadNewValue.A))
+        }.isInstanceOf(NotSerializableException::class.java)
+    }
+
+    @CordaSerializationTransformEnumDefaults(
+            CordaSerializationTransformEnumDefault(new = "D", old = "E"),
+            CordaSerializationTransformEnumDefault(new = "E", old = "A")
+    )
+    enum class OutOfOrder { A, B, C, D, E}
+
+    @Test
+    fun outOfOrder() {
+        val sf = testDefaultFactory()
+
+        data class C (val e : OutOfOrder)
+
+        Assertions.assertThatThrownBy {
+            SerializationOutput(sf).serialize(C(OutOfOrder.A))
+        }.isInstanceOf(NotSerializableException::class.java)
+    }
+
+    // class as it existed as it was serialized
+    //
+    // enum class ChangedOrdinality { A, B, C }
+    //
+    // class as it exists for the tests
+    @CordaSerializationTransformEnumDefault("D", "A")
+    enum class ChangedOrdinality { A, B, D, C }
+
+    @Test
+    fun changedOrdinality() {
+        val resource = "${javaClass.simpleName}.${testName()}"
+        val sf = testDefaultFactory()
+
+        data class C(val e: ChangedOrdinality)
+
+        // Uncomment to re-generate test files, needs to be done in three stages
+        // File(URI("$localPath/$resource")).writeBytes(
+        //         SerializationOutput(sf).serialize(C(ChangedOrdinality.A)).bytes)
+
+        Assertions.assertThatThrownBy {
+            DeserializationInput(sf).deserialize(SerializedBytes<C>(
+                    File(EvolvabilityTests::class.java.getResource(resource).toURI()).readBytes()))
+        }.isInstanceOf(NotSerializableException::class.java)
+    }
 }

@@ -225,7 +225,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
 
                             transform.enum.validate(
                                     transforms[transform.enum] ?: emptyList(),
-                                    clazz.enumConstants.map { it.toString() }.toSet())
+                                    clazz.enumConstants.mapIndexed { i, s -> Pair(s.toString(), i) }.toMap())
                         }
                     }
                 } catch (_: ClassNotFoundException) {

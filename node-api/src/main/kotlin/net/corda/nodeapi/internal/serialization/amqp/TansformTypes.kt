@@ -28,14 +28,14 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
     Unknown({ UnknownTransform() }) {
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
-        override fun validate(l : List<Transform>, constants: Set<String>) { }
+        override fun validate(l : List<Transform>, constants: Map<String, Int>) { }
     },
     EnumDefault({ a -> EnumDefaultSchemaTransform((a as CordaSerializationTransformEnumDefault).old, a.new) }) {
         override fun getDescriptor(): Any = DESCRIPTOR
         override fun getDescribed(): Any = ordinal
 
         /**
-         * Validates a list of constant additions to an enumerated types, to be valid a default (the value
+         * Validates a list of constant additions to an enumerated type. To be valid a default (the value
          * that should be used when we cannot use the new value) must refer to a constant that exists in the
          * enum class as it exists now and it cannot refer to itself. 
          *
@@ -43,8 +43,12 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          * existing value
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
-        override fun validate(l : List<Transform>, constants: Set<String>) {
-            uncheckedCast<List<Transform>, List<EnumDefaultSchemaTransform>>(l).forEach {
+        override fun validate(list : List<Transform>, constants: Map<String, Int>) {
+            uncheckedCast<List<Transform>, List<EnumDefaultSchemaTransform>>(list).forEach {
+                if (!constants.contains(it.new)) {
+                    throw NotSerializableException("Unknown enum constant ${it.new}")
+                }
+
                 if (!constants.contains(it.old)) {
                     throw NotSerializableException(
                             "Enum extension defaults must be to a valid constant: ${it.new} -> ${it.old}. ${it.old} " +
@@ -53,6 +57,12 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
 
                 if (it.old == it.new) {
                     throw NotSerializableException("Enum extension ${it.new} cannot default to itself")
+                }
+
+                if (constants[it.old]!! >= constants[it.new]!!) {
+                    throw NotSerializableException(
+                            "Enum extensions must default to older constants. ${it.new}[${constants[it.new]}] " +
+                            "defaults to ${it.old}[${constants[it.old]}] which is greater")
                 }
             }
         }
@@ -70,7 +80,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          * and old values
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
-        override fun validate(l : List<Transform>, constants: Set<String>) {
+        override fun validate(l : List<Transform>, constants: Map<String, Int>) {
             object : Any() {
                     val from : MutableSet<String> = mutableSetOf()
                     val to : MutableSet<String> = mutableSetOf() }.apply {
@@ -94,7 +104,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
     //}
     ;
 
-    abstract fun validate(l: List<Transform>, constants: Set<String>)
+    abstract fun validate(l: List<Transform>, constants: Map<String, Int>)
 
     companion object : DescribedTypeConstructor<TransformTypes> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_ELEMENT_KEY.amqpDescriptor
