@@ -17,10 +17,11 @@ Just define a new flow that wraps the SendTransactionFlow/ReceiveTransactionFlow
 
 .. container:: codeset
 
-    .. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/flows/AutoOfferFlow.kt
+    .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/AutoOfferFlow.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
+        :dedent: 4
 
 In this example, the ``AutoOfferFlow`` is the business logic, and we define two very short and simple flows to send
 the transaction to the regulator. There are two important aspects to note here:
