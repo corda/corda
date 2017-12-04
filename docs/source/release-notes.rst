@@ -18,11 +18,11 @@ AMQP Serialization is now enabled for both peer to peer communication and writin
 brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
 users.
 
-* **CorDapp Custom Serializers**
+* **Custom Serializers**
 
-To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serialises
-to be written for those classes provided. If needed, a proxy object can be created as an interim step that allows Corda's internal
-serialisers to operate on those types.
+To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serializers
+to be written for those classes. If needed, a proxy object can be created as an interim step that allows Corda's internal
+serializers to operate on those types.
 
 A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
 

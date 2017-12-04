@@ -70,7 +70,7 @@ abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>)
 
         cordappLoader.forEach { ca ->
             ca.serializationCustomSerializers.forEach {
-                factory.registerExternal(CorDappCustomSerializer(it.newInstance(), factory))
+                factory.registerExternal(CorDappCustomSerializer(it, factory))
             }
         }
     }

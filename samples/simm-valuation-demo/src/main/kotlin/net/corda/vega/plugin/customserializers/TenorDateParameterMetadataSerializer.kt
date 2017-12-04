@@ -5,7 +5,6 @@ import com.opengamma.strata.market.param.TenorDateParameterMetadata
 import net.corda.core.serialization.*
 import java.time.LocalDate
 
-@CordaCustomSerializer
 @Suppress("UNUSED")
 class TenorDateParameterMetadataSerializer :
         SerializationCustomSerializer<TenorDateParameterMetadata, TenorDateParameterMetadataSerializer.Proxy> {

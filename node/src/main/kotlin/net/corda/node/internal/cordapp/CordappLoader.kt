@@ -248,8 +248,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
     }
 
-    private fun findSerialzers(scanResult: RestrictedScanResult) : List<Class<out SerializationCustomSerializer<*, *>>> {
-        return scanResult.getClassesWithAnnotation(SerializationCustomSerializer::class, CordaCustomSerializer::class)
+    private fun findSerialzers(scanResult: RestrictedScanResult) : List<SerializationCustomSerializer<*, *>> {
+//        return scanResult.getClassesWithAnnotation(SerializationCustomSerializer::class, CordaCustomSerializer::class)
+        return scanResult.getClassesImplementing(SerializationCustomSerializer::class)
     }
 
     private fun findCustomSchemas(scanResult: RestrictedScanResult): Set<MappedSchema> {
@@ -302,6 +303,14 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
         fun <T : Any> getClassesWithSuperclass(type: KClass<T>): List<T> {
             return scanResult.getNamesOfSubclassesOf(type.java)
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+                    .mapNotNull { loadClass(it, type) }
+                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .map { it.kotlin.objectOrNewInstance() }
+        }
+
+        fun <T : Any> getClassesImplementing(type: KClass<T>): List<T> {
+            return scanResult.getNamesOfClassesImplementing(type.java)
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { Modifier.isAbstract(it.modifiers) }

@@ -4,7 +4,6 @@ import com.opengamma.strata.basics.date.Tenor
 import net.corda.core.serialization.*
 import java.time.Period
 
-@CordaCustomSerializer
 @Suppress("UNUSED")
 class TenorSerializer : SerializationCustomSerializer<Tenor, TenorSerializer.Proxy> {
     data class Proxy(val years: Int, val months: Int, val days: Int, val name: String)

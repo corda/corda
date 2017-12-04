@@ -3,7 +3,7 @@ Pluggable Serializers for CorDapps
 
 .. contents::
 
-To be serializable by Corda Java classes must be compiled with the -parameters switch to enable matching of it's properties
+To be serializable by Corda Java classes must be compiled with the -parameters switch to enable matching of its properties
 to constructor parameters. This is important because Corda's internal AMQP serialization scheme will only construct
 objects using their constructors. However, when recompilation isn't possible, or classes are built in such a way that
 they cannot be easily modified for simple serialization, CorDapps can provide custom proxy serializers that Corda
@@ -18,11 +18,10 @@ Writing a Custom Serializer
 ---------------------------
 Serializers must
  * Inherit from net.corda.core.serialization.SerializationCustomSerializer
- * Be annotated with the @CordaCustomSerializer annotation
  * Provide a proxy class to transform the object to and from
- * Implmenet the ``toProxy`` and ``fromProxy`` methods
+ * Implement the ``toProxy`` and ``fromProxy`` methods
 
-Serializers inheriting from SerializationCustomSerializer have to implement two methods and two types
+Serializers inheriting from SerializationCustomSerializer have to implement two methods and two types.
 
 Example
 -------
@@ -47,13 +46,12 @@ Consider this example class
     }
 
 Without a custom serializer we cannot serialize this class as there is no public constructor that facilitates the
-initialisation of all of it's properties.
+initialisation of all of its properties.
 
-To be serializable by Corda this would require a custom serializer as follows
+To be serializable by Corda this would require a custom serializer as follows:
 
 .. sourcecode:: kotlin
 
-    @CordaCustomSerializer
     class ExampleSerializer : SerializationCustomSerializer<Example, ExampleSerializer.Proxy> {
         data class Proxy(val a: Int, val b: Int)
 

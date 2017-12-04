@@ -2,10 +2,8 @@ package net.corda.vega.plugin.customserializers
 
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities
 import com.opengamma.strata.market.param.CurrencyParameterSensitivity
-import net.corda.core.serialization.CordaCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
 
-@CordaCustomSerializer
 @Suppress("UNUSED")
 class CurrencyParameterSensitivitiesSerializer :
         SerializationCustomSerializer<CurrencyParameterSensitivities, CurrencyParameterSensitivitiesSerializer.Proxy> {

@@ -17,7 +17,7 @@ data class CordappImpl(
         override val schedulableFlows: List<Class<out FlowLogic<*>>>,
         override val services: List<Class<out SerializeAsToken>>,
         override val serializationWhitelists: List<SerializationWhitelist>,
-        override val serializationCustomSerializers: List<Class<out SerializationCustomSerializer<*, *>>>,
+        override val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>,
         override val customSchemas: Set<MappedSchema>,
         override val jarPath: URL) : Cordapp {
     override val name: String = File(jarPath.toURI()).name.removeSuffix(".jar")

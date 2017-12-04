@@ -4,7 +4,6 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import com.opengamma.strata.basics.currency.Currency
 import net.corda.core.serialization.*
 
-@CordaCustomSerializer
 @Suppress("UNUSED")
 class MultiCurrencyAmountSerializer :
         SerializationCustomSerializer<MultiCurrencyAmount, MultiCurrencyAmountSerializer.Proxy> {

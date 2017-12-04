@@ -5,10 +5,8 @@ import com.opengamma.strata.market.param.ParameterMetadata
 import com.opengamma.strata.data.MarketDataName
 import com.opengamma.strata.collect.array.DoubleArray
 import com.opengamma.strata.basics.currency.Currency
-import net.corda.core.serialization.CordaCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
 
-@CordaCustomSerializer
 @Suppress("UNUSED")
 class CurrencyParameterSensitivitySerializer :
         SerializationCustomSerializer<CurrencyParameterSensitivity, CurrencyParameterSensitivitySerializer.Proxy> {
