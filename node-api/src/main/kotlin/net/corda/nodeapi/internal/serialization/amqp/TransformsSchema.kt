@@ -146,8 +146,8 @@ class EnumDefaultSchemaTransform(val old: String, val new: String) : Transform()
 /**
  * Transform applied to either a class or enum where a property is renamed
  *
- * @property from the name at time of change of the property
- * @property to the new name of the property
+ * @property from the name of the property or constant prior to being changed, i.e. what it was
+ * @property to the new name of the property or constant after the change has been made, i.e. what it is now
  */
 class RenameSchemaTransform(val from: String, val to: String) : Transform() {
     companion object : DescribedTypeConstructor<RenameSchemaTransform> {
@@ -193,6 +193,61 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_SCHEMA.amqpDescriptor
 
         /**
+         * Takes a class name and either returns a cached instance of the TransformSet for it or, on a cache miss,
+         * instantiates the transform set before inserting into the cache and returning it.
+         *
+         * @param name fully qualified class name to lookup transforms for
+         * @param sf the [SerializerFactory] building this transform set. Needed as each can define it's own
+         * class loader and this dictates which classes we can and cannot see
+         */
+        fun get(name: String, sf: SerializerFactory) = sf.transformsCache.computeIfAbsent(name) {
+                val transforms = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
+                try {
+                    val clazz = sf.classloader.loadClass(name)
+
+                    supportedTransforms.forEach { transform ->
+                        clazz.getAnnotation(transform.type)?.let { list ->
+                            transform.getAnnotations(list).forEach { annotation ->
+                                val t = transform.enum.build(annotation)
+
+                                // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
+                                // ignore them it feels like a good thing to alert the user to since this is
+                                // more than likely a typo in their code so best make it an actual error
+                                if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }
+                                        .filter { t == it }
+                                        .isNotEmpty()) {
+                                    throw NotSerializableException(
+                                            "Repeated unique transformation annotation of type ${t.name}")
+                                }
+
+                                transforms[transform.enum]!!.add(t)
+                            }
+
+                            transform.enum.validate(
+                                    transforms[transform.enum] ?: emptyList(),
+                                    clazz.enumConstants.mapIndexed { i, s -> Pair(s.toString(), i) }.toMap())
+                        }
+                    }
+                } catch (_: ClassNotFoundException) {
+                    // if we can't load the class we'll end up caching an empty list which is fine as that
+                    // list, on lookup, won't be included in the schema because it's empty
+                }
+
+                transforms
+            }
+
+        private fun getAndAdd(
+                type: String,
+                sf: SerializerFactory,
+                map: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>) {
+            get(type, sf).apply {
+                if (isNotEmpty()) {
+                    map[type] = this
+                }
+            }
+        }
+
+        /**
          * Prepare a schema for encoding, takes all of the types being transmitted and inspects each
          * one for any transform annotations. If there are any build up a set that can be
          * encoded into the AMQP [Envelope]
@@ -200,48 +255,10 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          * @param schema should be a [Schema] generated for a serialised data structure
          * @param sf should be provided by the same serialization context that generated the schema
          */
-        fun build(schema: Schema, sf: SerializerFactory): TransformsSchema {
-            val rtn = mutableMapOf<String, EnumMap<TransformTypes, MutableList<Transform>>>()
-
-            schema.types.forEach { type ->
-                sf.transformsCache.computeIfAbsent(type.name) {
-                    val transforms = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
-                    try {
-                        val clazz = sf.classloader.loadClass(type.name)
-
-                        supportedTransforms.forEach { transform ->
-                            clazz.getAnnotation(transform.type)?.let { list ->
-                                transform.getAnnotations(list).forEach { annotation ->
-                                    val t = transform.enum.build(annotation)
-
-                                    // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
-                                    // ignore them it feels like a good thing to alert the user to since this is
-                                    // more than likely a typo in their code so best make it an actual error
-                                    if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }
-                                            .filter { t == it }.isNotEmpty()) {
-                                        throw NotSerializableException(
-                                                "Repeated unique transformation annotation of type ${t.name}")
-                                    }
-
-                                    transforms[transform.enum]!!.add(t)
-                                }
-                            }
-                        }
-                    } catch (_: ClassNotFoundException) {
-                        // if we can't load the class we'll end up caching an empty list which is fine as that
-                        // list, on lookup, won't be included in the schema because it's empty
-                    }
-
-                    transforms
-                }.apply {
-                    if (isNotEmpty()) {
-                        rtn[type.name] = this
-                    }
-                }
-            }
-
-            return TransformsSchema(rtn)
-        }
+        fun build(schema: Schema, sf: SerializerFactory) = TransformsSchema(
+                mutableMapOf<String, EnumMap<TransformTypes, MutableList<Transform>>>().apply {
+                    schema.types.forEach { type -> getAndAdd(type.name, sf, this) }
+                })
 
         override fun getTypeClass(): Class<*> = TransformsSchema::class.java
 
@@ -286,6 +303,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
 
     override fun getDescribed(): Any = types
 
+    @Suppress("NAME_SHADOWING")
     override fun toString(): String {
         data class Indent(val indent: String) {
             @Suppress("UNUSED") constructor(i: Indent) : this("  ${i.indent}")
