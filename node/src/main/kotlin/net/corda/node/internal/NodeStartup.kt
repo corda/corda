@@ -35,9 +35,9 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     /**
-     * @return 0 if the node startup was successful. This value is intended to be the exit code of the process.
+     * @return true if the node startup was successful. This value is intended to be the exit code of the process.
      */
-    open fun run(): Int {
+    open fun run(): Boolean {
         try {
             val startTime = System.currentTimeMillis()
             assertCanNormalizeEmptyPath()
@@ -55,13 +55,13 @@ open class NodeStartup(val args: Array<String>) {
                 println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
                 println("Revision ${versionInfo.revision}")
                 println("Platform Version ${versionInfo.platformVersion}")
-                return 0
+                return true
             }
 
             // Maybe render command line help.
             if (cmdlineOptions.help) {
                 argsParser.printHelp(System.out)
-                return 0
+                return true
             }
 
             drawBanner(versionInfo)
@@ -75,7 +75,7 @@ open class NodeStartup(val args: Array<String>) {
                     conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
                 } else {
                     println("bootstrap-raft-notaries flag not recognized, exiting...")
-                    return 1
+                    return false
                 }
             } else {
                 conf0
@@ -85,7 +85,7 @@ open class NodeStartup(val args: Array<String>) {
             preNetworkRegistration(conf)
             if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
                 registerWithNetwork(cmdlineOptions, conf)
-                return 0
+                return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
 
@@ -99,13 +99,13 @@ open class NodeStartup(val args: Array<String>) {
                 } else {
                     logger.error("Exception during node startup", e)
                 }
-                return 1
+                return false
             }
 
             logger.info("Node exiting successfully")
-            return 0
+            return true
         } catch (e: Exception) {
-            return 1
+            return false
         }
     }
 
