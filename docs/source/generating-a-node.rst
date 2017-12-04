@@ -16,10 +16,10 @@ Each Corda node has the following structure:
     ├── logs                    // The node logs
     ├── node.conf               // The node's configuration files
     ├── persistence.mv.db       // The node's database
-    └── cordapps                // The CorDapps jars installed on the node
+    └── plugins                 // The CorDapps jars installed on the node
 
 The node is configured by editing its ``node.conf`` file. You install CorDapps on the node by dropping the CorDapp JARs
-into the ``cordapps`` folder.
+into the ``plugins`` folder.
 
 Node naming
 -----------
