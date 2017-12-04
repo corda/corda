@@ -15,7 +15,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.utilities.currentDBSession
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.ALICE_NAME
 import net.corda.testing.BOB_NAME
 import net.corda.testing.node.MockNetwork

@@ -1,24 +1,40 @@
 package net.corda.cordform;
 
+import javax.annotation.Nonnull;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 public abstract class CordformDefinition {
-    public final Path driverDirectory;
-    public final ArrayList<Consumer<? super CordformNode>> nodeConfigurers = new ArrayList<>();
+    private Path nodesDirectory = Paths.get("build", "nodes");
+    private final List<Consumer<CordformNode>> nodeConfigurers = new ArrayList<>();
+    private final List<String> cordappPackages = new ArrayList<>();
 
-    public CordformDefinition(Path driverDirectory) {
-        this.driverDirectory = driverDirectory;
+    public Path getNodesDirectory() {
+        return nodesDirectory;
     }
 
-    public void addNode(Consumer<? super CordformNode> configurer) {
+    public void setNodesDirectory(Path nodesDirectory) {
+        this.nodesDirectory = nodesDirectory;
+    }
+
+    public List<Consumer<CordformNode>> getNodeConfigurers() {
+        return nodeConfigurers;
+    }
+
+    public void addNode(Consumer<CordformNode> configurer) {
         nodeConfigurers.add(configurer);
+    }
+
+    public List<String> getCordappPackages() {
+        return cordappPackages;
     }
 
     /**
      * Make arbitrary changes to the node directories before they are started.
      * @param context Lookup of node directory by node name.
      */
-    public abstract void setup(CordformContext context);
+    public abstract void setup(@Nonnull CordformContext context);
 }

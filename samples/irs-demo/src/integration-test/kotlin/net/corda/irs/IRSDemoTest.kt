@@ -21,7 +21,7 @@ import net.corda.finance.plugin.registerFinanceJSONMappers
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.web.IrsDemoWebApplication
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.test.spring.springDriver
 import net.corda.testing.*
 import net.corda.testing.http.HttpApi
@@ -117,7 +117,7 @@ class IRSDemoTest {
         log.info("Running trade against ${nodeApi.root}")
         val fileContents = loadResourceFile("net/corda/irs/web/simulation/example-irs-trade.json")
         val tradeFile = fileContents.replace("tradeXXX", "trade1").replace("oracleXXX", oracle.name.toString())
-        assertThat(nodeApi.postJson("deals", tradeFile)).isTrue()
+        nodeApi.postJson("deals", tradeFile)
     }
 
     private fun runUploadRates(nodeApi: HttpApi) {

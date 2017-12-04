@@ -52,20 +52,18 @@ class FXFwdTimeOption {
     @Test
     fun `issue - signature`() {
         transaction {
-            output(UNIVERSAL_PROGRAM_ID) { inState }
+            output(UNIVERSAL_PROGRAM_ID, inState)
             timeWindow(TEST_TX_TIME_1)
 
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Issue())
                 this `fails with` "the transaction is signed by all liable parties"
             }
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Issue())
                 this `fails with` "the transaction is signed by all liable parties"
             }
-
-            command(highStreetBank.owningKey, acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
-
+            command(listOf(highStreetBank.owningKey, acmeCorp.owningKey), UniversalContract.Commands.Issue())
             this.verifies()
         }
     }
@@ -73,31 +71,28 @@ class FXFwdTimeOption {
     @Test
     fun `maturity, bank exercise`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
-            output(UNIVERSAL_PROGRAM_ID) { outState2 }
-
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
+            output(UNIVERSAL_PROGRAM_ID, outState2)
             timeWindow(TEST_TX_TIME_AFTER_MATURITY)
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("exercise") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("exercise"))
                 this `fails with` "condition must be met"
             }
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Action("exercise") }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Action("exercise"))
                 this `fails with` "condition must be met"
             }
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Action("expire") }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Action("expire"))
                 this `fails with` "condition must be met"
             }
-
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("expire") }
-
+            command(highStreetBank.owningKey, UniversalContract.Commands.Action("expire"))
             this.verifies()
         }
     }
@@ -105,31 +100,28 @@ class FXFwdTimeOption {
     @Test
     fun `maturity, corp exercise`() {
         transaction {
-            input(UNIVERSAL_PROGRAM_ID) { inState }
-            output(UNIVERSAL_PROGRAM_ID) { outState1 }
-            output(UNIVERSAL_PROGRAM_ID) { outState2 }
-
+            input(UNIVERSAL_PROGRAM_ID, inState)
+            output(UNIVERSAL_PROGRAM_ID, outState1)
+            output(UNIVERSAL_PROGRAM_ID, outState2)
             timeWindow(TEST_TX_TIME_BEFORE_MATURITY)
 
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Action("some undefined name"))
                 this `fails with` "action must be defined"
             }
             tweak {
-                command(acmeCorp.owningKey) { UniversalContract.Commands.Action("expire") }
+                command(acmeCorp.owningKey, UniversalContract.Commands.Action("expire"))
                 this `fails with` "condition must be met"
             }
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("expire") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("expire"))
                 this `fails with` "condition must be met"
             }
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("exercise") }
+                command(highStreetBank.owningKey, UniversalContract.Commands.Action("exercise"))
                 this `fails with` "condition must be met"
             }
-
-            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("exercise") }
-
+            command(acmeCorp.owningKey, UniversalContract.Commands.Action("exercise"))
             this.verifies()
         }
     }

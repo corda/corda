@@ -24,6 +24,7 @@ object CustomVaultQuery {
         private companion object {
             private val log = contextLogger()
         }
+
         fun rebalanceCurrencyReserves(): List<Amount<Currency>> {
             val nativeQuery = """
                 select
@@ -44,16 +45,18 @@ object CustomVaultQuery {
             """
             log.info("SQL to execute: $nativeQuery")
             val session = services.jdbcSession()
-            val prepStatement = session.prepareStatement(nativeQuery)
-            val rs = prepStatement.executeQuery()
-            val topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
-            while (rs.next()) {
-                val currencyStr = rs.getString(1)
-                val amount = rs.getLong(2)
-                log.info("$currencyStr : $amount")
-                topUpLimits.add(Amount(amount, Currency.getInstance(currencyStr)))
+            return session.prepareStatement(nativeQuery).use { prepStatement ->
+                prepStatement.executeQuery().use { rs ->
+                    val topUpLimits: MutableList<Amount<Currency>> = mutableListOf()
+                    while (rs.next()) {
+                        val currencyStr = rs.getString(1)
+                        val amount = rs.getLong(2)
+                        log.info("$currencyStr : $amount")
+                        topUpLimits.add(Amount(amount, Currency.getInstance(currencyStr)))
+                    }
+                    topUpLimits
+                }
             }
-            return topUpLimits
         }
     }
 }
@@ -69,6 +72,7 @@ object TopupIssuerFlow {
     data class TopupRequest(val issueToParty: Party,
                             val issuerPartyRef: OpaqueBytes,
                             val notaryParty: Party)
+
     @InitiatingFlow
     @StartableByRPC
     class TopupIssuanceRequester(val issueToParty: Party,

@@ -20,6 +20,7 @@ import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
+import net.corda.core.internal.join
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
@@ -29,6 +30,7 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.config.User
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -207,6 +209,7 @@ class RPCServer(
     }
 
     fun close() {
+        observationSendExecutor?.join()
         reaperScheduledFuture?.cancel(false)
         rpcExecutor?.shutdownNow()
         reaperExecutor?.shutdownNow()

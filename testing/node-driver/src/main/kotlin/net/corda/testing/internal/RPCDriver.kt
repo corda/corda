@@ -23,7 +23,7 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import net.corda.testing.driver.*
 import net.corda.testing.node.NotarySpec
@@ -230,7 +230,6 @@ fun <A> rpcDriver(
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = false,
         waitForNodesToFinish: Boolean = false,
         extraCordappPackagesToScan: List<String> = emptyList(),
@@ -254,7 +253,7 @@ fun <A> rpcDriver(
         ),
         coerce = { it },
         dsl = dsl,
-        initialiseSerialization = initialiseSerialization
+        initialiseSerialization = false
 )
 
 private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {

@@ -11,10 +11,10 @@ import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.net.URLClassLoader
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarInputStream
 
 /**
  * Creates nodes based on the configuration of this task in the gradle configuration DSL.
@@ -23,12 +23,16 @@ import java.util.concurrent.TimeUnit
  */
 @Suppress("unused")
 open class Cordform : DefaultTask() {
+    private companion object {
+        private val defaultDirectory: Path = Paths.get("build", "nodes")
+    }
+
     /**
      * Optionally the name of a CordformDefinition subclass to which all configuration will be delegated.
      */
     @Suppress("MemberVisibilityCanPrivate")
     var definitionClass: String? = null
-    private var directory = Paths.get("build", "nodes")
+    private var directory = defaultDirectory
     private val nodes = mutableListOf<Node>()
 
     /**
@@ -116,7 +120,6 @@ open class Cordform : DefaultTask() {
     /**
      * This task action will create and install the nodes based on the node configurations added.
      */
-    @Suppress("unused")
     @TaskAction
     fun build() {
         project.logger.info("Running Cordform task")
@@ -129,16 +132,48 @@ open class Cordform : DefaultTask() {
     private fun initializeConfiguration() {
         if (definitionClass != null) {
             val cd = loadCordformDefinition()
+            // If the user has specified their own directory (even if it's the same default path) then let them know
+            // it's not used and should just rely on the one in CordformDefinition
+            require(directory === defaultDirectory) {
+                "'directory' cannot be used when 'definitionClass' is specified. Use CordformDefinition.nodesDirectory instead."
+            }
+            directory = cd.nodesDirectory
+            val cordapps = cd.getMatchingCordapps()
             cd.nodeConfigurers.forEach {
                 val node = node { }
                 it.accept(node)
                 node.rootDir(directory)
+                node.installCordapps(cordapps)
             }
             cd.setup { nodeName -> project.projectDir.toPath().resolve(getNodeByName(nodeName)!!.nodeDir.toPath()) }
         } else {
             nodes.forEach {
                 it.rootDir(directory)
             }
+        }
+    }
+
+    private fun CordformDefinition.getMatchingCordapps(): List<File> {
+        val cordappJars = project.configuration("cordapp").files
+        return cordappPackages.map { `package` ->
+            val cordappsWithPackage = cordappJars.filter { it.containsPackage(`package`) }
+            when (cordappsWithPackage.size) {
+                0 -> throw IllegalArgumentException("There are no cordapp dependencies containing the package $`package`")
+                1 -> cordappsWithPackage[0]
+                else -> throw IllegalArgumentException("More than one cordapp dependency contains the package $`package`: $cordappsWithPackage")
+            }
+        }
+    }
+
+    private fun File.containsPackage(`package`: String): Boolean {
+        JarInputStream(inputStream()).use {
+            while (true) {
+                val name = it.nextJarEntry?.name ?: break
+                if (name.endsWith(".class") && name.replace('/', '.').startsWith(`package`)) {
+                    return true
+                }
+            }
+            return false
         }
     }
 
@@ -149,7 +184,7 @@ open class Cordform : DefaultTask() {
 
     private fun generateNodeInfos() {
         project.logger.info("Generating node infos")
-        var nodeProcesses = buildNodeProcesses()
+        val nodeProcesses = buildNodeProcesses()
         try {
             validateNodeProcessess(nodeProcesses)
         } finally {
@@ -177,7 +212,7 @@ open class Cordform : DefaultTask() {
 
     private fun buildNodeProcess(node: Node): Pair<Node, Process> {
         node.makeLogDirectory()
-        var process = ProcessBuilder(generateNodeInfoCommand())
+        val process = ProcessBuilder(generateNodeInfoCommand())
                 .directory(node.fullPath().toFile())
                 .redirectErrorStream(true)
                 // InheritIO causes hangs on windows due the gradle buffer also not being flushed.
@@ -224,6 +259,8 @@ open class Cordform : DefaultTask() {
             }
         }
     }
+
     private fun Node.logFile(): Path = this.logDirectory().resolve("generate-info.log")
+
     private fun ProcessBuilder.addEnvironment(key: String, value: String) = this.apply { environment().put(key, value) }
 }

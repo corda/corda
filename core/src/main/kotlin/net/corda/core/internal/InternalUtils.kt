@@ -31,6 +31,8 @@ import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
 import java.util.Spliterator.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.stream.IntStream
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
@@ -307,3 +309,10 @@ fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationCo
 val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
+/** Analogous to [Thread.join]. */
+fun ExecutorService.join() {
+    shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
+    while (!awaitTermination(1, TimeUnit.SECONDS)) {
+        // Try forever. Do not give up, tests use this method to assert the executor has no more tasks.
+    }
+}

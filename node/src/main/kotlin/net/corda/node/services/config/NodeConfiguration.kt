@@ -5,9 +5,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.NodeSSLConfiguration
-import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.parseAs
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -29,6 +30,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
+    // TODO Remove as this is only used by the driver
     val useHTTPS: Boolean
     val p2pAddress: NetworkHostAndPort
     val rpcAddress: NetworkHostAndPort?
@@ -41,25 +43,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
-
-data class DatabaseConfig(
-        val initialiseSchema: Boolean = true,
-        val serverNameTablePrefix: String = "",
-        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
-)
-
-enum class TransactionIsolationLevel {
-    NONE,
-    READ_UNCOMMITTED,
-    READ_COMMITTED,
-    REPEATABLE_READ,
-    SERIALIZABLE;
-
-    /**
-     * The JDBC constant value of the same name but with prefixed with TRANSACTION_ defined in [java.sql.Connection].
-     */
-    val jdbcValue: Int = java.sql.Connection::class.java.getField("TRANSACTION_$name").get(null) as Int
-}
 
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true

@@ -36,7 +36,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
-import net.corda.node.utilities.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.*
@@ -106,8 +106,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             bobNode.database.transaction {
-                VaultFiller(bobNode.services).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
-                        issuedBy = cashIssuer)
+                VaultFiller(bobNode.services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, 10, cashIssuer)
             }
 
             val alicesFakePaper = aliceNode.database.transaction {
@@ -156,8 +155,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             val cashStates = bobNode.database.transaction {
-                VaultFiller(bobNode.services).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, notary, 3, 3,
-                        issuedBy = issuer)
+                VaultFiller(bobNode.services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, issuer)
             }
 
             val alicesFakePaper = aliceNode.database.transaction {
@@ -216,8 +214,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val issuer = bank.ref(1, 2, 3)
 
             bobNode.database.transaction {
-                VaultFiller(bobNode.services).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary,
-                        issuedBy = issuer)
+                VaultFiller(bobNode.services, DUMMY_NOTARY, DUMMY_NOTARY_KEY, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, 10, issuer)
             }
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, issuer, alice,
@@ -656,13 +653,13 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         // wants to sell to Bob.
         val eb1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             // Issued money to itself.
-            output(Cash.PROGRAM_ID, "elbonian money 1", notary = notary) { 800.DOLLARS.CASH issuedBy issuer ownedBy interimOwner }
-            output(Cash.PROGRAM_ID, "elbonian money 2", notary = notary) { 1000.DOLLARS.CASH issuedBy issuer ownedBy interimOwner }
+            output(Cash.PROGRAM_ID, "elbonian money 1", notary = notary, contractState = 800.DOLLARS.CASH issuedBy issuer ownedBy interimOwner)
+            output(Cash.PROGRAM_ID, "elbonian money 2", notary = notary, contractState = 1000.DOLLARS.CASH issuedBy issuer ownedBy interimOwner)
             if (!withError) {
-                command(issuer.party.owningKey) { Cash.Commands.Issue() }
+                command(issuer.party.owningKey, Cash.Commands.Issue())
             } else {
                 // Put a broken command on so at least a signature is created
-                command(issuer.party.owningKey) { Cash.Commands.Move() }
+                command(issuer.party.owningKey, Cash.Commands.Move())
             }
             timeWindow(TEST_TX_TIME)
             if (withError) {
@@ -675,16 +672,16 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         // Bob gets some cash onto the ledger from BoE
         val bc1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 1")
-            output(Cash.PROGRAM_ID, "bob cash 1", notary = notary) { 800.DOLLARS.CASH issuedBy issuer ownedBy owner }
-            command(interimOwner.owningKey) { Cash.Commands.Move() }
+            output(Cash.PROGRAM_ID, "bob cash 1", notary = notary, contractState = 800.DOLLARS.CASH issuedBy issuer ownedBy owner)
+            command(interimOwner.owningKey, Cash.Commands.Move())
             this.verifies()
         }
 
         val bc2 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 2")
-            output(Cash.PROGRAM_ID, "bob cash 2", notary = notary) { 300.DOLLARS.CASH issuedBy issuer ownedBy owner }
-            output(Cash.PROGRAM_ID, notary = notary) { 700.DOLLARS.CASH issuedBy issuer ownedBy interimOwner }   // Change output.
-            command(interimOwner.owningKey) { Cash.Commands.Move() }
+            output(Cash.PROGRAM_ID, "bob cash 2", notary = notary, contractState = 300.DOLLARS.CASH issuedBy issuer ownedBy owner)
+            output(Cash.PROGRAM_ID, notary = notary, contractState = 700.DOLLARS.CASH issuedBy issuer ownedBy interimOwner)   // Change output.
+            command(interimOwner.owningKey, Cash.Commands.Move())
             this.verifies()
         }
 
@@ -700,10 +697,9 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             attachmentID: SecureHash?,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val ap = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
-            output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", notary = notary) {
-                CommercialPaper.State(issuer, owner, amount, TEST_TX_TIME + 7.days)
-            }
-            command(issuer.party.owningKey) { CommercialPaper.Commands.Issue() }
+            output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", notary = notary,
+                contractState = CommercialPaper.State(issuer, owner, amount, TEST_TX_TIME + 7.days))
+            command(issuer.party.owningKey, CommercialPaper.Commands.Issue())
             if (!withError)
                 timeWindow(time = TEST_TX_TIME)
             if (attachmentID != null)

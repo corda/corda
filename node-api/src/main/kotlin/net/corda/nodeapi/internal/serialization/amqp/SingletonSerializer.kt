@@ -28,7 +28,7 @@ class SingletonSerializer(override val type: Class<*>, val singleton: Any, facto
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
         return singleton
     }
 }

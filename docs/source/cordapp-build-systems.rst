@@ -118,9 +118,9 @@ Creating the CorDapp JAR
 The gradle ``jar`` task included in the CorDapp template build file will automatically build your CorDapp JAR correctly
 as long as your dependencies are set correctly.
 
-Note that the hash of the resulting CorDapp JAR is not deterministic, as it depends on variables such as the timestamp
-at creation. Nodes running the same CorDapp must therefore ensure they are using the exact same CorDapp jar, and not
-different versions of the JAR created from identical sources.
+.. warning:: The hash of the generated CorDapp JAR is not deterministic, as it depends on variables such as the
+   timestamp at creation. Nodes running the same CorDapp must therefore ensure they are using the exact same CorDapp
+   jar, and not different versions of the JAR created from identical sources.
 
 The filename of the JAR must include a unique identifier to deduplicate it from other releases of the same CorDapp.
 This is typically done by appending the version string to the CorDapp's name. This unique identifier should not change
@@ -131,7 +131,7 @@ Installing the CorDapp jar
 --------------------------
 
 .. note:: Before installing a CorDapp, you must create one or more nodes to install it on. For instructions, please see
-   :doc:`deploying-a-node`.
+   :doc:`generating-a-node`.
 
 At runtime, nodes will load any CorDapps present in their ``cordapps`` folder. Therefore in order to install a CorDapp on
 a node, the CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder, where ``node_dir`` is the folder in which

@@ -1,7 +1,7 @@
 package net.corda.attachmentdemo
 
 import net.corda.core.internal.div
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.driver.driver

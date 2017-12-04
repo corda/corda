@@ -16,11 +16,14 @@ import javax.ws.rs.core.Response
 
 // API is accessible from /api/bank. All paths specified below are relative to it.
 @Path("bank")
-class BankOfCordaWebApi(val rpc: CordaRPCOps) {
-    data class IssueRequestParams(val amount: Long, val currency: String,
-                                  val issueToPartyName: CordaX500Name, val issuerBankPartyRef: String,
-                                  val issuerBankName: CordaX500Name,
-                                  val notaryName: CordaX500Name)
+class BankOfCordaWebApi(private val rpc: CordaRPCOps) {
+    data class IssueRequestParams(
+            val amount: Amount<Currency>,
+            val issueToPartyName: CordaX500Name,
+            val issuerBankPartyRef: String,
+            val issuerBankName: CordaX500Name,
+            val notaryName: CordaX500Name
+    )
 
     private companion object {
         private val logger = contextLogger()
@@ -47,14 +50,13 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
         val notaryParty = rpc.notaryIdentities().firstOrNull { it.name == params.notaryName }
                 ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate notary ${params.notaryName} in network map").build()
 
-        val amount = Amount(params.amount, Currency.getInstance(params.currency))
         val anonymous = true
         val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
 
         // invoke client side of Issuer Flow: IssuanceRequester
         // The line below blocks and waits for the future to resolve.
         return try {
-            rpc.startFlow(::CashIssueAndPaymentFlow, amount, issuerBankPartyRef, issueToParty, anonymous, notaryParty).returnValue.getOrThrow()
+            rpc.startFlow(::CashIssueAndPaymentFlow, params.amount, issuerBankPartyRef, issueToParty, anonymous, notaryParty).returnValue.getOrThrow()
             logger.info("Issue and payment request completed successfully: $params")
             Response.status(Response.Status.CREATED).build()
         } catch (e: Exception) {

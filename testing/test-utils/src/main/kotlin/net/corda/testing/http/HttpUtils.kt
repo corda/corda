@@ -6,6 +6,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
@@ -14,11 +15,13 @@ import java.util.concurrent.TimeUnit
  */
 object HttpUtils {
     private val logger = LoggerFactory.getLogger(javaClass)
+
     private val client by lazy {
         OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS).build()
     }
+
     val defaultMapper: ObjectMapper by lazy {
         net.corda.client.jackson.JacksonSupport.createNonRpcMapper()
     }
@@ -28,9 +31,9 @@ object HttpUtils {
         return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").put(body).build())
     }
 
-    fun postJson(url: URL, data: String): Boolean {
+    fun postJson(url: URL, data: String) {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
-        return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
+        makeExceptionalRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
     }
 
     fun postPlain(url: URL, data: String): Boolean {
@@ -42,6 +45,14 @@ object HttpUtils {
         val paramString = if (params.isEmpty()) "" else "?" + params.map { "${it.key}=${it.value}" }.joinToString("&")
         val parameterisedUrl = URL(url.toExternalForm() + paramString)
         return mapper.readValue(parameterisedUrl, T::class.java)
+    }
+
+    // TODO Move everything to use this instead of makeRequest
+    private fun makeExceptionalRequest(request: Request) {
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            throw IOException("${request.method()} to ${request.url()} returned a ${response.code()}: ${response.body().string()}")
+        }
     }
 
     private fun makeRequest(request: Request): Boolean {

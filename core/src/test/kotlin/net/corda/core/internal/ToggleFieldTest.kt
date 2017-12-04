@@ -14,7 +14,6 @@ import org.junit.runners.model.Statement
 import org.slf4j.Logger
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -23,10 +22,7 @@ private fun <T> withSingleThreadExecutor(callable: ExecutorService.() -> T) = Ex
         fork {}.getOrThrow() // Start the thread.
         callable()
     } finally {
-        shutdown()
-        while (!awaitTermination(1, TimeUnit.SECONDS)) {
-            // Do nothing.
-        }
+        join()
     }
 }
 

@@ -19,7 +19,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
@@ -133,7 +133,7 @@ class ContractUpgradeFlowTest {
 
     @Test
     fun `2 parties contract upgrade using RPC`() {
-        rpcDriver(initialiseSerialization = false) {
+        rpcDriver {
             // Create dummy contract.
             val twoPartyDummyContract = DummyContract.generateInitial(0, notary, alice.ref(1), bob.ref(1))
             val signedByA = aliceNode.services.signInitialTransaction(twoPartyDummyContract)

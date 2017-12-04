@@ -10,9 +10,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
@@ -25,14 +25,15 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.schedulers.Schedulers
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
@@ -46,7 +47,7 @@ import kotlin.system.exitProcess
  */
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
-                val initialiseSerialization: Boolean = true,
+                private val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
 ) : AbstractNode(configuration, createClock(configuration), versionInfo, cordappLoader) {
     companion object {
@@ -293,6 +294,7 @@ open class Node(configuration: NodeConfiguration,
         return started
     }
 
+    override fun getRxIoScheduler() = Schedulers.io()!!
     private fun initialiseSerialization() {
         val classloader = cordappLoader.appClassLoader
         nodeSerializationEnv = SerializationEnvironmentImpl(

@@ -54,8 +54,6 @@ dependencies {
     compile project(':client:rpc')
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
-    compile "com.google.code.findbugs:jsr305:3.0.1"
-
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"

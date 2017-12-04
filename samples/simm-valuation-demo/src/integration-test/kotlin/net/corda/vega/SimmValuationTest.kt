@@ -41,7 +41,7 @@ class SimmValuationTest {
             assertThat(createTradeBetween(nodeAApi, nodeBParty, testTradeId)).isTrue()
             assertTradeExists(nodeBApi, nodeAParty, testTradeId)
             assertTradeExists(nodeAApi, nodeBParty, testTradeId)
-            assertThat(runValuationsBetween(nodeAApi, nodeBParty)).isTrue()
+            runValuationsBetween(nodeAApi, nodeBParty)
             assertValuationExists(nodeBApi, nodeAParty)
             assertValuationExists(nodeAApi, nodeBParty)
         }
@@ -66,8 +66,8 @@ class SimmValuationTest {
         assertThat(trades).filteredOn { it.id == tradeId }.isNotEmpty()
     }
 
-    private fun runValuationsBetween(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty): Boolean {
-        return partyApi.postJson("${counterparty.id}/portfolio/valuations/calculate", PortfolioApi.ValuationCreationParams(valuationDate))
+    private fun runValuationsBetween(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty) {
+        partyApi.postJson("${counterparty.id}/portfolio/valuations/calculate", PortfolioApi.ValuationCreationParams(valuationDate))
     }
 
     private fun assertValuationExists(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty) {

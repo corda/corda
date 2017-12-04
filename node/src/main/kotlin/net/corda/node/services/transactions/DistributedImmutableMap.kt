@@ -5,8 +5,9 @@ import io.atomix.copycat.Query
 import io.atomix.copycat.server.Commit
 import io.atomix.copycat.server.StateMachine
 import net.corda.core.utilities.contextLogger
-import net.corda.node.utilities.*
-import java.util.LinkedHashMap
+import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import java.util.*
 
 /**
  * A distributed map state machine that doesn't allow overriding values. The state machine is replicated

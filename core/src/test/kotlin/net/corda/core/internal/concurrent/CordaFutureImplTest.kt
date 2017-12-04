@@ -2,13 +2,13 @@ package net.corda.core.internal.concurrent
 
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.join
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.rigorousMock
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import org.slf4j.Logger
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -108,10 +108,7 @@ class CordaFutureTest {
         val throwable = Exception("Boom")
         val executor = Executors.newSingleThreadExecutor()
         executor.fork { throw throwable }.andForget(log)
-        executor.shutdown()
-        while (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
-            // Do nothing.
-        }
+        executor.join()
         verify(log).error(any(), same(throwable))
     }
 
