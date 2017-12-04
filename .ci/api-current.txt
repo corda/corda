@@ -2724,6 +2724,10 @@ public static final class net.corda.core.serialization.SerializationContext$UseC
   public static net.corda.core.serialization.SerializationContext$UseCase valueOf(String)
   public static net.corda.core.serialization.SerializationContext$UseCase[] values()
 ##
+public interface net.corda.core.serialization.SerializationCustomSerializer
+  public abstract Object fromProxy(Object)
+  public abstract Object toProxy(Object)
+##
 public final class net.corda.core.serialization.SerializationDefaults extends java.lang.Object
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getCHECKPOINT_CONTEXT()
   @org.jetbrains.annotations.NotNull public final net.corda.core.serialization.SerializationContext getP2P_CONTEXT()
