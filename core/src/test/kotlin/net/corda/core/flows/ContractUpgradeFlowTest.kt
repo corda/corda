@@ -19,7 +19,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2

@@ -6,7 +6,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 

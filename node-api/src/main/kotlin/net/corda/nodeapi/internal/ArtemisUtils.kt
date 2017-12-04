@@ -1,6 +1,6 @@
 @file:JvmName("ArtemisUtils")
 
-package net.corda.nodeapi
+package net.corda.nodeapi.internal
 
 import java.nio.file.FileSystems
 import java.nio.file.Path

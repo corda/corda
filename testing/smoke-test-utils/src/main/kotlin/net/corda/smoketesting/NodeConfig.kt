@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 
 class NodeConfig(
         val legalName: CordaX500Name,

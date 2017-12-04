@@ -29,8 +29,8 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.NodeInfoFilesCopier
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
 import net.corda.testing.internal.ProcessUtilities

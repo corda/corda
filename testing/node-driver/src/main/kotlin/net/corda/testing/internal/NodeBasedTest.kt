@@ -14,7 +14,7 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.services.config.plus
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts

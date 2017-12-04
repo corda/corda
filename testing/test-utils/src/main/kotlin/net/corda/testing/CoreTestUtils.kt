@@ -16,7 +16,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory

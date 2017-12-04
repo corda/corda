@@ -13,7 +13,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
