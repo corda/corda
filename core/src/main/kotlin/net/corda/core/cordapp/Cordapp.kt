@@ -23,7 +23,6 @@ import java.net.URL
  * @property schedulableFlows List of flows startable by the scheduler
  * @property services List of RPC services
  * @property serializationWhitelists List of Corda plugin registries
- * @property serializationCustomSerializerProxies List of Proxy classes used by the custom serializers
  * @property serializationCustomSerializers List of serializers
  * @property customSchemas List of custom schemas
  * @property jarPath The path to the JAR for this CorDapp
