@@ -19,7 +19,6 @@ import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.node.services.identity.InMemoryIdentityService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
 import net.corda.testing.SerializationEnvironmentRule;
@@ -48,6 +47,7 @@ import static net.corda.finance.contracts.asset.CashUtilities.*;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.TestConstants.*;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
+import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests {
@@ -61,14 +61,12 @@ public class VaultQueryJavaTests {
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        IdentityService identitySvc = new InMemoryIdentityService(
-                Arrays.asList(getMEGA_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY()),
-                Collections.emptySet(),
-                getDEV_TRUST_ROOT());
+        IdentityService identitySvc = makeTestIdentityService(Arrays.asList(getMEGA_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY()));
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 Arrays.asList(getMEGA_CORP_KEY(), getDUMMY_NOTARY_KEY()),
                 identitySvc,
-                cordappPackages);
+                cordappPackages,
+                getMEGA_CORP().getName());
         issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();

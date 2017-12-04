@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -34,7 +35,7 @@ class PersistentIdentityServiceTests {
 
     @Before
     fun setup() {
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = emptyList(), identityService = PersistentIdentityService(DEV_TRUST_ROOT))
+        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(emptyList(), PersistentIdentityService(DEV_TRUST_ROOT), initialIdentityName = MEGA_CORP.name)
         database = databaseAndServices.first
         services = databaseAndServices.second
         identityService = services.identityService
@@ -266,7 +267,7 @@ class PersistentIdentityServiceTests {
      */
     @Test
     fun `deanonymising a well known identity should return the identity`() {
-        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
+        val service = makeTestIdentityService()
         val expected = ALICE
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
         val actual = service.wellKnownPartyFromAnonymous(expected)
@@ -278,7 +279,7 @@ class PersistentIdentityServiceTests {
      */
     @Test
     fun `deanonymising a false well known identity should return null`() {
-        val service = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
+        val service = makeTestIdentityService()
         val notAlice = Party(ALICE.name, generateKeyPair().public)
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
         val actual = service.wellKnownPartyFromAnonymous(notAlice)
