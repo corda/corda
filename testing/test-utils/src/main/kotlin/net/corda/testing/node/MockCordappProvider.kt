@@ -22,7 +22,6 @@ class MockCordappProvider(cordappLoader: CordappLoader, attachmentStorage: Attac
                 schedulableFlows = emptyList(),
                 services = emptyList(),
                 serializationWhitelists = emptyList(),
-                serializationCustomSerializerProxies = emptyList(),
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
                 jarPath = Paths.get(".").toUri().toURL())

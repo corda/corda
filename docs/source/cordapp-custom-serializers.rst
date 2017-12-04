@@ -1,16 +1,18 @@
 Pluggable Serializers for CorDapps
 ==================================
-To be serializable by Corda Java classes must be compiled with the -parameter switch to enable matching of it's properties
-to constructor parameters. This is important because Corda's internal AMQP serialization scheme will only constuct
+
+.. contents::
+
+To be serializable by Corda Java classes must be compiled with the -parameters switch to enable matching of it's properties
+to constructor parameters. This is important because Corda's internal AMQP serialization scheme will only construct
 objects using their constructors. However, when recompilation isn't possible, or classes are built in such a way that
 they cannot be easily modified for simple serailization, CorDapps can provide custom proxy serializers that Corda
-can use to move from types it cannot serializer to an interim representation that it can with the transformation to and
+can use to move from types it cannot serialize to an interim representation that it can with the transformation to and
 from this proxy object being handled by the supplied serializer.
 
 Serializer Location
 -------------------
-Custom serializers should be placed in the plugins directory of a CorDapp or a sub directory thereof. These
-classes will be scanned and loaded by the CorDapp loading process.
+Custom serializer classes should follow the rules for including classes found in :doc:`cordapp-build-systems`
 
 Writing a Custom Serializer
 ---------------------------
@@ -26,7 +28,9 @@ Example
 -------
 Consider this example class
 
+
 .. sourcecode:: java
+
     public final class Example {
         private final Int a
         private final Int b
@@ -42,33 +46,31 @@ Consider this example class
         public int getB() { return b; }
     }
 
-Without a custom serializer we cannot serialise this class as there is no public constructor that facilitates the
-initialisation of al of its's properties.
+Without a custom serializer we cannot serialize this class as there is no public constructor that facilitates the
+initialisation of all of its's properties.
 
 To be serializable by Corda this would require a custom serializer as follows
 
 .. sourcecode:: kotlin
+
     @CordaCustomSerializer
-    class ExampleSerializer : SerializationCustomSerializer {
+    class ExampleSerializer : SerializationCustomSerializer<Example, ExampleSerializer.Proxy> {
         @CordaCustomSerializerProxy
         data class Proxy(val a: Int, val b: Int)
 
-        override fun toProxy(obj: Any): Any = Proxy((obj as Example).a, obj.b)
+        override fun toProxy(obj: Example) = Proxy(obj.a, obj.b)
 
-        override fun fromProxy(proxy: Any): Any {
+        override fun fromProxy(proxy: Proxy) : Example {
             val constructorArg = IntArray(2);
-            constructorArg[0] = (proxy as Proxy).a
+            constructorArg[0] = proxy.a
             constructorArg[1] = proxy.b
             return Example.create(constructorArg)
         }
-
-        override val type: Type get() = Example::class.java
-        override val ptype: Type get() = Proxy::class.java
     }
 
 Whitelisting
 ------------
 By writing a custom serializer for a class it has the effect of adding that class to the whitelist, meaning such
-classes don't need explicitly adding to the CorDapp's whitelist
+classes don't need explicitly adding to the CorDapp's whitelist.
 
 

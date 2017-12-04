@@ -38,7 +38,6 @@ interface Cordapp {
     val schedulableFlows: List<Class<out FlowLogic<*>>>
     val services: List<Class<out SerializeAsToken>>
     val serializationWhitelists: List<SerializationWhitelist>
-    val serializationCustomSerializerProxies: List<Class<*>>
     val serializationCustomSerializers: List<Class<out SerializationCustomSerializer<*, *>>>
     val customSchemas: Set<MappedSchema>
     val jarPath: URL

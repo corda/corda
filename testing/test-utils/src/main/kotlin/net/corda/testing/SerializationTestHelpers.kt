@@ -104,6 +104,7 @@ private fun createTestSerializationEnv(label: String) = object : SerializationEn
         },
         AMQP_P2P_CONTEXT,
         KRYO_RPC_SERVER_CONTEXT,
+        KRYO_RPC_CLIENT_CONTEXT,
         AMQP_STORAGE_CONTEXT,
         KRYO_CHECKPOINT_CONTEXT) {
     override fun toString() = "testSerializationEnv($label)"

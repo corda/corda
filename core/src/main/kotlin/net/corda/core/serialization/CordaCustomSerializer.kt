@@ -8,11 +8,3 @@ package net.corda.core.serialization
 @Target(AnnotationTarget.CLASS)
 annotation class CordaCustomSerializer
 
-/**
- *  This annotation marks a class as being a proxy for some third party class and used by some
- *  implementation of [SerializationCustomSerializer]. Such classes must be annotated to allow
- *  them to be discovered in a CorDapp jar and loaded
- */
-@Target(AnnotationTarget.CLASS)
-annotation class CordaCustomSerializerProxy
-

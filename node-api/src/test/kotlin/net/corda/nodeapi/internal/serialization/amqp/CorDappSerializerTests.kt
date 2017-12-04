@@ -2,27 +2,21 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import org.junit.Test
 import net.corda.core.serialization.CordaCustomSerializer
-import net.corda.core.serialization.CordaCustomSerializerProxy
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationCustomSerializer
 import org.assertj.core.api.Assertions
 import java.io.NotSerializableException
-import java.lang.reflect.Type
 import kotlin.test.assertEquals
 
 class CorDappSerializerTests {
     data class NeedsProxy (val a: String)
 
     @CordaCustomSerializer
-    class NeedsProxyProxySerializer : SerializationCustomSerializer {
-        @CordaCustomSerializerProxy
+    class NeedsProxyProxySerializer : SerializationCustomSerializer<NeedsProxy, NeedsProxyProxySerializer.Proxy> {
         data class Proxy(val proxy_a_: String)
 
-        override val type: Type get()  = NeedsProxy::class.java
-        override val ptype: Type get() = Proxy::class.java
-
-        override fun fromProxy(proxy: Any) : Any = NeedsProxy((proxy as Proxy).proxy_a_)
-        override fun toProxy(obj: Any) : Any = Proxy((obj as NeedsProxy).a)
+        override fun fromProxy(proxy: Proxy) = NeedsProxy(proxy.proxy_a_)
+        override fun toProxy(obj: NeedsProxy) = Proxy(obj.a)
     }
 
     // Standard proxy serializer used internally, here for comparison purposes
@@ -34,12 +28,10 @@ class CorDappSerializerTests {
         data class Proxy(val proxy_a_: String)
 
         override fun toProxy(obj: NeedsProxy): Proxy {
-            println ("InternalProxySerializer - toProxy")
             return Proxy(obj.a)
         }
 
         override fun fromProxy(proxy: Proxy): NeedsProxy {
-            println ("InternalProxySerializer - fromProxy")
             return NeedsProxy(proxy.proxy_a_)
         }
     }

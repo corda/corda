@@ -5,24 +5,70 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
+import java.io.NotSerializableException
 import java.lang.reflect.Type
+import kotlin.reflect.jvm.javaType
+import kotlin.reflect.jvm.jvmErasure
 
+/**
+ * Index into the types list of the parent type of the serializer object, should be the
+ * type that this object proxies for
+ */
+const val CORDAPP_TYPE = 0
+
+/**
+ * Index into the types list of the parent type of the serializer object, should be the
+ * type of the proxy object that we're using to represent the object we're proxying for
+ */
+const val PROXY_TYPE = 1
+
+/**
+ * Wrapper class for user provided serializers
+ *
+ * Through the CorDapp JAR scanner we will have a list of custom serializer types that implement
+ * the toProxy and fromProxy methods. This class takes an instance of one of those objects and
+ * embeds it within a serialization context associated with a serializer factory by creating
+ * and instance of this class and registering that with a [SerializerFactory]
+ *
+ * Proxy serializers should transform an unserializable class into a representation that we can serialize
+ *
+ * @property serializer in instance of a user written serialization proxy, normally scanned and loaded
+ * automatically
+ * @property type the Java [Type] of the class which this serializes, inferred via reflection of the
+ * [serializer]'s super type
+ * @property proxyType the Java [Type] of the class into which instances of [type] are proxied for use byt
+ * the underlying serialisation engine
+ *
+ * @param factory a [SerializerFactory] belonging to the context this serializer is being instantiated
+ * for
+ */
 class CorDappCustomSerializer(
-        private val serialiser: SerializationCustomSerializer<*, *>,
-        factory: SerializerFactory)
-    : AMQPSerializer<Any>, SerializerFor {
+        private val serializer: SerializationCustomSerializer<*, *>,
+        factory: SerializerFactory) : AMQPSerializer<Any>, SerializerFor {
     override val revealSubclassesInSchema: Boolean get() = false
-    override val type: Type get() = serialiser.type
+    private val types = serializer::class.supertypes.filter { it.jvmErasure == SerializationCustomSerializer::class }
+            .flatMap { it.arguments }
+            .map { it.type!!.javaType }
+
+    init {
+        if (types.size != 2) {
+            throw NotSerializableException("Unable to determine serializer parent types")
+        }
+    }
+
+    override val type = types[CORDAPP_TYPE]
+    val proxyType = types[PROXY_TYPE]
+
     override val typeDescriptor = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${nameForType(type)}")
     val descriptor: Descriptor = Descriptor(typeDescriptor)
 
-    private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(serialiser.ptype, factory) }
+    private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(proxyType, factory) }
 
     override fun writeClassInfo(output: SerializationOutput) {}
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        @Suppress("UNCHECKED_CAST")
-        val proxy = (serialiser as SerializationCustomSerializer<Any?,Any?>).toProxy(obj)
+        val proxy = uncheckedCast<SerializationCustomSerializer<*, *>,
+                SerializationCustomSerializer<Any?,Any?>> (serializer).toProxy(obj)
 
         data.withDescribed(descriptor) {
             data.withList {
@@ -33,11 +79,10 @@ class CorDappCustomSerializer(
         }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput) =
-            @Suppress("UNCHECKED_CAST")
-            (serialiser as SerializationCustomSerializer<Any?,Any?>).fromProxy(
-                    uncheckedCast(proxySerializer.readObject(obj, schema, input)))!!
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput) =
+            uncheckedCast<SerializationCustomSerializer<*, *>, SerializationCustomSerializer<Any?,Any?>> (
+                    serializer).fromProxy(uncheckedCast(proxySerializer.readObject(obj, schemas, input)))!!
 
-    override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == type
+    override fun isSerializerFor(clazz: Class<*>) = clazz == type
 }
 

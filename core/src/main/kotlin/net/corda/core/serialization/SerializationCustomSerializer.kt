@@ -17,9 +17,6 @@ import java.lang.reflect.Type
  *
  * Failing to apply either annotation will result in the class not being loaded by Corda and thus serialization
  * failing
- *
- * @property type the type of the object that this class is proxying
- * @property ptype the type of the proxy object used as an intermediate representation of [type]
  */
 interface SerializationCustomSerializer<OBJ, PROXY> {
     /**
@@ -33,14 +30,4 @@ interface SerializationCustomSerializer<OBJ, PROXY> {
      * unserializable type
      */
     fun fromProxy(proxy: PROXY) : OBJ
-
-    /**
-     * Should be set to the type of the object being proxied
-     */
-    val type: Type
-
-    /**
-     * Should be set to the proxy objects type
-     */
-    val ptype: Type
 }

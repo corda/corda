@@ -204,8 +204,8 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     }
 
     /**
-     * Iterate over an AMQP schema, for each type ascertain weather it's on ClassPath of [classloader] amd
-     * if not use the [ClassCarpenter] to generate a class to use in it's place
+     * Iterate over an AMQP schema, for each type ascertain whether it's on ClassPath of [classloader] and,
+     * if not, use the [ClassCarpenter] to generate a class to use in it's place.
      */
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val metaSchema = CarpenterMetaSchema.newInstance()

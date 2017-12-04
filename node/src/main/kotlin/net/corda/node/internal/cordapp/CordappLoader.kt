@@ -181,7 +181,6 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 schedulableFlows = listOf(),
                 services = listOf(),
                 serializationWhitelists = listOf(),
-                serializationCustomSerializerProxies = listOf(),
                 serializationCustomSerializers = listOf(),
                 customSchemas = setOf(),
                 jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
@@ -198,7 +197,6 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findSchedulableFlows(scanResult),
                     findServices(scanResult),
                     findPlugins(it),
-                    findSerialiserProxies(scanResult),
                     findSerialzers(scanResult),
                     findCustomSchemas(scanResult),
                     it.url)
@@ -248,10 +246,6 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         return ServiceLoader.load(SerializationWhitelist::class.java, URLClassLoader(arrayOf(cordappJarPath.url), appClassLoader)).toList().filter {
             it.javaClass.protectionDomain.codeSource.location == cordappJarPath.url && it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix)
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
-    }
-
-    private fun findSerialiserProxies(scanResult: RestrictedScanResult) : List<Class<*>> {
-        return scanResult.getClassesWithAnnotation(Class::class, CordaCustomSerializerProxy::class)
     }
 
     private fun findSerialzers(scanResult: RestrictedScanResult) : List<Class<out SerializationCustomSerializer<*, *>>> {
