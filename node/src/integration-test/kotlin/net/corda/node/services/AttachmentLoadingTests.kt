@@ -12,7 +12,7 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
@@ -70,7 +70,7 @@ class AttachmentLoadingTests {
         }
     }
 
-    private val services = rigorousMock<ServiceHub>().also {
+    private val services = rigorousMock<ServicesForResolution>().also {
         doReturn(attachments).whenever(it).attachments
         doReturn(provider).whenever(it).cordappProvider
         doReturn(rigorousMock<IdentityService>().also {

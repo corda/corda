@@ -57,7 +57,6 @@ class AttachmentsClassLoaderTests {
     private val appContext get() = cordappProvider.getAppContext(cordapp)
     private val serviceHub = rigorousMock<ServiceHub>().also {
         doReturn(attachments).whenever(it).attachments
-        doReturn(cordappProvider).whenever(it).cordappProvider
     }
 
     // These ClassLoaders work together to load 'AnotherDummyContract' in a disposable way, such that even though
@@ -273,7 +272,7 @@ class AttachmentsClassLoaderTests {
                 .withClassLoader(child)
 
         val bytes = run {
-            val wireTransaction = tx.toWireTransaction(serviceHub, context)
+            val wireTransaction = tx.toWireTransaction(cordappProvider, context)
             wireTransaction.serialize(context = context)
         }
         val copiedWireTransaction = bytes.deserialize(context = context)
@@ -297,7 +296,7 @@ class AttachmentsClassLoaderTests {
                     val outboundContext = SerializationFactory.defaultFactory.defaultContext
                             .withServiceHub(serviceHub)
                             .withClassLoader(child)
-                    val wireTransaction = tx.toWireTransaction(serviceHub, outboundContext)
+                    val wireTransaction = tx.toWireTransaction(cordappProvider, outboundContext)
                     wireTransaction.serialize(context = outboundContext)
                 }
                 // use empty attachmentStorage
