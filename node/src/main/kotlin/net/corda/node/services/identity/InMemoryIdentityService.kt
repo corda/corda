@@ -61,14 +61,13 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
-            log.error("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
-            log.error("Certificate path :")
+            log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
+            log.warn("Certificate path :")
             identity.certPath.certificates.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).joinToString("") { "   " }
-                log.error("$space${certificate.toX509CertHolder().subject}")
+                log.warn("$space${certificate.toX509CertHolder().subject}")
             }
-            // Log the error and continue.
-            return null
+            throw e
         }
 
         // Ensure we record the first identity of the same name, first

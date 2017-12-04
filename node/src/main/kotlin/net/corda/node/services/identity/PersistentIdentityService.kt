@@ -117,13 +117,12 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
-            log.error(e.localizedMessage)
-            log.error("Path = ")
+            log.warn(e.localizedMessage)
+            log.warn("Path = ")
             identity.certPath.certificates.reversed().forEach {
-                log.error(it.toX509CertHolder().subject.toString())
+                log.warn(it.toX509CertHolder().subject.toString())
             }
-            // Log the error and continue.
-            return null
+            throw e
         }
 
         // Ensure we record the first identity of the same name, first

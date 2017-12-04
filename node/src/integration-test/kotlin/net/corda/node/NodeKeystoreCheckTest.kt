@@ -12,7 +12,9 @@ import net.corda.testing.driver.driver
 import org.junit.Test
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class NodeKeystoreCheckTest {
     @Test
@@ -21,6 +23,9 @@ class NodeKeystoreCheckTest {
             // This will fail because there are no keystore configured.
             assertFailsWith(ExecutionException::class) {
                 startNode(customOverrides = mapOf("devMode" to false)).get()
+            }.apply {
+                assertTrue(cause is IllegalArgumentException)
+                assertTrue(cause?.message?.startsWith("Identity certificate not found. ") ?: false)
             }
 
             // Create keystores
@@ -50,8 +55,10 @@ class NodeKeystoreCheckTest {
             keystore.save(config.nodeKeystore, config.keyStorePassword)
 
             assertFailsWith(ExecutionException::class) {
-                // This will fail because there are no keystore configured.
                 startNode(providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false)).get()
+            }.apply {
+                assertTrue(cause is IllegalArgumentException)
+                assertEquals("Client CA certificate must chain to the trusted root.", cause?.message)
             }
         }
     }
