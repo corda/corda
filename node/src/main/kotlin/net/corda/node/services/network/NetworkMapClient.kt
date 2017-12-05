@@ -18,7 +18,9 @@ import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import okhttp3.CacheControl
 import okhttp3.Headers
+import rx.Observable
 import rx.Subscription
+import rx.subjects.PublishSubject
 import java.io.BufferedReader
 import java.io.Closeable
 import java.net.HttpURLConnection
@@ -87,7 +89,8 @@ data class NetworkMapResponse(val networkMap: NetworkMap, val cacheMaxAge: Durat
 
 class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val fileWatcher: NodeInfoWatcher,
-                        private val networkMapClient: NetworkMapClient?) : Closeable {
+                        private val networkMapClient: NetworkMapClient?,
+                        private val currentParametersHash: SecureHash) : Closeable {
     companion object {
         private val logger = contextLogger()
         private val retryInterval = 1.minutes
@@ -95,6 +98,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
     private val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater Thread", Executors.defaultThreadFactory()))
     private var fileWatcherSubscription: Subscription? = null
+
+    val parametersUpdates: PublishSubject<SecureHash> = PublishSubject.create<SecureHash>()
 
     override fun close() {
         fileWatcherSubscription?.unsubscribe()
@@ -127,6 +132,12 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             override fun run() {
                 val nextScheduleDelay = try {
                     val (networkMap, cacheTimeout) = networkMapClient.getNetworkMap()
+                    // TODO NetworkParameters updates are not implemented yet. Every mismatch should result in node shutdown.
+                    if (currentParametersHash != networkMap.networkParameterHash) {
+                        logger.error("Node is using parameters with hash: $currentParametersHash but network map is advertising: ${networkMap.networkParameterHash}.\n" +
+                                "Please update node to use correct network parameters file.\"")
+                        parametersUpdates.onNext(networkMap.networkParameterHash)
+                    }
                     val currentNodeHashes = networkMapCache.allNodeHashes
                     val hashesFromNetworkMap = networkMap.nodeInfoHashes
                     (hashesFromNetworkMap - currentNodeHashes).mapNotNull {
@@ -146,7 +157,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                     (currentNodeHashes - hashesFromNetworkMap - fileWatcher.processedNodeInfoHashes)
                             .mapNotNull(networkMapCache::getNodeByHash)
                             .forEach(networkMapCache::removeNode)
-                    // TODO: Check NetworkParameter.
                     cacheTimeout
                 } catch (t: Throwable) {
                     logger.warn("Error encountered while updating network map, will retry in ${retryInterval.seconds} seconds", t)

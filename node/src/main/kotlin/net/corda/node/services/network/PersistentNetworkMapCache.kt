@@ -289,7 +289,6 @@ open class PersistentNetworkMapCache(
         else result.map { it.toNodeInfo() }.singleOrNull() ?: throw IllegalStateException("More than one node with the same host and port")
     }
 
-
     /** Object Relational Mapping support. */
     private fun generateMappedObject(nodeInfo: NodeInfo): NodeInfoSchemaV1.PersistentNodeInfo {
         return NodeInfoSchemaV1.PersistentNodeInfo(

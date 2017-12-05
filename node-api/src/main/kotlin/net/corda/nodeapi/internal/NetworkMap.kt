@@ -21,21 +21,21 @@ import java.time.Instant
 data class NetworkMap(val nodeInfoHashes: List<SecureHash>, val networkParameterHash: SecureHash)
 
 /**
- * @property minimumPlatformVersion
- * @property notaries
- * @property eventHorizon
+ * @property minimumPlatformVersion Minimal version of Corda platform that is required for nodes in the network.
+ * @property notaries List of well known and trusted notary identities with information on validation type.
  * @property maxMessageSize Maximum P2P message sent over the wire in bytes.
  * @property maxTransactionSize Maximum permitted transaction size in bytes.
  * @property modifiedTime
  * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set
  * of parameters.
  */
-// TODO Wire up the parameters
+// TODO Add eventHorizon - how many days a node can be offline before being automatically ejected from the network.
+//  It needs separate design.
+// TODO Currently both maxTransactionSize and modifiedTime are not wired.
 @CordaSerializable
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
-        val eventHorizon: Duration,
         val maxMessageSize: Int,
         val maxTransactionSize: Int,
         val modifiedTime: Instant,
