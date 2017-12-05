@@ -42,6 +42,7 @@ class DoormanIntegrationTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
+    @Ignore
     @Test
     fun `initial registration`() {
         val rootCertAndKey = createDoormanRootCertificateAndKeyPair()

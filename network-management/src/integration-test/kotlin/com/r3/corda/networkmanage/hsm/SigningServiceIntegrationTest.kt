@@ -85,6 +85,7 @@ class SigningServiceIntegrationTest {
         }
     }
 
+    @Ignore
     @Test
     fun `Signing service signs approved CSRs`() {
         //Start doorman server
