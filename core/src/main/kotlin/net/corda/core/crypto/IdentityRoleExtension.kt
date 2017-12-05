@@ -4,6 +4,9 @@ import net.corda.core.identity.Role
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.X509Extension
 
+/**
+ * X.509 certificate extension for the Corda role the certificate represents.
+ */
 class IdentityRoleExtension : ASN1Encodable {
     companion object {
         fun getInstance(obj: Any?): IdentityRoleExtension? {
