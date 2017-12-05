@@ -192,16 +192,14 @@ object X509Utilities {
      * @param subjectPublicKey public key of the certificate subject.
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     * @param role the Corda identity role the certificate represents, or null if none (i.e. an intermediate CA or above).
      */
     fun createCertificate(certificateType: CertificateType,
                           issuer: CordaX500Name,
                           subject: CordaX500Name,
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null,
-                          role: Role? = null): X509v3CertificateBuilder {
-        return createCertificate(certificateType, issuer.x500Name, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints, role)
+                          nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
+        return createCertificate(certificateType, issuer.x500Name, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
     }
 
     /**
@@ -212,19 +210,18 @@ object X509Utilities {
      * @param subjectPublicKey public key of the certificate subject.
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     * @param role the Corda identity role the certificate represents, or null if none (i.e. an intermediate CA or above).
      */
     internal fun createCertificate(certificateType: CertificateType,
                                    issuer: X500Name,
                                    subject: X500Name,
                                    subjectPublicKey: PublicKey,
                                    validityWindow: Pair<Date, Date>,
-                                   nameConstraints: NameConstraints? = null,
-                                   role: Role?): X509v3CertificateBuilder {
+                                   nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
 
         val serial = BigInteger.valueOf(random63BitValue())
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
+        val role = certificateType.role
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second,
                 subject, subjectPublicKey)
@@ -252,7 +249,6 @@ object X509Utilities {
      * @param subjectPublicKey public key of the certificate subject.
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     * @param role the Corda identity role the certificate represents, or null if none (i.e. an intermediate CA or above).
      */
     fun createCertificate(certificateType: CertificateType,
                           issuer: X500Name,
@@ -260,9 +256,8 @@ object X509Utilities {
                           subject: CordaX500Name,
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null,
-                          role: Role? = null): X509CertificateHolder {
-        val builder = createCertificate(certificateType, issuer, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints, role)
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+        val builder = createCertificate(certificateType, issuer, subject.x500Name, subjectPublicKey, validityWindow, nameConstraints)
         return builder.build(issuerSigner).apply {
             require(isValidOn(Date()))
         }
@@ -277,7 +272,6 @@ object X509Utilities {
      * @param subjectPublicKey public key of the certificate subject.
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
-     * @param role the Corda identity role the certificate represents, or null if none (i.e. an intermediate CA or above).
      */
     fun createCertificate(certificateType: CertificateType,
                           issuer: X500Name,
@@ -285,11 +279,10 @@ object X509Utilities {
                           subject: X500Name,
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null,
-                          role: Role? = null): X509CertificateHolder {
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
         val provider = Crypto.findProvider(signatureScheme.providerName)
-        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints, role)
+        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
 
         val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
         return builder.build(signer).apply {
@@ -334,13 +327,14 @@ class X509CertificateFactory {
     }
 }
 
-enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean) {
+enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean, val role: Role?) {
     ROOT_CA(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = true
+            isCA = true,
+            role = null
     ),
 
     INTERMEDIATE_CA(
@@ -348,7 +342,8 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = true
+            isCA = true,
+            role = Role.INTERMEDIATE_CA
     ),
 
     NODE_CA(
@@ -356,7 +351,8 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = true
+            isCA = true,
+            role = Role.NODE_CA
     ),
 
     TLS(
@@ -364,16 +360,18 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = false
+            isCA = false,
+            role = Role.TLS
     ),
 
-    // TODO: Identity certs should have only limited depth (i.e. 1) CA signing capability, with tight name constraints
+    // TODO: Identity certs should have tight name constraints on child certificates
     WELL_KNOWN_IDENTITY(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign),
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = true
+            isCA = true,
+            role = Role.WELL_KNOWN_IDENTITY
     ),
 
     CONFIDENTIAL_IDENTITY(
@@ -381,7 +379,8 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_serverAuth,
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
-            isCA = false
+            isCA = false,
+            role = Role.CONFIDENTIAL_IDENTITY
     )
 }
 
