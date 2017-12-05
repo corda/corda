@@ -7,13 +7,14 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.sample.businessnetwork.membership.CheckMembershipFlow
+import net.corda.sample.businessnetwork.membership.MembershipAware
 
 @InitiatedBy(IOUFlow::class)
-class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
+class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>(), MembershipAware {
     @Suspendable
     override fun call() {
-        subFlow(CheckMembershipFlow(IOUFlow.allowedMembershipName, otherPartySession.counterparty))
+
+        otherPartySession.counterparty.checkMembership(IOUFlow.allowedMembershipName, this)
 
         subFlow(object : SignTransactionFlow(otherPartySession, SignTransactionFlow.tracker()) {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {

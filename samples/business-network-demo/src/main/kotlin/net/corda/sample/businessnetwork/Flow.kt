@@ -10,6 +10,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.sample.businessnetwork.membership.MembershipAware
+import net.corda.sample.businessnetwork.membership.CheckMembershipFlow
+import net.corda.sample.businessnetwork.membership.CheckMembershipResult
 import kotlin.reflect.jvm.jvmName
 
 @InitiatingFlow
@@ -28,15 +30,12 @@ class IOUFlow(val iouValue: Int,
     /** The flow logic is encapsulated within the call() method. */
     @Suspendable
     override fun call(): SignedTransaction {
-
-        // Check whether the other party belongs to the membership list important for us.
-        otherParty.checkMembership(allowedMembershipName, this)
-
-        // Prior to creating any state - obtain consent from [otherParty] to borrow from us.
+        // Prior to creating any state, check on our side whether [otherParty] belongs to desired membership list.
+        // Also obtain consent from [otherParty] to borrow from us.
         // This is done early enough in the flow such that if the other party rejects - do not do any unnecessary processing in this flow.
         // Even if this is not done, later on upon signatures collection phase membership will be checked on the other side and
         // transaction rejected if this doesn't hold. See [IOUFlowResponder] for more information.
-        otherParty.checkSharesSameMembershipWithUs(allowedMembershipName, this)
+        check(subFlow(CheckMembershipFlow(otherParty, allowedMembershipName)) == CheckMembershipResult.PASS)
 
         // We retrieve the notary identity from the network map.
         val notary = serviceHub.networkMapCache.notaryIdentities[0]

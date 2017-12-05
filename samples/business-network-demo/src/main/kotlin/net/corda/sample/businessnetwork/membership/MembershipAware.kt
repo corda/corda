@@ -4,7 +4,6 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.sample.businessnetwork.membership.internal.MembershipListProvider
 
@@ -22,10 +21,6 @@ interface MembershipAware {
     }
 
     fun getMembershipList(listName: CordaX500Name, serviceHub: ServiceHub): MembershipList = MembershipListProvider.obtainMembershipList(listName, serviceHub.networkMapCache)
-
-    fun <T> Party.checkSharesSameMembershipWithUs(membershipName: CordaX500Name, initiatorFlow: FlowLogic<T>) {
-        initiatorFlow.stateMachine.initiateFlow(this, CheckMembershipFlow(membershipName, initiatorFlow.ourIdentity))
-    }
 }
 
 class MembershipViolationException(msg: String) : FlowException(msg)
