@@ -1,6 +1,5 @@
 package net.corda.node.services.messaging
 
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.AuthServiceId
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
@@ -60,7 +59,7 @@ class ArtemisMessagingTests {
 
     @Before
     fun setUp() {
-        securityManager = RPCSecurityManagerImpl.buildInMemory(users = emptyList(), id = AuthServiceId("TEST"))
+        securityManager = RPCSecurityManagerImpl.fromUserList(users = emptyList(), id = AuthServiceId("TEST"))
         config = testNodeConfiguration(
                 baseDirectory = temporaryFolder.root.toPath(),
                 myLegalName = ALICE.name)

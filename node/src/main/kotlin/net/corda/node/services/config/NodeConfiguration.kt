@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
+import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -125,6 +126,9 @@ data class NodeConfigurationImpl(
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
         require(myLegalName.commonName == null) { "Common name must be null: $myLegalName" }
+        require(securityDataSource == null || rpcUsers.isEmpty()) {
+            "Cannot specify both 'rpcUsers' and 'securityDataSource' in configuratio"
+        }
     }
 }
 
@@ -182,6 +186,7 @@ enum class PasswordEncryption {
 data class SecurityDataSourceConfig(
         val type: SecurityDataSourceType,
         val passwordEncryption: PasswordEncryption = PasswordEncryption.SHA256,
+        val id: AuthServiceId = defaultAuthServiceId(type),
         val dataSourceProperties: Properties? = null,
         val users: List<User>? = null) {
 
@@ -189,6 +194,13 @@ data class SecurityDataSourceConfig(
         when (type) {
             SecurityDataSourceType.EMBEDDED -> require(users != null && dataSourceProperties == null)
             SecurityDataSourceType.JDBC -> require(users == null && dataSourceProperties != null)
+        }
+    }
+
+    private companion object {
+        fun defaultAuthServiceId(type: SecurityDataSourceType) = when (type) {
+            SecurityDataSourceType.EMBEDDED -> AuthServiceId("NODE_CONFIG")
+            SecurityDataSourceType.JDBC -> AuthServiceId("REMOTE_DATABASE")
         }
     }
 }

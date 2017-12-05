@@ -8,10 +8,7 @@ import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityDataSourceConfig
 import net.corda.node.services.config.SecurityDataSourceType
 import net.corda.nodeapi.User
-import org.apache.shiro.authc.AuthenticationInfo
-import org.apache.shiro.authc.AuthenticationToken
-import org.apache.shiro.authc.SimpleAuthenticationInfo
-import org.apache.shiro.authc.UsernamePasswordToken
+import org.apache.shiro.authc.*
 import org.apache.shiro.authc.credential.PasswordMatcher
 import org.apache.shiro.authc.credential.SimpleCredentialsMatcher
 import org.apache.shiro.authz.AuthorizationInfo
@@ -25,30 +22,35 @@ import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.SimplePrincipalCollection
 import org.apache.shiro.subject.Subject
+import javax.security.auth.login.FailedLoginException
 
 /**
  * Default implementation of [RPCSecurityManager] adapting
  * [org.apache.shiro.mgt.SecurityManager]
  */
-class RPCSecurityManagerImpl(override val id: AuthServiceId,
-                             val sourceConfigs: List<SecurityDataSourceConfig> = emptyList(),
-                             val addedUsers: List<User> = emptyList()) : RPCSecurityManager {
+class RPCSecurityManagerImpl(sourceConfig: SecurityDataSourceConfig) : RPCSecurityManager {
 
+    override val id = sourceConfig.id
     private val manager: DefaultSecurityManager
 
     init {
-        manager = buildImpl(sourceConfigs, addedUsers)
+        manager = buildImpl(sourceConfig)
     }
 
     override fun close() {
         manager.destroy()
     }
 
+    @Throws(FailedLoginException::class)
     override fun authenticate(principal: String, password: Password): AuthorizingSubject {
         password.use {
             val authToken = UsernamePasswordToken(principal, it.value)
             val authSubject = Subject.Builder(manager).buildSubject()
-            authSubject.login(authToken)
+            try {
+                authSubject.login(authToken)
+            } catch (authcException : AuthenticationException) {
+                throw FailedLoginException(authcException.toString())
+            }
             return ShiroAuthorizingSubject(authSubject)
         }
     }
@@ -59,50 +61,49 @@ class RPCSecurityManagerImpl(override val id: AuthServiceId,
             var authSubject = Subject.Builder(manager).buildSubject()
             try {
                 authSubject.login(authToken)
-            } catch (e: Exception) {
+            } catch (e: AuthenticationException) {
                 authSubject = null
             }
             return ShiroAuthorizingSubject(authSubject)
         }
     }
 
-    override fun subjectInSession(principal: String): AuthorizingSubject {
-        val subject = Subject.Builder(manager)
-                .authenticated(true)
-                .principals(SimplePrincipalCollection(principal, id.value))
-                .buildSubject()
-        return ShiroAuthorizingSubject(subject)
-    }
+    override fun subjectInSession(principal: String): AuthorizingSubject =
+            ShiroAuthorizingSubject(
+                    Subject.Builder(manager)
+                            .authenticated(true)
+                            .principals(SimplePrincipalCollection(principal, id.value))
+                            .buildSubject())
+
 
     companion object {
 
         private val logger = loggerFor<RPCSecurityManagerImpl>()
 
         /**
-         * Helper function to instantiate security manager from a list of [User]
+         * Instantiate RPCSecurityManager initialised with users data from a list of [User]
          */
-        fun buildInMemory(id: AuthServiceId, users: List<User>) = RPCSecurityManagerImpl(id = id, addedUsers = users)
+        fun fromUserList(id: AuthServiceId, users: List<User>) =
+                RPCSecurityManagerImpl(
+                        SecurityDataSourceConfig(
+                                type = SecurityDataSourceType.EMBEDDED,
+                                passwordEncryption = PasswordEncryption.NONE,
+                                id = id,
+                                users = users))
 
-        private fun buildImpl(sourceConfigs: List<SecurityDataSourceConfig>, addedUsers: List<User>): DefaultSecurityManager {
-
-            require(sourceConfigs.filter { it.type == SecurityDataSourceType.EMBEDDED }.size <= 1) {
-                "Multiple Config-embedded security realms are not allowed"
-            }
-
-            val dataSources = sourceConfigs.map {
-                when (it.type) {
-                    SecurityDataSourceType.JDBC -> {
-                        logger.info("Constructing JDBC-backed security data source: ${it.dataSourceProperties}")
-                        NodeJdbcRealm(it)
-                    }
-                    SecurityDataSourceType.EMBEDDED -> {
-                        logger.info("Constructing realm from list of users in config ${it.users!!}")
-                        InMemoryRealm(it.users, "CONFIG_USERS", it.passwordEncryption)
-                    }
+        // Build internal Shiro securityManager instance
+        private fun buildImpl(config: SecurityDataSourceConfig): DefaultSecurityManager {
+            val realm = when (config.type) {
+                SecurityDataSourceType.JDBC -> {
+                    logger.info("Constructing JDBC-backed security data source: ${config.dataSourceProperties}")
+                    NodeJdbcRealm(config)
                 }
-            }.plus(InMemoryRealm(addedUsers, "RPCUSERS_LIST", PasswordEncryption.NONE)).toList()
-
-            return if (dataSources.isEmpty()) DefaultSecurityManager() else DefaultSecurityManager(dataSources)
+                SecurityDataSourceType.EMBEDDED -> {
+                    logger.info("Constructing realm from list of users in config ${config.users!!}")
+                    InMemoryRealm(config.users, config.id.value, config.passwordEncryption)
+                }
+            }
+            return DefaultSecurityManager(realm)
         }
     }
 }
@@ -115,7 +116,7 @@ class RPCSecurityManagerImpl(override val id: AuthServiceId,
  * represented by instances of the [Permission] interface which offers a single method: [implies], to
  * test if the 'x implies y' binary predicate is satisfied.
  */
-internal class RPCPermission : DomainPermission {
+private class RPCPermission : DomainPermission {
 
     /**
      * Helper constructor directly setting actions and target field
@@ -147,7 +148,7 @@ internal class RPCPermission : DomainPermission {
  *     of a given class
  *
  */
-internal object RPCPermissionResolver : PermissionResolver {
+private object RPCPermissionResolver : PermissionResolver {
 
     private val SEPARATOR = '.'
     private val ACTION_START_FLOW = "startflow"
@@ -183,21 +184,23 @@ internal object RPCPermissionResolver : PermissionResolver {
     }
 }
 
-internal class ShiroAuthorizingSubject(private val impl: Subject) : AuthorizingSubject {
+private class ShiroAuthorizingSubject(private val impl: Subject) : AuthorizingSubject {
 
     override val principal: String
         get() = impl.principals.primaryPrincipal as String
 
-    override fun isPermitted(action: String, vararg arguments: String) = impl.isPermitted(RPCPermission(setOf(action), arguments.firstOrNull()))
+    override fun isPermitted(action: String, vararg arguments: String) =
+            impl.isPermitted(RPCPermission(setOf(action), arguments.firstOrNull()))
 }
 
 private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {
-
     PasswordEncryption.NONE -> SimpleCredentialsMatcher()
     PasswordEncryption.SHA256 -> PasswordMatcher()
 }
 
-internal class InMemoryRealm(users: List<User>, realmId: String, passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
+private class InMemoryRealm(users: List<User>,
+                             realmId: String,
+                             passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
 
     private val authorizationInfoByUser: Map<String, AuthorizationInfo>
     private val authenticationInfoByUser: Map<String, AuthenticationInfo>
@@ -228,11 +231,14 @@ internal class InMemoryRealm(users: List<User>, realmId: String, passwordEncrypt
 
     // Methods from AuthorizingRealm interface used by Shiro to query
     // for authentication/authorization data for a given user
-    override fun doGetAuthenticationInfo(token: AuthenticationToken) = authenticationInfoByUser[token.principal as String]
-    override fun doGetAuthorizationInfo(principals: PrincipalCollection) = authorizationInfoByUser[principals.primaryPrincipal as String]
+    override fun doGetAuthenticationInfo(token: AuthenticationToken) =
+            authenticationInfoByUser[token.principal as String]
+
+    override fun doGetAuthorizationInfo(principals: PrincipalCollection) =
+            authorizationInfoByUser[principals.primaryPrincipal as String]
 }
 
-internal class NodeJdbcRealm(val config: SecurityDataSourceConfig) : JdbcRealm() {
+private class NodeJdbcRealm(config: SecurityDataSourceConfig) : JdbcRealm() {
 
     init {
         credentialsMatcher = buildCredentialMatcher(config.passwordEncryption)

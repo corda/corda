@@ -20,8 +20,7 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
@@ -133,10 +132,16 @@ open class Node(configuration: NodeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
-        securityManager = RPCSecurityManagerImpl(
-                id = AuthServiceId("NODE_RPC"),
-                sourceConfigs = listOf(configuration.securityDataSource).filterNotNull(),
-                addedUsers = configuration.rpcUsers)
+        // Construct security manager reading users data either from the securityDataSource if specified or
+        // from rpcUsers list if the former is missing from config.
+        val securityDataSource = configuration.securityDataSource ?:
+                SecurityDataSourceConfig(
+                        type = SecurityDataSourceType.EMBEDDED,
+                        id = AuthServiceId("NODE_CONFIG"),
+                        users = configuration.rpcUsers,
+                        passwordEncryption = PasswordEncryption.NONE)
+
+        securityManager = RPCSecurityManagerImpl(securityDataSource)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val advertisedAddress = info.addresses.single()
