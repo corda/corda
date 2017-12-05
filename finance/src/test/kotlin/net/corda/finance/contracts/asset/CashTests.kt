@@ -25,6 +25,7 @@ import net.corda.testing.contracts.DummyState
 import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -70,9 +71,10 @@ class CashTests {
         miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), MINI_CORP.name, MINI_CORP_KEY)
         val notaryServices = MockServices(listOf("net.corda.finance.contracts.asset"), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                cordappPackages = listOf("net.corda.finance.contracts.asset"),
-                initialIdentityName = CordaX500Name(organisation = "Me", locality = "London", country = "GB"),
-                keys = listOf(generateKeyPair()))
+                listOf(generateKeyPair()),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                listOf("net.corda.finance.contracts.asset"),
+                CordaX500Name("Me", "London", "GB"))
         database = databaseAndServices.first
         ourServices = databaseAndServices.second
 

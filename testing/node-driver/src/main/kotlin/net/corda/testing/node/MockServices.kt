@@ -41,6 +41,7 @@ import java.sql.Connection
 import java.time.Clock
 import java.util.*
 
+fun makeTestIdentityService(identities: Iterable<PartyAndCertificate> = emptySet()) = InMemoryIdentityService(identities, DEV_TRUST_ROOT)
 /**
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
@@ -52,8 +53,6 @@ open class MockServices(
         vararg val keys: KeyPair
 ) : ServiceHub, StateLoader by validatedTransactions {
     companion object {
-        private val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)
-
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -73,32 +72,16 @@ open class MockServices(
             return props
         }
 
-        private fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
-
         /**
          * Makes database and mock services appropriate for unit tests.
-         * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
-         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defaults to [InMemoryIdentityService].
-         *
-         * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
-         */
-        @JvmStatic
-        fun makeTestDatabaseAndMockServices(keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
-                                            identityService: IdentityService = makeTestIdentityService(),
-                                            cordappPackages: List<String> = emptyList()): Pair<CordaPersistence, MockServices> {
-            return makeTestDatabaseAndMockServices(keys, identityService, cordappPackages, MEGA_CORP.name)
-        }
-
-        /**
-         * Makes database and mock services appropriate for unit tests.
-         * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
-         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defauts to [InMemoryIdentityService].
+         * @param keys a list of [KeyPair] instances to be used by [MockServices].
+         * @param identityService an instance of [IdentityService], see [makeTestIdentityService].
          * @param initialIdentityName the name of the first (typically sole) identity the services will represent.
          * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
         @JvmStatic
-        fun makeTestDatabaseAndMockServices(keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
-                                            identityService: IdentityService = makeTestIdentityService(),
+        fun makeTestDatabaseAndMockServices(keys: List<KeyPair>,
+                                            identityService: IdentityService,
                                             cordappPackages: List<String> = emptyList(),
                                             initialIdentityName: CordaX500Name): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
@@ -137,7 +120,7 @@ open class MockServices(
     }
 
     final override val attachments = MockAttachmentStorage()
-    override val identityService: IdentityService = makeTestIdentityService()
+    override val identityService: IdentityService = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY))
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()

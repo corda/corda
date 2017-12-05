@@ -11,13 +11,12 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.internal.configureDatabase
-import net.corda.testing.DEV_TRUST_ROOT
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_IDENTITY
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.rigorousMock
 import org.junit.After
 import org.junit.Before
@@ -49,7 +48,7 @@ class InteractiveShellTest {
         override fun call() = a
     }
 
-    private val ids = InMemoryIdentityService(listOf(MEGA_CORP_IDENTITY), trustRoot = DEV_TRUST_ROOT)
+    private val ids = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY))
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {
