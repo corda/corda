@@ -41,6 +41,7 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             .max()!!
     driver(
             isDebug = true,
+            isMonitor = true,
             driverDirectory = nodesDirectory,
             extraCordappPackagesToScan = cordappPackages,
             // Notaries are manually specified in Cordform so we don't want the driver automatically starting any

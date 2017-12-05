@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.readLines
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.DUMMY_BANK_A
@@ -12,9 +13,12 @@ import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.internal.addressMustBeBound
 import net.corda.testing.internal.addressMustNotBeBound
+import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.json.simple.JSONObject
 import org.junit.Test
+import java.lang.Thread.sleep
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
@@ -63,6 +67,21 @@ class DriverTests {
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
+        }
+    }
+
+    @Test
+    fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
+        driver(isMonitor = true) {
+            // start another node so we gain access to node JMX metrics
+            startNode(providedName = DUMMY_REGULATOR.name)
+
+            sleep(5000)
+            val webAddress = NetworkHostAndPort("localhost", 7006)
+            // request access to some JMX metrics via Jolokia HTTP/JSON
+            val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
+            val listAsJson = api.getJson<JSONObject>("/jolokia/list/")
+            println(listAsJson)
         }
     }
 

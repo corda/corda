@@ -161,9 +161,11 @@ data class NodeParameters(
 fun <A> driver(
         defaultParameters: DriverParameters = DriverParameters(),
         isDebug: Boolean = defaultParameters.isDebug,
+        isMonitor: Boolean = defaultParameters.isMonitor,
         driverDirectory: Path = defaultParameters.driverDirectory,
         portAllocation: PortAllocation = defaultParameters.portAllocation,
         debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
+        monitorPortAllocation: PortAllocation = defaultParameters.monitorPortAllocation,
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
@@ -177,10 +179,12 @@ fun <A> driver(
             driverDsl = DriverDSLImpl(
                     portAllocation = portAllocation,
                     debugPortAllocation = debugPortAllocation,
+                    monitorPortAllocation = monitorPortAllocation,
                     systemProperties = systemProperties,
                     driverDirectory = driverDirectory.toAbsolutePath(),
                     useTestClock = useTestClock,
                     isDebug = isDebug,
+                    isMonitor = isMonitor,
                     startNodesInProcess = startNodesInProcess,
                     waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
@@ -210,9 +214,11 @@ fun <A> driver(
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
+        val isMonitor: Boolean = false,
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        val monitorPortAllocation: PortAllocation = PortAllocation.Incremental(7005),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val initialiseSerialization: Boolean = true,
@@ -225,6 +231,7 @@ data class DriverParameters(
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
     fun setPortAllocation(portAllocation: PortAllocation) = copy(portAllocation = portAllocation)
     fun setDebugPortAllocation(debugPortAllocation: PortAllocation) = copy(debugPortAllocation = debugPortAllocation)
+    fun setMonitorPortAllocation(monitorPortAllocation: PortAllocation) = copy(monitorPortAllocation = monitorPortAllocation)
     fun setSystemProperties(systemProperties: Map<String, String>) = copy(systemProperties = systemProperties)
     fun setUseTestClock(useTestClock: Boolean) = copy(useTestClock = useTestClock)
     fun setInitialiseSerialization(initialiseSerialization: Boolean) = copy(initialiseSerialization = initialiseSerialization)

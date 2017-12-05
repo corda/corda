@@ -211,6 +211,9 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                     addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
                 }
         )
+        // JMX enablement
+        isJMXManagementEnabled = true
+        isJMXUseBrokerName = true
     }.configureAddressSecurity()
 
     private fun queueConfig(name: String, address: String = name, filter: String? = null, durable: Boolean): CoreQueueConfiguration {
