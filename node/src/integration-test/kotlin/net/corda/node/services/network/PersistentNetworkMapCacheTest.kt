@@ -6,9 +6,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_REGULATOR
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.TestIdentity
 import net.corda.testing.chooseIdentity
 import net.corda.testing.internal.NodeBasedTest
 import org.junit.Before
@@ -16,6 +16,12 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
+    private companion object {
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val BOB = TestIdentity(BOB_NAME, 80).party
+        val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party
+    }
+
     private val partiesList = listOf(DUMMY_REGULATOR, ALICE, BOB)
     private val addressesMap = HashMap<CordaX500Name, NetworkHostAndPort>()
     private val infos = HashSet<NodeInfo>()

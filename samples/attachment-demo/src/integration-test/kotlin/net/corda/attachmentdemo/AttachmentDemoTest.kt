@@ -5,8 +5,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_BANK_A_NAME
+import net.corda.testing.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import org.junit.Test
@@ -27,8 +27,8 @@ class AttachmentDemoTest {
                     invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed)
             )))
             val (nodeA, nodeB) = listOf(
-                    startNode(providedName = DUMMY_BANK_A.name, rpcUsers = demoUser, maximumHeapSize = "1g"),
-                    startNode(providedName = DUMMY_BANK_B.name, rpcUsers = demoUser, maximumHeapSize = "1g")
+                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = demoUser, maximumHeapSize = "1g"),
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = demoUser, maximumHeapSize = "1g")
             ).map { it.getOrThrow() }
             startWebserver(nodeB).getOrThrow()
 

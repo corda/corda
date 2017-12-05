@@ -9,7 +9,6 @@ import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
-import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.nodeapi.internal.NodeInfoFilesCopier
 import net.corda.testing.*
 import net.corda.testing.node.MockKeyManagementService
@@ -28,8 +27,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NodeInfoWatcherTest {
-    companion object {
-        val nodeInfo = NodeInfo(listOf(), listOf(getTestPartyAndCertificate(ALICE)), 0, 0)
+    private companion object {
+        val alice = TestIdentity(ALICE_NAME, 70)
+        val nodeInfo = NodeInfo(listOf(), listOf(alice.identity), 0, 0)
     }
 
     @Rule
@@ -49,7 +49,7 @@ class NodeInfoWatcherTest {
     @Before
     fun start() {
         val identityService = makeTestIdentityService()
-        keyManagementService = MockKeyManagementService(identityService, ALICE_KEY)
+        keyManagementService = MockKeyManagementService(identityService, alice.key)
         nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler)
         nodeInfoPath = tempFolder.root.toPath() / CordformNode.NODE_INFO_DIRECTORY
     }
