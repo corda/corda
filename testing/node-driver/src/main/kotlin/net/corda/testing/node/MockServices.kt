@@ -4,12 +4,14 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -17,6 +19,7 @@ import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.VersionInfo
 import net.corda.node.internal.StateLoaderImpl
@@ -285,6 +288,10 @@ class MockStateMachineRecordedTransactionMappingStorage(
 ) : StateMachineRecordedTransactionMappingStorage by storage
 
 open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
+    override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
+        return txns[id]?.let { doneFuture(it) } ?: _updatesPublisher.filter { it.id == id }.toFuture()
+    }
+
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return DataFeed(txns.values.toList(), _updatesPublisher)
     }

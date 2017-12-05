@@ -38,8 +38,8 @@ or if the semantics of a particular receive changes.
 
 The ``InitiatingFlow`` annotation (see :doc:`flow-state-machine` for more information on the flow annotations) has a ``version``
 property, which if not specified defaults to 1. This flow version is included in the flow session handshake and exposed
-to both parties in the communication via ``FlowLogic.getFlowContext``. This takes in a ``Party`` and will return a
-``FlowContext`` object which describes the flow running on the other side. In particular it has the ``flowVersion`` property
+to both parties in the communication via ``FlowLogic.getFlowInfo``. This takes in a ``Party`` and will return a
+``FlowInfo`` object which describes the flow running on the other side. In particular it has the ``flowVersion`` property
 which can be used to programmatically evolve flows across versions.
 
 .. container:: codeset
@@ -48,7 +48,7 @@ which can be used to programmatically evolve flows across versions.
 
         @Suspendable
         override fun call() {
-            val flowVersionOfOtherParty = getFlowContext(otherParty).flowVersion
+            val flowVersionOfOtherParty = getFlowInfo(otherParty).flowVersion
             val receivedString = if (flowVersionOfOtherParty == 1) {
                 receive<Int>(otherParty).unwrap { it.toString() }
             } else {
@@ -63,7 +63,7 @@ running the older flow (or rather older CorDapps containing the older flow).
 .. warning:: It's important that ``InitiatingFlow.version`` be incremented each time the flow protocol changes in an
    incompatible way.
 
-``FlowContext`` also has ``appName`` which is the name of the CorDapp hosting the flow. This can be used to determine
+``FlowInfo`` also has ``appName`` which is the name of the CorDapp hosting the flow. This can be used to determine
 implementation details of the CorDapp. See :doc:`cordapp-build-systems` for more information on the CorDapp filename.
 
 .. note:: Currently changing any of the properties of a ``CordaSerializable`` type is also backwards incompatible and

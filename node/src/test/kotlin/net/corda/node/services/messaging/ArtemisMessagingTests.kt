@@ -1,6 +1,10 @@
 package net.corda.node.services.messaging
 
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.concurrent.CordaFuture
+import com.codahale.metrics.MetricRegistry
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -118,7 +122,7 @@ class ArtemisMessagingTests {
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
-        assertEquals("first msg", String(actual.data))
+        assertEquals("first msg", String(actual.data.bytes))
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
@@ -143,7 +147,8 @@ class ArtemisMessagingTests {
 
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
         startNodeMessagingClient()
-        messagingClient.addMessageHandler(TOPIC) { message, _ ->
+        messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
+            handle.acknowledge() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.

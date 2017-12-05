@@ -14,11 +14,15 @@ class DatabaseTransaction(
 ) {
     val id: UUID = UUID.randomUUID()
 
+    private var _connectionCreated = false
+    val connectionCreated get() = _connectionCreated
     val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
-        cordaPersistence.dataSource.connection.apply {
-            autoCommit = false
-            transactionIsolation = isolation
-        }
+        cordaPersistence.dataSource.connection
+                .apply {
+                    _connectionCreated = true
+                    autoCommit = false
+                    transactionIsolation = isolation
+                }
     }
 
     private val sessionDelegate = lazy {
@@ -30,20 +34,22 @@ class DatabaseTransaction(
     val session: Session by sessionDelegate
     private lateinit var hibernateTransaction: Transaction
 
-    private val outerTransaction: DatabaseTransaction? = threadLocal.get()
+    val outerTransaction: DatabaseTransaction? = threadLocal.get()
 
     fun commit() {
         if (sessionDelegate.isInitialized()) {
             hibernateTransaction.commit()
         }
-        connection.commit()
+        if (_connectionCreated) {
+            connection.commit()
+        }
     }
 
     fun rollback() {
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.clear()
         }
-        if (!connection.isClosed) {
+        if (_connectionCreated && !connection.isClosed) {
             connection.rollback()
         }
     }
@@ -52,7 +58,9 @@ class DatabaseTransaction(
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
         }
-        connection.close()
+        if (_connectionCreated) {
+            connection.close()
+        }
         threadLocal.set(outerTransaction)
         if (outerTransaction == null) {
             transactionBoundaries.onNext(DatabaseTransactionManager.Boundary(id))
