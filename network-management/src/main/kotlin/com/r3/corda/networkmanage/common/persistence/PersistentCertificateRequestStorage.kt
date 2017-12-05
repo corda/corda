@@ -139,7 +139,7 @@ class PersistentCertificateRequestStorage(private val database: CordaPersistence
             }
         }
         val duplicates = session.createQuery(query).resultList.filter {
-            it.status == RequestStatus.NEW || it.status == RequestStatus.APPROVED || it.certificateData?.certificateStatus == CertificateStatus.VALID
+            it.status in setOf(RequestStatus.NEW, RequestStatus.TICKET_CREATED, RequestStatus.APPROVED) || it.certificateData?.certificateStatus == CertificateStatus.VALID
         }
         return if (duplicates.isEmpty()) {
             Pair(legalName.x500Name, null)
