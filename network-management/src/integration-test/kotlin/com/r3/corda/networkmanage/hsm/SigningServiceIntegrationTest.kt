@@ -14,6 +14,7 @@ import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorag
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -24,11 +25,13 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.*
 import net.corda.testing.common.internal.testNetworkParameters
+import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.h2.tools.Server
 import org.junit.*
 import org.junit.rules.TemporaryFolder
 import java.net.URL
+import java.security.KeyPair
 import java.util.*
 import javax.persistence.PersistenceException
 import kotlin.concurrent.scheduleAtFixedRate
@@ -50,10 +53,15 @@ class SigningServiceIntegrationTest {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private lateinit var timer: Timer
+    private lateinit var rootCAKey: KeyPair
+    private lateinit var rootCACert: X509CertificateHolder
 
     @Before
     fun setUp() {
         timer = Timer()
+        rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA",
+                organisation = "R3 Ltd", locality = "London", country = "GB"), rootCAKey)
     }
 
     @After
@@ -63,9 +71,6 @@ class SigningServiceIntegrationTest {
 
     private fun givenSignerSigningAllRequests(storage: SignedCertificateRequestStorage): HsmCsrSigner {
         // Create all certificates
-        val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(CordaX500Name(commonName = "Integration Test Corda Node Root CA",
-                organisation = "R3 Ltd", locality = "London", country = "GB"), rootCAKey)
         val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey,
                 CordaX500Name(commonName = "Integration Test Corda Node Intermediate CA", locality = "London", country = "GB",
@@ -85,7 +90,6 @@ class SigningServiceIntegrationTest {
         }
     }
 
-    @Ignore
     @Test
     fun `Signing service signs approved CSRs`() {
         //Start doorman server
@@ -122,6 +126,9 @@ class SigningServiceIntegrationTest {
                 // [org.hibernate.tool.schema.spi.SchemaManagementException] being thrown as the schema is missing.
             }
         }
+        config.rootCaCertFile.parent.createDirectories()
+        X509Utilities.saveCertificateAsPEMFile(rootCACert, config.rootCaCertFile)
+
         NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
         verify(hsmSigner).sign(any())
         doorman.close()
