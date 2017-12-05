@@ -7,7 +7,6 @@ import net.corda.core.contracts.*;
 import net.corda.core.crypto.CryptoUtils;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.messaging.DataFeed;
-import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.VaultQueryException;
 import net.corda.core.node.services.VaultService;
@@ -19,6 +18,7 @@ import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
+import net.corda.node.services.identity.IdentityServiceInternal;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
 import net.corda.testing.SerializationEnvironmentRule;
@@ -61,13 +61,13 @@ public class VaultQueryJavaTests {
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
         List<String> cordappPackages = Arrays.asList("net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
-        IdentityService identitySvc = makeTestIdentityService(Arrays.asList(getMEGA_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY()));
+        IdentityServiceInternal identitySvc = makeTestIdentityService(Arrays.asList(getMEGA_CORP_IDENTITY(), getDUMMY_CASH_ISSUER_IDENTITY(), getDUMMY_NOTARY_IDENTITY()));
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 Arrays.asList(getMEGA_CORP_KEY(), getDUMMY_NOTARY_KEY()),
                 identitySvc,
                 cordappPackages,
                 getMEGA_CORP().getName());
-        issuerServices = new MockServices(cordappPackages, getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
+        issuerServices = new MockServices(cordappPackages, rigorousMock(IdentityServiceInternal.class), getDUMMY_CASH_ISSUER_NAME(), getDUMMY_CASH_ISSUER_KEY(), getBOC_KEY());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, getDUMMY_NOTARY(), getDUMMY_NOTARY_KEY());

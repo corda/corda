@@ -223,8 +223,8 @@ class CommercialPaperTestsGeneric {
     private lateinit var aliceServices: MockServices
     private lateinit var aliceVaultService: VaultService
     private lateinit var alicesVault: Vault<ContractState>
-    private val notaryServices = MockServices(MEGA_CORP.name, DUMMY_NOTARY_KEY)
-    private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), MEGA_CORP.name, DUMMY_CASH_ISSUER_KEY)
+    private val notaryServices = MockServices(rigorousMock(), MEGA_CORP.name, DUMMY_NOTARY_KEY)
+    private val issuerServices = MockServices(listOf("net.corda.finance.contracts"), rigorousMock(), MEGA_CORP.name, DUMMY_CASH_ISSUER_KEY)
     private lateinit var moveTX: SignedTransaction
     @Test
     fun `issue move and then redeem`() {

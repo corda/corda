@@ -1,8 +1,12 @@
 package net.corda.core.transactions
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.node.services.identity.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices
@@ -18,7 +22,10 @@ class LedgerTransactionQueryTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val services = MockServices(MEGA_CORP.name)
+    private val keyPair = generateKeyPair()
+    private val services = MockServices(rigorousMock<IdentityServiceInternal>().also {
+        doReturn(null).whenever(it).partyFromKey(keyPair.public)
+    }, MEGA_CORP.name, keyPair)
     private val identity: Party = services.myInfo.singleIdentity()
 
     @Before

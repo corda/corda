@@ -50,6 +50,7 @@ fun makeTestIdentityService(identities: Iterable<PartyAndCertificate> = emptySet
 open class MockServices private constructor(
         cordappLoader: CordappLoader,
         override val validatedTransactions: WritableTransactionStorage,
+        override val identityService: IdentityServiceInternal,
         private val initialIdentityName: CordaX500Name,
         vararg val keys: KeyPair
 ) : ServiceHub, StateLoader by validatedTransactions {
@@ -90,8 +91,7 @@ open class MockServices private constructor(
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
             val mockService = database.transaction {
-                object : MockServices(cordappLoader, initialIdentityName = initialIdentityName, keys = *(keys.toTypedArray())) {
-                    override val identityService get() = identityService
+                object : MockServices(cordappLoader, identityService, initialIdentityName, *(keys.toTypedArray())) {
                     override val vaultService: VaultServiceInternal = makeVaultService(database.hibernateConfig, schemaService)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
@@ -107,10 +107,10 @@ open class MockServices private constructor(
         }
     }
 
-    private constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), initialIdentityName, *keys)
-    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), initialIdentityName, *keys)
-    constructor(initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(emptyList(), initialIdentityName, *keys)
-    constructor(initialIdentityName: CordaX500Name) : this(initialIdentityName, generateKeyPair())
+    private constructor(cordappLoader: CordappLoader, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), identityService, initialIdentityName, *keys)
+    constructor(cordappPackages: List<String>, identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), identityService, initialIdentityName, *keys)
+    constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(emptyList(), identityService, initialIdentityName, *keys)
+    constructor(identityService: IdentityServiceInternal, initialIdentityName: CordaX500Name) : this(identityService, initialIdentityName, generateKeyPair())
 
     val key: KeyPair get() = keys.first()
 
@@ -121,7 +121,6 @@ open class MockServices private constructor(
     }
 
     final override val attachments = MockAttachmentStorage()
-    override val identityService: IdentityServiceInternal = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY))
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
