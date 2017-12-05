@@ -35,5 +35,5 @@ interface AMQPSerializer<out T> {
     /**
      * Read the given object from the input. The envelope is provided in case the schema is required.
      */
-    fun readObject(obj: Any, schema: SerializationSchemas, input: DeserializationInput): T
+    fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): T
 }
