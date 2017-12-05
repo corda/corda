@@ -1,5 +1,7 @@
 package net.corda.core.identity
 
+import net.corda.core.CordaOID
+import net.corda.core.crypto.IdentityRoleExtension
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.cert.*
@@ -38,6 +40,21 @@ class PartyAndCertificate(val certPath: CertPath) {
     fun verify(trustAnchor: TrustAnchor): PKIXCertPathValidatorResult {
         val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = false }
         val validator = CertPathValidator.getInstance("PKIX")
-        return validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
+        val result = validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
+        // Apply Corda-specific validity rules to the chain
+        var parentRole: Role? = IdentityRoleExtension.get(result.trustAnchor.trustedCert)?.role
+        certPath.certificates.reversed().forEach { certificate ->
+            val extension = IdentityRoleExtension.get(result.trustAnchor.trustedCert)
+            if (parentRole != null) {
+                if (parentRole != null && extension == null) {
+                    throw CertPathValidatorException("Child certificate whose issuer includes a Corda role, must also specify Corda role")
+                }
+                if (extension?.role?.parent != parentRole) {
+                    throw CertPathValidatorException("Expected certificate $certificate to have parent ${extension?.role?.parent} but was $parentRole")
+                }
+            }
+            parentRole = extension?.role
+        }
+        return result
     }
 }

@@ -1,6 +1,7 @@
 package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.IdentityRoleExtension
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
@@ -113,7 +114,6 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
-        // TODO: Verify certificate roles are present and in the correct hierarchy
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
@@ -126,15 +126,13 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         }
 
         // Ensure we record the first identity of the same name, first
-        // TODO: Switch to using the certificate with the well known identity role
-        val identityPrincipal = identity.name.x500Principal
-        val firstCertWithThisName: Certificate = identity.certPath.certificates.last { it ->
-            val principal = (it as? X509Certificate)?.subjectX500Principal
-            principal == identityPrincipal
+        val wellKnownCert: Certificate = identity.certPath.certificates.single { it ->
+            val extension = IdentityRoleExtension.get(it)
+            extension?.role == Role.WELL_KNOWN_IDENTITY
         }
-        if (firstCertWithThisName != identity.certificate) {
+        if (wellKnownCert != identity.certificate) {
             val certificates = identity.certPath.certificates
-            val idx = certificates.lastIndexOf(firstCertWithThisName)
+            val idx = certificates.lastIndexOf(wellKnownCert)
             val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
