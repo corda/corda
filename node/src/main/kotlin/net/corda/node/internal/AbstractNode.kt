@@ -70,6 +70,7 @@ import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
+import java.lang.management.ManagementFactory
 import java.lang.reflect.InvocationTargetException
 import java.security.KeyPair
 import java.security.KeyStoreException
@@ -194,6 +195,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val transactionStorage = makeTransactionStorage(database)
             val stateLoader = StateLoaderImpl(transactionStorage)
             val nodeServices = makeServices(keyPairs, schemaService, transactionStorage, stateLoader, database, info, identityService)
+            val mutualExclusionConfiguration = configuration.enterpriseConfiguration.mutualExclusionConfiguration
+            if (mutualExclusionConfiguration.on) {
+                RunOnceService(database, mutualExclusionConfiguration.machineName,
+                        ManagementFactory.getRuntimeMXBean().name.split("@")[0],
+                        mutualExclusionConfiguration.updateInterval, mutualExclusionConfiguration.waitInterval).start()
+            }
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
             val flowStarter = FlowStarterImpl(serverThread, smm)
@@ -582,7 +589,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     open protected fun checkNetworkMapIsInitialized() {
-        if (!services.networkMapCache.loadDBSuccess ) {
+        if (!services.networkMapCache.loadDBSuccess) {
             // TODO: There should be a consistent approach to configuration error exceptions.
             throw NetworkMapCacheEmptyException()
         }

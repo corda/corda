@@ -35,6 +35,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val p2pAddress: NetworkHostAndPort
     val rpcAddress: NetworkHostAndPort?
     val messagingServerAddress: NetworkHostAndPort?
+    val enterpriseConfiguration: EnterpriseConfiguration
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
@@ -105,6 +106,7 @@ data class NodeConfigurationImpl(
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         override val messagingServerAddress: NetworkHostAndPort?,
+        override val enterpriseConfiguration: EnterpriseConfiguration,
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,

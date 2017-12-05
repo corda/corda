@@ -49,5 +49,6 @@ class NodeConfigurationImplTest {
             certificateChainCheckPolicies = emptyList(),
             devMode = true,
             activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)),
-            relay = null)
+            relay = null,
+            enterpriseConfiguration = EnterpriseConfiguration((MutualExclusionConfiguration(false, "", 20000, 40000))))
 }
