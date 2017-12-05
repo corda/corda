@@ -199,8 +199,8 @@ private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {
 }
 
 private class InMemoryRealm(users: List<User>,
-                             realmId: String,
-                             passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
+                            realmId: String,
+                            passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
 
     private val authorizationInfoByUser: Map<String, AuthorizationInfo>
     private val authenticationInfoByUser: Map<String, AuthenticationInfo>
