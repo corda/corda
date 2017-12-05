@@ -8,6 +8,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.toHex
 import net.corda.core.utilities.unwrap
 import net.corda.nodeapi.User
 import net.corda.testing.driver.driver
@@ -145,7 +146,7 @@ class SSHServerTest : IntegrationTest() {
             val response = String(Streams.readAll(channel.inputStream))
 
             // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
-            assertThat(response.lines()).filteredOn( { it.contains("Done")}).hasSize(1)
+            assertThat(response.lines()).filteredOn( { it.contains("Done")}).size().isGreaterThanOrEqualTo(1)
         }
     }
 
