@@ -125,7 +125,7 @@ class NodeVaultServiceTest {
             assertThat(w1).hasSize(3)
 
             val originalVault = vaultService
-            val services2 = object : MockServices() {
+            val services2 = object : MockServices(MEGA_CORP.name) {
                 override val vaultService: NodeVaultService get() = originalVault
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -575,7 +575,7 @@ class NodeVaultServiceTest {
         val identity = services.myInfo.singleIdentityAndCert()
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-        val thirdPartyServices = MockServices()
+        val thirdPartyServices = MockServices(MEGA_CORP.name)
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
