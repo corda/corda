@@ -48,7 +48,6 @@ import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import rx.Observable
 import rx.observables.ConnectableObservable
@@ -57,6 +56,7 @@ import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
@@ -165,8 +165,8 @@ interface DriverDSLExposedInterface : CordformContext {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize,
-            initialRegistration: Boolean = defaultParameters.initialRegistration): CordaFuture<NodeHandle>
+            maximumHeapSize: String = defaultParameters.maximumHeapSize
+    ): CordaFuture<NodeHandle>
 
 
     /**
@@ -301,8 +301,7 @@ data class NodeParameters(
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "200m",
-        val initialRegistration: Boolean = false
+        val maximumHeapSize: String = "200m"
 ) {
     fun setProvidedName(providedName: CordaX500Name?) = copy(providedName = providedName)
     fun setRpcUsers(rpcUsers: List<User>) = copy(rpcUsers = rpcUsers)
@@ -339,13 +338,9 @@ data class NodeParameters(
  *     not. Note that this may be overridden in [DriverDSLExposedInterface.startNode].
  * @param notarySpecs The notaries advertised  for this network. These nodes will be started automatically and will be
  * available from [DriverDSLExposedInterface.notaryHandles]. Defaults to a simple validating notary.
- * @param compatibilityZoneURL if not null each node is started once in registration mode (which makes the node register and quit),
- *     and then re-starts the node with the given parameters.
- * @param rootCertificate if not null every time a node is started for registration that certificate is written on disk
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
-// TODO: make the registration testing parameters internal.
 fun <A> driver(
         defaultParameters: DriverParameters = DriverParameters(),
         isDebug: Boolean = defaultParameters.isDebug,
@@ -359,8 +354,6 @@ fun <A> driver(
         waitForAllNodesToFinish: Boolean = defaultParameters.waitForNodesToFinish,
         notarySpecs: List<NotarySpec> = defaultParameters.notarySpecs,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL,
-        rootCertificate: X509CertificateHolder? = defaultParameters.rootCertificate,
         dsl: DriverDSLExposedInterface.() -> A
 ): A {
     return genericDriver(
@@ -375,8 +368,51 @@ fun <A> driver(
                     waitForNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    compatibilityZoneURL = compatibilityZoneURL,
-                    rootCertificate = rootCertificate
+                    compatibilityZone = null
+            ),
+            coerce = { it },
+            dsl = dsl,
+            initialiseSerialization = initialiseSerialization
+    )
+}
+
+// TODO Move CompatibilityZoneParams and internalDriver into internal package
+
+/**
+ * @property url The base CZ URL for registration and network map updates
+ * @property rootCert If specified then the node will register itself using [url] and expect the registration response
+ * to be rooted at this cert.
+ */
+data class CompatibilityZoneParams(val url: URL, val rootCert: X509Certificate?)
+
+fun <A> internalDriver(
+        isDebug: Boolean = DriverParameters().isDebug,
+        driverDirectory: Path = DriverParameters().driverDirectory,
+        portAllocation: PortAllocation = DriverParameters().portAllocation,
+        debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
+        systemProperties: Map<String, String> = DriverParameters().systemProperties,
+        useTestClock: Boolean = DriverParameters().useTestClock,
+        initialiseSerialization: Boolean = DriverParameters().initialiseSerialization,
+        startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
+        waitForAllNodesToFinish: Boolean = DriverParameters().waitForNodesToFinish,
+        notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
+        extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
+        compatibilityZone: CompatibilityZoneParams? = null,
+        dsl: DriverDSL.() -> A
+): A {
+    return genericDriver(
+            driverDsl = DriverDSL(
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    systemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    isDebug = isDebug,
+                    startNodesInProcess = startNodesInProcess,
+                    waitForNodesToFinish = waitForAllNodesToFinish,
+                    notarySpecs = notarySpecs,
+                    extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    compatibilityZone = compatibilityZone
             ),
             coerce = { it },
             dsl = dsl,
@@ -411,9 +447,7 @@ data class DriverParameters(
         val startNodesInProcess: Boolean = false,
         val waitForNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY.name)),
-        val extraCordappPackagesToScan: List<String> = emptyList(),
-        val compatibilityZoneURL: URL? = null,
-        val rootCertificate: X509CertificateHolder? = null
+        val extraCordappPackagesToScan: List<String> = emptyList()
 ) {
     fun setIsDebug(isDebug: Boolean) = copy(isDebug = isDebug)
     fun setDriverDirectory(driverDirectory: Path) = copy(driverDirectory = driverDirectory)
@@ -426,8 +460,6 @@ data class DriverParameters(
     fun setTerminateNodesOnShutdown(terminateNodesOnShutdown: Boolean) = copy(waitForNodesToFinish = terminateNodesOnShutdown)
     fun setNotarySpecs(notarySpecs: List<NotarySpec>) = copy(notarySpecs = notarySpecs)
     fun setExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>) = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
-    fun setCompatibilityZoneURL(compatibilityZoneURL: URL?) = copy(compatibilityZoneURL = compatibilityZoneURL)
-    fun setRootCertificate(rootCertificate: X509CertificateHolder?) = copy(rootCertificate = rootCertificate)
 }
 
 /**
@@ -480,10 +512,9 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
-        compatibilityZoneURL: URL? = defaultParameters.compatibilityZoneURL,
-        rootCertificate: X509CertificateHolder? = defaultParameters.rootCertificate,
         driverDslWrapper: (DriverDSL) -> D,
-        coerce: (D) -> DI, dsl: DI.() -> A
+        coerce: (D) -> DI,
+        dsl: DI.() -> A
 ): A {
     val serializationEnv = setGlobalSerialization(initialiseSerialization)
     val driverDsl = driverDslWrapper(
@@ -498,8 +529,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
                     waitForNodesToFinish = waitForNodesToFinish,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     notarySpecs = notarySpecs,
-                    compatibilityZoneURL = compatibilityZoneURL,
-                    rootCertificate = rootCertificate
+                    compatibilityZone = null
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -606,8 +636,7 @@ class DriverDSL(
         val waitForNodesToFinish: Boolean,
         extraCordappPackagesToScan: List<String>,
         val notarySpecs: List<NotarySpec>,
-        val compatibilityZoneURL: URL?,
-        val rootCertificate: X509CertificateHolder?
+        val compatibilityZone: CompatibilityZoneParams?
 ) : DriverDSLInternalInterface {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -679,16 +708,14 @@ class DriverDSL(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            initialRegistration: Boolean
+            maximumHeapSize: String
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name(organisation = "${oneOf(names).organisation}-${p2pAddress.port}", locality = "London", country = "GB")
 
-        val registrationFuture = if (initialRegistration) {
-            compatibilityZoneURL ?: throw IllegalArgumentException("Compatibility zone URL must be provided for initial registration.")
-            registerNode(name, compatibilityZoneURL)
+        val registrationFuture = if (compatibilityZone?.rootCert != null) {
+            nodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
         } else {
             doneFuture(Unit)
         }
@@ -709,8 +736,8 @@ class DriverDSL(
             val config = ConfigHelper.loadConfig(
                     baseDirectory = baseDirectory(name),
                     allowMissingConfig = true,
-                    configOverrides = if (compatibilityZoneURL != null) {
-                        configMap + mapOf("compatibilityZoneURL" to compatibilityZoneURL.toString())
+                    configOverrides = if (compatibilityZone != null) {
+                        configMap + mapOf("compatibilityZoneURL" to compatibilityZone.url.toString())
                     } else {
                         configMap
                     }
@@ -719,14 +746,10 @@ class DriverDSL(
         }
     }
 
-    private fun writeRootCaCertificateForNode(path: Path, caRootCertificate: X509CertificateHolder) {
-        path.parent.createDirectories()
-        X509Utilities.saveCertificateAsPEMFile(caRootCertificate, path)
-    }
-
-    private fun registerNode(providedName: CordaX500Name, compatibilityZoneURL: URL): CordaFuture<Unit> {
+    private fun nodeRegistration(providedName: CordaX500Name, rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<Unit> {
+        val baseDirectory = baseDirectory(providedName).createDirectories()
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory(providedName),
+                baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "p2pAddress" to "localhost:1222",  // required argument, not really used
@@ -734,16 +757,17 @@ class DriverDSL(
                         "myLegalName" to providedName.toString())
         )
         val configuration = config.parseAsNodeConfiguration()
-        // If a rootCertificate is specified, put that in the node expected path.
-        rootCertificate?.let { writeRootCaCertificateForNode(configuration.rootCaCertFile, it) }
-        if (startNodesInProcess) {
+
+        configuration.rootCertFile.parent.createDirectories()
+        X509Utilities.saveCertificateAsPEMFile(rootCert, configuration.rootCertFile)
+
+        return if (startNodesInProcess) {
             // This is a bit cheating, we're not starting a full node, we're just calling the code nodes call
             // when registering.
-            NetworkRegistrationHelper(configuration, HTTPNetworkRegistrationService(compatibilityZoneURL))
-                    .buildKeystore()
-            return doneFuture(Unit)
+            NetworkRegistrationHelper(configuration, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
+            doneFuture(Unit)
         } else {
-            return startNodeForRegistration(config)
+            startOutOfProcessNodeRegistration(config, configuration)
         }
     }
 
@@ -872,18 +896,18 @@ class DriverDSL(
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = listOf(baseDirectory(spec.name)),
                         serviceName = spec.name,
-                        rootCertertificate = rootCertificate,
-                        serviceId = "identity"
+                        serviceId = "identity",
+                        customRootCert = compatibilityZone?.rootCert
                 )
             } else {
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
                         serviceName = spec.name,
-                        rootCertertificate = rootCertificate,
                         serviceId = NotaryService.constructId(
                                 validating = spec.validating,
                                 raft = spec.cluster is ClusterSpec.Raft
-                        )
+                        ),
+                        customRootCert = compatibilityZone?.rootCert
                 )
             }
             NotaryInfo(identity, spec.validating)
@@ -1008,16 +1032,12 @@ class DriverDSL(
         return future
     }
 
-    private fun startNodeForRegistration(config: Config): CordaFuture<Unit> {
-        val maximumHeapSize = "200m"
-        val configuration = config.parseAsNodeConfiguration()
-        configuration.baseDirectory.createDirectories()
-
+    private fun startOutOfProcessNodeRegistration(config: Config, configuration: NodeConfiguration): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort,
-                systemProperties, cordappPackages, maximumHeapSize, initialRegistration = true)
+                systemProperties, cordappPackages, "200m", initialRegistration = true)
 
-        return poll(executorService, "process exit") {
+        return poll(executorService, "node registration (${configuration.myLegalName})") {
             if (process.isAlive) null else Unit
         }
     }
@@ -1030,7 +1050,7 @@ class DriverDSL(
         val baseDirectory = configuration.baseDirectory.createDirectories()
         // Distribute node info file using file copier when network map service URL (compatibilityZoneURL) is null.
         // TODO: need to implement the same in cordformation?
-        val nodeInfoFilesCopier = if (compatibilityZoneURL == null) nodeInfoFilesCopier else null
+        val nodeInfoFilesCopier = if (compatibilityZone == null) nodeInfoFilesCopier else null
 
         nodeInfoFilesCopier?.addConfig(baseDirectory)
         networkParameters!!.install(baseDirectory)
@@ -1068,7 +1088,7 @@ class DriverDSL(
             }
             val p2pReadyFuture = addressMustBeBoundFuture(executorService, configuration.p2pAddress, process)
             return p2pReadyFuture.flatMap {
-                val processDeathFuture = poll(executorService, "process death") {
+                val processDeathFuture = poll(executorService, "process death while waiting for RPC (${configuration.myLegalName})") {
                     if (process.isAlive) null else process
                 }
                 establishRpc(configuration, processDeathFuture).flatMap { rpc ->

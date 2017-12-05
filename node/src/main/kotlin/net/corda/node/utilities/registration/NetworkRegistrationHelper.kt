@@ -28,10 +28,18 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
         val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
     }
 
+    init {
+        require(config.rootCertFile.exists()) {
+            "${config.rootCertFile} does not exist. This file must contain the root CA cert of your compatibility zone. " +
+                    "Please contact your CZ operator."
+        }
+    }
+
     private val requestIdStore = config.certificatesDirectory / "certificate-request-id.txt"
     private val keystorePassword = config.keyStorePassword
     // TODO: Use different password for private key.
     private val privateKeyPassword = config.keyStorePassword
+    private val rootCert = X509Utilities.loadCertificateFromPEMFile(config.rootCertFile)
 
     /**
      * Ensure the initial keystore for a node is set up; note that this function may cause the process to exit under
@@ -106,12 +114,11 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
 
     /**
      * Checks that the passed Certificate is the expected root CA.
-     * @throws WrongRootCaCertificateException if the certificates don't match.
+     * @throws WrongRootCertException if the certificates don't match.
      */
     private fun checkReturnedRootCaMatchesExpectedCa(returnedRootCa: Certificate) {
-        val expected = X509Utilities.loadCertificateFromPEMFile(config.rootCaCertFile).cert
-        if (expected != returnedRootCa) {
-            throw WrongRootCaCertificateException(expected, returnedRootCa, config.rootCaCertFile)
+        if (rootCert != returnedRootCa) {
+            throw WrongRootCertException(rootCert, returnedRootCa, config.rootCertFile)
         }
     }
 
@@ -173,9 +180,9 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
  * Exception thrown when the doorman root certificate doesn't match the expected (out-of-band) root certificate.
  * This usually means the has been a Man-in-the-middle attack when contacting the doorman.
  */
-class WrongRootCaCertificateException(expected: Certificate,
-                                      actual: Certificate,
-                                      expectedFilePath: Path):
+class WrongRootCertException(expected: Certificate,
+                             actual: Certificate,
+                             expectedFilePath: Path):
         Exception("""
             The Root CA returned back from the registration process does not match the expected Root CA
             expected: $expected

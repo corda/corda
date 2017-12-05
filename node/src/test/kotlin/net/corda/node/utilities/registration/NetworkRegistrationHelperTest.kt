@@ -1,53 +1,56 @@
 package net.corda.node.utilities.registration
 
-import com.nhaarman.mockito_kotlin.*
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.getX509Certificate
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.ALICE
 import net.corda.testing.rigorousMock
 import net.corda.testing.testNodeConfiguration
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.cert.Certificate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-
-val X500Name.commonName: String? get() = getRDNs(BCStyle.CN).firstOrNull()?.first?.value?.toString()
 
 class NetworkRegistrationHelperTest {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    @Test
-    fun buildKeyStore() {
-        val id = SecureHash.randomSHA256().toString()
+    private val requestId = SecureHash.randomSHA256().toString()
+    private lateinit var config: NodeConfiguration
 
+    @Before
+    fun init() {
+        config = testNodeConfiguration(baseDirectory = tempFolder.root.toPath(), myLegalName = ALICE.name)
+    }
+
+    @Test
+    fun `successful registration`() {
         val identities = listOf("CORDA_CLIENT_CA",
                 "CORDA_INTERMEDIATE_CA",
                 "CORDA_ROOT_CA")
                 .map { CordaX500Name(commonName = it, organisation = "R3 Ltd", locality = "London", country = "GB") }
         val certs = identities.stream().map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
                 .map { it.cert }.toTypedArray()
-        val certService = rigorousMock<NetworkRegistrationService>().also {
-            doReturn(id).whenever(it).submitRequest(any())
-            doReturn(certs).whenever(it).retrieveCertificates(eq(id))
-        }
 
-        val config = testNodeConfiguration(
-                baseDirectory = tempFolder.root.toPath(),
-                myLegalName = ALICE.name)
+        val certService = mockRegistrationResponse(*certs)
 
-        config.rootCaCertFile.parent.createDirectories()
-        X509Utilities.saveCertificateAsPEMFile(certs.last().toX509CertHolder(), config.rootCaCertFile)
+        config.rootCertFile.parent.createDirectories()
+        X509Utilities.saveCertificateAsPEMFile(certs.last(), config.rootCertFile)
 
         assertFalse(config.nodeKeystore.exists())
         assertFalse(config.sslKeystore.exists())
@@ -90,6 +93,46 @@ class NetworkRegistrationHelperTest {
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
             assertTrue(containsAlias(X509Utilities.CORDA_ROOT_CA))
+        }
+    }
+
+    @Test
+    fun `rootCertFile doesn't exist`() {
+        val certService = rigorousMock<NetworkRegistrationService>()
+
+        assertThatThrownBy {
+            NetworkRegistrationHelper(config, certService)
+        }.hasMessageContaining(config.rootCertFile.toString())
+    }
+
+    @Test
+    fun `root cert in response doesn't match expected`() {
+        val identities = listOf("CORDA_CLIENT_CA",
+                "CORDA_INTERMEDIATE_CA",
+                "CORDA_ROOT_CA")
+                .map { CordaX500Name(commonName = it, organisation = "R3 Ltd", locality = "London", country = "GB") }
+        val certs = identities.stream().map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
+                .map { it.cert }.toTypedArray()
+
+        val certService = mockRegistrationResponse(*certs)
+
+        config.rootCertFile.parent.createDirectories()
+        X509Utilities.saveCertificateAsPEMFile(
+                X509Utilities.createSelfSignedCACertificate(
+                        CordaX500Name("CORDA_ROOT_CA", "R3 Ltd", "London", "GB"),
+                        Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)).cert,
+                config.rootCertFile
+        )
+
+        assertThatThrownBy {
+            NetworkRegistrationHelper(config, certService).buildKeystore()
+        }.isInstanceOf(WrongRootCertException::class.java)
+    }
+
+    private fun mockRegistrationResponse(vararg response: Certificate): NetworkRegistrationService {
+        return rigorousMock<NetworkRegistrationService>().also {
+            doReturn(requestId).whenever(it).submitRequest(any())
+            doReturn(response).whenever(it).retrieveCertificates(eq(requestId))
         }
     }
 }

@@ -6,9 +6,8 @@ import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.driver
+import net.corda.testing.driver.internalDriver
 
 fun CordformDefinition.clean() {
     System.err.println("Deleting: $nodesDirectory")
@@ -39,7 +38,7 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             .flatMap { listOf(it.p2pAddress, it.rpcAddress, it.webAddress) }
             .mapNotNull { address -> address?.let { NetworkHostAndPort.parse(it).port } }
             .max()!!
-    driver(
+    internalDriver(
             isDebug = true,
             driverDirectory = nodesDirectory,
             extraCordappPackagesToScan = cordappPackages,
@@ -50,7 +49,7 @@ private fun CordformDefinition.runNodes(waitForAllNodesToFinish: Boolean, block:
             waitForAllNodesToFinish = waitForAllNodesToFinish
     ) {
         setup(this)
-        (this as DriverDSL).startCordformNodes(nodes).getOrThrow() // Only proceed once everything is up and running
+        startCordformNodes(nodes).getOrThrow() // Only proceed once everything is up and running
         println("All nodes and webservers are ready...")
         block()
     }

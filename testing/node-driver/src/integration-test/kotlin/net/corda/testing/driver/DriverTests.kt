@@ -76,8 +76,8 @@ class DriverTests {
             assertThat(baseDirectory / "process-id").exists()
         }
 
-        val baseDirectory = driver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
-            (this as DriverDSL).baseDirectory(DUMMY_NOTARY.name)
+        val baseDirectory = internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name))) {
+            baseDirectory(DUMMY_NOTARY.name)
         }
         assertThat(baseDirectory / "process-id").doesNotExist()
     }
