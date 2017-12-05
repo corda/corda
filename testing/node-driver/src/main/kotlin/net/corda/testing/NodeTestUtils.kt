@@ -31,7 +31,7 @@ import java.nio.file.Path
  */
 @JvmOverloads
 fun ledger(
-        services: ServiceHub = MockServices(),
+        services: ServiceHub = MockServices(MEGA_CORP.name),
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
     return LedgerDSL(TestLedgerDSLInterpreter(services)).also { dsl(it) }
@@ -47,7 +47,7 @@ fun transaction(
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         cordappPackages: List<String> = emptyList(),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(services = MockServices(cordappPackages)) {
+) = ledger(services = MockServices(cordappPackages, MEGA_CORP.name)) {
     dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
 }
 

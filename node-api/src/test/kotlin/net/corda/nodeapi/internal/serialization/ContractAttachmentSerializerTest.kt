@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.serialization.*
+import net.corda.testing.MEGA_CORP
 import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices
@@ -22,9 +23,7 @@ class ContractAttachmentSerializerTest {
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
     private lateinit var contextWithToken: SerializationContext
-
-    private val mockServices = MockServices()
-
+    private val mockServices = MockServices(MEGA_CORP.name)
     @Before
     fun setup() {
         factory = testSerialization.env.serializationFactory

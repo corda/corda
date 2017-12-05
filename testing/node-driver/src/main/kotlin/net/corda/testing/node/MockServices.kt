@@ -46,10 +46,10 @@ fun makeTestIdentityService(identities: Iterable<PartyAndCertificate> = emptySet
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(
+open class MockServices private constructor(
         cordappLoader: CordappLoader,
         override val validatedTransactions: WritableTransactionStorage,
-        private val initialIdentityName: CordaX500Name = MEGA_CORP.name,
+        private val initialIdentityName: CordaX500Name,
         vararg val keys: KeyPair
 ) : ServiceHub, StateLoader by validatedTransactions {
     companion object {
@@ -106,10 +106,10 @@ open class MockServices(
         }
     }
 
-    constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name = MEGA_CORP.name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), initialIdentityName = initialIdentityName, keys = *keys)
-    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name = MEGA_CORP.name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), initialIdentityName = initialIdentityName, keys = *keys)
-    constructor(vararg keys: KeyPair) : this(emptyList(), MEGA_CORP.name, *keys)
-    constructor() : this(generateKeyPair())
+    private constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(cordappLoader, MockTransactionStorage(), initialIdentityName, *keys)
+    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(CordappLoader.createWithTestPackages(cordappPackages), initialIdentityName, *keys)
+    constructor(initialIdentityName: CordaX500Name, vararg keys: KeyPair) : this(emptyList(), initialIdentityName, *keys)
+    constructor(initialIdentityName: CordaX500Name) : this(initialIdentityName, generateKeyPair())
 
     val key: KeyPair get() = keys.first()
 

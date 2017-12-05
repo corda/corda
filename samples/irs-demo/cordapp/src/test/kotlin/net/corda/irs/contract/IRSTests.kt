@@ -311,7 +311,7 @@ class IRSTests {
      */
     @Test
     fun generateIRSandFixSome() {
-        val services = MockServices(listOf("net.corda.irs.contract"))
+        val services = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name)
         var previousTXN = generateIRSTxn(1)
         previousTXN.toLedgerTransaction(services).verify()
         services.recordTransactions(previousTXN)
