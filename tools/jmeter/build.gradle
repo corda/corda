@@ -39,6 +39,9 @@ dependencies {
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_config', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter', version: "$jmVersion"
     runtime group: 'org.apache.jmeter', name: 'jorphan', version: "$jmVersion"
+
+    testCompile project(':test-utils')
+    testCompile project(':node-driver')
 }
 
 // Run JMeter as server process/agent on current host.
@@ -69,6 +72,14 @@ task(runSsh, dependsOn: 'classes', type: JavaExec) {
         args+= "-Xssh"
         args+= Eval.me(jmeterHosts)
     }
+    standardInput = System.in
+}
+
+// Use the driver to launch 2 local nodes and the notary running the perftestcordapp.
+// To use for development of samplers and flows locally.
+task(runDriver, dependsOn: 'classes', type: JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.r3.corda.jmeter.StartLocalPerfCorDapp'
     standardInput = System.in
 }
 

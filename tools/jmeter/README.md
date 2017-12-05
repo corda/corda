@@ -55,3 +55,12 @@ remote user name is different from the current user name, `-XsshUser <remote use
 can be used to set this, or in the gradle call:
 
 `./gradlew tools:jmeter:runSsh -PjmeterHosts="['hostname1', 'hostname2']" -PsshUser="'username'"`
+
+To run up 3 nodes (2 nodes, 1 non-validating notary) locally for testing anything in the `perftestcordapp` (e.g. samplers,
+custom flows), you can use gradle to run:
+
+`./gradlew tools:jmeter:runDriver`
+
+This uses the driver test infrastructure to fire up the nodes. See `StartLocalPerfCorDapp` for X500 names of nodes, 
+RPC user logins etc.  The RPC port of Bank A is typically 10004, but they are all reporting in the console output.  A
+sample JMeter config for this setup has been included as `LocalIssueAndPay Request.jmx` under resources.

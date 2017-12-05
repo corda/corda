@@ -3,6 +3,7 @@ package com.r3.corda.jmeter
 import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.POUNDS
 import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueAndPaymentFlow
+import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueAndPaymentNoSelection
 import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -62,24 +63,31 @@ class CashIssueSampler : AbstractSampler() {
 class CashIssueAndPaySampler : AbstractSampler() {
     companion object JMeterProperties {
         val otherParty = Argument("otherPartyName", "", "<meta>", "The X500 name of the payee.")
+        val coinSelection = Argument("useCoinSelection", "true", "<meta>", "True to use coin selection and false (or anything else) to avoid coin selection.")
     }
 
     lateinit var counterParty: Party
+    var useCoinSelection: Boolean = true
 
     override fun setupTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
         getNotaryIdentity(rpcProxy,testContext)
         counterParty = getIdentity(rpcProxy, testContext, otherParty)
+        useCoinSelection = testContext.getParameter(coinSelection.name, coinSelection.value).toBoolean()
     }
 
 
     override fun createFlowInvoke(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext): FlowInvoke<*> {
         val amount = 2_000_000.POUNDS
-        return FlowInvoke<CashIssueAndPaymentFlow>(CashIssueAndPaymentFlow::class.java, arrayOf(amount, OpaqueBytes.of(1), counterParty, true, notaryIdentity))
+        if (useCoinSelection) {
+            return FlowInvoke<CashIssueAndPaymentFlow>(CashIssueAndPaymentFlow::class.java, arrayOf(amount, OpaqueBytes.of(1), counterParty, true, notaryIdentity))
+        } else {
+            return FlowInvoke<CashIssueAndPaymentNoSelection>(CashIssueAndPaymentNoSelection::class.java, arrayOf(amount, OpaqueBytes.of(1), counterParty, true, notaryIdentity))
+        }
     }
 
     override fun teardownTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
     }
 
     override val additionalArgs: Set<Argument>
-        get() = setOf(notary, otherParty)
+        get() = setOf(notary, otherParty, coinSelection)
 }
