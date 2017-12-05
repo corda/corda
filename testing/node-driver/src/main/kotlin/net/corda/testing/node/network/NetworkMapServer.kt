@@ -97,12 +97,7 @@ class NetworkMapServer(cacheTimeout: Duration,
     @Path("network-map")
     class InMemoryNetworkMapService(private val cacheTimeout: Duration, private val networkMapKeyAndCert: CertificateAndKeyPair) {
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedData<NodeInfo>>()
-        private val serializedParameters = {
-            val serialize = stubNetworkParameter.serialize()
-            val signature = networkMapKeyAndCert.keyPair.sign(serialize)
-            SignedData(serialize, signature).serialize()
-        }()
-        private val parametersHash = serializedParameters.hash
+        private val parametersHash = stubNetworkParameter.serialize().hash
 
         @POST
         @Path("publish")
