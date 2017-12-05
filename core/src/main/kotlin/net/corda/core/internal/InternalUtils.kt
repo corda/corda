@@ -2,9 +2,9 @@
 
 package net.corda.core.internal
 
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.TransactionBuilder
@@ -295,15 +295,15 @@ fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ i
  * Provide access to internal method for AttachmentClassLoaderTests
  * @suppress
  */
-fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(services, serializationContext)
+fun TransactionBuilder.toWireTransaction(cordappProvider: CordappProvider, serializationContext: SerializationContext): WireTransaction {
+    return toWireTransactionWithContext(cordappProvider, serializationContext)
 }
 
 /**
  * Provide access to internal method for AttachmentClassLoaderTests
  * @suppress
  */
-fun TransactionBuilder.toLedgerTransaction(services: ServiceHub, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.`package`.name
