@@ -24,15 +24,15 @@ import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.config.*
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.NodeInfoFilesCopier
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.*
+import net.corda.testing.internal.InProcessNode
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -941,12 +941,7 @@ class DriverDSL(
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
                 // TODO pass the version in?
-                val node = Node(
-                        nodeConf,
-                        MOCK_VERSION_INFO,
-                        initialiseSerialization = false,
-                        cordappLoader = CordappLoader.createDefaultWithTestPackages(nodeConf, cordappPackages))
-                        .start()
+                val node = InProcessNode(nodeConf, MOCK_VERSION_INFO, cordappPackages).start()
                 val nodeThread = thread(name = nodeConf.myLegalName.organisation) {
                     node.internals.run()
                 }

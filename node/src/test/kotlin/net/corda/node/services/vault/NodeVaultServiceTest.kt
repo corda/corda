@@ -38,6 +38,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.VaultFiller
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -72,7 +73,11 @@ class NodeVaultServiceTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(cordappPackages = cordappPackages)
+        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
+                listOf(MEGA_CORP_KEY),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                cordappPackages,
+                MEGA_CORP.name)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)

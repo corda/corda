@@ -2,7 +2,6 @@
 
 package net.corda.testing
 
-import com.nhaarman.mockito_kotlin.doCallRealMethod
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.Actor
@@ -17,8 +16,10 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.*
-import net.corda.nodeapi.User
+import net.corda.node.services.config.CertChainPolicyConfig
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.VerifierType
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
@@ -72,11 +73,6 @@ fun testNodeConfiguration(
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
-        doCallRealMethod().whenever(it).certificatesDirectory
-        doCallRealMethod().whenever(it).trustStoreFile
-        doCallRealMethod().whenever(it).sslKeystore
-        doCallRealMethod().whenever(it).nodeKeystore
-        doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
     }
 }
 

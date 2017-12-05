@@ -12,7 +12,6 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.NodeInfoFilesCopier
 import rx.Observable
 import rx.Scheduler
-import rx.schedulers.Schedulers
 import java.io.IOException
 import java.nio.file.Path
 import java.time.Duration
@@ -31,9 +30,8 @@ import kotlin.streams.toList
  */
 // TODO: Use NIO watch service instead?
 class NodeInfoWatcher(private val nodePath: Path,
-                      private val pollInterval: Duration = 5.seconds,
-                      private val scheduler: Scheduler = Schedulers.io()) {
-
+                      private val scheduler: Scheduler,
+                      private val pollInterval: Duration = 5.seconds) {
     private val nodeInfoDirectory = nodePath / CordformNode.NODE_INFO_DIRECTORY
     private val processedNodeInfoFiles = mutableSetOf<Path>()
     private val _processedNodeInfoHashes = mutableSetOf<SecureHash>()

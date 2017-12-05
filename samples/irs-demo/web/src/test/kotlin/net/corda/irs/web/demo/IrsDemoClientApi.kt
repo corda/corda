@@ -8,7 +8,7 @@ import org.apache.commons.io.IOUtils
 /**
  * Interface for communicating with nodes running the IRS demo.
  */
-class IRSDemoClientApi(private val hostAndPort: NetworkHostAndPort) {
+class IRSDemoClientApi(hostAndPort: NetworkHostAndPort) {
     private val api = HttpApi.fromHostAndPort(hostAndPort, apiRoot)
 
     fun runTrade(tradeId: String, oracleName: CordaX500Name) {
@@ -17,14 +17,14 @@ class IRSDemoClientApi(private val hostAndPort: NetworkHostAndPort) {
         api.postJson("deals", tradeFile)
     }
 
-    fun runDateChange(newDate: String): Boolean {
-        return api.putJson("demodate", "\"$newDate\"")
+    fun runDateChange(newDate: String) {
+        api.putJson("demodate", "\"$newDate\"")
     }
 
     // TODO: Add uploading of files to the HTTP API
     fun runUploadRates() {
         val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name())
-        check(api.postPlain("fixes", fileContents))
+        api.postPlain("fixes", fileContents)
         println("Rates successfully uploaded!")
     }
 

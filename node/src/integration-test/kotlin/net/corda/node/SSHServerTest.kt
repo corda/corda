@@ -10,7 +10,8 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toHex
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
+import net.corda.testing.ALICE
 import net.corda.testing.driver.driver
 import org.bouncycastle.util.io.Streams
 import org.junit.Test
@@ -33,7 +34,7 @@ class SSHServerTest : IntegrationTest() {
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver() {
             val node = startNode(providedName = ALICE.name, rpcUsers = listOf(user))
             node.getOrThrow()
 

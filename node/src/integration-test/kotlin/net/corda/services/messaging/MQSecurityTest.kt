@@ -22,8 +22,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATI
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.*
 import net.corda.testing.internal.NodeBasedTest
 import net.corda.testing.messaging.SimpleMQClient

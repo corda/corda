@@ -6,8 +6,8 @@ import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.services.config.NotaryConfig
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toConfig
 
 fun CordformDefinition.node(configure: CordformNode.() -> Unit) {
     addNode { cordformNode -> cordformNode.configure() }
