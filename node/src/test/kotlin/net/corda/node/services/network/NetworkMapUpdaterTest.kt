@@ -33,6 +33,9 @@ class NetworkMapUpdaterTest {
     val testSerialization = SerializationEnvironmentRule(true)
     private val jimFs = Jimfs.newFileSystem(Configuration.unix())
     private val baseDir = jimFs.getPath("/node")
+    companion object {
+        val NETWORK_PARAMS_HASH = SecureHash.randomSHA256()
+    }
 
     @Test
     fun `publish node info`() {
@@ -53,7 +56,7 @@ class NetworkMapUpdaterTest {
 
         val scheduler = TestScheduler()
         val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
-        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, SecureHash.randomSHA256())
+        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, NETWORK_PARAMS_HASH)
 
         // Publish node info for the first time.
         updater.updateNodeInfo(nodeInfo1) { signedNodeInfo }
@@ -88,7 +91,6 @@ class NetworkMapUpdaterTest {
         val nodeInfo3 = TestNodeInfoFactory.createNodeInfo("Info 3")
         val nodeInfo4 = TestNodeInfoFactory.createNodeInfo("Info 4")
         val fileNodeInfo = TestNodeInfoFactory.createNodeInfo("Info from file")
-        val parametersHash = SecureHash.randomSHA256()
         val networkMapCache = getMockNetworkMapCache()
 
         val nodeInfoMap = ConcurrentHashMap<SecureHash, SignedData<NodeInfo>>()
@@ -97,13 +99,13 @@ class NetworkMapUpdaterTest {
                 val signedNodeInfo: SignedData<NodeInfo> = uncheckedCast(it.arguments.first())
                 nodeInfoMap.put(signedNodeInfo.verified().serialize().hash, signedNodeInfo)
             }
-            on { getNetworkMap() }.then { NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), parametersHash), 100.millis) }
+            on { getNetworkMap() }.then { NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), NETWORK_PARAMS_HASH), 100.millis) }
             on { getNodeInfo(any()) }.then { nodeInfoMap[it.arguments.first()]?.verified() }
         }
 
         val scheduler = TestScheduler()
         val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
-        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, parametersHash)
+        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, NETWORK_PARAMS_HASH)
 
         // Test adding new node.
         networkMapClient.publish(nodeInfo1)
@@ -143,7 +145,6 @@ class NetworkMapUpdaterTest {
         val nodeInfo3 = TestNodeInfoFactory.createNodeInfo("Info 3")
         val nodeInfo4 = TestNodeInfoFactory.createNodeInfo("Info 4")
         val fileNodeInfo = TestNodeInfoFactory.createNodeInfo("Info from file")
-        val parametersHash = SecureHash.randomSHA256()
         val networkMapCache = getMockNetworkMapCache()
 
         val nodeInfoMap = ConcurrentHashMap<SecureHash, SignedData<NodeInfo>>()
@@ -152,13 +153,13 @@ class NetworkMapUpdaterTest {
                 val signedNodeInfo: SignedData<NodeInfo> = uncheckedCast(it.arguments.first())
                 nodeInfoMap.put(signedNodeInfo.verified().serialize().hash, signedNodeInfo)
             }
-            on { getNetworkMap() }.then { NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), parametersHash), 100.millis) }
+            on { getNetworkMap() }.then { NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), NETWORK_PARAMS_HASH), 100.millis) }
             on { getNodeInfo(any()) }.then { nodeInfoMap[it.arguments.first()]?.verified() }
         }
 
         val scheduler = TestScheduler()
         val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
-        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, parametersHash)
+        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, NETWORK_PARAMS_HASH)
 
         // Add all nodes.
         NodeInfoWatcher.saveToFile(baseDir / CordformNode.NODE_INFO_DIRECTORY, fileNodeInfo)
@@ -202,7 +203,7 @@ class NetworkMapUpdaterTest {
 
         val scheduler = TestScheduler()
         val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
-        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, null, SecureHash.randomSHA256())
+        val updater = NetworkMapUpdater(networkMapCache, fileWatcher, null, NETWORK_PARAMS_HASH)
 
         // Not subscribed yet.
         verify(networkMapCache, times(0)).addNode(any())

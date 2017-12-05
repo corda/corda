@@ -20,6 +20,7 @@ import org.junit.Test
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NetworkParametersTest {
@@ -37,6 +38,7 @@ class NetworkParametersTest {
     fun `choose highest epoch`() {
         var alice = mockNet.createPartyNode(ALICE.name)
         val aliceDirectory = alice.internals.configuration.baseDirectory
+        // Epoch is not exposed by node, so we are checking notaries instead.
         assertEquals(DUMMY_NOTARY.name, alice.services.networkMapCache.notaryIdentities[0].name)
         alice.dispose()
         // Make parameters with higher epoch and different notary so it's easier to check them.
@@ -83,9 +85,9 @@ class NetworkParametersTest {
             val notary = NotaryConfig(false)
             doReturn(notary).whenever(it).notary}))
         val fakeNotaryId = fakeNotary.info.chooseIdentity()
-        assert(fakeNotary.internals.configuration.notary != null)
+        assertFalse(fakeNotary.internals.configuration.notary == null)
         val alice = mockNet.createPartyNode(ALICE_NAME)
-        assert(fakeNotaryId !in alice.services.networkMapCache.notaryIdentities)
+        assertFalse(fakeNotaryId in alice.services.networkMapCache.notaryIdentities)
         assertFails {
             alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).resultFuture.getOrThrow()
         }

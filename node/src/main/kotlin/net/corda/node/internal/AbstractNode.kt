@@ -58,6 +58,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.nodeapi.internal.NETWORK_PARAM_FILE_PREFIX
 import net.corda.nodeapi.internal.NetworkParameters
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -84,6 +85,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.collections.set
 import kotlin.reflect.KClass
+import kotlin.streams.toList
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -277,7 +279,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     // TODO NetworkParameters updates are not implemented yet. This handling is not ideal, because we simply shutdown node, which can cause some problems.
     private fun handleNetworkParametersUpdate(newParametersHash: SecureHash) {
-        log.error("Network map is advertising different parametersHash than the ones node is currently using.\n" +
+        log.error("The NetworkMap is advertising a different network parameters hash than the one this node is currently using.\n" +
                 "Our hash: ${ networkParameters.serialize().hash }, new hash: $newParametersHash. Please update parameters file.")
         stop()
     }
@@ -647,19 +649,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private fun readNetworkParameters() {
-        var latestEpoch = 0
-        var latestParams: NetworkParameters? = null
         // Load network parameters with the latest known epoch.
-        for (paramFile in Files.list(configuration.baseDirectory)) {
-            if ("network-parameters" !in paramFile.toString())
-                continue
-            val params = paramFile.readAll().deserialize<SignedData<NetworkParameters>>().verified()
-            val epoch = params.epoch
-            if (latestEpoch < epoch) {
-                latestEpoch = epoch
-                latestParams = params
-            }
-        }
+        val latestParams = Files.list(configuration.baseDirectory).filter { NETWORK_PARAM_FILE_PREFIX in it.toString() }.toList()
+                .mapNotNull { try {
+                    it.readAll().deserialize<SignedData<NetworkParameters>>().verified()
+                } catch (t: Throwable) {
+                    null // We ignore all the files that are incorrect.
+                }}.maxBy { it.epoch }
         checkNotNull(latestParams) { "Couldn't find network parameters file" }
         networkParameters = latestParams!!
         log.info("Loaded the latest known version of network parameters $latestParams")

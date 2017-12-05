@@ -22,7 +22,7 @@ class NetworkParametersCopier(networkParameters: NetworkParameters) {
         SignedData(serialize, signature).serialize()
     }
 
-    fun install(dir: Path, paramsFile: String = "network-parameters") {
+    fun install(dir: Path, paramsFile: String = NETWORK_PARAM_FILE_PREFIX) {
         try {
             serializedNetworkParameters.open().copyTo(dir / paramsFile)
         } catch (e: FileAlreadyExistsException) {

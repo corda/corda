@@ -44,4 +44,4 @@ fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) 
 object DummyCommandData : TypeOnlyCommandData()
 
 /** Maximum artemis message size. 10 MiB maximum allowed file size for attachments, including message headers. */
-val MAX_MESSAGE_SIZE: Int = 1048576
+const val MAX_MESSAGE_SIZE: Int = 1048576

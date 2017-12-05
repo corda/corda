@@ -13,6 +13,7 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 
+const val NETWORK_PARAM_FILE_PREFIX = "network-parameters"
 // TODO: Need more discussion on rather we should move this class out of internal.
 /**
  * Data class containing hash of [NetworkParameters] and network participant's [NodeInfo] hashes.
