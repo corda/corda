@@ -8,7 +8,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.concurrent.doneFuture
@@ -22,18 +21,15 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.VersionInfo
-import net.corda.node.internal.StateLoaderImpl
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.configOf
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshCertificate
 import net.corda.node.services.keys.getSigner
-import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -59,6 +55,7 @@ import java.sql.Connection
 import java.time.Clock
 import java.util.*
 
+fun makeTestIdentityService(identities: Iterable<PartyAndCertificate> = emptySet()) = InMemoryIdentityService(identities, DEV_TRUST_ROOT)
 /**
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
@@ -66,13 +63,10 @@ import java.util.*
 open class MockServices(
         cordappLoader: CordappLoader,
         override val validatedTransactions: WritableTransactionStorage,
-        protected val stateLoader: StateLoaderImpl = StateLoaderImpl(validatedTransactions),
         private val initialIdentityName: CordaX500Name = MEGA_CORP.name,
         vararg val keys: KeyPair
-) : ServiceHub, StateLoader by stateLoader {
+) : ServiceHub, StateLoader by validatedTransactions {
     companion object {
-        private val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)
-
         @JvmStatic
         val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -143,32 +137,16 @@ open class MockServices(
             return DatabaseConfig(transactionIsolationLevel = transactionIsolationLevel, schema = schema)
         }
 
-        private fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DEV_TRUST_ROOT)
-
         /**
          * Makes database and mock services appropriate for unit tests.
-         * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
-         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defaults to [InMemoryIdentityService].
-         *
-         * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
-         */
-        @JvmStatic
-        fun makeTestDatabaseAndMockServices(keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
-                                            identityService: IdentityService = makeTestIdentityService(),
-                                            cordappPackages: List<String> = emptyList()): Pair<CordaPersistence, MockServices> {
-            return makeTestDatabaseAndMockServices(keys, identityService, cordappPackages, MEGA_CORP.name)
-        }
-
-        /**
-         * Makes database and mock services appropriate for unit tests.
-         * @param keys a list of [KeyPair] instances to be used by [MockServices]. Defaults to [MEGA_CORP_KEY]
-         * @param createIdentityService a lambda function returning an instance of [IdentityService]. Defauts to [InMemoryIdentityService].
+         * @param keys a list of [KeyPair] instances to be used by [MockServices].
+         * @param identityService an instance of [IdentityService], see [makeTestIdentityService].
          * @param initialIdentityName the name of the first (typically sole) identity the services will represent.
          * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
         @JvmStatic
-        fun makeTestDatabaseAndMockServices(keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
-                                            identityService: IdentityService = makeTestIdentityService(),
+        fun makeTestDatabaseAndMockServices(keys: List<KeyPair>,
+                                            identityService: IdentityService,
                                             cordappPackages: List<String> = emptyList(),
                                             initialIdentityName: CordaX500Name): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
@@ -181,9 +159,7 @@ open class MockServices(
                     override val vaultService: VaultServiceInternal = makeVaultService(database.hibernateConfig, schemaService)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-                        for (stx in txs) {
-                            validatedTransactions.addTransaction(stx)
-                        }
+                        super.recordTransactions(statesToRecord, txs)
                         // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                         vaultService.notifyAll(statesToRecord, txs.map { it.tx })
                     }
@@ -204,16 +180,12 @@ open class MockServices(
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
-            stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
-        }
-        for (stx in txs) {
-            validatedTransactions.addTransaction(stx)
+            validatedTransactions.addTransaction(it)
         }
     }
 
     final override val attachments = MockAttachmentStorage()
-    val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
-    override val identityService: IdentityService = makeTestIdentityService()
+    override val identityService: IdentityService = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY))
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
@@ -231,7 +203,7 @@ open class MockServices(
     lateinit var hibernatePersister: HibernateObserver
 
     fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService): VaultServiceInternal {
-        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, stateLoader, hibernateConfig)
+        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, validatedTransactions, hibernateConfig)
         hibernatePersister = HibernateObserver.install(vaultService.rawUpdates, hibernateConfig, schemaService)
         return vaultService
     }
@@ -282,10 +254,6 @@ class MockKeyManagementService(val identityService: IdentityService,
         return keyPair.sign(signableData)
     }
 }
-
-class MockStateMachineRecordedTransactionMappingStorage(
-        val storage: StateMachineRecordedTransactionMappingStorage = InMemoryStateMachineRecordedTransactionMappingStorage()
-) : StateMachineRecordedTransactionMappingStorage by storage
 
 open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
     override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {

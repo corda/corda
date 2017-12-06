@@ -2,9 +2,9 @@ package net.corda.webserver
 
 import com.typesafe.config.Config
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.NodeSSLConfiguration
-import net.corda.nodeapi.config.getValue
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.getValue
 import java.nio.file.Path
 
 /**

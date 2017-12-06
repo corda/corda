@@ -14,6 +14,7 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -216,7 +217,10 @@ class CommercialPaperTestsGeneric {
 
     //    @Test
     fun `issue move and then redeem`() = withTestSerialization{
-        val aliceDatabaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = listOf(ALICE_KEY))
+        val aliceDatabaseAndServices = MockServices.makeTestDatabaseAndMockServices(
+                listOf(ALICE_KEY),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                initialIdentityName = MEGA_CORP.name)
         val databaseAlice = aliceDatabaseAndServices.first
         aliceServices = aliceDatabaseAndServices.second
         aliceVaultService = aliceServices.vaultService
@@ -226,7 +230,10 @@ class CommercialPaperTestsGeneric {
             aliceVaultService = aliceServices.vaultService
         }
 
-        val bigCorpDatabaseAndServices = MockServices.makeTestDatabaseAndMockServices(keys = listOf(BIG_CORP_KEY))
+        val bigCorpDatabaseAndServices = MockServices.makeTestDatabaseAndMockServices(
+                listOf(BIG_CORP_KEY),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                initialIdentityName = MEGA_CORP.name)
         val databaseBigCorp = bigCorpDatabaseAndServices.first
         bigCorpServices = bigCorpDatabaseAndServices.second
         bigCorpVaultService = bigCorpServices.vaultService

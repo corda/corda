@@ -5,7 +5,6 @@ import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.URL
 import java.util.concurrent.TimeUnit
@@ -14,8 +13,6 @@ import java.util.concurrent.TimeUnit
  * A small set of utilities for making HttpCalls, aimed at demos and tests.
  */
 object HttpUtils {
-    private val logger = LoggerFactory.getLogger(javaClass)
-
     private val client by lazy {
         OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
@@ -26,19 +23,19 @@ object HttpUtils {
         net.corda.client.jackson.JacksonSupport.createNonRpcMapper()
     }
 
-    fun putJson(url: URL, data: String): Boolean {
+    fun putJson(url: URL, data: String) {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
-        return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").put(body).build())
+        makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").put(body).build())
     }
 
     fun postJson(url: URL, data: String) {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
-        makeExceptionalRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
+        makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
     }
 
-    fun postPlain(url: URL, data: String): Boolean {
+    fun postPlain(url: URL, data: String) {
         val body = RequestBody.create(MediaType.parse("text/plain; charset=utf-8"), data)
-        return makeRequest(Request.Builder().url(url).post(body).build())
+        makeRequest(Request.Builder().url(url).post(body).build())
     }
 
     inline fun <reified T : Any> getJson(url: URL, params: Map<String, String> = mapOf(), mapper: ObjectMapper = defaultMapper): T {
@@ -47,21 +44,10 @@ object HttpUtils {
         return mapper.readValue(parameterisedUrl, T::class.java)
     }
 
-    // TODO Move everything to use this instead of makeRequest
-    private fun makeExceptionalRequest(request: Request) {
+    private fun makeRequest(request: Request) {
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
             throw IOException("${request.method()} to ${request.url()} returned a ${response.code()}: ${response.body().string()}")
         }
-    }
-
-    private fun makeRequest(request: Request): Boolean {
-        val response = client.newCall(request).execute()
-
-        if (!response.isSuccessful) {
-            logger.error("Could not fulfill HTTP request of type ${request.method()} to ${request.url()}. Status Code: ${response.code()}. Message: ${response.body().string()}")
-        }
-
-        return response.isSuccessful
     }
 }

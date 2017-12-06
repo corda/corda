@@ -1,6 +1,6 @@
 @file:JvmName("ConfigUtilities")
 
-package net.corda.nodeapi.config
+package net.corda.nodeapi.internal.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -200,4 +200,4 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
     }
 }
 
-private val logger = LoggerFactory.getLogger("net.corda.nodeapi.config")
+private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.config")

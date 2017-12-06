@@ -34,68 +34,79 @@ open class NodeStartup(val args: Array<String>) {
         val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
     }
 
-    open fun run() {
-        val startTime = System.currentTimeMillis()
-        assertCanNormalizeEmptyPath()
-        val (argsParser, cmdlineOptions) = parseArguments()
-
-        // We do the single node check before we initialise logging so that in case of a double-node start it
-        // doesn't mess with the running node's logs.
-        enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
-
-        initLogging(cmdlineOptions)
-
-        val versionInfo = getVersionInfo()
-
-        if (cmdlineOptions.isVersion) {
-            println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
-            println("Revision ${versionInfo.revision}")
-            println("Platform Version ${versionInfo.platformVersion}")
-            exitProcess(0)
-        }
-
-        // Maybe render command line help.
-        if (cmdlineOptions.help) {
-            argsParser.printHelp(System.out)
-            exitProcess(0)
-        }
-
-        drawBanner(versionInfo)
-        Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
-        val conf0 = loadConfigFile(cmdlineOptions)
-
-        val conf = if (cmdlineOptions.bootstrapRaftCluster) {
-            if (conf0 is NodeConfigurationImpl) {
-                println("Bootstrapping raft cluster (starting up as seed node).")
-                // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
-                conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
-            } else {
-                println("bootstrap-raft-notaries flag not recognized, exiting...")
-                exitProcess(1)
-            }
-        } else {
-            conf0
-        }
-
-        banJavaSerialisation(conf)
-        preNetworkRegistration(conf)
-        maybeRegisterWithNetworkAndExit(cmdlineOptions, conf)
-        logStartupInfo(versionInfo, cmdlineOptions, conf)
-
+    /**
+     * @return true if the node startup was successful. This value is intended to be the exit code of the process.
+     */
+    open fun run(): Boolean {
         try {
-            cmdlineOptions.baseDirectory.createDirectories()
-            startNode(conf, versionInfo, startTime, cmdlineOptions)
-        } catch (e: Exception) {
-            if (e.message?.startsWith("Unknown named curve:") == true) {
-                logger.error("Exception during node startup - ${e.message}. " +
-                        "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-            } else
-                logger.error("Exception during node startup", e)
-            exitProcess(1)
-        }
+            val startTime = System.currentTimeMillis()
+            assertCanNormalizeEmptyPath()
+            val (argsParser, cmdlineOptions) = parseArguments()
 
-        logger.info("Node exiting successfully")
-        exitProcess(0)
+            // We do the single node check before we initialise logging so that in case of a double-node start it
+            // doesn't mess with the running node's logs.
+            enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
+
+            initLogging(cmdlineOptions)
+
+            val versionInfo = getVersionInfo()
+
+            if (cmdlineOptions.isVersion) {
+                println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
+                println("Revision ${versionInfo.revision}")
+                println("Platform Version ${versionInfo.platformVersion}")
+                return true
+            }
+
+            // Maybe render command line help.
+            if (cmdlineOptions.help) {
+                argsParser.printHelp(System.out)
+                return true
+            }
+
+            drawBanner(versionInfo)
+            Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
+            val conf0 = loadConfigFile(cmdlineOptions)
+
+            val conf = if (cmdlineOptions.bootstrapRaftCluster) {
+                if (conf0 is NodeConfigurationImpl) {
+                    println("Bootstrapping raft cluster (starting up as seed node).")
+                    // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
+                    conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
+                } else {
+                    println("bootstrap-raft-notaries flag not recognized, exiting...")
+                    return false
+                }
+            } else {
+                conf0
+            }
+
+            banJavaSerialisation(conf)
+            preNetworkRegistration(conf)
+            if (shouldRegisterWithNetwork(cmdlineOptions, conf)) {
+                registerWithNetwork(cmdlineOptions, conf)
+                return true
+            }
+            logStartupInfo(versionInfo, cmdlineOptions, conf)
+
+            try {
+                cmdlineOptions.baseDirectory.createDirectories()
+                startNode(conf, versionInfo, startTime, cmdlineOptions)
+            } catch (e: Exception) {
+                if (e.message?.startsWith("Unknown named curve:") == true) {
+                    logger.error("Exception during node startup - ${e.message}. " +
+                            "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+                } else {
+                    logger.error("Exception during node startup", e)
+                }
+                return false
+            }
+
+            logger.info("Node exiting successfully")
+            return true
+        } catch (e: Exception) {
+            return false
+        }
     }
 
     open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
@@ -155,9 +166,13 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    open protected fun maybeRegisterWithNetworkAndExit(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
+    private fun shouldRegisterWithNetwork(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration): Boolean {
         val compatibilityZoneURL = conf.compatibilityZoneURL
-        if (!cmdlineOptions.isRegistration || compatibilityZoneURL == null) return
+        return !(!cmdlineOptions.isRegistration || compatibilityZoneURL == null)
+    }
+
+    open protected fun registerWithNetwork(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
+        val compatibilityZoneURL = conf.compatibilityZoneURL!!
         println()
         println("******************************************************************")
         println("*                                                                *")
@@ -165,15 +180,14 @@ open class NodeStartup(val args: Array<String>) {
         println("*                                                                *")
         println("******************************************************************")
         NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL)).buildKeystore()
-        exitProcess(0)
     }
 
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration {
         try {
             return cmdlineOptions.loadConfig()
-        } catch (e: ConfigException) {
-            println("Unable to load the configuration file: ${e.rootCause.message}")
-            exitProcess(2)
+        } catch (configException: ConfigException) {
+            println("Unable to load the configuration file: ${configException.rootCause.message}")
+            throw configException
         }
     }
 

@@ -5,7 +5,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.RPCUserService
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.getX509Certificate

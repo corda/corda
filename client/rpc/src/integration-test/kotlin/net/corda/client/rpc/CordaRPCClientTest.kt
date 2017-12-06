@@ -20,7 +20,7 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException

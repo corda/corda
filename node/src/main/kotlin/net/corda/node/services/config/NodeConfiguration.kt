@@ -6,9 +6,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.NodeSSLConfiguration
-import net.corda.nodeapi.config.parseAs
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.parseAs
 import java.net.URL
 import java.nio.file.Path
 import java.util.*

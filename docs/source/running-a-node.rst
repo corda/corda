@@ -22,6 +22,12 @@ Start the nodes with ``runnodes`` by running the following command from the root
 .. warn:: On macOS, do not click/change focus until all the node terminal windows have opened, or some processes may
    fail to start.
 
+If you receive an ``OutOfMemoryError`` exception when interacting with the nodes, you need to increase the amount of
+Java heap memory available to them, which you can do when running them individually. See
+:ref:`starting-an-individual-corda-node`.
+
+.. _starting-an-individual-corda-node:
+
 Starting an individual Corda node
 ---------------------------------
 Run the node by opening a terminal window in the node's folder and running:
@@ -30,9 +36,18 @@ Run the node by opening a terminal window in the node's folder and running:
 
    java -jar corda.jar
 
-.. warning:: By default, the node will look for a configuration file called ``node.conf`` and a CorDapps folder called
-   ``cordapps`` in the current working directory. You can override the configuration file and workspace paths on the
-   command line (e.g. ``./corda.jar --config-file=test.conf --base-directory=/opt/r3corda/nodes/test``).
+By default, the node will look for a configuration file called ``node.conf`` and a CorDapps folder called ``cordapps``
+in the current working directory. You can override the configuration file and workspace paths on the command line (e.g.
+``./corda.jar --config-file=test.conf --base-directory=/opt/corda/nodes/test``).
+
+You can increase the amount of Java heap memory available to the node using the ``-Xmx`` command line argument. For
+example, the following would run the node with a heap size of 2048MB:
+
+.. code-block:: shell
+
+   java -Xmx2048m -jar corda.jar
+
+You should do this if you receive an ``OutOfMemoryError`` exception when interacting with the node.
 
 Optionally run the node's webserver as well by opening a terminal window in the node's folder and running:
 

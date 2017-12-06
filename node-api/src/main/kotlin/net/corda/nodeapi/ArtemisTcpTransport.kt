@@ -3,7 +3,8 @@ package net.corda.nodeapi
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants

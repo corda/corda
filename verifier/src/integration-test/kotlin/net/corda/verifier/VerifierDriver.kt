@@ -20,8 +20,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
-import net.corda.nodeapi.config.NodeSSLConfiguration
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.driver.*
 import net.corda.testing.internal.ProcessUtilities
 import net.corda.testing.node.NotarySpec

@@ -28,6 +28,7 @@ import net.corda.testing.contracts.DummyState
 import net.corda.testing.contracts.VaultFiller.Companion.calculateRandomlySizedAmounts
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -104,7 +105,11 @@ class CashTests {
     fun setUp() = withTestSerialization {
         LogHelper.setLevel(NodeVaultService::class)
         megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset","com.r3.corda.enterprise.perftestcordapp.schemas"), MEGA_CORP.name, MEGA_CORP_KEY)
-        val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset","com.r3.corda.enterprise.perftestcordapp.schemas"), keys = listOf(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY))
+        val databaseAndServices = makeTestDatabaseAndMockServices(
+                listOf(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"),
+                CordaX500Name("Me", "London", "GB"))
         database = databaseAndServices.first
         miniCorpServices = databaseAndServices.second
 
