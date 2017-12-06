@@ -81,7 +81,7 @@ class DriverTests {
             // request access to some JMX metrics via Jolokia HTTP/JSON
             val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
             val listAsJson = api.getJson<JSONObject>("/jolokia/list/")
-            println(listAsJson)
+            // TODO: add assertions and other test cases
         }
     }
 
