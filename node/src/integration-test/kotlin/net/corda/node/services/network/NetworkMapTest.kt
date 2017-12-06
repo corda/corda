@@ -4,6 +4,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.seconds
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.ALICE_NAME
+import net.corda.testing.SerializationEnvironmentRule
 import net.corda.testing.BOB_NAME
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
@@ -12,10 +13,14 @@ import net.corda.testing.node.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.net.URL
 
 class NetworkMapTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule(true)
     private val cacheTimeout = 1.seconds
     private val portAllocation = PortAllocation.Incremental(10000)
 
@@ -36,7 +41,7 @@ class NetworkMapTest {
 
     @Test
     fun `nodes can see each other using the http network map`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
             val alice = startNode(providedName = ALICE_NAME)
             val bob = startNode(providedName = BOB_NAME)
             val notaryNode = defaultNotaryNode.get()
@@ -51,7 +56,7 @@ class NetworkMapTest {
 
     @Test
     fun `nodes process network map add updates correctly when adding new node to network map`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
             val alice = startNode(providedName = ALICE_NAME)
             val notaryNode = defaultNotaryNode.get()
             val aliceNode = alice.get()
@@ -72,7 +77,7 @@ class NetworkMapTest {
 
     @Test
     fun `nodes process network map remove updates correctly`() {
-        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone) {
+        internalDriver(portAllocation = portAllocation, compatibilityZone = compatibilityZone, initialiseSerialization = false) {
             val alice = startNode(providedName = ALICE_NAME)
             val bob = startNode(providedName = BOB_NAME)
             val notaryNode = defaultNotaryNode.get()
