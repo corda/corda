@@ -70,12 +70,11 @@ class NetworkMapServer(cacheTimeout: Duration,
                         register(service)
                         additionalServices.forEach { register(it) }
                     }
-                    val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }// Initialise at server start
+                    val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 } // Initialise at server start
                     addServlet(jerseyServlet, "/*")
                 })
             }
         }
-
     }
 
     fun start(): NetworkHostAndPort {

@@ -433,7 +433,7 @@ class X509UtilitiesTest {
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name.x500Name, BOB_PUBKEY)
-        val expected = X509CertificateFactory().delegate.generateCertPath(listOf(certificate.cert, rootCACert.cert))
+        val expected = X509CertificateFactory().generateCertPath(certificate.cert, rootCACert.cert)
         val serialized = expected.serialize(factory, context).bytes
         val actual: CertPath = serialized.deserialize(factory, context)
         assertEquals(expected, actual)

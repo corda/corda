@@ -15,8 +15,7 @@ import org.junit.Before
 import org.junit.Test
 import java.net.URL
 
-// TODO There is a unit test class with the same name. Rename this to something else.
-class NetworkMapClientTest {
+class NetworkMapTest {
     private val cacheTimeout = 1.seconds
     private val portAllocation = PortAllocation.Incremental(10000)
 
@@ -27,7 +26,7 @@ class NetworkMapClientTest {
     fun start() {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
-        compatibilityZone = CompatibilityZoneParams(URL("http://$address"), rootCert = null)
+        compatibilityZone = CompatibilityZoneParams(URL("http://$address"))
     }
 
     @After

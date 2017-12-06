@@ -79,7 +79,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         if (firstCertWithThisName != identity.certificate) {
             val certificates = identity.certPath.certificates
             val idx = certificates.lastIndexOf(firstCertWithThisName)
-            val firstPath = X509CertificateFactory().delegate.generateCertPath(certificates.slice(idx until certificates.size))
+            val firstPath = X509CertificateFactory().generateCertPath(certificates.slice(idx until certificates.size))
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 

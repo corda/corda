@@ -18,7 +18,6 @@ fun CordformDefinition.clean() {
  * Deploy the nodes specified in the given [CordformDefinition]. This will block until all the nodes and webservers
  * have terminated.
  */
-// TODO add notaries to cordform!
 fun CordformDefinition.deployNodes() {
     runNodes(waitForAllNodesToFinish = true) { }
 }

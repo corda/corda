@@ -383,7 +383,7 @@ fun <A> driver(
  * @property rootCert If specified then the node will register itself using [url] and expect the registration response
  * to be rooted at this cert.
  */
-data class CompatibilityZoneParams(val url: URL, val rootCert: X509Certificate?)
+data class CompatibilityZoneParams(val url: URL, val rootCert: X509Certificate? = null)
 
 fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,

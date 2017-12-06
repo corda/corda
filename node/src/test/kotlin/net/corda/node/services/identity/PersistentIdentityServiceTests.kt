@@ -257,7 +257,7 @@ class PersistentIdentityServiceTests {
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate.toX509CertHolder(), issuerKeyPair, x500Name, txKey.public)
-        val txCertPath = X509CertificateFactory().delegate.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
+        val txCertPath = X509CertificateFactory().generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }
 

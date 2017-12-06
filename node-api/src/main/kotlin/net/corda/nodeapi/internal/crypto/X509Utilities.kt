@@ -151,7 +151,7 @@ object X509Utilities {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
         params.isRevocationEnabled = false
-        val certPath = X509CertificateFactory().delegate.generateCertPath(certificates.toList())
+        val certPath = X509CertificateFactory().generateCertPath(*certificates)
         val pathValidator = CertPathValidator.getInstance("PKIX")
         pathValidator.validate(certPath, params)
     }
@@ -308,11 +308,15 @@ object X509Utilities {
  */
 class X509CertificateFactory {
     val delegate: CertificateFactory = CertificateFactory.getInstance("X.509")
+
     fun generateCertificate(input: InputStream): X509Certificate {
         return delegate.generateCertificate(input) as X509Certificate
     }
 
-    // TODO migrate calls to [CertificateFactory#generateCertPath] to call this instead.
+    fun generateCertPath(certificates: List<Certificate>): CertPath {
+        return delegate.generateCertPath(certificates)
+    }
+
     fun generateCertPath(vararg certificates: Certificate): CertPath {
         return delegate.generateCertPath(certificates.asList())
     }

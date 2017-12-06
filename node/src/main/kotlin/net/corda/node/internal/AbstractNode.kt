@@ -718,7 +718,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
         }
 
-        val certPath = X509CertificateFactory().delegate.generateCertPath(certificates)
+        val certPath = X509CertificateFactory().generateCertPath(certificates)
         return Pair(PartyAndCertificate(certPath), keyPair)
     }
 

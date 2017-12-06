@@ -35,8 +35,7 @@ import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
-// TODO Rename this to NodeRegistrationTest
-class NetworkRegistrationHelperDriverTest {
+class NodeRegistrationTest {
     private val portAllocation = PortAllocation.Incremental(13000)
     private val rootCertAndKeyPair = createSelfKeyAndSelfSignedCertificate()
     private val registrationHandler = RegistrationHandler(rootCertAndKeyPair)
@@ -48,7 +47,7 @@ class NetworkRegistrationHelperDriverTest {
     fun startServer() {
         server = NetworkMapServer(1.minutes, portAllocation.nextHostAndPort(), registrationHandler)
         val address = server.start()
-        compatibilityZone = CompatibilityZoneParams(URL("http://$address"), rootCertAndKeyPair.certificate.cert)
+        compatibilityZone = CompatibilityZoneParams(URL("http://$address"), rootCert = rootCertAndKeyPair.certificate.cert)
     }
 
     @After
