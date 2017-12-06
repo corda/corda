@@ -4,6 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.cert
 import net.corda.core.internal.div
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
@@ -11,7 +12,6 @@ import net.corda.testing.ALICE_NAME
 import net.corda.testing.driver.driver
 import org.junit.Test
 import java.nio.file.Path
-import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -21,11 +21,10 @@ class NodeKeystoreCheckTest {
     fun `node should throw exception if cert path doesn't chain to the trust root`() {
         driver(startNodesInProcess = true) {
             // This will fail because there are no keystore configured.
-            assertFailsWith(ExecutionException::class) {
-                startNode(customOverrides = mapOf("devMode" to false)).get()
+            assertFailsWith(IllegalArgumentException::class) {
+                startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
             }.apply {
-                assertTrue(cause is IllegalArgumentException)
-                assertTrue(cause?.message?.startsWith("Identity certificate not found. ") ?: false)
+                assertTrue(message?.startsWith("Identity certificate not found. ") ?: false)
             }
 
             // Create keystores
@@ -54,11 +53,10 @@ class NodeKeystoreCheckTest {
             keystore.setKeyEntry(X509Utilities.CORDA_CLIENT_CA, nodeCA.keyPair.private, config.keyStorePassword.toCharArray(), arrayOf(badNodeCACert.cert, badRoot.cert))
             keystore.save(config.nodeKeystore, config.keyStorePassword)
 
-            assertFailsWith(ExecutionException::class) {
-                startNode(providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false)).get()
+            assertFailsWith(IllegalArgumentException::class) {
+                startNode(providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false)).getOrThrow()
             }.apply {
-                assertTrue(cause is IllegalArgumentException)
-                assertEquals("Client CA certificate must chain to the trusted root.", cause?.message)
+                assertEquals("Client CA certificate must chain to the trusted root.", message)
             }
         }
     }
