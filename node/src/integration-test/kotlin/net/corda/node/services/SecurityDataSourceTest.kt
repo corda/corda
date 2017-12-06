@@ -118,20 +118,20 @@ class SecurityDataSourceTestEmbedded : SecurityDataSourceTest() {
 
 class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
 
-    private val db = MockUsersDB(
+    private val db = UsersDB(
             name = "SecurityDataSourceTestDB",
             users = listOf(UserAndRoles(username = "user",
                     password = "foo",
                     roles = listOf("default"))),
             roleAndPermissions = listOf(
-                    RoleAndPermission(
+                    RoleAndPermissions(
                             role = "default",
                             permissions = listOf(
                                     Permissions.startFlow<DummyFlow>(),
                                     Permissions.invokeRpc("vaultQueryBy"),
                                     Permissions.invokeRpc(CordaRPCOps::stateMachinesFeed),
                                     Permissions.invokeRpc("vaultQueryByCriteria"))),
-                    RoleAndPermission(
+                    RoleAndPermissions(
                             role = "admin",
                             permissions = listOf("ALL")
                     )))
@@ -171,7 +171,6 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
 
     @Test
     fun `Modify user permissions during RPC session` () {
-
         db.insert(UserAndRoles(
                 username = "user3",
                 password = "bar",
@@ -180,16 +179,34 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
 
         client.start("user3", "bar").use {
             val proxy = it.proxy
-
             assertFailsWith (
                     PermissionException::class,
                     "This user should not be authorized to call 'nodeInfo'") {
                 proxy.stateMachinesFeed()
             }
-
             db.addRoleToUser("user3", "default")
             proxy.stateMachinesFeed()
         }
+    }
+
+    @Test
+    fun `Revoke user permissions during RPC session` () {
+        db.insert(UserAndRoles(
+                username = "user4",
+                password = "test",
+                roles = listOf("default")))
+
+        client.start("user4", "test").use {
+            val proxy = it.proxy
+            proxy.stateMachinesFeed()
+            db.deleteUser("user4")
+            assertFailsWith (
+                    PermissionException::class,
+                    "This user should not be authorized to call 'nodeInfo'") {
+                proxy.stateMachinesFeed()
+            }
+        }
+
     }
 
     @After
@@ -198,13 +215,12 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
     }
 }
 
-private fun CordaRPCClient.start(username: String, password: String) =
-    this.start(username, password)
+private fun CordaRPCClient.start(username: String, password: String) = this.start(username, password)
 
 private data class UserAndRoles(val username: String, val password: String, val roles: List<String>)
-private data class RoleAndPermission(val role: String, val permissions: List<String>)
+private data class RoleAndPermissions(val role: String, val permissions: List<String>)
 
-private class MockUsersDB : AutoCloseable {
+private class UsersDB : AutoCloseable {
 
     val jdbcUrl: String
 
@@ -225,8 +241,8 @@ private class MockUsersDB : AutoCloseable {
         }
     }
 
-    fun insert(roleAndPermission: RoleAndPermission) {
-        val (role, permissions) = roleAndPermission
+    fun insert(roleAndPermissions: RoleAndPermissions) {
+        val (role, permissions) = roleAndPermissions
         session {
             for (permission in permissions) {
                 it.execute("INSERT INTO roles_permissions VALUES ('$role', '$permission')")
@@ -263,7 +279,7 @@ private class MockUsersDB : AutoCloseable {
 
     constructor(name: String,
                 users: List<UserAndRoles> = emptyList(),
-                roleAndPermissions: List<RoleAndPermission> = emptyList()) {
+                roleAndPermissions: List<RoleAndPermissions> = emptyList()) {
 
         jdbcUrl = "jdbc:h2:mem:${name};DB_CLOSE_DELAY=-1"
 
