@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import kotlin.Pair;
 import kotlin.Triple;
 import net.corda.core.contracts.*;
+import net.corda.core.crypto.CryptoUtils;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.IdentityService;
@@ -14,7 +15,6 @@ import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
-import net.corda.core.utilities.EncodingUtils;
 import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
@@ -449,30 +449,28 @@ public class VaultQueryJavaTests {
                 // DOCSTART VaultJavaQueryExample23
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
                 Field currency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
-                Field issuerParty = CashSchemaV1.PersistentCashState.class.getDeclaredField("issuerParty");
-
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Arrays.asList(issuerParty, currency), Sort.Direction.DESC));
-
+                Field issuerPartyHash = CashSchemaV1.PersistentCashState.class.getDeclaredField("issuerPartyHash");
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Arrays.asList(issuerPartyHash, currency), Sort.Direction.DESC));
                 Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, sumCriteria);
                 // DOCEND VaultJavaQueryExample23
 
                 assertThat(results.getOtherResults()).hasSize(12);
 
                 assertThat(results.getOtherResults().get(0)).isEqualTo(400L);
-                assertThat(results.getOtherResults().get(1)).isEqualTo(EncodingUtils.toBase58String(getBOC_PUBKEY()));
+                assertThat(results.getOtherResults().get(1)).isEqualTo(CryptoUtils.toStringShort(getBOC_PUBKEY()));
                 assertThat(results.getOtherResults().get(2)).isEqualTo("GBP");
                 assertThat(results.getOtherResults().get(3)).isEqualTo(300L);
-                assertThat(results.getOtherResults().get(4)).isEqualTo(EncodingUtils.toBase58String(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
+                assertThat(results.getOtherResults().get(4)).isEqualTo(CryptoUtils.toStringShort(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
                 assertThat(results.getOtherResults().get(5)).isEqualTo("GBP");
                 assertThat(results.getOtherResults().get(6)).isEqualTo(200L);
-                assertThat(results.getOtherResults().get(7)).isEqualTo(EncodingUtils.toBase58String(getBOC_PUBKEY()));
+                assertThat(results.getOtherResults().get(7)).isEqualTo(CryptoUtils.toStringShort(getBOC_PUBKEY()));
                 assertThat(results.getOtherResults().get(8)).isEqualTo("USD");
                 assertThat(results.getOtherResults().get(9)).isEqualTo(100L);
-                assertThat(results.getOtherResults().get(10)).isEqualTo(EncodingUtils.toBase58String(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
+                assertThat(results.getOtherResults().get(10)).isEqualTo(CryptoUtils.toStringShort(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
                 assertThat(results.getOtherResults().get(11)).isEqualTo("USD");
 
             } catch (NoSuchFieldException e) {
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
             return tx;
         });
