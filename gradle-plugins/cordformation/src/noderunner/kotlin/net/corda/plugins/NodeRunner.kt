@@ -80,13 +80,18 @@ private abstract class JavaCommand(
         init: MutableList<String>.() -> Unit, args: List<String>,
         jvmArgs: List<String>
 ) {
+    private val jolokiaJar by lazy {
+        File("$dir/drivers").listFiles { dir, filename ->
+            filename.matches("jolokia-jvm-.*-agent\\.jar$".toRegex())
+        }.first().absolutePath
+    }
+
     internal val command: List<String> = mutableListOf<String>().apply {
         add(getJavaPath())
         addAll(jvmArgs)
         add("-Dname=$nodeName")
         null != debugPort && add("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
-//        null != monitoringPort && add("-Dcapsule.jvm.args=-javaagent:jolokia-agent-jvm.jar=port=$monitoringPort")
-        null != monitoringPort && add("-Dcapsule.jvm.args=-javaagent:jolokia-jvm.jar=port=$monitoringPort")
+        null != monitoringPort && add("-Dcapsule.jvm.args=-javaagent:$jolokiaJar=port=$monitoringPort")
         add("-jar")
         add(jarName)
         init()

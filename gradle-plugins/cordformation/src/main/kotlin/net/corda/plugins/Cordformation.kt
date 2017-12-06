@@ -31,5 +31,7 @@ class Cordformation : Plugin<Project> {
 
     override fun apply(project: Project) {
         Utils.createCompileConfiguration("cordapp", project)
+        val jolokiaVersion = project.rootProject.ext<String>("jolokia_version")
+        project.dependencies.add("runtime", "org.jolokia:jolokia-jvm:$jolokiaVersion:agent")
     }
 }
