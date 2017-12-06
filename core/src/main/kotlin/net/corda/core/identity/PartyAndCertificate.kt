@@ -43,17 +43,22 @@ class PartyAndCertificate(val certPath: CertPath) {
         val result = validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
         // Apply Corda-specific validity rules to the chain
         var parentRole: Role? = IdentityRoleExtension.get(result.trustAnchor.trustedCert)?.role
-        certPath.certificates.reversed().forEach { certificate ->
-            val extension = IdentityRoleExtension.get(result.trustAnchor.trustedCert)
+        for (certIdx in (0 until certPath.certificates.size).reversed()) {
+            val certificate = certPath.certificates[certIdx]
+            val extension = IdentityRoleExtension.get(certificate)
             if (parentRole != null) {
-                if (parentRole != null && extension == null) {
+                if (extension == null) {
                     throw CertPathValidatorException("Child certificate whose issuer includes a Corda role, must also specify Corda role")
                 }
-                if (extension?.role?.parent != parentRole) {
-                    throw CertPathValidatorException("Expected certificate $certificate to have parent ${extension?.role?.parent} but was $parentRole")
+                if (extension.role.parent != parentRole) {
+                    throw CertPathValidatorException("Expected certificate $certificate to have parent ${extension.role.parent} but was $parentRole")
                 }
             }
             parentRole = extension?.role
+        }
+        if (parentRole != Role.WELL_KNOWN_IDENTITY
+                && parentRole != Role.CONFIDENTIAL_IDENTITY) {
+            throw CertPathValidatorException("Party certificate does not have a well known or confidential identity role. Found: $parentRole")
         }
         return result
     }

@@ -13,6 +13,8 @@ enum class Role(val parent: Role?) : ASN1Encodable {
      * A Doorman (intermediate CA of some kind).
      */
     INTERMEDIATE_CA(null),
+    /** Signing key for the network map */
+    NETWORK_MAP(null),
     /** The node level CA from which the TLS and well known identity certificates are issued. */
     NODE_CA(INTERMEDIATE_CA),
     /** The transport layer security certificate */
