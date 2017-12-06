@@ -21,6 +21,12 @@ class PartyAndCertificate(val certPath: CertPath) {
         val certs = certPath.certificates
         require(certs.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
         certificate = certs[0] as X509Certificate
+        val roleExtension = IdentityRoleExtension.get(certificate)
+        val role = roleExtension?.role
+        if (role!= Role.WELL_KNOWN_IDENTITY
+                && role != Role.CONFIDENTIAL_IDENTITY) {
+            throw CertPathValidatorException("Party certificate ${certificate.subjectDN} does not have a well known or confidential identity role. Found: $role")
+        }
     }
 
     @Transient
@@ -55,10 +61,6 @@ class PartyAndCertificate(val certPath: CertPath) {
                 }
             }
             parentRole = extension?.role
-        }
-        if (parentRole != Role.WELL_KNOWN_IDENTITY
-                && parentRole != Role.CONFIDENTIAL_IDENTITY) {
-            throw CertPathValidatorException("Party certificate does not have a well known or confidential identity role. Found: $parentRole")
         }
         return result
     }
