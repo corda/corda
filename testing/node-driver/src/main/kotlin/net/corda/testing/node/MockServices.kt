@@ -27,6 +27,7 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.identity.IdentityServiceInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
@@ -75,13 +76,13 @@ open class MockServices private constructor(
         /**
          * Makes database and mock services appropriate for unit tests.
          * @param keys a list of [KeyPair] instances to be used by [MockServices].
-         * @param identityService an instance of [IdentityService], see [makeTestIdentityService].
+         * @param identityService an instance of [IdentityServiceInternal], see [makeTestIdentityService].
          * @param initialIdentityName the name of the first (typically sole) identity the services will represent.
          * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
         @JvmStatic
         fun makeTestDatabaseAndMockServices(keys: List<KeyPair>,
-                                            identityService: IdentityService,
+                                            identityService: IdentityServiceInternal,
                                             cordappPackages: List<String> = emptyList(),
                                             initialIdentityName: CordaX500Name): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
@@ -120,7 +121,7 @@ open class MockServices private constructor(
     }
 
     final override val attachments = MockAttachmentStorage()
-    override val identityService: IdentityService = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY))
+    override val identityService: IdentityServiceInternal = makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY))
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *keys) }
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
@@ -152,7 +153,7 @@ open class MockServices private constructor(
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
 }
 
-class MockKeyManagementService(val identityService: IdentityService,
+class MockKeyManagementService(val identityService: IdentityServiceInternal,
                                vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
 
