@@ -346,6 +346,15 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             role = Role.INTERMEDIATE_CA
     ),
 
+    NETWORK_MAP(
+            KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = false,
+            role = Role.NETWORK_MAP
+    ),
+
     NODE_CA(
             KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign),
             KeyPurposeId.id_kp_serverAuth,
