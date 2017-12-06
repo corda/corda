@@ -1,7 +1,8 @@
 package com.r3.corda.jmeter
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.User
+import net.corda.node.services.Permissions
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.NotarySpec
 import java.io.BufferedReader
@@ -12,7 +13,7 @@ class StartLocalPerfCorDapp {
         @JvmStatic
         fun main(args: Array<String>) {
             // Typically the RPC port of Bank A is 10004.
-            val demoUser = User("perf", "perf", setOf(net.corda.node.services.Permissions.Companion.all()))
+            val demoUser = User("perf", "perf", setOf(Permissions.all()))
             net.corda.testing.driver.driver(startNodesInProcess = false,
                     waitForAllNodesToFinish = true,
                     notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, validating = false)),
