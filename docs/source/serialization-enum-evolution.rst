@@ -14,10 +14,10 @@ versions to interoperate with serialised versions of an enumeration of differing
 
 This is achieved through the use of certain annotations. Whenever a change is made, an annotation
 capturing the change must be added (whilst it can be omitted any interoperability will be lost). Corda
-supports two modifications to enumerated types, adding new constants, and renaming exiting constants
+supports two modifications to enumerated types, adding new constants, and renaming existing constants
 
 .. warning:: Once added evolution annotations MUST NEVER be removed from a class, doing so will break
-    both forward and backward compatability for this version of the class and any version moving
+    both forward and backward compatibility for this version of the class and any version moving
     forward
 
 The Purpose of Annotating Changes
@@ -38,7 +38,7 @@ the new) one a deserializing system should treat any instances of the new one as
 
 .. note:: Ultimately, this may mean some design compromises are required. If an enumeration is
     planned as being often extend and no sensible defaults will exist then including a constant
-    in the origional iteration of the class that all new additions can default to may make sense
+    in the original iteration of the class that all new additions can default to may make sense
 
 Evolution Transmission
 ----------------------
@@ -61,15 +61,15 @@ If, however, the finger prints differ then we know that the class we are attempt
 than the version we will be deserializing it into. What we cannot know is which version is newer, at least
 not by examining the finger print
 
-.. note:: Corda's AMQP fingerprnting for enumerated types include the type name amd the enum constants
+.. note:: Corda's AMQP fingerprinting for enumerated types include the type name and the enum constants
 
 Newer vs older is important as the deserializer needs to use the more recent set of transforms to ensure it
 can transform the serialised object into the form as it exists in the deserializer. Newness is determined simply
 by length of the list of all transforms. This is sufficient as annotations should only ever be added
 
 .. warning:: technically there is nothing to prevent annotations being removed in newer versions. However,
-    this will break backward comaptibility and should thus be avoided unless a rigerous upgrade procedure
-    is in place to cope with all deployed isntances of the class and all serialised versions existing
+    this will break backward compatibility and should thus be avoided unless a rigorous upgrade procedure
+    is in place to cope with all deployed instances of the class and all serialised versions existing
     within vaults.
 
 Thus, on deserialization, there will be two options to chose from in terms of transformation rules
@@ -77,10 +77,10 @@ Thus, on deserialization, there will be two options to chose from in terms of tr
     #.  Determined from the local class and the annotations applied to it (the local copy)
     #.  Parsed from the AMQP header (the remote copy)
 
-Which set is used will simply be the larger
+Which set is used will simply be the largest.
 
-Renaming Consants
------------------
+Renaming Constants
+------------------
 
 Renamed constants are marked as such with the ``@CordaSerializationTransformRenames`` meta annotation that
 wraps a list of ``@CordaSerializationTransformRename`` annotations. Each rename requiring an instance in the
@@ -109,7 +109,7 @@ If we were to rename constant C to D this would be done as follows:
             A, B, D
         }
 
-.. note:: The paramaers to the ``CordaSerializationTransformRename`` annotation are as defined 'to' and 'from,
+.. note:: The parameters to the ``CordaSerializationTransformRename`` annotation are as defined 'to' and 'from,
     so in the above example it can be read as constant D (given that is how the class now exists) was renamed
     from C
 
@@ -179,12 +179,12 @@ If we were to add the constant D
             A, B, C, D
         }
 
-.. note:: The paramaers to the ``CordaSerializationTransformEnumDefault`` annotation are as defined 'new' and 'old',
-    so in the above example it can be read as constant D should be treated as constant C if you, the deserialiser,
+.. note:: The parameters to the ``CordaSerializationTransformEnumDefault`` annotation are as defined 'new' and 'old',
+    so in the above example it can be read as constant D should be treated as constant C if you, the deserializer,
     doesn't know anything about constant D
 
-.. note:: Just as with the CordaSerializationTransformRename transformation if a single transform is being applies
-    the meta transform may be ommited.
+.. note:: Just as with the ``CordaSerializationTransformRename`` transformation if a single transform is being applied
+    then the meta transform may be omitted.
 
     .. container:: codeset
 
@@ -210,7 +210,7 @@ since inception. In this example, having added D (above) we add the constant E a
             A, B, C, D, E
         }
 
-.. note:: Alternativly, we could have decided both new constants should have been defaulted to the firs
+.. note:: Alternatively, we could have decided both new constants should have been defaulted to the first
     element
 
     .. sourcecode:: kotlin
@@ -230,7 +230,7 @@ nodes could have three distinct views on what the enum Example looks like (annot
 
    .. sourcecode:: kotlin
 
-        // The original version of the class. Will deserialise
+        // The original version of the class. Will deserialize: -
         //   A -> A  
         //   B -> B
         //   C -> C  
@@ -242,7 +242,7 @@ nodes could have three distinct views on what the enum Example looks like (annot
 
    .. sourcecode:: kotlin
 
-        // The class as it existed after the first addition. Will deserialise
+        // The class as it existed after the first addition. Will deserialize:
         //   A -> A  
         //   B -> B
         //   C -> C  
@@ -254,7 +254,7 @@ nodes could have three distinct views on what the enum Example looks like (annot
 
    .. sourcecode:: kotlin
 
-        // The current state of the class. All values will deserialise as themselves
+        // The current state of the class. All values will deserialize as themselves
         enum class Example {
             A, B, C, D, E
         }
