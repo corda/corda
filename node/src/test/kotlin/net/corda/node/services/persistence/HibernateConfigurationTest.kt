@@ -867,7 +867,7 @@ class HibernateConfigurationTest {
     }
 
     /**
-     *  Test invoking SQL query using JDBC connection (session)
+     *  Test invoking SQL query using DB connection (session)
      */
     @Test
     fun `test calling an arbitrary JDBC native query`() {

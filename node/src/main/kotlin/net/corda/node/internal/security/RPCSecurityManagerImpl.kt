@@ -8,8 +8,8 @@ import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.context.AuthServiceId
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.SecurityDataSourceConfig
-import net.corda.node.services.config.SecurityDataSourceType
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.AuthDataSourceType
 import net.corda.nodeapi.User
 import org.apache.shiro.authc.*
 import org.apache.shiro.authc.credential.PasswordMatcher
@@ -29,18 +29,19 @@ import org.apache.shiro.subject.Subject
 import javax.security.auth.login.FailedLoginException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+private typealias AuthServiceConfig = SecurityConfiguration.AuthService
 
 /**
  * Default implementation of [RPCSecurityManager] adapting
  * [org.apache.shiro.mgt.SecurityManager]
  */
-class RPCSecurityManagerImpl(sourceConfig: SecurityDataSourceConfig) : RPCSecurityManager {
+class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
 
-    override val id = sourceConfig.id
+    override val id = config.id
     private val manager: DefaultSecurityManager
 
     init {
-        manager = buildImpl(sourceConfig)
+        manager = buildImpl(config)
     }
 
     override fun close() {
@@ -91,25 +92,28 @@ class RPCSecurityManagerImpl(sourceConfig: SecurityDataSourceConfig) : RPCSecuri
          */
         fun fromUserList(id: AuthServiceId, users: List<User>) =
                 RPCSecurityManagerImpl(
-                        SecurityDataSourceConfig(
-                                type = SecurityDataSourceType.EMBEDDED,
-                                passwordEncryption = PasswordEncryption.NONE,
-                                id = id,
-                                users = users))
+                    AuthServiceConfig.fromUsers(users).copy(id = id))
 
         // Build internal Shiro securityManager instance
-        private fun buildImpl(config: SecurityDataSourceConfig): DefaultSecurityManager {
-            val realm = when (config.type) {
-                SecurityDataSourceType.JDBC -> {
-                    logger.info("Constructing JDBC-backed security data source: ${config.dataSourceProperties}")
-                    NodeJdbcRealm(config)
+        private fun buildImpl(config: AuthServiceConfig): DefaultSecurityManager {
+            val realm = when (config.dataSource.type) {
+                AuthDataSourceType.DB -> {
+                    logger.info("Constructing DB-backed security data source: ${config.dataSource.connection}")
+                    NodeJdbcRealm(config.dataSource)
                 }
-                SecurityDataSourceType.EMBEDDED -> {
-                    logger.info("Constructing realm from list of users in config ${config.users!!}")
-                    InMemoryRealm(config.users, config.id.value, config.passwordEncryption)
+                AuthDataSourceType.INMEMORY -> {
+                    logger.info("Constructing realm from list of users in config ${config.dataSource.users!!}")
+                    InMemoryRealm(config.dataSource.users, config.id.value, config.dataSource.passwordEncryption)
                 }
             }
-            return DefaultSecurityManager(realm)
+            return DefaultSecurityManager(realm).also {
+                // Setup optional cache layer if configured
+                it.cacheManager = config.options?.cache?.let {
+                    GuavaCacheManager(
+                            timeToLiveSeconds = it.expiryTimeInSecs,
+                            maxSize = it.capacity)
+                }
+            }
         }
     }
 }
@@ -201,7 +205,7 @@ private class ShiroAuthorizingSubject(private val impl: Subject) : AuthorizingSu
 
 private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {
     PasswordEncryption.NONE -> SimpleCredentialsMatcher()
-    PasswordEncryption.SHA256 -> PasswordMatcher()
+    PasswordEncryption.SHIRO_CRYPT_1 -> PasswordMatcher()
 }
 
 private class InMemoryRealm(users: List<User>,
@@ -244,12 +248,12 @@ private class InMemoryRealm(users: List<User>,
             authorizationInfoByUser[principals.primaryPrincipal as String]
 }
 
-private class NodeJdbcRealm(config: SecurityDataSourceConfig) : JdbcRealm() {
+private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource) : JdbcRealm() {
 
     init {
         credentialsMatcher = buildCredentialMatcher(config.passwordEncryption)
         setPermissionsLookupEnabled(true)
-        dataSource = HikariDataSource(HikariConfig(config.dataSourceProperties!!))
+        dataSource = HikariDataSource(HikariConfig(config.connection!!))
         permissionResolver = RPCPermissionResolver
     }
 }
@@ -303,11 +307,14 @@ private class GuavaCacheManager(val maxSize: Long,
         return result as ShiroCache<K, V>
     }
 
-    private fun <K, V> buildCache(name: String) = CacheBuilder.newBuilder()
-            .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
-            .maximumSize(maxSize)
-            .build<K, V>()
-            .toShiroCache(name)
+    private fun <K, V> buildCache(name: String) : ShiroCache<K, V> {
+        logger.info("Constructing cache '$name' with maximumSize=$maxSize, TTL=${timeToLiveSeconds}s")
+        return CacheBuilder.newBuilder()
+                .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
+                .maximumSize(maxSize)
+                .build<K, V>()
+                .toShiroCache(name)
+    }
 
     companion object {
         private val logger = loggerFor<GuavaCacheManager>()

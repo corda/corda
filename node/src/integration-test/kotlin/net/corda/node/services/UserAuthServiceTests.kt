@@ -12,8 +12,8 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.SecurityDataSourceConfig
-import net.corda.node.services.config.SecurityDataSourceType
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.AuthDataSourceType
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.toConfig
 import net.corda.testing.internal.NodeBasedTest
@@ -27,7 +27,7 @@ import java.sql.Statement
 import java.util.*
 import kotlin.test.assertFailsWith
 
-abstract class SecurityDataSourceTest : NodeBasedTest() {
+abstract class UserAuthServiceTest : NodeBasedTest() {
 
     protected lateinit var node: StartedNode<Node>
     protected lateinit var client: CordaRPCClient
@@ -93,7 +93,7 @@ abstract class SecurityDataSourceTest : NodeBasedTest() {
     }
 }
 
-class SecurityDataSourceTestEmbedded : SecurityDataSourceTest() {
+class UserAuthServiceEmbedded : UserAuthServiceTest() {
 
     private val rpcUser = User("user", "foo", permissions = setOf(
             Permissions.startFlow<DummyFlow>(),
@@ -103,19 +103,16 @@ class SecurityDataSourceTestEmbedded : SecurityDataSourceTest() {
 
     @Before
     fun setup() {
-        val dataSourceConfig = SecurityDataSourceConfig(
-                type = SecurityDataSourceType.EMBEDDED,
-                passwordEncryption = PasswordEncryption.NONE,
-                users = listOf(rpcUser))
-                .toConfig().root().unwrapped()
+        val securityConfig = SecurityConfiguration(
+               authService = SecurityConfiguration.AuthService.fromUsers(listOf(rpcUser)))
 
-        val configOverrides = mapOf("securityDataSource" to dataSourceConfig)
+        val configOverrides = mapOf("security" to securityConfig.toConfig().root().unwrapped())
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = configOverrides)
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }
 }
 
-class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
+class UserAuthServiceTestsJDBC : UserAuthServiceTest() {
 
     private val db = UsersDB(
             name = "SecurityDataSourceTestDB",
@@ -137,17 +134,22 @@ class SecurityDataSourceTestJDBC : SecurityDataSourceTest() {
 
     @Before
     fun setup() {
-        val dataSourceConfig = SecurityDataSourceConfig(
-                type = SecurityDataSourceType.JDBC,
-                passwordEncryption = PasswordEncryption.NONE,
-                dataSourceProperties = Properties().apply {
-                    setProperty("jdbcUrl", db.jdbcUrl)
-                    setProperty("username", "")
-                    setProperty("password", "")
-                    setProperty("driverClassName", "org.h2.Driver")
-                }).toConfig().root().unwrapped()
+        val securityConfig = SecurityConfiguration(
+                authService = SecurityConfiguration.AuthService(
+                        dataSource = SecurityConfiguration.AuthService.DataSource(
+                                type = AuthDataSourceType.DB,
+                                passwordEncryption = PasswordEncryption.NONE,
+                                connection = Properties().apply {
+                                    setProperty("jdbcUrl", db.jdbcUrl)
+                                    setProperty("username", "")
+                                    setProperty("password", "")
+                                    setProperty("driverClassName", "org.h2.Driver")
+                                }
+                        )
+                )
+        )
 
-        val configOverrides = mapOf("securityDataSource" to dataSourceConfig)
+        val configOverrides = mapOf("security" to securityConfig.toConfig().root().unwrapped())
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = configOverrides)
         client = CordaRPCClient(node.internals.configuration.rpcAddress!!)
     }

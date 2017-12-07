@@ -132,16 +132,12 @@ open class Node(configuration: NodeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     override fun makeMessagingService(database: CordaPersistence, info: NodeInfo): MessagingService {
-        // Construct security manager reading users data either from the securityDataSource if specified or
-        // from rpcUsers list if the former is missing from config.
-        val securityDataSource = configuration.securityDataSource ?:
-                SecurityDataSourceConfig(
-                        type = SecurityDataSourceType.EMBEDDED,
-                        id = AuthServiceId("NODE_CONFIG"),
-                        users = configuration.rpcUsers,
-                        passwordEncryption = PasswordEncryption.NONE)
+        // Construct security manager reading users data either from the 'security' config section
+        // if present or from rpcUsers list if the former is missing from config.
+        val securityManagerConfig = configuration.security?.authService ?:
+            SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
-        securityManager = RPCSecurityManagerImpl(securityDataSource)
+        securityManager = RPCSecurityManagerImpl(securityManagerConfig)
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val advertisedAddress = info.addresses.single()
@@ -229,10 +225,10 @@ open class Node(configuration: NodeConfiguration,
     }
 
     /**
-     * If the node is persisting to an embedded H2 database, then expose this via TCP with a JDBC URL of the form:
+     * If the node is persisting to an embedded H2 database, then expose this via TCP with a DB URL of the form:
      * jdbc:h2:tcp://<host>:<port>/node
      * with username and password as per the DataSource connection details.  The key element to enabling this support is to
-     * ensure that you specify a JDBC connection URL of the form jdbc:h2:file: in the node config and that you include
+     * ensure that you specify a DB connection URL of the form jdbc:h2:file: in the node config and that you include
      * the H2 option AUTO_SERVER_PORT set to the port you desire to use (0 will give a dynamically allocated port number)
      * but exclude the H2 option AUTO_SERVER=TRUE.
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
