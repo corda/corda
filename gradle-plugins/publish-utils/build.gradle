@@ -1,6 +1,7 @@
 apply plugin: 'groovy'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
+apply plugin: 'com.jfrog.artifactory'
 
 // Used for bootstrapping project
 buildscript {
