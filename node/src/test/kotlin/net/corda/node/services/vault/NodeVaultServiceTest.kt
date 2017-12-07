@@ -531,6 +531,7 @@ class NodeVaultServiceTest {
 
         val identity = services.myInfo.singleIdentityAndCert()
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
+        // We use a random key pair to pay to here, as we don't actually use the cash once sent
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
 
