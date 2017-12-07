@@ -108,8 +108,8 @@ class InMemoryIdentityServiceTests {
      */
     @Test
     fun `get anonymous identity by key`() {
-        val (alice, aliceTxIdentity) = createParty(ALICE.name, DEV_CA)
-        val (_, bobTxIdentity) = createParty(ALICE.name, DEV_CA)
+        val (alice, aliceTxIdentity) = createConfidentialIdentity(ALICE.name, DEV_CA)
+        val (_, bobTxIdentity) = createConfidentialIdentity(ALICE.name, DEV_CA)
 
         // Now we have identities, construct the service and let it know about both
         val service = createService(alice)
@@ -131,8 +131,8 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `assert ownership`() {
         withTestSerialization {
-            val (alice, anonymousAlice) = createParty(ALICE.name, DEV_CA)
-            val (bob, anonymousBob) = createParty(BOB.name, DEV_CA)
+            val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name, DEV_CA)
+            val (bob, anonymousBob) = createConfidentialIdentity(BOB.name, DEV_CA)
 
             // Now we have identities, construct the service and let it know about both
             val service = createService(alice, bob)
@@ -157,11 +157,11 @@ class InMemoryIdentityServiceTests {
         }
     }
 
-    private fun createParty(x500Name: CordaX500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, PartyAndCertificate> {
+    private fun createConfidentialIdentity(x500Name: CordaX500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, PartyAndCertificate> {
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
-        val txCert = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, issuer.certificate.toX509CertHolder(), issuerKeyPair, x500Name, txKey.public)
+        val txCert = X509Utilities.createCertificate(CertificateType.CONFIDENTIAL_IDENTITY, issuer.certificate.toX509CertHolder(), issuerKeyPair, x500Name, txKey.public)
         val txCertPath = X509CertificateFactory().delegate.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
     }

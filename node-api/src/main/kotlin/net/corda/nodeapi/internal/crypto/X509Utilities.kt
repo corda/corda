@@ -355,6 +355,14 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = true
+    ),
+
+    CONFIDENTIAL_IDENTITY(
+            KeyUsage(KeyUsage.digitalSignature),
+            KeyPurposeId.id_kp_serverAuth,
+            KeyPurposeId.id_kp_clientAuth,
+            KeyPurposeId.anyExtendedKeyUsage,
+            isCA = false
     )
 }
 
