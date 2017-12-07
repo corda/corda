@@ -10,8 +10,10 @@ import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
+import net.corda.testing.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("NotaryTest")
@@ -21,7 +23,7 @@ data class NotariseCommand(val issueTx: SignedTransaction, val moveTx: SignedTra
 val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
         "Notarising dummy transactions",
         generate = { _, _ ->
-            val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
+            val issuerServices = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name, DUMMY_CASH_ISSUER_KEY)
             val generateTx = Generator.pickOne(simpleNodes).flatMap { node ->
                 Generator.int().map {
                     val issueBuilder = DummyContract.generateInitial(it, notary.info.legalIdentities[1], DUMMY_CASH_ISSUER) // TODO notary choice

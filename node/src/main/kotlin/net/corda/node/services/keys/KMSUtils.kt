@@ -4,8 +4,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
-import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -28,7 +28,7 @@ import java.time.Duration
  * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
  * @return X.509 certificate and path to the trust root.
  */
-fun freshCertificate(identityService: IdentityService,
+fun freshCertificate(identityService: IdentityServiceInternal,
                      subjectPublicKey: PublicKey,
                      issuer: PartyAndCertificate,
                      issuerSigner: ContentSigner,
@@ -39,7 +39,7 @@ fun freshCertificate(identityService: IdentityService,
             issuerSigner, issuer.name, subjectPublicKey, window)
     val ourCertPath = X509CertificateFactory().delegate.generateCertPath(listOf(ourCertificate.cert) + issuer.certPath.certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
-    identityService.verifyAndRegisterIdentity(anonymisedIdentity)
+    identityService.justVerifyAndRegisterIdentity(anonymisedIdentity)
     return anonymisedIdentity
 }
 

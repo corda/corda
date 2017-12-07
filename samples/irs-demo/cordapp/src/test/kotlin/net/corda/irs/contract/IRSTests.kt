@@ -1,5 +1,7 @@
 package net.corda.irs.contract
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.transactions.SignedTransaction
@@ -18,6 +20,7 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.PaymentRule
 import net.corda.finance.contracts.Tenor
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Rule
@@ -212,10 +215,9 @@ class IRSTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name, MEGA_CORP_KEY)
-    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), MINI_CORP.name, MINI_CORP_KEY)
-    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-
+    private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
+    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), MINI_CORP.name, MINI_CORP_KEY)
+    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
     @Test
     fun ok() {
         trade().verifies()
@@ -311,7 +313,11 @@ class IRSTests {
      */
     @Test
     fun generateIRSandFixSome() {
-        val services = MockServices(listOf("net.corda.irs.contract"))
+        val services = MockServices(listOf("net.corda.irs.contract"), rigorousMock<IdentityServiceInternal>().also {
+            listOf(MEGA_CORP, MINI_CORP).forEach { party ->
+                doReturn(party).whenever(it).partyFromKey(party.owningKey)
+            }
+        }, MEGA_CORP.name)
         var previousTXN = generateIRSTxn(1)
         previousTXN.toLedgerTransaction(services).verify()
         services.recordTransactions(previousTXN)

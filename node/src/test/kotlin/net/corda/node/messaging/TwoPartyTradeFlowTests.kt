@@ -1,6 +1,8 @@
 package net.corda.node.messaging
 
 import co.paralleluniverse.fibers.Suspendable
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
@@ -34,6 +36,7 @@ import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -90,13 +93,15 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         // we run in the unit test thread exclusively to speed things up, ensure deterministic results and
         // allow interruption half way through.
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
-        ledger(MockServices(cordappPackages)) {
+        val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
+        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
             val bankNode = mockNet.createPartyNode(BOC_NAME)
             val alice = aliceNode.info.singleIdentity()
             val bank = bankNode.info.singleIdentity()
+            doReturn(null).whenever(ledgerIdentityService).partyFromKey(bank.owningKey)
             val bob = bobNode.info.singleIdentity()
             val notary = mockNet.defaultNotaryIdentity
             val cashIssuer = bank.ref(1)
@@ -140,13 +145,15 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     @Test(expected = InsufficientBalanceException::class)
     fun `trade cash for commercial paper fails using soft locking`() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = cordappPackages)
-        ledger(MockServices(cordappPackages)) {
+        val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
+        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
             val bankNode = mockNet.createPartyNode(BOC_NAME)
             val alice = aliceNode.info.singleIdentity()
             val bank = bankNode.info.singleIdentity()
+            doReturn(null).whenever(ledgerIdentityService).partyFromKey(bank.owningKey)
             val bob = bobNode.info.singleIdentity()
             val issuer = bank.ref(1)
             val notary = mockNet.defaultNotaryIdentity
@@ -196,7 +203,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     @Test
     fun `shutdown and restore`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
-        ledger(MockServices(cordappPackages)) {
+        val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
+        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             var bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -210,6 +218,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val notary = mockNet.defaultNotaryIdentity
             val alice = aliceNode.info.singleIdentity()
             val bank = bankNode.info.singleIdentity()
+            doReturn(null).whenever(ledgerIdentityService).partyFromKey(bank.owningKey)
             val bob = bobNode.info.singleIdentity()
             val issuer = bank.ref(1, 2, 3)
 
@@ -491,16 +500,18 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     @Test
     fun `dependency with error on buyer side`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
-        ledger(MockServices(cordappPackages)) {
-            runWithError(true, false, "at least one cash input")
+        val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
+        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
+            runWithError(ledgerIdentityService, true, false, "at least one cash input")
         }
     }
 
     @Test
     fun `dependency with error on seller side`() {
         mockNet = MockNetwork(cordappPackages = cordappPackages)
-        ledger(MockServices(cordappPackages)) {
-            runWithError(false, true, "Issuances have a time-window")
+        val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
+        ledger(MockServices(cordappPackages, ledgerIdentityService, MEGA_CORP.name)) {
+            runWithError(ledgerIdentityService, false, true, "Issuances have a time-window")
         }
     }
 
@@ -562,6 +573,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     data class TestTx(val notaryIdentity: Party, val price: Amount<Currency>, val anonymous: Boolean)
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
+            ledgerIdentityService: IdentityServiceInternal,
             bobError: Boolean,
             aliceError: Boolean,
             expectedMessageSubstring: String
@@ -575,6 +587,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val alice = aliceNode.info.singleIdentity()
         val bob = bobNode.info.singleIdentity()
         val bank = bankNode.info.singleIdentity()
+        doReturn(null).whenever(ledgerIdentityService).partyFromKey(bank.owningKey)
         val issuer = bank.ref(1, 2, 3)
 
         val bobsBadCash = bobNode.database.transaction {
