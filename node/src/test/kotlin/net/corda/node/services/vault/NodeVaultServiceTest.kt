@@ -4,16 +4,11 @@ import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.*
 import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.StatesNotAvailableException
@@ -31,9 +26,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.finance.contracts.asset.DUMMY_CASH_ISSUER_NAME
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.utils.sumCash
@@ -51,6 +43,7 @@ import org.junit.Rule
 import org.junit.Test
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -59,8 +52,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
-    companion object {
-        private val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+    private companion object {
+        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val DUMMY_CASH_ISSUER_NAME = CordaX500Name("Snake Oil Issuer", "London", "GB")
+        val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
+        val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY.public))
+        val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
     }
 
     @Rule
