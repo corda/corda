@@ -5,6 +5,8 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.Tenor
 import net.corda.testing.*
+import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -12,7 +14,7 @@ import java.time.Instant
 import java.time.LocalDate
 
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-    net.corda.testing.transaction(cordappPackages = listOf("net.corda.finance.contracts.universal"), dsl = script)
+    MockServices(listOf("net.corda.finance.contracts.universal"), makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name).transaction(DUMMY_NOTARY, script)
 }
 
 class Cap {

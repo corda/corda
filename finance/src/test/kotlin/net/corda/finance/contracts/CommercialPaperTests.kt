@@ -92,11 +92,11 @@ class CommercialPaperTestsGeneric {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     val issuer = MEGA_CORP.ref(123)
-
+    private val ledgerServices = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)
     @Test
     fun `trade lifecycle test`() {
         val someProfits = 1200.DOLLARS `issued by` issuer
-        ledger {
+        ledgerServices.ledger {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "alice's $900", 900.DOLLARS.CASH issuedBy issuer ownedBy ALICE)
@@ -160,6 +160,10 @@ class CommercialPaperTestsGeneric {
                 this.verifies()
             }
         }
+    }
+
+    private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
+        ledgerServices.transaction(DUMMY_NOTARY, script)
     }
 
     @Test
