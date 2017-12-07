@@ -102,7 +102,7 @@ class DriverDSLImpl(
     }
 
     private val jolokiaJarPath: String by lazy {
-        resolveJar("jolokia-jvm-.*-agent\\.jar$")
+        resolveJar(".*jolokia-jvm-.*-agent\\.jar$")
     }
 
     private fun resolveJar(jarNamePattern: String): String {

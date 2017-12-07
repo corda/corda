@@ -11,14 +11,13 @@ import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.addressMustBeBound
 import net.corda.testing.internal.addressMustNotBeBound
-import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.json.simple.JSONObject
 import org.junit.Test
-import java.lang.Thread.sleep
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
