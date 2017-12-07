@@ -2,19 +2,14 @@ package net.corda.flowhook
 
 import co.paralleluniverse.fibers.Fiber
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import java.sql.Connection
 import java.time.Instant
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.thread
-
-/**
- * This is a debugging helper class that dumps the map of Fiber->DB connection, or more precisely, the
- * Fiber->(DB tx -> DB connection) map, as there may be multiple transactions per fiber.
- */
 
 data class MonitorEvent(val type: MonitorEventType, val keys: List<Any>, val extra: Any? = null)
 
@@ -34,47 +29,62 @@ enum class MonitorEventType {
     FiberResumed,
     FiberEnded,
 
-    ExecuteTransition
+    SmExecuteTransition,
+    SmScheduleEvent,
+
+    NettyThreadLocalMapCreated,
+
+    SetThreadLocals,
+    SetInheritableThreadLocals,
+    GetThreadLocals,
+    GetInheritableThreadLocals
 }
 
+/**
+ * This is a monitor processing events coming from [FlowHookContainer]. It just appends them to a log that allows
+ * analysis of the events.
+ *
+ * Suggested way of debugging using this class and IntelliJ:
+ * 1. Hook the function calls you're interested in using [FlowHookContainer].
+ * 2. Add an associated event type in [MonitorEventType].
+ * 3. Call [newEvent] in the hook. Provide some keys to allow analysis. Example keys are the current fiber ID or a
+ *   specific DB transaction. You can also provide additional info about the event using [MonitorEvent.extra].
+ * 4. Run your test and break on [newEvent] or [inspect].
+ * 5. Inspect the [correlator] in the debugger. E.g. you can add a watch for [MonitorEventCorrelator.getByType].
+ *   You can search for specific objects by using filter expressions in the debugger.
+ */
 object FiberMonitor {
-    private val log = contextLogger()
-    private val jobQueue = LinkedBlockingQueue<Job>()
+    private val log = loggerFor<FiberMonitor>()
     private val started = AtomicBoolean(false)
-    private var trackerThread: Thread? = null
+    private var executor: ScheduledExecutorService? = null
 
     val correlator = MonitorEventCorrelator()
 
-    sealed class Job {
-        data class NewEvent(val event: FullMonitorEvent) : Job()
-        object Finish : Job()
-    }
-
     fun newEvent(event: MonitorEvent) {
-        if (trackerThread != null) {
-            jobQueue.add(Job.NewEvent(FullMonitorEvent(Instant.now(), Exception().stackTrace.toList(), event)))
+        if (executor != null) {
+            val fullEvent = FullMonitorEvent(Instant.now(), Exception().stackTrace.toList(), event)
+            executor!!.execute {
+                processEvent(fullEvent)
+            }
         }
     }
 
     fun start() {
         if (started.compareAndSet(false, true)) {
-            require(trackerThread == null)
-            trackerThread = thread(name = "Fiber monitor", isDaemon = true) {
-                while (true) {
-                    val job = jobQueue.poll(1, TimeUnit.SECONDS)
-                    when (job) {
-                        is Job.NewEvent -> processEvent(job)
-                        Job.Finish -> return@thread
-                    }
-                }
-            }
+            require(executor == null)
+            executor = Executors.newSingleThreadScheduledExecutor()
+            executor!!.scheduleAtFixedRate(this::inspect, 100, 100, TimeUnit.MILLISECONDS)
         }
     }
 
-    private fun processEvent(job: Job.NewEvent) {
-        correlator.addEvent(job.event)
-        checkLeakedTransactions(job.event.event)
-        checkLeakedConnections(job.event.event)
+    // Break on this function or [newEvent].
+    private fun inspect() {
+    }
+
+    private fun processEvent(event: FullMonitorEvent) {
+        correlator.addEvent(event)
+        checkLeakedTransactions(event.event)
+        checkLeakedConnections(event.event)
     }
 
     inline fun <reified R, A : Any> R.getField(name: String): A {
@@ -124,7 +134,7 @@ object FiberMonitor {
 
     private fun checkLeakedConnections(event: MonitorEvent) {
         if (event.type == MonitorEventType.FiberParking) {
-            val events = correlator.events[event.keys[0]]!!
+            val events = correlator.merged()[event.keys[0]]!!
             val acquiredConnections = events.mapNotNullTo(HashSet()) {
                 if (it.event.type == MonitorEventType.ConnectionAcquired) {
                     it.event.keys.mapNotNull { it as? Connection }.first()
@@ -147,35 +157,47 @@ object FiberMonitor {
     }
 }
 
+/**
+ * This class holds the event log.
+ *
+ * Each event has a list of key associated with it. "Relatedness" is then the transitive closure of two events sharing a key.
+ *
+ * [merged] returns a map from key to related events. Note that an eventlist may be associated by several keys.
+ * [getUnique] makes these lists unique by keying on the set of keys associated with the events.
+ * [getByType] simply groups by the type of the keys. This is probably the most useful "top-level" breakdown of events.
+ */
 class MonitorEventCorrelator {
-    private val _events = HashMap<Any, ArrayList<FullMonitorEvent>>()
-    val events: Map<Any, ArrayList<FullMonitorEvent>> get() = _events
+    private val events = ArrayList<FullMonitorEvent>()
 
-    fun getUnique() = events.values.toSet().associateBy { it.flatMap { it.event.keys }.toSet() }
+    fun getUnique() = merged().values.toSet().associateBy { it.flatMap { it.event.keys }.toSet() }
 
-    fun getByType() = events.entries.groupBy { it.key.javaClass }
+    fun getByType() = merged().entries.groupBy { it.key.javaClass }
 
     fun addEvent(fullMonitorEvent: FullMonitorEvent) {
-        val list = link(fullMonitorEvent.event.keys)
-        list.add(fullMonitorEvent)
-        for (key in fullMonitorEvent.event.keys) {
-            _events[key] = list
-        }
+        events.add(fullMonitorEvent)
     }
 
-    fun link(keys: List<Any>): ArrayList<FullMonitorEvent> {
-        val eventLists = HashSet<ArrayList<FullMonitorEvent>>()
-        for (key in keys) {
-            val list = _events[key]
-            if (list != null) {
-                eventLists.add(list)
+    fun merged(): Map<Any, List<FullMonitorEvent>> {
+        val merged = HashMap<Any, ArrayList<FullMonitorEvent>>()
+        for (event in events) {
+            val eventLists = HashSet<ArrayList<FullMonitorEvent>>()
+            for (key in event.event.keys) {
+                val list = merged[key]
+                if (list != null) {
+                    eventLists.add(list)
+                }
+            }
+            val newList = when (eventLists.size) {
+                0 -> ArrayList()
+                1 -> eventLists.first()
+                else -> mergeAll(eventLists)
+            }
+            newList.add(event)
+            for (key in event.event.keys) {
+                merged[key] = newList
             }
         }
-        return when {
-            eventLists.isEmpty() -> ArrayList()
-            eventLists.size == 1 -> eventLists.first()
-            else -> mergeAll(eventLists)
-        }
+        return merged
     }
 
     fun mergeAll(lists: Collection<List<FullMonitorEvent>>): ArrayList<FullMonitorEvent> {

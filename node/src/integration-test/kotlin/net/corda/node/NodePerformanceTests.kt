@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.performance.div
 import net.corda.testing.internal.performance.startPublishingFixedRateInjector
@@ -128,20 +129,39 @@ class NodePerformanceTests : IntegrationTest() {
         driver(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.finance")
+                extraCordappPackagesToScan = listOf("net.corda.finance"),
+                portAllocation = PortAllocation.Incremental(20000)
         ) {
             val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
             val metricRegistry = startReporter(shutdownManager, notary.node.services.monitoringService.metrics)
             notary.rpcClientToNode().use("A", "A") { connection ->
                 println("ISSUING")
-                val doneFutures = (1..100).toList().parallelStream().map {
+                val doneFutures = (1..100).toList().map {
                     connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue
                 }.toList()
                 doneFutures.transpose().get()
                 println("STARTING PAYMENT")
-                startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 100L / TimeUnit.SECONDS) {
+                startPublishingFixedRateInjector(metricRegistry, 8, 5.minutes, 5L / TimeUnit.SECONDS) {
                     connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, defaultNotaryIdentity).returnValue.get()
                 }
+            }
+        }
+    }
+
+    @Test
+    fun `single pay`() {
+        val user = User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>()))
+        driver(
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY.name, rpcUsers = listOf(user))),
+                startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf("net.corda.finance"),
+                portAllocation = PortAllocation.Incremental(20000)
+        ) {
+            val notary = defaultNotaryNode.getOrThrow() as NodeHandle.InProcess
+            val metricRegistry = startReporter(shutdownManager, notary.node.services.monitoringService.metrics)
+            notary.rpcClientToNode().use("A", "A") { connection ->
+                connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.getOrThrow()
+                connection.proxy.startFlow(::CashPaymentFlow, 1.DOLLARS, defaultNotaryIdentity).returnValue.getOrThrow()
             }
         }
     }
