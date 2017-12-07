@@ -18,9 +18,7 @@ import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import okhttp3.CacheControl
 import okhttp3.Headers
-import rx.Observable
 import rx.Subscription
-import rx.subjects.PublishSubject
 import java.io.BufferedReader
 import java.io.Closeable
 import java.net.HttpURLConnection
@@ -99,8 +97,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater Thread", Executors.defaultThreadFactory()))
     private var fileWatcherSubscription: Subscription? = null
 
-    val parametersUpdates: PublishSubject<SecureHash> = PublishSubject.create<SecureHash>()
-
     override fun close() {
         fileWatcherSubscription?.unsubscribe()
         MoreExecutors.shutdownAndAwaitTermination(executor, 50, TimeUnit.SECONDS)
@@ -136,7 +132,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                     if (currentParametersHash != networkMap.networkParameterHash) {
                         logger.error("Node is using parameters with hash: $currentParametersHash but network map is advertising: ${networkMap.networkParameterHash}.\n" +
                                 "Please update node to use correct network parameters file.\"")
-                        parametersUpdates.onNext(networkMap.networkParameterHash)
+                        System.exit(1)
                     }
                     val currentNodeHashes = networkMapCache.allNodeHashes
                     val hashesFromNetworkMap = networkMap.nodeInfoHashes

@@ -22,7 +22,7 @@ const val NETWORK_PARAM_FILE_PREFIX = "network-parameters"
 data class NetworkMap(val nodeInfoHashes: List<SecureHash>, val networkParameterHash: SecureHash)
 
 /**
- * @property minimumPlatformVersion Minimal version of Corda platform that is required for nodes in the network.
+ * @property minimumPlatformVersion Minimum version of Corda platform that is required for nodes in the network.
  * @property notaries List of well known and trusted notary identities with information on validation type.
  * @property maxMessageSize Maximum P2P message sent over the wire in bytes.
  * @property maxTransactionSize Maximum permitted transaction size in bytes.
@@ -46,6 +46,8 @@ data class NetworkParameters(
         require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }
         require(notaries.distinctBy { it.identity } == notaries) { "Duplicate notary identities" }
         require(epoch > 0) { "epoch must be at least 1" }
+        require(maxMessageSize > 0 ) { "maxMessageSize must be at least 1" }
+        require(maxTransactionSize > 0 ) { "maxTransactionSize must be at least 1" }
     }
 }
 

@@ -10,7 +10,6 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
@@ -139,11 +138,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     protected val _nodeReadyFuture = openFuture<Unit>()
-    protected val networkMapClient: NetworkMapClient? by lazy {
-        configuration.compatibilityZoneURL?.let {
-            NetworkMapClient(it, services.identityService.trustRoot)
-        }
-    }
+    protected var networkMapClient: NetworkMapClient? = null
 
     lateinit var securityManager: RPCSecurityManager get
 
@@ -205,6 +200,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
+        networkMapClient = configuration.compatibilityZoneURL?.let {
+            NetworkMapClient(it, identityService.trustRoot)
+        }
+        readNetworkParameters()
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService) { database ->
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService)
@@ -242,12 +241,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             startShell(rpcOps)
             Pair(StartedNodeImpl(this, _services, info, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
-
         val networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
                 networkParameters.serialize().hash)
-        networkMapUpdater.parametersUpdates.subscribe({handleNetworkParametersUpdate(it)})
         runOnStop += networkMapUpdater::close
 
         networkMapUpdater.updateNodeInfo(services.myInfo) {
@@ -276,13 +273,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
      * or [rx.internal.schedulers.CachedThreadScheduler] (with shutdown registered with [runOnStop]) for shared-JVM testing.
      */
     protected abstract fun getRxIoScheduler(): Scheduler
-
-    // TODO NetworkParameters updates are not implemented yet. This handling is not ideal, because we simply shutdown node, which can cause some problems.
-    private fun handleNetworkParametersUpdate(newParametersHash: SecureHash) {
-        log.error("The NetworkMap is advertising a different network parameters hash than the one this node is currently using.\n" +
-                "Our hash: ${ networkParameters.serialize().hash }, new hash: $newParametersHash. Please update parameters file.")
-        stop()
-    }
 
     open fun startShell(rpcOps: CordaRPCOps) {
         InteractiveShell.startShell(configuration, rpcOps, securityManager, _services.identityService, _services.database)
@@ -656,8 +646,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 } catch (t: Throwable) {
                     null // We ignore all the files that are incorrect.
                 }}.maxBy { it.epoch }
-        checkNotNull(latestParams) { "Couldn't find network parameters file" }
-        networkParameters = latestParams!!
+        networkParameters = if (latestParams != null) {
+            latestParams
+        } else if (networkMapClient != null) {
+            val (networkMap, _) = networkMapClient!!.getNetworkMap()
+            networkMapClient!!.getNetworkParameter(networkMap.networkParameterHash) ?: throw IllegalArgumentException("Failed loading network parameters from network map server")
+        } else {
+            throw IllegalArgumentException("Couldn't load network parameters file")
+        }
         log.info("Loaded the latest known version of network parameters $latestParams")
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) { "Node is too old for the network" }
     }
