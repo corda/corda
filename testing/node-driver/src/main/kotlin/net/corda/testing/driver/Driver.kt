@@ -144,11 +144,14 @@ data class NodeParameters(
  * @param defaultParameters The default parameters for the driver. Allows the driver to be configured in builder style
  *   when called from Java code.
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
+ * @param isMonitor Indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote JMX
+ *        monitoring using HTTP/JSON.
  * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
+ * @param monitorPortAllocation The port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP. Defaults to incremental.
  * @param systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
  * @param useTestClock If true the test clock will be used in Node.
  * @param startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or

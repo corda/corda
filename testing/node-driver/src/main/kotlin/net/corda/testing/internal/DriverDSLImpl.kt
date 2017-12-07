@@ -65,10 +65,12 @@ import kotlin.concurrent.thread
 class DriverDSLImpl(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
+        val monitorPortAllocation: PortAllocation,
         val systemProperties: Map<String, String>,
         val driverDirectory: Path,
         val useTestClock: Boolean,
         val isDebug: Boolean,
+        val isMonitor: Boolean,
         val startNodesInProcess: Boolean,
         val waitForNodesToFinish: Boolean,
         extraCordappPackagesToScan: List<String>,
@@ -96,11 +98,25 @@ class DriverDSLImpl(
 
     //TODO: remove this once we can bundle quasar properly.
     private val quasarJarPath: String by lazy {
-        val cl = ClassLoader.getSystemClassLoader()
-        val urls = (cl as URLClassLoader).urLs
-        val quasarPattern = ".*quasar.*\\.jar$".toRegex()
-        val quasarFileUrl = urls.first { quasarPattern.matches(it.path) }
-        Paths.get(quasarFileUrl.toURI()).toString()
+        resolveJar(".*quasar.*\\.jar$")
+    }
+
+    private val jolokiaJarPath: String by lazy {
+        resolveJar("jolokia-jvm-.*-agent\\.jar$")
+    }
+
+    private fun resolveJar(jarNamePattern: String): String {
+        return try {
+            val cl = ClassLoader.getSystemClassLoader()
+            val urls = (cl as URLClassLoader).urLs
+            val jarPattern = jarNamePattern.toRegex()
+            val jarFileUrl = urls.first { jarPattern.matches(it.path) }
+            Paths.get(jarFileUrl.toURI()).toString()
+        }
+        catch(e: Exception) {
+            log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}")
+            ""
+        }
     }
 
     override fun shutdown() {
@@ -380,7 +396,8 @@ class DriverDSLImpl(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort, systemProperties, cordappPackages, maximumHeapSize)
+            val monitorPort = if (isMonitor) monitorPortAllocation.nextPort() else null
+            val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
             if (waitForNodesToFinish) {
                 state.locked {
                     processes += process
@@ -473,12 +490,13 @@ class DriverDSLImpl(
                 config: Config,
                 quasarJarPath: String,
                 debugPort: Int?,
+                jolokiaJarPath: String,
+                monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 cordappPackages: List<String>,
                 maximumHeapSize: String
         ): Process {
-            log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
-            // Write node.conf
+            log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled") + ", jolokia monitoring port is " + (monitorPort ?: "not enabled"))            // Write node.conf
             writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
             val systemProperties = overriddenSystemProperties + mapOf(
@@ -498,6 +516,7 @@ class DriverDSLImpl(
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
+            val jolokiaAgent = monitorPort?.let { "-javaagent:$jolokiaJarPath=port=$monitorPort,host=localhost" }
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
             return ProcessUtilities.startCordaProcess(
@@ -508,7 +527,7 @@ class DriverDSLImpl(
                             "--no-local-shell"
                     ),
                     jdwpPort = debugPort,
-                    extraJvmArguments = extraJvmArguments,
+                    extraJvmArguments = extraJvmArguments + listOfNotNull(jolokiaAgent),
                     errorLogPath = nodeConf.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
                     workingDirectory = nodeConf.baseDirectory,
                     maximumHeapSize = maximumHeapSize
@@ -631,9 +650,11 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         defaultParameters: DriverParameters = DriverParameters(),
         isDebug: Boolean = defaultParameters.isDebug,
+        isMonitor: Boolean = defaultParameters.isMonitor,
         driverDirectory: Path = defaultParameters.driverDirectory,
         portAllocation: PortAllocation = defaultParameters.portAllocation,
         debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
+        monitorPortAllocation: PortAllocation = defaultParameters.monitorPortAllocation,
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
@@ -649,10 +670,12 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
             DriverDSLImpl(
                     portAllocation = portAllocation,
                     debugPortAllocation = debugPortAllocation,
+                    monitorPortAllocation = monitorPortAllocation,
                     systemProperties = systemProperties,
                     driverDirectory = driverDirectory.toAbsolutePath(),
                     useTestClock = useTestClock,
                     isDebug = isDebug,
+                    isMonitor = isMonitor,
                     startNodesInProcess = startNodesInProcess,
                     waitForNodesToFinish = waitForNodesToFinish,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
