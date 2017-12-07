@@ -73,22 +73,6 @@ val DEV_CA: CertificateAndKeyPair by lazy {
     val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
     caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
 }
-val DEV_NODE_CA: CertificateAndKeyPair by lazy {
-    val issuerCertificate = DEV_CA.certificate
-    val issuerKeyPair = DEV_CA.keyPair
-    val keyPair = generateKeyPair()
-    val clientName = CordaX500Name(organisation = X509Utilities.CORDA_CLIENT_CA_CN, locality = "London", country = "GB")
-
-    val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
-    val provider = Security.getProvider(signatureScheme.providerName)
-    val issuerSigner = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
-
-    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, clientName.x500Name))), arrayOf())
-    val certificate = X509Utilities.createCertificate(CertificateType.NODE_CA, issuerCertificate.subject, issuerSigner, clientName,
-            keyPair.public, Pair(issuerCertificate.notBefore, issuerCertificate.notAfter),
-            nameConstraints = nameConstraints)
-    CertificateAndKeyPair(certificate, keyPair)
-}
 val DEV_TRUST_ROOT: X509CertificateHolder by lazy {
     // TODO: Should be identity scheme
     val caKeyStore = loadKeyStore(ClassLoader.getSystemResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
