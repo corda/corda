@@ -115,19 +115,24 @@ is already correctly configured and this is for reference only;
 
 Creating the CorDapp JAR
 ------------------------
-The gradle ``jar`` task included in the CorDapp template build file will automatically build your CorDapp JAR correctly
-as long as your dependencies are set correctly.
+Once your dependencies are set correctly, you can build your CorDapp JAR using the gradle ``jar`` task:
+
+* Unix/Mac OSX: ``./gradlew jar``
+
+* Windows: ``gradlew.bat jar``
+
+The CorDapp JAR will be output to the ``build/libs`` folder.
 
 .. warning:: The hash of the generated CorDapp JAR is not deterministic, as it depends on variables such as the
    timestamp at creation. Nodes running the same CorDapp must therefore ensure they are using the exact same CorDapp
-   jar, and not different versions of the JAR created from identical sources.
+   JAR, and not different versions of the JAR created from identical sources.
 
 The filename of the JAR must include a unique identifier to deduplicate it from other releases of the same CorDapp.
 This is typically done by appending the version string to the CorDapp's name. This unique identifier should not change
 once the JAR has been deployed on a node. If it does, make sure no one is relying on ``FlowContext.appName`` in their
 flows (see :doc:`versioning`).
 
-Installing the CorDapp jar
+Installing the CorDapp JAR
 --------------------------
 
 .. note:: Before installing a CorDapp, you must create one or more nodes to install it on. For instructions, please see
@@ -136,6 +141,3 @@ Installing the CorDapp jar
 At runtime, nodes will load any CorDapps present in their ``cordapps`` folder. Therefore in order to install a CorDapp on
 a node, the CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder, where ``node_dir`` is the folder in which
 the node's JAR and configuration files are stored.
-
-The ``deployNodes`` gradle task, if correctly configured, will automatically place your CorDapp JAR as well as any
-dependent CorDapp JARs specified into the ``cordapps`` folder automatically.
