@@ -602,7 +602,7 @@ class NodeLoginModule : LoginModule {
                 PEER_ROLE -> authenticatePeer(certificates)
                 NODE_ROLE -> authenticateNode(certificates)
                 VERIFIER_ROLE -> authenticateVerifier(certificates)
-                RPC_ROLE -> authenticateRpcUser(password, username)
+                RPC_ROLE -> authenticateRpcUser(username, Password(password))
                 else -> throw FailedLoginException("Peer does not belong on our network")
             }
             principals += UserPrincipal(validatedUser)
@@ -633,8 +633,8 @@ class NodeLoginModule : LoginModule {
         return certificates.first().subjectDN.name
     }
 
-    private fun authenticateRpcUser(password: String, username: String): String {
-        securityManager.authenticate(username, Password(password))
+    private fun authenticateRpcUser(username: String, password: Password): String {
+        securityManager.authenticate(username, password)
         loginListener(username)
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses

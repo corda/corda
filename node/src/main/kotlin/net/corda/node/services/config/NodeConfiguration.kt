@@ -174,7 +174,8 @@ enum class PasswordEncryption {
     NONE,
 
     // Password salt-hashed using Apache Shiro flexible encryption format
-    SHIRO_CRYPT_1
+    // [org.apache.shiro.crypto.hash.format.Shiro1CryptFormat]
+    SHIRO_1_CRYPT
 }
 
 // Subset of Node configuration related to security aspects
@@ -187,7 +188,7 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
 
         init {
             require(!(dataSource.type == AuthDataSourceType.INMEMORY &&
-                       options?.cache != null)) {
+                    options?.cache != null)) {
                 "No cache supported for INMEMORY data provider"
             }
         }
@@ -228,6 +229,5 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                             passwordEncryption = PasswordEncryption.NONE),
                     id = AuthServiceId("NODE_CONFIG"))
         }
-
     }
 }

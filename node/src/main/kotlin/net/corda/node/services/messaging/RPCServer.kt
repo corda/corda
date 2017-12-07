@@ -30,8 +30,6 @@ import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.*
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.nodeapi.internal.config.User
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -370,7 +368,7 @@ class RPCServer(
     private fun actorFrom(message: ClientMessage): Pair<Actor, AuthorizingSubject> {
         val validatedUser = message.getStringProperty(Message.HDR_VALIDATED_USER) ?: throw IllegalArgumentException("Missing validated user from the Artemis message")
         val targetLegalIdentity = message.getStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY)?.let(CordaX500Name.Companion::parse) ?: nodeLegalName
-        return Pair(Actor(Id(validatedUser), securityManager.id, targetLegalIdentity), securityManager.subjectInSession(validatedUser))
+        return Pair(Actor(Id(validatedUser), securityManager.id, targetLegalIdentity), securityManager.buildSubject(validatedUser))
     }
 }
 

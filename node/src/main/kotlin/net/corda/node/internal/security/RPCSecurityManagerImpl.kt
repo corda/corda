@@ -62,20 +62,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
         }
     }
 
-    override fun tryAuthenticate(principal: String, password: Password): AuthorizingSubject? {
-        password.use {
-            val authToken = UsernamePasswordToken(principal, it.value)
-            var authSubject = Subject.Builder(manager).buildSubject()
-            try {
-                authSubject.login(authToken)
-            } catch (e: AuthenticationException) {
-                authSubject = null
-            }
-            return ShiroAuthorizingSubject(authSubject)
-        }
-    }
-
-    override fun subjectInSession(principal: String): AuthorizingSubject =
+    override fun buildSubject(principal: String): AuthorizingSubject =
             ShiroAuthorizingSubject(
                     Subject.Builder(manager)
                             .authenticated(true)
@@ -205,7 +192,7 @@ private class ShiroAuthorizingSubject(private val impl: Subject) : AuthorizingSu
 
 private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {
     PasswordEncryption.NONE -> SimpleCredentialsMatcher()
-    PasswordEncryption.SHIRO_CRYPT_1 -> PasswordMatcher()
+    PasswordEncryption.SHIRO_1_CRYPT -> PasswordMatcher()
 }
 
 private class InMemoryRealm(users: List<User>,

@@ -28,9 +28,9 @@ class RPCPermissionsTests : AbstractRPCTest() {
         override val protocolVersion = 1
         override fun validatePermission(method: String, target: String?) {
             val authorized = if (target == null) {
-                rpcContext().authorizer.isPermitted(method)
+                rpcContext().isPermitted(method)
             } else {
-                rpcContext().authorizer.isPermitted(method, target)
+                rpcContext().isPermitted(method, target)
             }
             if (!authorized) {
                 throw PermissionException("RPC user not authorized")

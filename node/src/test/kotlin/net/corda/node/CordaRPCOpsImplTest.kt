@@ -57,7 +57,7 @@ private fun buildSubject(principal: String, permissionStrings: Set<String>) =
                 users = listOf(User(username = principal,
                         password = "",
                         permissions = permissionStrings)))
-                .subjectInSession(principal)
+                .buildSubject(principal)
 
 class CordaRPCOpsImplTest {
     private companion object {
@@ -313,7 +313,7 @@ class CordaRPCOpsImplTest {
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
             CURRENT_RPC_CONTEXT.set(previous.copy(authorizer =
-            buildSubject(previous.authorizer.principal, permissions.toSet())))
+            buildSubject(previous.principal, permissions.toSet())))
             action.invoke()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)
