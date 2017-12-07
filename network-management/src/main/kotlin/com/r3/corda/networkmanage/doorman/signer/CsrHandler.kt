@@ -71,7 +71,7 @@ class JiraCsrHandler(private val jiraClient: JiraClient, private val storage: Ce
         jiraClient.getApprovedRequests().forEach { (id, approvedBy) -> storage.approveRequest(id, approvedBy) }
         delegate.processApprovedRequests()
         val signedRequests = storage.getRequests(RequestStatus.SIGNED).mapNotNull {
-            it.certData?.certPath.let { certs -> it.requestId to certs!! }
+            it.certData?.certPath?.let { certs -> it.requestId to certs }
         }.toMap()
         jiraClient.updateSignedRequests(signedRequests)
     }

@@ -4,7 +4,9 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.sha256
+import net.corda.nodeapi.internal.DigitalSignatureWithCert
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.PublicKey
@@ -41,3 +43,5 @@ fun X509CertificateHolder.toX509Certificate(): X509Certificate = X509Certificate
 fun buildCertPath(vararg certificates: Certificate): CertPath = X509CertificateFactory().delegate.generateCertPath(certificates.asList())
 
 fun buildCertPath(certPathBytes: ByteArray): CertPath = X509CertificateFactory().delegate.generateCertPath(certPathBytes.inputStream())
+
+fun DigitalSignature.WithKey.withCert(cert: X509Certificate): DigitalSignatureWithCert = DigitalSignatureWithCert(cert, bytes)

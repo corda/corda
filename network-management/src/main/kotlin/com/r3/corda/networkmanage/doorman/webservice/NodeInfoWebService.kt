@@ -74,7 +74,7 @@ class NodeInfoWebService(private val nodeInfoStorage: NodeInfoStorage,
     }
 
     @GET
-    @Path("{nodeInfoHash}")
+    @Path("node-info/{nodeInfoHash}")
     fun getNodeInfo(@PathParam("nodeInfoHash") nodeInfoHash: String): Response {
         val nodeInfo = nodeInfoStorage.getNodeInfo(SecureHash.parse(nodeInfoHash))
         return if (nodeInfo != null) {

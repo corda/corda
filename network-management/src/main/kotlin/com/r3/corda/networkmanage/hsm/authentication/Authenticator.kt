@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.hsm.authentication
 
 import CryptoServerJCE.CryptoServerProvider
+import com.r3.corda.networkmanage.common.signer.AuthenticationException
 import com.r3.corda.networkmanage.hsm.configuration.Parameters
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -25,8 +26,8 @@ class Authenticator(private val provider: CryptoServerProvider,
      * 1) [CryptoServerProvider] instance
      * 2) List of strings that corresponds to user names authenticated against the HSM.
      */
-    fun connectAndAuthenticate(block: (CryptoServerProvider, List<String>) -> Unit) {
-        try {
+    fun <T : Any> connectAndAuthenticate(block: (CryptoServerProvider, List<String>) -> T): T {
+        return try {
             val authenticated = mutableListOf<String>()
             loop@ while (true) {
                 val user = if (autoUsername.isNullOrEmpty()) {
@@ -78,6 +79,8 @@ class Authenticator(private val provider: CryptoServerProvider,
             }
             if (!authenticated.isEmpty()) {
                 block(provider, authenticated)
+            } else {
+                throw AuthenticationException()
             }
         } finally {
             try {
@@ -89,8 +92,8 @@ class Authenticator(private val provider: CryptoServerProvider,
         }
     }
 }
-
 /*
+
  * Configuration class for [CryptoServerProvider]
  */
 data class CryptoServerProviderConfig(

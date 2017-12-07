@@ -6,18 +6,20 @@ import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
-import com.r3.corda.networkmanage.common.signer.NetworkMap
-import com.r3.corda.networkmanage.common.signer.SignedNetworkMap
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import com.r3.corda.networkmanage.common.utils.toX509Certificate
+import com.r3.corda.networkmanage.common.utils.withCert
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.cert
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.NetworkMap
+import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.SerializationEnvironmentRule
@@ -97,16 +99,17 @@ class NodeInfoWebServiceTest {
 
     @Test
     fun `get network map`() {
-        val hashedNetworkMap = NetworkMap(listOf(SecureHash.randomSHA256().toString(), SecureHash.randomSHA256().toString()), SecureHash.randomSHA256().toString())
+        val networkMap = NetworkMap(listOf(SecureHash.randomSHA256(), SecureHash.randomSHA256()), SecureHash.randomSHA256())
+        val serializedNetworkMap = networkMap.serialize()
         val networkMapStorage: NetworkMapStorage = mock {
-            on { getCurrentNetworkMap() }.thenReturn(SignedNetworkMap(hashedNetworkMap, mock()))
+            on { getCurrentNetworkMap() }.thenReturn(SignedNetworkMap(serializedNetworkMap, intermediateCAKey.sign(serializedNetworkMap).withCert(intermediateCACert.cert)))
         }
         DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(mock(), networkMapStorage)).use {
             it.start()
             val conn = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}").openConnection() as HttpURLConnection
-            val signedHashedNetworkMap = conn.inputStream.readBytes().deserialize<SignedNetworkMap>()
+            val signedNetworkMap = conn.inputStream.readBytes().deserialize<SignedNetworkMap>()
             verify(networkMapStorage, times(1)).getCurrentNetworkMap()
-            assertEquals(signedHashedNetworkMap.networkMap, hashedNetworkMap)
+            assertEquals(signedNetworkMap.verified(), networkMap)
         }
     }
 
@@ -126,7 +129,7 @@ class NodeInfoWebServiceTest {
 
         DoormanServer(NetworkHostAndPort("localhost", 0), NodeInfoWebService(nodeInfoStorage, mock())).use {
             it.start()
-            val nodeInfoURL = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}/$nodeInfoHash")
+            val nodeInfoURL = URL("http://${it.hostAndPort}/${NodeInfoWebService.NETWORK_MAP_PATH}/node-info/$nodeInfoHash")
             val conn = nodeInfoURL.openConnection()
             val nodeInfoResponse = conn.inputStream.readBytes().deserialize<SignedData<NodeInfo>>()
             verify(nodeInfoStorage, times(1)).getNodeInfo(nodeInfoHash)

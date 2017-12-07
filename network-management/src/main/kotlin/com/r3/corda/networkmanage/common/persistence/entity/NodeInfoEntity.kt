@@ -18,10 +18,6 @@ class NodeInfoEntity(
         @JoinColumn(name = "certificate_signing_request", nullable = true)
         val certificateSigningRequest: CertificateSigningRequestEntity? = null,
 
-        @OneToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "network_map", nullable = true)
-        val networkMap: NetworkMapEntity? = null,
-
         @Lob
         @Column(name = "node_info_bytes")
         val nodeInfoBytes: ByteArray,
@@ -55,7 +51,6 @@ class NodeInfoEntity(
     }
 
     fun copy(nodeInfoHash: String = this.nodeInfoHash,
-             networkMap: NetworkMapEntity? = this.networkMap,
              certificateSigningRequest: CertificateSigningRequestEntity? = this.certificateSigningRequest,
              nodeInfoBytes: ByteArray = this.nodeInfoBytes,
              signatureBytes: ByteArray? = this.signatureBytes,
@@ -68,8 +63,7 @@ class NodeInfoEntity(
                 nodeInfoBytes = nodeInfoBytes,
                 signatureBytes = signatureBytes,
                 signaturePublicKeyBytes = signaturePublicKeyBytes,
-                signaturePublicKeyAlgorithm = signaturePublicKeyAlgorithm,
-                networkMap = networkMap
+                signaturePublicKeyAlgorithm = signaturePublicKeyAlgorithm
         )
     }
 }

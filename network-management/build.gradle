@@ -56,9 +56,7 @@ dependencies {
     compile fileTree(dir: 'libs', include: '*.jar')
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-    compile "net.corda:corda-core:$corda_dependency_version"
     compile "net.corda:corda-node-api:$corda_dependency_version"
-    testCompile "net.corda:corda-test-utils:$corda_dependency_version"
     testCompile "net.corda:corda-node-driver:$corda_dependency_version"
     testCompile "net.corda:corda-test-common:$corda_dependency_version"
 

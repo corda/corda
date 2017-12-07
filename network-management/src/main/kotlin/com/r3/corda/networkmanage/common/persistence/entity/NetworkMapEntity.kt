@@ -1,8 +1,7 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
-import com.r3.corda.networkmanage.common.signer.SignatureAndCertPath
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.serialization.deserialize
+import net.corda.nodeapi.internal.DigitalSignatureWithCert
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import javax.persistence.*
 
 @Entity
@@ -12,27 +11,23 @@ class NetworkMapEntity(
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
         val version: Long? = null,
 
-        // Reverting relation ownership due to (potentially) unlimited number of node info items.
-        @OneToMany(mappedBy = "networkMap", fetch = FetchType.LAZY)
-        val nodeInfoList: List<NodeInfoEntity> = mutableListOf(),
-
-        @OneToOne
-        @JoinColumn(name = "network_parameters")
-        val parameters: NetworkParametersEntity,
+        @Lob
+        @Column(name = "serialized_network_map")
+        val networkMap: ByteArray,
 
         @Lob
-        @Column(name = "signature_bytes")
-        val signatureBytes: ByteArray,
+        @Column(name = "signature")
+        val signature: ByteArray,
 
         @Lob
-        @Column(name = "certificate_path_bytes")
-        val certificatePathBytes: ByteArray
+        @Column(name = "certificate")
+        val certificate: ByteArray
 ) {
     /**
      * Deserializes NetworkMapEntity.signatureBytes into the [SignatureAndCertPath] instance
      */
-    fun signatureAndCertificate(): SignatureAndCertPath? {
-        return SignatureAndCertPath(DigitalSignature(signatureBytes), certificatePathBytes.deserialize())
+    fun signatureAndCertificate(): DigitalSignatureWithCert {
+        return DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
     }
 
 }

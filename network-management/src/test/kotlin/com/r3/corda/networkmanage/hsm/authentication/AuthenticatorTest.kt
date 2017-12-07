@@ -3,9 +3,10 @@ package com.r3.corda.networkmanage.hsm.authentication
 import CryptoServerJCE.CryptoServerProvider
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
+import com.r3.corda.networkmanage.common.signer.AuthenticationException
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class AuthenticatorTest : TestBase() {
@@ -24,15 +25,15 @@ class AuthenticatorTest : TestBase() {
     fun `connectAndAuthenticate aborts when user inputs Q`() {
         // given
         givenUserConsoleInputOnReadLine("Q")
-        var executed = false
 
         // when
-        Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _ -> executed = true }
+        assertFailsWith<AuthenticationException> {
+            Authenticator(provider = provider, inputReader = inputReader).connectAndAuthenticate { _, _ -> }
+        }
 
-        // then
-        assertFalse(executed)
-        verify(provider, never()).loginPassword(any<String>(), any<String>())
-        verify(provider, never()).loginSign(any<String>(), any<String>(), any<String>())
+        //then
+        verify(provider, never()).loginPassword(any(), any<String>())
+        verify(provider, never()).loginSign(any(), any(), any())
     }
 
     @Test
@@ -50,7 +51,7 @@ class AuthenticatorTest : TestBase() {
 
         // then
         verify(provider).loginPassword(username, password)
-        verify(provider, never()).loginSign(any<String>(), any<String>(), any<String>())
+        verify(provider, never()).loginSign(any(), any(), any())
         assertTrue(executed)
     }
 
@@ -67,7 +68,7 @@ class AuthenticatorTest : TestBase() {
 
         // then
         verify(provider).loginSign(username, ":cs2:cyb:USB0", null)
-        verify(provider, never()).loginPassword(any<String>(), any<String>())
+        verify(provider, never()).loginPassword(any(), any<String>())
         assertTrue(executed)
     }
 
@@ -86,7 +87,7 @@ class AuthenticatorTest : TestBase() {
 
         // then
         verify(provider, times(3)).loginPassword(username, password)
-        verify(provider, never()).loginSign(any<String>(), any<String>(), any<String>())
+        verify(provider, never()).loginSign(any(), any(), any())
         assertTrue(executed)
     }
 
@@ -98,7 +99,7 @@ class AuthenticatorTest : TestBase() {
     }
 
     private fun givenUserConsoleInputOnReadPassword(input: String) {
-        whenever(inputReader.readPassword(any<String>())).thenReturn(input)
+        whenever(inputReader.readPassword(any())).thenReturn(input)
     }
 
     private fun givenUserConsoleInputOnReadLine(input: String) {

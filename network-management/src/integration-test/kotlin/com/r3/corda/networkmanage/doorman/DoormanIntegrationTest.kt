@@ -92,9 +92,7 @@ class DoormanIntegrationTest {
         doorman.close()
     }
 
-    //TODO remove @Ignore once PR https://github.com/corda/corda/pull/2054 is merged
     @Test
-    @Ignore
     fun `nodeInfo is published to the network map`() {
         // Given
         val rootCertAndKey = createDoormanRootCertificateAndKeyPair()
@@ -111,6 +109,8 @@ class DoormanIntegrationTest {
             whenever(it.compatibilityZoneURL).thenReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}"))
             whenever(it.emailAddress).thenReturn("iTest@R3.com")
         }
+        config.rootCaCertFile.parent.createDirectories()
+        X509Utilities.saveCertificateAsPEMFile(rootCertAndKey.certificate, config.rootCaCertFile)
 
         NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!)).buildKeystore()
 

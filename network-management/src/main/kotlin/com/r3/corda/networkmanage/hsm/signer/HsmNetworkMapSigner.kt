@@ -3,15 +3,17 @@ package com.r3.corda.networkmanage.hsm.signer
 import com.google.common.util.concurrent.MoreExecutors
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
-import com.r3.corda.networkmanage.common.signer.SignatureAndCertPath
 import com.r3.corda.networkmanage.common.signer.Signer
-import com.r3.corda.networkmanage.common.utils.buildCertPath
+import com.r3.corda.networkmanage.common.utils.withCert
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.getAndInitializeKeyStore
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.signData
 import com.r3.corda.networkmanage.hsm.utils.X509Utilities.verify
+import net.corda.core.internal.cert
+import net.corda.core.internal.toX509CertHolder
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
+import net.corda.nodeapi.internal.DigitalSignatureWithCert
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.time.Duration
@@ -59,16 +61,14 @@ class HsmNetworkMapSigner(networkMapStorage: NetworkMapStorage,
     /**
      * Signs given data using [CryptoServerJCE.CryptoServerProvider], which connects to the underlying HSM.
      */
-    override fun sign(data: ByteArray): SignatureAndCertPath? {
-        var result: SignatureAndCertPath? = null
-        authenticator.connectAndAuthenticate { provider, _ ->
+    override fun sign(data: ByteArray): DigitalSignatureWithCert {
+        return authenticator.connectAndAuthenticate { provider, _ ->
             val keyStore = getAndInitializeKeyStore(provider)
             val caCertificateChain = keyStore.getCertificateChain(caCertificateKeyName)
             val caKey = keyStore.getKey(caCertificateKeyName, caPrivateKeyPass.toCharArray()) as PrivateKey
             val signature = signData(data, KeyPair(caCertificateChain.first().publicKey, caKey), provider)
             verify(data, signature, caCertificateChain.first().publicKey)
-            result = SignatureAndCertPath(signature, buildCertPath(*caCertificateChain))
+            signature.withCert(caCertificateChain.first().toX509CertHolder().cert)
         }
-        return result
     }
 }

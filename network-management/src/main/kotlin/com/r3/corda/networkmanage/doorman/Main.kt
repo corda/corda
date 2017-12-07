@@ -11,7 +11,6 @@ import com.r3.corda.networkmanage.doorman.signer.JiraCsrHandler
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.doorman.webservice.NodeInfoWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
-import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
@@ -32,6 +31,7 @@ import java.io.Closeable
 import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.file.Path
+import java.security.cert.X509Certificate
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -190,7 +190,7 @@ fun startDoorman(hostAndPort: NetworkHostAndPort,
         // Persisting new network parameters
         val currentNetworkParameters = networkMapStorage.getCurrentNetworkParameters()
         if (currentNetworkParameters == null) {
-            networkMapStorage.putNetworkParameters(networkMapParameters)
+            networkMapStorage.saveNetworkParameters(networkMapParameters)
         } else {
             throw UnsupportedOperationException("Network parameters already exist. Updating them via the file config is not supported yet.")
         }
@@ -242,8 +242,8 @@ private fun buildLocalSigner(parameters: DoormanParameters): LocalSigner? {
         val caPrivateKeyPassword = parameters.caPrivateKeyPassword ?: readPassword("CA Private Key Password: ")
         val keystore = loadOrCreateKeyStore(parameters.keystorePath, keystorePassword)
         val caKeyPair = keystore.getKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, caPrivateKeyPassword)
-        val caCertPath = keystore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA)
-        LocalSigner(caKeyPair, caCertPath)
+        val caCertPath = keystore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA).map { it as X509Certificate }
+        LocalSigner(caKeyPair, caCertPath.toTypedArray())
     }
 }
 

@@ -1,77 +1,64 @@
 package com.r3.corda.networkmanage.common.persistence
 
-import com.r3.corda.networkmanage.common.persistence.entity.NetworkMapEntity
-import com.r3.corda.networkmanage.common.persistence.entity.NetworkParametersEntity
-import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
-import com.r3.corda.networkmanage.common.signer.NetworkMap
-import com.r3.corda.networkmanage.common.signer.SignedNetworkMap
+import com.r3.corda.networkmanage.common.persistence.entity.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.nodeapi.internal.NetworkMap
 import net.corda.nodeapi.internal.NetworkParameters
+import net.corda.nodeapi.internal.SignedNetworkMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import org.hibernate.Session
-import org.hibernate.jpa.QueryHints
 
 /**
  * Database implementation of the [NetworkMapStorage] interface
  */
 class PersistentNetworkMapStorage(private val database: CordaPersistence) : NetworkMapStorage {
     override fun getCurrentNetworkMap(): SignedNetworkMap? = database.transaction {
-        val networkMapEntity = getCurrentNetworkMapEntity(getNetworkMapWithNodeInfoAndParametersHint(session))
+        val networkMapEntity = getCurrentNetworkMapEntity()
         networkMapEntity?.let {
-            val nodeInfoHashes = it.nodeInfoList.map { it.nodeInfoHash }
-            val networkParameterHash = it.parameters.parametersHash
             val signatureAndCertPath = it.signatureAndCertificate()
-            SignedNetworkMap(NetworkMap(nodeInfoHashes, networkParameterHash), signatureAndCertPath!!)
+            SignedNetworkMap(SerializedBytes(it.networkMap), signatureAndCertPath)
         }
     }
 
     override fun getCurrentNetworkParameters(): NetworkParameters? = database.transaction {
-        getCurrentNetworkMapEntity(getNetworkMapWithParametersHint(session))?.parameters?.networkParameters()
+        getCurrentNetworkMapEntity()?.let {
+            val parameterHash = it.networkMap.deserialize<NetworkMap>().networkParameterHash
+            getNetworkParameters(parameterHash)
+        }
     }
 
     override fun saveNetworkMap(signedNetworkMap: SignedNetworkMap) {
         database.transaction {
-            val networkMap = signedNetworkMap.networkMap
-            val signatureAndCertPath = signedNetworkMap.signatureData
-            val signature = signatureAndCertPath.signature
-            val networkParametersEntity = getNetworkParametersEntity(networkMap.parametersHash)
-            networkParametersEntity ?: throw IllegalArgumentException("Error when retrieving network parameters entity for network map signing! - Entity does not exist")
             val networkMapEntity = NetworkMapEntity(
-                    parameters = networkParametersEntity,
-                    signatureBytes = signature.bytes,
-                    certificatePathBytes = signatureAndCertPath.certPath.serialize().bytes
+                    networkMap = signedNetworkMap.raw.bytes,
+                    signature = signedNetworkMap.sig.signatureBytes,
+                    certificate = signedNetworkMap.sig.by.encoded
             )
             session.save(networkMapEntity)
-            networkMap.nodeInfoHashes.forEach {
-                val nodeInfoEntity = session.find(NodeInfoEntity::class.java, it)
-                session.merge(nodeInfoEntity.copy(networkMap = networkMapEntity))
+        }
+    }
+
+    override fun getNetworkParameters(parameterHash: SecureHash): NetworkParameters? {
+        return getNetworkParametersEntity(parameterHash.toString())?.networkParameters()
+    }
+
+    override fun getNodeInfoHashes(certificateStatus: CertificateStatus): List<SecureHash> = database.transaction {
+        val builder = session.criteriaBuilder
+        val query = builder.createQuery(String::class.java).run {
+            from(NodeInfoEntity::class.java).run {
+                select(get<String>(NodeInfoEntity::nodeInfoHash.name))
+                        .where(builder.equal(get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name)
+                                .get<CertificateDataEntity>(CertificateSigningRequestEntity::certificateData.name)
+                                .get<CertificateStatus>(CertificateDataEntity::certificateStatus.name), certificateStatus))
             }
         }
+        session.createQuery(query).resultList.map { SecureHash.parse(it) }
     }
 
-    override fun getNetworkParameters(parameterHash: SecureHash): NetworkParameters {
-        val entity = getNetworkParametersEntity(parameterHash.toString())
-        if (entity != null) {
-            return entity.networkParameters()
-        } else {
-            throw NoSuchElementException("Network parameters with $parameterHash do not exist")
-        }
-    }
-
-    override fun getCurrentNetworkMapNodeInfoHashes(certificateStatuses: List<CertificateStatus>): List<SecureHash> = database.transaction {
-        val networkMapEntity = getCurrentNetworkMapEntity(getNetworkMapWithNodeInfoAndCsrHint(session))
-        if (networkMapEntity != null) {
-            networkMapEntity.nodeInfoList.filter({
-                certificateStatuses.isEmpty() || certificateStatuses.contains(it.certificateSigningRequest?.certificateData?.certificateStatus)
-            }).map { SecureHash.parse(it.nodeInfoHash) }
-        } else {
-            emptyList()
-        }
-    }
-
-    override fun putNetworkParameters(networkParameters: NetworkParameters): SecureHash = database.transaction {
+    override fun saveNetworkParameters(networkParameters: NetworkParameters): SecureHash = database.transaction {
         val bytes = networkParameters.serialize().bytes
         val hash = bytes.sha256()
         session.save(NetworkParametersEntity(
@@ -94,63 +81,21 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         session.createQuery(query).resultList.first()
     }
 
-    override fun getDetachedAndValidNodeInfoHashes(): List<SecureHash> = database.transaction {
-        val builder = session.criteriaBuilder
-        // Get signed NodeInfoEntities
-        val query = builder.createQuery(NodeInfoEntity::class.java).run {
-            from(NodeInfoEntity::class.java).run {
-                where(builder.and(
-                        builder.isNull(get<ByteArray>(NodeInfoEntity::networkMap.name)),
-                        builder.isNotNull(get<ByteArray>(NodeInfoEntity::signatureBytes.name))))
-            }
-        }
-        session.createQuery(query).resultList.map { SecureHash.parse(it.nodeInfoHash) }
-    }
-
-    private fun getCurrentNetworkMapEntity(hint: Pair<String, Any>): NetworkMapEntity? = database.transaction {
+    private fun getCurrentNetworkMapEntity(): NetworkMapEntity? = database.transaction {
         val builder = session.criteriaBuilder
         val query = builder.createQuery(NetworkMapEntity::class.java).run {
             from(NetworkMapEntity::class.java).run {
-                where(builder.isNotNull(get<ByteArray?>(NetworkMapEntity::signatureBytes.name)))
+                where(builder.isNotNull(get<ByteArray?>(NetworkMapEntity::signature.name)))
                 orderBy(builder.desc(get<String>(NetworkMapEntity::version.name)))
             }
         }
         // We just want the last signed entry
-        session.createQuery(query).setHint(hint.first, hint.second).resultList.firstOrNull()
+        session.createQuery(query).resultList.firstOrNull()
     }
 
     private fun getNetworkParametersEntity(parameterHash: String): NetworkParametersEntity? = database.transaction {
         singleRequestWhere(NetworkParametersEntity::class.java) { builder, path ->
             builder.equal(path.get<String>(NetworkParametersEntity::parametersHash.name), parameterHash)
         }
-    }
-
-    /**
-     * Creates Hibernate query hint for pulling [NetworkParametersEntity] when querying for [NetworkMapEntity]
-     */
-    private fun getNetworkMapWithParametersHint(session: Session): Pair<String, Any> {
-        val graph = session.createEntityGraph(NetworkMapEntity::class.java)
-        graph.addAttributeNodes(NetworkMapEntity::parameters.name)
-        return QueryHints.HINT_LOADGRAPH to graph
-    }
-
-    /**
-     * Creates Hibernate query hint for pulling [NodeInfoEntity] and [CertificateSigningRequestEntity] when querying for [NetworkMapEntity]
-     */
-    private fun getNetworkMapWithNodeInfoAndCsrHint(session: Session): Pair<String, Any> {
-        val graph = session.createEntityGraph(NetworkMapEntity::class.java)
-        val subGraph = graph.addSubgraph(NetworkMapEntity::nodeInfoList.name, NodeInfoEntity::class.java)
-        subGraph.addAttributeNodes(NodeInfoEntity::certificateSigningRequest.name)
-        return QueryHints.HINT_LOADGRAPH to graph
-    }
-
-    /**
-     * Creates Hibernate query hint for pulling [NodeInfoEntity] and [NetworkParametersEntity] when querying for [NetworkMapEntity]
-     */
-    private fun getNetworkMapWithNodeInfoAndParametersHint(session: Session): Pair<String, Any> {
-        val graph = session.createEntityGraph(NetworkMapEntity::class.java)
-        graph.addAttributeNodes(NetworkMapEntity::nodeInfoList.name)
-        graph.addAttributeNodes(NetworkMapEntity::parameters.name)
-        return QueryHints.HINT_LOADGRAPH to graph
     }
 }
