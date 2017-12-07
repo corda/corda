@@ -117,10 +117,10 @@ The following JMX statistics are exported:
 * JVM statistics: classloading, garbage collection, memory, runtime, threading, operating system
 * Hibernate statistics (only when node is started-up in `devMode` due to to expensive run-time costs)
 
-When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`), you should see a startup message as follows:
+When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`), you should see a startup message similar to the following:
 **Jolokia: Agent started with URL http://127.0.0.1:7005/jolokia/**
 
-When starting Corda nodes using the `DriverDSL`, you should see a startup message in the logs as follows:
+When starting Corda nodes using the `DriverDSL`, you should see a startup message in the logs similar to the following:
 **Starting out-of-process Node USA Bank Corp, debug port is not enabled, jolokia monitoring port is 7005 {}**
 
 Several Jolokia policy based security configuration files (``jolokia-access.xml``) are available for dev, test, and prod

@@ -71,7 +71,7 @@ class DriverTests {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(isMonitor = true) {
+        driver(jmxPolicy = JmxPolicy(true)) {
             // start another node so we gain access to node JMX metrics
             startNode(providedName = DUMMY_REGULATOR.name).getOrThrow()
 

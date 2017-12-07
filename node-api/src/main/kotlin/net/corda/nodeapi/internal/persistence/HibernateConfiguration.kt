@@ -64,7 +64,7 @@ class HibernateConfiguration(
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
-        if (databaseConfig.exportStatistics)
+        if (databaseConfig.exportHibernateJMXStatistics)
             initStatistics(sessionFactory)
 
         return sessionFactory

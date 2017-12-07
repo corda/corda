@@ -65,15 +65,14 @@ import kotlin.concurrent.thread
 class DriverDSLImpl(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
-        val monitorPortAllocation: PortAllocation,
         val systemProperties: Map<String, String>,
         val driverDirectory: Path,
         val useTestClock: Boolean,
         val isDebug: Boolean,
-        val isMonitor: Boolean,
         val startNodesInProcess: Boolean,
         val waitForNodesToFinish: Boolean,
         extraCordappPackagesToScan: List<String>,
+        val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
@@ -396,7 +395,7 @@ class DriverDSLImpl(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val monitorPort = if (isMonitor) monitorPortAllocation.nextPort() else null
+            val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(configuration, config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
             if (waitForNodesToFinish) {
                 state.locked {
@@ -496,7 +495,8 @@ class DriverDSLImpl(
                 cordappPackages: List<String>,
                 maximumHeapSize: String
         ): Process {
-            log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled") + ", jolokia monitoring port is " + (monitorPort ?: "not enabled"))            // Write node.conf
+            log.info("Starting out-of-process Node ${nodeConf.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled") + ", jolokia monitoring port is " + (monitorPort ?: "not enabled"))
+            // Write node.conf
             writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
             val systemProperties = overriddenSystemProperties + mapOf(
@@ -650,11 +650,9 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         defaultParameters: DriverParameters = DriverParameters(),
         isDebug: Boolean = defaultParameters.isDebug,
-        isMonitor: Boolean = defaultParameters.isMonitor,
         driverDirectory: Path = defaultParameters.driverDirectory,
         portAllocation: PortAllocation = defaultParameters.portAllocation,
         debugPortAllocation: PortAllocation = defaultParameters.debugPortAllocation,
-        monitorPortAllocation: PortAllocation = defaultParameters.monitorPortAllocation,
         systemProperties: Map<String, String> = defaultParameters.systemProperties,
         useTestClock: Boolean = defaultParameters.useTestClock,
         initialiseSerialization: Boolean = defaultParameters.initialiseSerialization,
@@ -662,6 +660,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         startNodesInProcess: Boolean = defaultParameters.startNodesInProcess,
         notarySpecs: List<NotarySpec>,
         extraCordappPackagesToScan: List<String> = defaultParameters.extraCordappPackagesToScan,
+        jmxPolicy: JmxPolicy = JmxPolicy(),
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
@@ -670,15 +669,14 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
             DriverDSLImpl(
                     portAllocation = portAllocation,
                     debugPortAllocation = debugPortAllocation,
-                    monitorPortAllocation = monitorPortAllocation,
                     systemProperties = systemProperties,
                     driverDirectory = driverDirectory.toAbsolutePath(),
                     useTestClock = useTestClock,
                     isDebug = isDebug,
-                    isMonitor = isMonitor,
                     startNodesInProcess = startNodesInProcess,
                     waitForNodesToFinish = waitForNodesToFinish,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    jmxPolicy = jmxPolicy,
                     notarySpecs = notarySpecs
             )
     )

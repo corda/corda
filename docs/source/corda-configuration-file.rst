@@ -73,6 +73,7 @@ path to the node's base directory.
         :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
+        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
 
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
@@ -144,8 +145,7 @@ path to the node's base directory.
     and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
     bugs in the checkpointing process. Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
     or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate an existing schema
-    failing on node start if this schema is either not present or not compatible. Furthermore, if ``devMode`` is true, Hibernate
-    run-time statistics will be exported via JMX.
+    failing on node start if this schema is either not present or not compatible.
 
 :detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network

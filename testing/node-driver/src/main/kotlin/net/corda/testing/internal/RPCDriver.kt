@@ -92,11 +92,9 @@ private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
 private val globalMonitorPortAllocation = PortAllocation.Incremental(7005)
 fun <A> rpcDriver(
         isDebug: Boolean = false,
-        isMonitor: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = globalPortAllocation,
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
-        monitorPortAllocation: PortAllocation = globalMonitorPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
@@ -104,6 +102,7 @@ fun <A> rpcDriver(
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
+        jmxPolicy: JmxPolicy = JmxPolicy(),
         dsl: RPCDriverDSL.() -> A
 ) : A {
     return genericDriver(
@@ -111,14 +110,15 @@ fun <A> rpcDriver(
                 DriverDSLImpl(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
-                        monitorPortAllocation = monitorPortAllocation,systemProperties = systemProperties,
+                        systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
-                        isDebug = isDebug,isMonitor = isMonitor,
+                        isDebug = isDebug,
                         startNodesInProcess = startNodesInProcess,
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
-                        notarySpecs = notarySpecs
+                        notarySpecs = notarySpecs,
+                        jmxPolicy = jmxPolicy
                 ), externalTrace
         ),
         coerce = { it },

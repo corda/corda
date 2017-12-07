@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Jolokia agent and MBean access policy based security -->
+<!-- TODO: review these settings before production deployment -->
 <restrict>
     <!-- IP based restrictions -->
     <remote>
@@ -13,13 +14,6 @@
         <command>read</command>
     </commands>
     <!-- MBean access and deny restrictions -->
-    <!-- allow anyone to force a garbage collection -->
-    <allow>
-        <mbean>
-            <name>java.lang:type=Memory</name>
-            <operation>gc</operation>
-        </mbean>
-    </allow>
     <!-- HTTP method restrictions: get, post -->
     <http>
         <method>get</method>

@@ -189,7 +189,7 @@ class Node(private val project: Project) : CordformNode() {
             (it.group == "org.jolokia") &&
             (it.name == "jolokia-jvm") &&
             (it.version == jolokiaVersion)
-            // TODO: unavailable attribute: (it.classifier = "agent")
+            // TODO: revisit when classifier attribute is added. eg && (it.classifier = "agent")
         }.first()  // should always be the jolokia agent fat jar: eg. jolokia-jvm-1.3.7-agent.jar
         project.logger.info("Jolokia agent jar: $agentJar")
         if (agentJar.isFile) {
