@@ -14,21 +14,22 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
+import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.util.*
 import kotlin.test.*
 
 /**
- * Run tests for cryptographic algorithms
+ * Run tests for cryptographic algorithms.
  */
 class CryptoUtilsTest {
 
-    private val testString = "Hello World"
-    private val testBytes = testString.toByteArray()
+    private val testBytes = "Hello World".toByteArray()
 
     // key generation test
     @Test
@@ -780,5 +781,114 @@ class CryptoUtilsTest {
         val (dpriv_2, dpub_2) = Crypto.deriveKeyPair(priv, "seed-2".toByteArray())
         assertEquals(dpriv2, dpriv_2)
         assertEquals(dpub2, dpub_2)
+    }
+
+    @Test
+    fun `EdDSA ed25519 keyPair from entropy`() {
+        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("10"))
+        assertEquals("DLBL3iHCp9uRReWhhCGfCsrxZZpfAm9h9GLbfN8ijqXTq", keyPairPositive.public.toStringShort())
+
+        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("-10"))
+        assertEquals("DLC5HXnYsJAFqmM9hgPj5G8whQ4TpyE9WMBssqCayLBwA2", keyPairNegative.public.toStringShort())
+
+        val keyPairZero = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("0"))
+        assertEquals("DL4UVhGh4tqu1G86UVoGNaDDNCMsBtNHzE6BSZuNNJN7W2", keyPairZero.public.toStringShort())
+
+        val keyPairOne = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("1"))
+        assertEquals("DL8EZUdHixovcCynKMQzrMWBnXQAcbVDHi6ArPphqwJVzq", keyPairOne.public.toStringShort())
+
+        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("2").pow(258).minus(BigInteger.TEN))
+        assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan256bits.public.toStringShort())
+        // The underlying implementation uses the first 256 bytes of the entropy. Thus, 2^258-10 and 2^258-50 and 2^514-10 have the same impact.
+        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("2").pow(258).minus(BigInteger("50")))
+        assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan256bitsV2.public.toStringShort())
+        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("2").pow(514).minus(BigInteger.TEN))
+        assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan512bits.public.toStringShort())
+
+        // Try another big number.
+        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("2").pow(259).plus(BigInteger.ONE))
+        assertEquals("DL5tEFVMXMGrzwjfCAW34JjkhsRkPfFyJ38iEnmpB6L2Z9", keyPairBiggerThan258bits.public.toStringShort())
+    }
+
+    @Test
+    fun `ECDSA R1 keyPair from entropy`() {
+        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("10"))
+        assertEquals("DLHDcxuSt9J3cbjd2Dsx4rAgYYA7BAP7A8VLrFiq1tH9yy", keyPairPositive.public.toStringShort())
+        // The underlying implementation uses the hash of entropy if it is out of range 2 < entropy < N, where N the order of the group.
+        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("-10"))
+        assertEquals("DLBASmjiMZuu1g3EtdHJxfSueXE8PRoUWbkdU61Qcnpamt", keyPairNegative.public.toStringShort())
+
+        val keyPairZero = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("0"))
+        assertEquals("DLH2FEHEnsT3MpCJt2gfyNjpqRqcBxeupK4YRPXvDsVEkb", keyPairZero.public.toStringShort())
+        // BigIntenger.Zero is out or range, so 1 and hash(1.toByteArray) would have the same impact.
+        val zeroHashed = BigInteger(1, BigInteger("0").toByteArray().sha256().bytes)
+        // Check oneHashed < N (order of the group), otherwise we would need an extra hash.
+        assertEquals(-1, zeroHashed.compareTo((Crypto.ECDSA_SECP256R1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
+        val keyPairZeroHashed = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, zeroHashed)
+        assertEquals("DLH2FEHEnsT3MpCJt2gfyNjpqRqcBxeupK4YRPXvDsVEkb", keyPairZeroHashed.public.toStringShort())
+
+        val keyPairOne = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("1"))
+        assertEquals("DLHrtKwjv6onq9HcrQDJPs8Cgtai5mZU5ZU6sb1ivJjx3z", keyPairOne.public.toStringShort())
+        // BigIntenger.ONE is out or range, so 1 and hash(1.toByteArray) would have the same impact.
+        val oneHashed = BigInteger(1, BigInteger("1").toByteArray().sha256().bytes)
+        // Check oneHashed < N (order of the group), otherwise we would need an extra hash.
+        assertEquals(-1, oneHashed.compareTo((Crypto.ECDSA_SECP256R1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
+        val keyPairOneHashed = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, oneHashed)
+        assertEquals("DLHrtKwjv6onq9HcrQDJPs8Cgtai5mZU5ZU6sb1ivJjx3z", keyPairOneHashed.public.toStringShort())
+
+        // 2 is in the range.
+        val keyPairTwo = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2"))
+        assertEquals("DLFoz6txJ3vHcKNSM1vFxHJUoEQ69PorBwW64dHsAnEoZB", keyPairTwo.public.toStringShort())
+
+        // Try big numbers that are out of range.
+        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2").pow(258).minus(BigInteger.TEN))
+        assertEquals("DLBv6fZqaCTbE4L7sgjbt19biXHMgU9CzR5s8g8XBJjZ11", keyPairBiggerThan256bits.public.toStringShort())
+        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2").pow(258).minus(BigInteger("50")))
+        assertEquals("DLANmjhGSVdLyghxcPHrn3KuGatscf6LtvqifUDxw7SGU8", keyPairBiggerThan256bitsV2.public.toStringShort())
+        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2").pow(514).minus(BigInteger.TEN))
+        assertEquals("DL9sKwMExBTD3MnJN6LWGqo496Erkebs9fxZtXLVJUBY9Z", keyPairBiggerThan512bits.public.toStringShort())
+        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
+        assertEquals("DLBwjWwPJSF9E7b1NWaSbEJ4oK8CF7RDGWd648TiBhZoL1", keyPairBiggerThan258bits.public.toStringShort())
+    }
+
+    @Test
+    fun `ECDSA K1 keyPair from entropy`() {
+        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("10"))
+        assertEquals("DL6pYKUgH17az8MLdonvvUtUPN8TqwpCGcdgLr7vg3skCU", keyPairPositive.public.toStringShort())
+        // The underlying implementation uses the hash of entropy if it is out of range 2 <= entropy < N, where N the order of the group.
+        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("-10"))
+        assertEquals("DLnpXhxece69Nyqgm3pPt3yV7ESQYDJKoYxs1hKgfBAEu", keyPairNegative.public.toStringShort())
+
+        val keyPairZero = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("0"))
+        assertEquals("DLBC28e18T6KsYwjTFfUWJfhvHjvYVapyVf6antnqUkbgd", keyPairZero.public.toStringShort())
+        // BigIntenger.Zero is out or range, so 1 and hash(1.toByteArray) would have the same impact.
+        val zeroHashed = BigInteger(1, BigInteger("0").toByteArray().sha256().bytes)
+        // Check oneHashed < N (order of the group), otherwise we would need an extra hash.
+        assertEquals(-1, zeroHashed.compareTo((Crypto.ECDSA_SECP256K1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
+        val keyPairZeroHashed = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, zeroHashed)
+        assertEquals("DLBC28e18T6KsYwjTFfUWJfhvHjvYVapyVf6antnqUkbgd", keyPairZeroHashed.public.toStringShort())
+
+        val keyPairOne = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("1"))
+        assertEquals("DLBimRXdEQhJUTpL6f9ri9woNdsze6mwkRrhsML13Eh7ET", keyPairOne.public.toStringShort())
+        // BigIntenger.ONE is out or range, so 1 and hash(1.toByteArray) would have the same impact.
+        val oneHashed = BigInteger(1, BigInteger("1").toByteArray().sha256().bytes)
+        // Check oneHashed < N (order of the group), otherwise we would need an extra hash.
+        assertEquals(-1, oneHashed.compareTo((Crypto.ECDSA_SECP256K1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
+        val keyPairOneHashed = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, oneHashed)
+        assertEquals("DLBimRXdEQhJUTpL6f9ri9woNdsze6mwkRrhsML13Eh7ET", keyPairOneHashed.public.toStringShort())
+
+        // 2 is in the range.
+        val keyPairTwo = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2"))
+        assertEquals("DLG32UWaevGw9YY7w1Rf9mmK88biavgpDnJA9bG4GapVPs", keyPairTwo.public.toStringShort())
+
+        // Try big numbers that are out of range.
+        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(258).minus(BigInteger.TEN))
+        assertEquals("DLGHsdv2xeAuM7n3sBc6mFfiphXe6VSf3YxqvviKDU6Vbd", keyPairBiggerThan256bits.public.toStringShort())
+        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(258).minus(BigInteger("50")))
+        assertEquals("DL9yJfiNGqteRrKPjGUkRQkeqzuQ4kwcYQWMCi5YKuUHrk", keyPairBiggerThan256bitsV2.public.toStringShort())
+        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(514).minus(BigInteger.TEN))
+        assertEquals("DL3Wr5EQGrMTaKBy5XMvG8rvSfKX1AYZLCRU8kixGbxt1E", keyPairBiggerThan512bits.public.toStringShort())
+        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
+        assertEquals("DL7NbssqvuuJ4cqFkkaVYu9j1MsVswESGgCfbqBS9ULwuM", keyPairBiggerThan258bits.public.toStringShort())
     }
 }
