@@ -1,8 +1,6 @@
 package net.corda.node.services.persistence
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -35,6 +33,7 @@ import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
@@ -85,9 +84,9 @@ class HibernateConfigurationTest {
     @Before
     fun setUp() {
         val cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset")
-        bankServices = MockServices(cordappPackages, BOC.name, BOC_KEY)
-        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
-        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        bankServices = MockServices(cordappPackages, rigorousMock(), BOC.name, BOC_KEY)
+        issuerServices = MockServices(cordappPackages, rigorousMock(), DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY)
+        notaryServices = MockServices(cordappPackages, rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
@@ -102,7 +101,9 @@ class HibernateConfigurationTest {
         database.transaction {
             hibernateConfig = database.hibernateConfig
             // `consumeCash` expects we can self-notarise transactions
-            services = object : MockServices(cordappPackages, BOB_NAME, generateKeyPair(), DUMMY_NOTARY_KEY) {
+            services = object : MockServices(cordappPackages, rigorousMock<IdentityServiceInternal>().also {
+                doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
+            }, BOB_NAME, generateKeyPair(), DUMMY_NOTARY_KEY) {
                 override val vaultService = makeVaultService(database.hibernateConfig, schemaService)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {

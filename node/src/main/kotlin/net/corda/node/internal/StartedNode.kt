@@ -1,14 +1,11 @@
 package net.corda.node.internal
 
-import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.StateLoader
 import net.corda.core.node.services.NotaryService
-import net.corda.core.node.services.TransactionStorage
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.MessagingService
@@ -42,19 +39,5 @@ interface StartedNode<out N : AbstractNode> {
                                                        initiatedFlowClass: Class<F>,
                                                        track: Boolean): Observable<F> {
         return internals.internalRegisterFlowFactory(smm, initiatingFlowClass, flowFactory, initiatedFlowClass, track)
-    }
-}
-
-class StateLoaderImpl(private val validatedTransactions: TransactionStorage) : StateLoader {
-    @Throws(TransactionResolutionException::class)
-    override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outputs[stateRef.index]
-    }
-
-    @Throws(TransactionResolutionException::class)
-    // TODO: future implementation to retrieve contract states from a Vault BLOB store
-    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-        return (stateRefs.map { StateAndRef(loadState(it), it) }).toSet()
     }
 }

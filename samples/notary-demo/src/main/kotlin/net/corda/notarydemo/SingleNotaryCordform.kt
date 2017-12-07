@@ -4,7 +4,7 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.NotaryConfig
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY

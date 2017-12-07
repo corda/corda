@@ -2,7 +2,6 @@
 
 package net.corda.testing
 
-import com.nhaarman.mockito_kotlin.doCallRealMethod
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.Actor
@@ -21,9 +20,10 @@ import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.makeTestIdentityService
 import java.nio.file.Path
 
 /**
@@ -32,7 +32,7 @@ import java.nio.file.Path
  */
 @JvmOverloads
 fun ledger(
-        services: ServiceHub = MockServices(),
+        services: ServiceHub = MockServices(makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name),
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
     return LedgerDSL(TestLedgerDSLInterpreter(services)).also { dsl(it) }
@@ -48,7 +48,7 @@ fun transaction(
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         cordappPackages: List<String> = emptyList(),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger(services = MockServices(cordappPackages)) {
+) = ledger(services = MockServices(cordappPackages, makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)), MEGA_CORP.name)) {
     dsl(TransactionDSL(TestTransactionDSLInterpreter(this.interpreter, transactionBuilder)))
 }
 
@@ -74,10 +74,6 @@ fun testNodeConfiguration(
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
-        doCallRealMethod().whenever(it).certificatesDirectory
-        doCallRealMethod().whenever(it).trustStoreFile
-        doCallRealMethod().whenever(it).sslKeystore
-        doCallRealMethod().whenever(it).nodeKeystore
     }
 }
 

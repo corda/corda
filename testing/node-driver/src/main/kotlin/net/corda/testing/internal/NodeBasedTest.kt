@@ -7,22 +7,20 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.configOf
-import net.corda.node.services.config.parseAsNodeConfiguration
-import net.corda.node.services.config.plus
-import net.corda.nodeapi.User
+import net.corda.node.services.config.*
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.SerializationEnvironmentRule
-import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
-import net.corda.testing.node.MockServices
+import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import rx.internal.schedulers.CachedThreadScheduler
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
@@ -90,11 +88,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         )
 
         val parsedConfig = config.parseAsNodeConfiguration()
-        val node = Node(
-                parsedConfig,
-                MockServices.MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
-                initialiseSerialization = false,
-                cordappLoader = CordappLoader.createDefaultWithTestPackages(parsedConfig, cordappPackages)).start()
+        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), cordappPackages).start()
         nodes += node
         ensureAllNetworkMapCachesHaveAllNodeInfos()
         thread(name = legalName.organisation) {
@@ -116,4 +110,10 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 node.services.networkMapCache.addNode(nodeInfo)
             }
     }
+}
+
+class InProcessNode(
+        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>) : Node(
+        configuration, versionInfo, false, CordappLoader.createDefaultWithTestPackages(configuration, cordappPackages)) {
+    override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }

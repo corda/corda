@@ -19,15 +19,18 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.User
-import net.corda.testing.*
+import net.corda.nodeapi.internal.config.User
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
-import net.corda.testing.internal.RPCDriverExposedDSLInterface
+import net.corda.testing.internal.RPCDriverDSL
 import net.corda.testing.internal.rpcDriver
 import net.corda.testing.internal.rpcTestUser
 import net.corda.testing.internal.startRpcClient
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.singleIdentity
+import net.corda.testing.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -120,7 +123,7 @@ class ContractUpgradeFlowTest {
         check(bobNode)
     }
 
-    private fun RPCDriverExposedDSLInterface.startProxy(node: StartedNode<*>, user: User): CordaRPCOps {
+    private fun RPCDriverDSL.startProxy(node: StartedNode<*>, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,

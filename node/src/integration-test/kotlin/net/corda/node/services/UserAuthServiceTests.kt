@@ -14,8 +14,8 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.AuthDataSourceType
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.testing.internal.NodeBasedTest
 import net.corda.testing.*
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException

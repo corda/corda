@@ -15,7 +15,6 @@ import java.io.StringWriter
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.cert.Certificate
-import kotlin.system.exitProcess
 
 /**
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
@@ -33,16 +32,16 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
     private val privateKeyPassword = config.keyStorePassword
 
     /**
-     * Ensure the initial keystore for a node is set up; note that this function may cause the process to exit under
-     * some circumstances.
+     * Ensure the initial keystore for a node is set up.
      *
      * This checks the "config.certificatesDirectory" field for certificates required to connect to a Corda network.
      * If the certificates are not found, a PKCS #10 certification request will be submitted to the
      * Corda network permissioning server via [NetworkRegistrationService]. This process will enter a polling loop until
      * the request has been approved, and then the certificate chain will be downloaded and stored in [KeyStore] reside in
      * the certificates directory.
+     *
+     * @throws CertificateRequestException if the certificate retrieved by doorman is invalid.
      */
-    // TODO: Stop killing the calling process from within a called function.
     fun buildKeystore() {
         config.certificatesDirectory.createDirectories()
         val caKeyStore = loadOrCreateKeyStore(config.nodeKeystore, keystorePassword)
@@ -62,12 +61,12 @@ class NetworkRegistrationHelper(private val config: NodeConfiguration, private v
 
             val certificates = try {
                 pollServerForCertificates(requestId)
-            } catch (e: CertificateRequestException) {
-                System.err.println(e.message)
-                println("Please make sure the details in configuration file are correct and try again.")
-                println("Corda node will now terminate.")
+            } catch (certificateRequestException: CertificateRequestException) {
+                System.err.println(certificateRequestException.message)
+                System.err.println("Please make sure the details in configuration file are correct and try again.")
+                System.err.println("Corda node will now terminate.")
                 requestIdStore.deleteIfExists()
-                exitProcess(1)
+                throw certificateRequestException
             }
 
             println("Certificate signing request approved, storing private key with the certificate chain.")

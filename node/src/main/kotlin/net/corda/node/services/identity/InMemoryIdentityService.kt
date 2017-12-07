@@ -5,11 +5,11 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
@@ -24,14 +24,8 @@ import javax.annotation.concurrent.ThreadSafe
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
 @ThreadSafe
-class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptySet(),
-                              confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                              override val trustRoot: X509Certificate,
-                              vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
-    constructor(wellKnownIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                confidentialIdentities: Iterable<PartyAndCertificate> = emptySet(),
-                trustRoot: X509CertificateHolder) : this(wellKnownIdentities, confidentialIdentities, trustRoot.cert)
-
+class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
+                              trustRoot: X509CertificateHolder) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
     }
@@ -40,18 +34,15 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
      * Certificate store for certificate authority and intermediary certificates.
      */
     override val caCertStore: CertStore
-    override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
+    override val trustRoot = trustRoot.cert
+    override val trustAnchor: TrustAnchor = TrustAnchor(this.trustRoot, null)
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
 
     init {
-        val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
-        caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
+        caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(this.trustRoot)))
         keyToParties.putAll(identities.associateBy { it.owningKey })
         principalToParties.putAll(identities.associateBy { it.name })
-        confidentialIdentities.forEach { identity ->
-            principalToParties.computeIfAbsent(identity.name) { identity }
-        }
     }
 
     // TODO: Check the certificate validation logic

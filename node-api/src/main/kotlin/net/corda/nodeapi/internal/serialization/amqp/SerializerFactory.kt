@@ -46,11 +46,11 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private fun getEvolutionSerializer(
             typeNotation: TypeNotation,
             newSerializer: AMQPSerializer<Any>,
-            transforms: TransformsSchema): AMQPSerializer<Any> {
+            schemas: SerializationSchemas): AMQPSerializer<Any> {
         return serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, this)
-                is RestrictedType -> throw NotSerializableException("Enum evolution is not currently supported")
+                is RestrictedType -> EnumEvolutionSerializer.make(typeNotation, newSerializer, this, schemas)
             }
         }
     }
@@ -210,7 +210,7 @@ open class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
                 // doesn't match that of the serialised object then we are dealing with  different
                 // instance of the class, as such we need to build an EvolutionSerialiser
                 if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
-                    getEvolutionSerializer(typeNotation, serialiser, schemaAndDescriptor.schemas.transforms)
+                    getEvolutionSerializer(typeNotation, serialiser, schemaAndDescriptor.schemas)
                 }
             } catch (e: ClassNotFoundException) {
                 if (sentinel) throw e

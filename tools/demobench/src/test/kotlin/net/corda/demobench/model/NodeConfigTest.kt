@@ -5,8 +5,8 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.parseAsNodeConfiguration
-import net.corda.nodeapi.User
-import net.corda.nodeapi.config.toConfig
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.webserver.WebServerConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test

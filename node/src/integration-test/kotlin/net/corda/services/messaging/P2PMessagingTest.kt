@@ -18,7 +18,7 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.ALICE
 import net.corda.testing.chooseIdentity
-import net.corda.testing.driver.DriverDSLExposedInterface
+import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
@@ -116,13 +116,13 @@ class P2PMessagingTest {
         }
     }
 
-    private fun startDriverWithDistributedService(dsl: DriverDSLExposedInterface.(List<StartedNode<Node>>) -> Unit) {
+    private fun startDriverWithDistributedService(dsl: DriverDSL.(List<StartedNode<Node>>) -> Unit) {
         driver(startNodesInProcess = true, notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))) {
             dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as NodeHandle.InProcess).node })
         }
     }
 
-    private fun DriverDSLExposedInterface.startAlice(): StartedNode<Node> {
+    private fun DriverDSL.startAlice(): StartedNode<Node> {
         return startNode(providedName = ALICE.name, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
                 .map { (it as NodeHandle.InProcess).node }
                 .getOrThrow()

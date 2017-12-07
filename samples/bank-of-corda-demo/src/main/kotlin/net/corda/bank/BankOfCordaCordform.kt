@@ -13,7 +13,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import net.corda.testing.BOC
 import net.corda.testing.internal.demorun.*
 import java.util.*

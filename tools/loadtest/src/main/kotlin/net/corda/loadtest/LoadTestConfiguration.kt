@@ -1,6 +1,6 @@
 package net.corda.loadtest
 
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import java.nio.file.Path
 import java.util.concurrent.ForkJoinPool
 

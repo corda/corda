@@ -29,6 +29,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -60,12 +61,16 @@ class VaultWithCashTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
-        val databaseAndServices = makeTestDatabaseAndMockServices(cordappPackages = cordappPackages, keys = listOf(generateKeyPair(), DUMMY_NOTARY_KEY))
+        val databaseAndServices = makeTestDatabaseAndMockServices(
+                listOf(generateKeyPair(), DUMMY_NOTARY_KEY),
+                makeTestIdentityService(listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY)),
+                cordappPackages,
+                MEGA_CORP.name)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, DUMMY_NOTARY, DUMMY_NOTARY_KEY)
-        issuerServices = MockServices(cordappPackages, DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        issuerServices = MockServices(cordappPackages, rigorousMock(), DUMMY_CASH_ISSUER_NAME, DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, rigorousMock(), DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 
@@ -96,7 +101,7 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, rigorousMock(), MEGA_CORP.name, MEGA_CORP_KEY)
         val freshKey = services.keyManagementService.freshKey()
 
         val usefulTX =

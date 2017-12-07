@@ -10,7 +10,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.AuthDataSourceType
-import net.corda.nodeapi.User
+import net.corda.nodeapi.internal.config.User
 import org.apache.shiro.authc.*
 import org.apache.shiro.authc.credential.PasswordMatcher
 import org.apache.shiro.authc.credential.SimpleCredentialsMatcher

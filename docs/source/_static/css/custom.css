@@ -71,7 +71,8 @@ a:visited {
 }
 
 .wy-nav-content {
-    background-color: #fff max-width: 1000px;
+    background-color: #fff;
+    max-width: none;
 }
 
 .wy-nav-side {

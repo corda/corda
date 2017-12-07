@@ -3,7 +3,7 @@ package net.corda.testing.internal.performance
 import com.codahale.metrics.ConsoleReporter
 import com.codahale.metrics.JmxReporter
 import com.codahale.metrics.MetricRegistry
-import net.corda.testing.driver.ShutdownManager
+import net.corda.testing.internal.ShutdownManager
 import java.util.concurrent.TimeUnit
 import javax.management.ObjectName
 import kotlin.concurrent.thread

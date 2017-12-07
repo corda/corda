@@ -38,7 +38,7 @@ class SimmValuationTest {
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)
             val nodeAParty = getPartyWithName(nodeBApi, nodeALegalName)
 
-            assertThat(createTradeBetween(nodeAApi, nodeBParty, testTradeId)).isTrue()
+            createTradeBetween(nodeAApi, nodeBParty, testTradeId)
             assertTradeExists(nodeBApi, nodeAParty, testTradeId)
             assertTradeExists(nodeAApi, nodeBParty, testTradeId)
             runValuationsBetween(nodeAApi, nodeBParty)
@@ -55,10 +55,10 @@ class SimmValuationTest {
         return partyApi.getJson("whoami")
     }
 
-    private fun createTradeBetween(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String): Boolean {
+    private fun createTradeBetween(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String) {
         val trade = SwapDataModel(tradeId, "desc", valuationDate, "EUR_FIXED_1Y_EURIBOR_3M",
                 valuationDate, LocalDate.parse("2020-01-02"), BuySell.BUY, BigDecimal.valueOf(1000), BigDecimal.valueOf(0.1))
-        return partyApi.putJson("${counterparty.id}/trades", trade)
+        partyApi.putJson("${counterparty.id}/trades", trade)
     }
 
     private fun assertTradeExists(partyApi: HttpApi, counterparty: PortfolioApi.ApiParty, tradeId: String) {

@@ -13,6 +13,7 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.nodeapi.NodeInfoFilesCopier
 import net.corda.testing.*
 import net.corda.testing.node.MockKeyManagementService
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.contentOf
 import org.junit.Before
@@ -47,9 +48,9 @@ class NodeInfoWatcherTest {
 
     @Before
     fun start() {
-        val identityService = InMemoryIdentityService(trustRoot = DEV_TRUST_ROOT)
+        val identityService = makeTestIdentityService()
         keyManagementService = MockKeyManagementService(identityService, ALICE_KEY)
-        nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler = scheduler)
+        nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler)
         nodeInfoPath = tempFolder.root.toPath() / CordformNode.NODE_INFO_DIRECTORY
     }
 
