@@ -2,16 +2,17 @@ package net.corda.webserver
 
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.*
 import net.corda.testing.driver.WebserverHandle
 import net.corda.testing.driver.addressMustBeBound
 import net.corda.testing.driver.addressMustNotBeBound
 import net.corda.testing.driver.driver
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
-class WebserverDriverTests {
+class WebserverDriverTests : IntegrationTest() {
     companion object {
         val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
@@ -22,6 +23,9 @@ class WebserverDriverTests {
         fun webserverMustBeDown(webserverAddr: NetworkHostAndPort) {
             addressMustNotBeBound(executorService, webserverAddr)
         }
+
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A.toDatabaseSchemaName())
     }
 
     @Test

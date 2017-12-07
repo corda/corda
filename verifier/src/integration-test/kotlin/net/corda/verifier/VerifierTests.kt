@@ -12,11 +12,9 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
-import net.corda.testing.ALICE
-import net.corda.testing.ALICE_NAME
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.SerializationEnvironmentRule
+import net.corda.testing.*
 import net.corda.testing.node.NotarySpec
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import java.util.*
@@ -24,7 +22,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class VerifierTests {
+class VerifierTests  : IntegrationTest() {
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE.toDatabaseSchemaName(), DUMMY_NOTARY.toDatabaseSchemaName())
+    }
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)

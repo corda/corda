@@ -38,7 +38,7 @@ and Hibernate properties in `database` entry - see `:ref:`dataSourceProperties`.
 
 SQL Azure and SQL Server
 ````````````````````````
-Corda supports SQL Server 2017 adn SQL Azure.
+Corda supports SQL Server 2017 (14.0.3006.16) and Azure SQL (12.0.2000.8).
 The minimum transaction isolation level ``database.transactionIsolationLevel`` is 'readCommitted'.
 The property ``database.schema`` is optional.
 Corda ships with Microsoft JDBC Driver 6.2 for SQLServer out-of-the-box.

@@ -16,12 +16,15 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.driver.driver
+import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class IntegrationTestingTutorial : IntegrationTest() {
-    override val databaseSchemas: MutableList<String>
-        get() = listOf(ALICE, BOB, DUMMY_NOTARY).map { it.toDatabaseSchemaName() }.toMutableList()
+    companion object {
+        @ClassRule @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE, BOB, DUMMY_NOTARY).map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
 
     @Test
     fun `alice bob cash exchange example`() {

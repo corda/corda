@@ -12,10 +12,7 @@ import org.junit.rules.ExternalResource
  * Base class for all integration tests that require common setup and/or teardown.
  * eg. serialization, database schema creation and data population / clean-up
  */
-
 abstract class IntegrationTest {
-    open protected val databaseSchemas = Companion.databaseSchemas
-
     // System properties set in main 'corda-project' build.gradle
     // Note: the database provider configuration file for integration tests should specify:
     // dataSource.user = ${nodeOrganizationName}
@@ -63,10 +60,10 @@ abstract class IntegrationTest {
 class IntegrationTestSchemas(vararg var list : String) : ExternalResource() {
 
     override fun before() {
-        IntegrationTest.Companion.databaseSchemas.addAll(list)
+        IntegrationTest.databaseSchemas.addAll(list)
     }
     override fun after() {
-        IntegrationTest.Companion.databaseSchemas.clear()
+        IntegrationTest.databaseSchemas.clear()
     }
 }
 
