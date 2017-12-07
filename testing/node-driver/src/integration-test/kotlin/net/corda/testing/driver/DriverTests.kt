@@ -80,8 +80,8 @@ class DriverTests {
             val webAddress = NetworkHostAndPort("localhost", 7006)
             // request access to some JMX metrics via Jolokia HTTP/JSON
             val api = HttpApi.fromHostAndPort(webAddress, "/jolokia/")
-            val listAsJson = api.getJson<JSONObject>("/jolokia/list/")
-            // TODO: add assertions and other test cases
+            val versionAsJson = api.getJson<JSONObject>("/jolokia/version/")
+            assertThat(versionAsJson.getValue("status")).isEqualTo(200)
         }
     }
 
