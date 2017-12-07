@@ -144,7 +144,8 @@ path to the node's base directory.
     and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
     bugs in the checkpointing process. Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
     or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate an existing schema
-    failing on node start if this schema is either not present or not compatible.
+    failing on node start if this schema is either not present or not compatible. Furthermore, if ``devMode`` is true, Hibernate
+    run-time statistics will be exported via JMX.
 
 :detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network
@@ -163,7 +164,9 @@ path to the node's base directory.
     Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
     for including JDBC drivers and the like. e.g. ``jarDirs = [ 'lib' ]``
 
-:sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials
-        and permissions as RPC subsystem. It has one required parameter.
+:sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
     :port: The port to start SSH server on
+
+:exportJMXTo: If set to ``http``, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent.
+    Default Jolokia access url is http://127.0.0.1:7005/jolokia/

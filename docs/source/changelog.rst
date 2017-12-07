@@ -6,6 +6,9 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Exporting additional JMX metrics (artemis, hibernate statistics) and loading Jolokia agent at JVM startup when using
+  DriverDSL and/or cordformation node runner.
+
 * Removed confusing property database.initDatabase, enabling its guarded behaviour with the dev-mode.
   In devMode Hibernate will try to create or update database schemas, otherwise it will expect relevant schemas to be present
   in the database (pre configured via DDL scripts or equivalent), and validate these are correct.
