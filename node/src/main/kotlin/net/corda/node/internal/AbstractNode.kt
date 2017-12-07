@@ -271,7 +271,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             keyPairs += notaryIdentityKeyPair
             notaryIdentity
         }
-        val info = NodeInfo(
+        val info = NodeInfoImpl(
                 myAddresses(),
                 listOf(identity, myNotaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,

@@ -26,8 +26,7 @@ import java.util.concurrent.TimeUnit
 
 class NetworkMapClient(compatibilityZoneURL: URL) {
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
-
-    fun publish(signedNodeInfo: SignedData<NodeInfo>) {
+    fun publish(signedNodeInfo: SignedData<out NodeInfo>) {
         val publishURL = URL("$networkMapUrl/publish")
         val conn = publishURL.openHttpConnection()
         conn.doOutput = true
@@ -81,11 +80,10 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         MoreExecutors.shutdownAndAwaitTermination(executor, 50, TimeUnit.SECONDS)
     }
 
-    fun updateNodeInfo(newInfo: NodeInfo, signNodeInfo: (NodeInfo) -> SignedData<NodeInfo>) {
+    fun updateNodeInfo(newInfo: NodeInfo, signNodeInfo: (NodeInfo) -> SignedData<out NodeInfo>) {
         val oldInfo = networkMapCache.getNodeByLegalIdentity(newInfo.legalIdentities.first())
         // Compare node info without timestamp.
-        if (newInfo.copy(serial = 0L) == oldInfo?.copy(serial = 0L)) return
-
+        if (newInfo.equalsWithoutSerial(oldInfo)) return
         // Only publish and write to disk if there are changes to the node info.
         val signedNodeInfo = signNodeInfo(newInfo)
         fileWatcher.saveToFile(signedNodeInfo)
@@ -131,7 +129,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         executor.submit(task) // The check may be expensive, so always run it in the background even the first time.
     }
 
-    private fun tryPublishNodeInfoAsync(signedNodeInfo: SignedData<NodeInfo>, networkMapClient: NetworkMapClient) {
+    private fun tryPublishNodeInfoAsync(signedNodeInfo: SignedData<out NodeInfo>, networkMapClient: NetworkMapClient) {
         val task = object : Runnable {
             override fun run() {
                 try {

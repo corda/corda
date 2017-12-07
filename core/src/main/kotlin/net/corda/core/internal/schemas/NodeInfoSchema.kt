@@ -3,6 +3,7 @@ package net.corda.core.internal.schemas
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NodeInfoImpl
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
@@ -53,8 +54,8 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "serial")
             val serial: Long
     ) {
-        fun toNodeInfo(): NodeInfo {
-            return NodeInfo(
+        fun toNodeInfo(): NodeInfoImpl {
+            return NodeInfoImpl(
                     this.addresses.map { it.toHostAndPort() },
                     (this.legalIdentitiesAndCerts.filter { it.isMain } + this.legalIdentitiesAndCerts.filter { !it.isMain }).map { it.toLegalIdentityAndCert() },
                     this.platformVersion,

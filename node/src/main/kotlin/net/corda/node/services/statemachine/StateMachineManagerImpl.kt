@@ -424,7 +424,7 @@ class StateMachineManagerImpl(
                 StateMachineRunId.createRandom(),
                 logic,
                 scheduler,
-                ourIdentity ?: serviceHub.myInfo.legalIdentities[0],
+                ourIdentity ?: serviceHub.myInfo.legalIdentitiesAndCerts[0].party,
                 context)
         initFiber(fsm)
         return fsm
