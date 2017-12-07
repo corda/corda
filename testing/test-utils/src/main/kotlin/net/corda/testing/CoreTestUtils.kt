@@ -130,7 +130,7 @@ fun configureTestSSL(legalName: CordaX500Name = MEGA_CORP.name): SSLConfiguratio
 }
 
 fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DEV_CA): PartyAndCertificate {
-    val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
+    val certHolder = X509Utilities.createCertificate(CertificateType.WELL_KNOWN_IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
     val certPath = X509CertificateFactory().delegate.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
     return PartyAndCertificate(certPath)
 }

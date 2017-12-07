@@ -10,19 +10,13 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.cert
 import net.corda.core.internal.toX509CertHolder
 import net.corda.nodeapi.internal.crypto.*
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.Security
-import java.security.cert.CertPathValidator
-import java.security.cert.PKIXCertPathValidatorResult
-import java.security.cert.PKIXParameters
-import java.security.cert.TrustAnchor
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
@@ -85,7 +79,7 @@ val DEV_NODE_CA: CertificateAndKeyPair by lazy {
     val provider = Security.getProvider(signatureScheme.providerName)
     val issuerSigner = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
 
-    val certificate = X509Utilities.createCertificate(CertificateType.CLIENT_CA, issuerCertificate.subject, issuerSigner, subject,
+    val certificate = X509Utilities.createCertificate(CertificateType.NODE_CA, issuerCertificate.subject, issuerSigner, subject,
             keyPair.public, Pair(issuerCertificate.notBefore, issuerCertificate.notAfter))
     CertificateAndKeyPair(certificate, keyPair)
 }
