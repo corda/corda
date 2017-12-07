@@ -294,9 +294,11 @@ class P2PMessagingClient(config: NodeConfiguration,
                     // processing a message but if so, it'll be parked waiting for us to count down the latch, so
                     // the session itself is still around and we can still ack messages as a result.
                     override fun acknowledge() {
-                        state.locked {
-                            artemisMessage.individualAcknowledge()
-                            artemis.started!!.session.commit()
+                        messagingExecutor.fetchFrom {
+                            state.locked {
+                                artemisMessage.individualAcknowledge()
+                                artemis.started!!.session.commit()
+                            }
                         }
                     }
                 }
