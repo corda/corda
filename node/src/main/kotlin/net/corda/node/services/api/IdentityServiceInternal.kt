@@ -1,4 +1,4 @@
-package net.corda.node.services.identity
+package net.corda.node.services.api
 
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService

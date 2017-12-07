@@ -20,7 +20,7 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Frequency
 import net.corda.finance.contracts.PaymentRule
 import net.corda.finance.contracts.Tenor
-import net.corda.node.services.identity.IdentityServiceInternal
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Rule

@@ -18,7 +18,7 @@ import net.corda.core.utilities.OpaqueBytes;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.node.services.identity.IdentityServiceInternal;
+import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
 import net.corda.testing.SerializationEnvironmentRule;

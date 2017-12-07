@@ -36,7 +36,7 @@ import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.services.identity.IdentityServiceInternal
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.nodeapi.internal.persistence.CordaPersistence

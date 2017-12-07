@@ -29,7 +29,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.identity.IdentityServiceInternal
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService

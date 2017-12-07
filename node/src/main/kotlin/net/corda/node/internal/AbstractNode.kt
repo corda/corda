@@ -46,7 +46,7 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
-import net.corda.node.services.identity.IdentityServiceInternal
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService

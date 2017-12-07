@@ -19,7 +19,7 @@ import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashBy
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
-import net.corda.node.services.identity.IdentityServiceInternal
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.*

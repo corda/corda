@@ -9,6 +9,7 @@ import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
