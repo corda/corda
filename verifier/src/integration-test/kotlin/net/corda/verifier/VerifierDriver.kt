@@ -50,9 +50,11 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 fun <A> verifierDriver(
         isDebug: Boolean = false,
+        isMonitor: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        monitorPortAllocation: PortAllocation = PortAllocation.Incremental(7005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
@@ -65,10 +67,12 @@ fun <A> verifierDriver(
                 DriverDSLImpl(
                         portAllocation = portAllocation,
                         debugPortAllocation = debugPortAllocation,
+                        monitorPortAllocation = monitorPortAllocation,
                         systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         isDebug = isDebug,
+                        isMonitor = isMonitor,
                         startNodesInProcess = startNodesInProcess,
                         waitForNodesToFinish = waitForNodesToFinish,
                         extraCordappPackagesToScan = extraCordappPackagesToScan,
